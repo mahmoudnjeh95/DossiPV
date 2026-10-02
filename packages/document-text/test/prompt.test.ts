@@ -23,6 +23,15 @@ describe('DOSSIER_TEXT_SYSTEM_PROMPT', () => {
   it('instructs the model to never reference client identity', () => {
     expect(DOSSIER_TEXT_SYSTEM_PROMPT).toMatch(/nom.*client|client.*nom/i);
   });
+
+  it('does not frame placeholder names as mere examples — the user turn supplies the closed list', () => {
+    // Spec §3.3: Claude must be told the placeholder vocabulary is closed, not illustrated
+    // by a couple of examples it could extrapolate from. "par exemple {P_DC_W}..." was
+    // exactly that loose framing; the design spec replaced it with an enumerated allowlist
+    // (supplied in the user turn). The norm-reference example ("par exemple NF C 15-100")
+    // is a different, legitimate use of "par exemple" and is not what this test targets.
+    expect(DOSSIER_TEXT_SYSTEM_PROMPT).not.toMatch(/par exemple \{/i);
+  });
 });
 
 describe('buildDossierTextUserPrompt', () => {
