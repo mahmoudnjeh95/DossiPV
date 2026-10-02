@@ -344,7 +344,7 @@ export interface ChecksContext {
   dossierDate: string;
   inverterStegApproved: boolean | undefined;
   companyAccreditationValidTo: string;
-  moduleVocV?: number;
+  moduleVocV: number;
 }
 
 /** Runs all 22 checks in C01..C22 order against a fully-derived context. */
@@ -367,7 +367,7 @@ export function runAllChecks(context: ChecksContext): CheckResult[] {
     checkC10(
       context.dcSpdUcV,
       context.ns,
-      context.moduleVocV ?? 0,
+      context.moduleVocV,
       context.dcSpdInKA,
       context.dcSpdIscpvKA,
       context.iscFieldDesign,

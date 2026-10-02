@@ -32,7 +32,20 @@ import {
   stabilityLhs as computeStabilityLhs,
   stabilityRhs as computeStabilityRhs,
 } from './structure';
-import { runAllChecks, type ChecksContext, type FuseCheckInput } from './checks';
+import {
+  runAllChecks,
+  checkC01,
+  checkC02,
+  checkC04,
+  checkC07,
+  checkC08,
+  checkC09,
+  checkC10,
+  checkC16,
+  type ChecksContext,
+  type FuseCheckInput,
+} from './checks';
+import type { InverterInput, MpptConfig, CheckResult } from './types';
 
 export interface CableRunInput {
   conductor: ConductorType;
@@ -87,6 +100,58 @@ export interface RunEngineInput {
 }
 
 /**
+ * Runs the 8 Ns/Np/fuse-dependent BLOCK checks (C01, C02, C04, C07, C08, C09, C10, C16) for one
+ * (inverter, MPPT) pair, using that pair's own inverter ratings and that MPPT's own ns/np —
+ * never array[0]'s. Called once per MPPT of every inverter entry so a failure on any string in
+ * a multi-inverter/multi-MPPT array is never silently skipped (see runEngine's doc comment).
+ */
+function evaluatePerMpptBlockChecks(
+  module: PvModuleInput,
+  inverter: InverterInput,
+  mppt: MpptConfig,
+  tMinC: number,
+  tMaxC: number,
+  dcSwitch: RunEngineInput['dcSwitch'],
+  dcFuse: RunEngineInput['dcFuse'],
+  dcSpd: RunEngineInput['dcSpd'],
+  dcRunIzCorrected: number,
+): CheckResult[] {
+  const ns = mppt.modulesPerString;
+  const np = mppt.stringsInParallel;
+
+  const nsMaxVal = nsMax(module, inverter, tMinC);
+  const nsMinVal = nsMin(module, inverter, tMaxC);
+  const npMaxVal = npMax(module, inverter, tMaxC);
+
+  const stringVoc = stringVocTmin(module, ns, tMinC);
+  const fieldDesignCurrent = iscFieldDesign(module, np);
+
+  const fuseRequired = dcFuseRequired(module, np);
+  const fuseLowerBound = 1.1 * 1.25 * module.iscA;
+  const fuseUpperBound = module.irmA;
+  const fuse: FuseCheckInput = {
+    fuseRequired,
+    fuseSet: dcFuse !== null,
+    fuseRatedCurrentA: dcFuse?.ratedCurrentA ?? null,
+    fuseRatedVoltageV: dcFuse?.ratedVoltageV ?? null,
+    lowerBoundA: fuseLowerBound,
+    upperBoundA: fuseUpperBound,
+    stringVocTmin: stringVoc,
+  };
+
+  return [
+    checkC01(ns, nsMaxVal),
+    checkC02(ns, nsMinVal),
+    checkC04(np, npMaxVal),
+    checkC07(stringVoc, module.maxSystemVoltageV),
+    checkC08(fuse),
+    checkC09(dcSwitch.ratedVoltageV, stringVoc, dcSwitch.ratedCurrentA, fieldDesignCurrent),
+    checkC10(dcSpd.ucV, ns, module.vocV, dcSpd.inKA, dcSpd.iscpvKA, fieldDesignCurrent),
+    checkC16(dcRunIzCorrected, fieldDesignCurrent),
+  ];
+}
+
+/**
  * Single entry point: validated project + equipment data in, every derived value and every
  * check's result out. Imported unchanged by the browser (live form validation) and the worker
  * (final generation) — spec §4's "single source of truth" guarantee depends on both call sites
@@ -95,12 +160,13 @@ export interface RunEngineInput {
 export function runEngine(input: RunEngineInput): EngineResult {
   const { module, array, tMinC, tMaxC } = input;
 
-  // Only single-inverter, single-MPPT projects are fully supported for the per-string checks
-  // in this task; multi-inverter aggregation (P_DC_W, POWER_RATIO) already works for any
-  // array shape via totalDcPowerW/totalModuleCount (Task 5), but the Ns/Np-driven checks below
-  // run only on the first MPPT of the first inverter — multi-string check support is explicitly
-  // handled by the Project-level orchestration layer introduced when the web form is built, not
-  // required for this package's public contract.
+  // Multi-inverter aggregation (P_DC_W, POWER_RATIO) works for any array shape via
+  // totalDcPowerW/totalModuleCount. The Ns/Np/fuse-dependent BLOCK checks (C01, C02, C04, C07,
+  // C08, C09, C10, C16) are evaluated below once per representative (first) MPPT for the
+  // `derived` output — which remains a single representative string's values, as before — AND,
+  // separately, for EVERY MPPT of EVERY inverter entry via evaluatePerMpptBlockChecks(), so a
+  // second inverter or MPPT with an out-of-bounds string still produces hasBlockingFailure: true
+  // and a traceable failing check, rather than being silently skipped.
   const firstEntry = array[0];
   const firstMppt = firstEntry?.mppts[0];
   const ns = firstMppt?.modulesPerString ?? 0;
@@ -256,7 +322,38 @@ export function runEngine(input: RunEngineInput): EngineResult {
     moduleVocV: module.vocV,
   };
 
-  const checks = runAllChecks(checksContext);
+  // The array-wide 22-check run above already evaluates the 8 Ns/Np/fuse-dependent BLOCK checks
+  // (C01, C02, C04, C07, C08, C09, C10, C16) for array[0].mppts[0] via checksContext. To avoid
+  // silently ignoring every OTHER MPPT, re-run those same 8 checks for every (inverter, MPPT)
+  // pair EXCEPT that first one (which would just duplicate the result already in runAllChecks'
+  // output) and append every result. A failing BLOCK on any additional string therefore always
+  // shows up in `checks` and always flips `hasBlockingFailure`, regardless of which inverter or
+  // MPPT it came from.
+  const perMpptChecks: CheckResult[] = [];
+  let isFirstPair = true;
+  for (const entry of array) {
+    for (const mppt of entry.mppts) {
+      if (isFirstPair) {
+        isFirstPair = false;
+        continue;
+      }
+      perMpptChecks.push(
+        ...evaluatePerMpptBlockChecks(
+          module,
+          entry.inverter,
+          mppt,
+          tMinC,
+          tMaxC,
+          input.dcSwitch,
+          input.dcFuse,
+          input.dcSpd,
+          dcRunIz,
+        ),
+      );
+    }
+  }
+
+  const checks = [...runAllChecks(checksContext), ...perMpptChecks];
   const hasBlockingFailure = checks.some((c) => c.level === 'BLOCK' && !c.pass);
 
   return {

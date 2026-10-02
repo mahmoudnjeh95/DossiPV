@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { izCorrected, duDcV, duDcPct, duAcV, duAcPct } from '../src/cabling';
+import {
+  izCorrected,
+  duDcV,
+  duDcPct,
+  duAcV,
+  duAcPct,
+  UnsupportedInstallMethodError,
+} from '../src/cabling';
 
 describe('izCorrected', () => {
   it('applies K1 (install method), K2 (grouping), K3 (temp+insulation), K4 (layers) to the base Iz', () => {
@@ -26,6 +33,31 @@ describe('izCorrected', () => {
     const resultPr = izCorrected(30, '13', 'B', 1, 1, 50, 'PR');
     expect(resultEpr).toBeCloseTo(resultPr, 5);
     expect(resultXlpo).toBeCloseTo(resultPr, 5);
+  });
+
+  it('clamps K4 (layers) to the worst-case (9-layer, 0.66) factor when layers exceeds the table, instead of defaulting to no correction (1.0)', () => {
+    // Mode 13: K1=1.0; 1 grouped circuit: K2=1.0; PR at 50C: K3_PR['50']=0.82.
+    // layers=12 is beyond K4_LAYERS' highest key ('9' => 0.66), so K4 must clamp to 0.66,
+    // NOT fall back to 1.0 (which would be the unsafe, no-derating direction).
+    // izBase=30 => 30 * 1.0 * 1.0 * 0.82 * 0.66 = 16.236
+    const result = izCorrected(30, '13', 'B', 1, 12, 50, 'PR');
+    expect(result).toBeCloseTo(16.236, 5);
+    // Sanity: confirm it is strictly less than what the old (unsafe) 1.0 fallback would give.
+    const unsafeWouldBe = izCorrected(30, '13', 'B', 1, 9, 50, 'PR'); // exactly at the table's max key
+    expect(result).toBeCloseTo(unsafeWouldBe, 5);
+  });
+
+  it('K3 (temperature) clamps to the hottest tabled column when ambientTempC exceeds every key (already-correct behavior, documented here)', () => {
+    // K3_PVC's highest key is '60' => 0.5. ambientTempC=80 is above every key in the table;
+    // nearestTempKey's "largest key <= ambientTempC" loop naturally resolves to '60' here,
+    // since there is no higher key to wrongly prefer. Mode 13: K1=1.0; 1 circuit: K2=1.0;
+    // 1 layer: K4=1.0. izBase=30 => 30 * 1.0 * 1.0 * 0.5 * 1.0 = 15.
+    const result = izCorrected(30, '13', 'B', 1, 1, 80, 'PVC');
+    expect(result).toBeCloseTo(15, 5);
+  });
+
+  it('throws UnsupportedInstallMethodError for a valid-per-schema but untabled install method (e.g. "21"), instead of silently using no derating', () => {
+    expect(() => izCorrected(30, '21', 'B', 1, 1, 50, 'PR')).toThrow(UnsupportedInstallMethodError);
   });
 });
 
@@ -55,11 +87,13 @@ describe('duAcV and duAcPct (phase-dependent b factor and reference voltage)', (
     expect(duAcPct(dv, 1)).toBeCloseTo((100 * 1.49632) / 230, 4);
   });
 
-  it('three-phase: b=1, reference voltage 400V', () => {
-    // same inner sum as above = 0.04676; * iacMaxA(16) = 0.74816; * b(1) = 0.74816
+  it('three-phase: b=sqrt(3), reference voltage 400V (NF C 15-100 / UTE C 15-105)', () => {
+    // same inner sum as above = 0.04676; * iacMaxA(16) = 0.74816; * b(sqrt(3)=1.7320508...)
+    // = 1.2958511321907313 (verified with node: Math.sqrt(3)*0.74816)
+    // duAcPct = 100 * 1.2958511321907313 / 400 = 0.3239627830476828
     const dv = duAcV('Cu', 10, 4, 0.8, 0.00008, 16, 3);
-    expect(dv).toBeCloseTo(0.74816, 4);
-    expect(duAcPct(dv, 3)).toBeCloseTo((100 * 0.74816) / 400, 4);
+    expect(dv).toBeCloseTo(1.29585, 4);
+    expect(duAcPct(dv, 3)).toBeCloseTo(0.32396, 4);
   });
 
   it('single-phase and three-phase at the same inputs do not produce the same drop percentage', () => {

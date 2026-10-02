@@ -377,5 +377,6 @@ function buildPassingContext(): ChecksContext {
     dossierDate: '2026-10-02',
     inverterStegApproved: true,
     companyAccreditationValidTo: '2027-01-01',
+    moduleVocV: 55.9,
   };
 }

@@ -11,15 +11,36 @@ export interface GpsPoint {
   lon: number;
 }
 
-/** Formats one decimal-degree axis value as degrees-minutes-seconds with its hemisphere letter. */
+/**
+ * Formats one decimal-degree axis value as degrees-minutes-seconds with its hemisphere letter.
+ *
+ * Seconds are rounded to 1 decimal place as part of deriving degrees/minutes/seconds, not as a
+ * display-only afterthought: computing seconds from the unrounded fractional minute and only
+ * THEN calling seconds.toFixed(1) can produce "60.0" (e.g. 36.4 deg naively gives
+ * 36°23'60.0" instead of 36°24'0.0"), because floating point pushes minutesFull/seconds just
+ * under their next whole unit before the display rounding pushes them back over it, with
+ * nothing to carry that rollover into minutes (or minutes into degrees). To fix this, the total
+ * seconds-in-the-last-minute value is rounded to 1 decimal first, then explicitly carried into
+ * minutes and, if that carry fills the minute, into degrees — so the displayed fields are always
+ * mutually consistent.
+ */
 export function formatDms(decimalDegrees: number, axis: 'lat' | 'lon'): string {
   const isNegative = decimalDegrees < 0;
   const absolute = Math.abs(decimalDegrees);
 
-  const degrees = Math.floor(absolute);
+  let degrees = Math.floor(absolute);
   const minutesFull = (absolute - degrees) * 60;
-  const minutes = Math.floor(minutesFull);
-  const seconds = (minutesFull - minutes) * 60;
+  let minutes = Math.floor(minutesFull);
+  let seconds = Math.round((minutesFull - minutes) * 60 * 10) / 10;
+
+  if (seconds >= 60) {
+    seconds -= 60;
+    minutes += 1;
+  }
+  if (minutes >= 60) {
+    minutes -= 60;
+    degrees += 1;
+  }
 
   const hemisphere = axis === 'lat' ? (isNegative ? 'S' : 'N') : isNegative ? 'W' : 'E';
 
