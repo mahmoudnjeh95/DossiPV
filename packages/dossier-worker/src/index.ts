@@ -1,1 +1,2 @@
-// Barrel file — later tasks add `export * from './...'` lines here as modules are built.
+export * from './placeholder-map';
+export * from './generate-dossier-document';
