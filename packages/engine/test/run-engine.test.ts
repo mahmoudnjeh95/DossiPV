@@ -84,4 +84,105 @@ describe('runEngine — reference dossier (Habib Khedhira, corrected)', () => {
     expect(failingBlocks.length).toBeGreaterThan(0);
     expect(failingBlocks.some((c) => c.id === 'C01')).toBe(true);
   });
+
+  it('catches a phase mismatch (C19) on a SECOND inverter, not just array[0]\'s (regression guard for only checking array[0].inverter.phases)', () => {
+    // array[0]'s inverter is single-phase, matching site.phases=1, so C19 passes for it.
+    // The second inverter is three-phase, which mismatches site.phases=1 — if runEngine only
+    // checked array[0].inverter.phases against site.phases, this mismatch would never surface.
+    const secondInverterWrongPhases = {
+      ...habibKhedhiraFixture,
+      array: [
+        ...habibKhedhiraFixture.array,
+        {
+          inverter: {
+            phases: 3 as const,
+            pacW: 1000,
+            sacVA: 1000,
+            vdcMaxV: 550,
+            mpptMinV: 90,
+            mpptMaxV: 550,
+            startUpV: 100,
+            mpptCount: 1,
+            inputsPerMppt: 2,
+            idcMaxPerMpptA: 16,
+            iscMaxPerMpptA: 20,
+            vacNomV: 230,
+            iacMaxA: 16,
+            stegApproved: true,
+          },
+          mppts: [{ stringsInParallel: 1, modulesPerString: 5 }],
+        },
+      ],
+    };
+    const result = runEngine(secondInverterWrongPhases);
+    expect(result.hasBlockingFailure).toBe(true);
+    const failingBlocks = result.checks.filter((c) => c.level === 'BLOCK' && !c.pass);
+    expect(failingBlocks.some((c) => c.id === 'C19')).toBe(true);
+  });
+
+  it('catches an under-rated AC breaker (C13) on a SECOND inverter, not just array[0]\'s (regression guard for only checking array[0].inverter.iacMaxA)', () => {
+    // array[0]'s inverter has iacMaxA=16, matching acBreaker.ratedCurrentA=20 (C13 passes for it).
+    // The second inverter draws iacMaxA=25, exceeding the shared 20A breaker — if runEngine only
+    // checked array[0].inverter.iacMaxA against the breaker, this overload would never surface.
+    const secondInverterOverloadsBreaker = {
+      ...habibKhedhiraFixture,
+      array: [
+        ...habibKhedhiraFixture.array,
+        {
+          inverter: {
+            phases: 1 as const,
+            pacW: 1000,
+            sacVA: 1000,
+            vdcMaxV: 550,
+            mpptMinV: 90,
+            mpptMaxV: 550,
+            startUpV: 100,
+            mpptCount: 1,
+            inputsPerMppt: 2,
+            idcMaxPerMpptA: 16,
+            iscMaxPerMpptA: 20,
+            vacNomV: 230,
+            iacMaxA: 25,
+            stegApproved: true,
+          },
+          mppts: [{ stringsInParallel: 1, modulesPerString: 5 }],
+        },
+      ],
+    };
+    const result = runEngine(secondInverterOverloadsBreaker);
+    expect(result.hasBlockingFailure).toBe(true);
+    const failingBlocks = result.checks.filter((c) => c.level === 'BLOCK' && !c.pass);
+    expect(failingBlocks.some((c) => c.id === 'C13')).toBe(true);
+  });
+
+  it('flags a non-STEG-approved SECOND inverter (C21, WARN) even though array[0]\'s is approved (regression guard for only checking array[0].inverter.stegApproved)', () => {
+    const secondInverterNotStegApproved = {
+      ...habibKhedhiraFixture,
+      array: [
+        ...habibKhedhiraFixture.array,
+        {
+          inverter: {
+            phases: 1 as const,
+            pacW: 1000,
+            sacVA: 1000,
+            vdcMaxV: 550,
+            mpptMinV: 90,
+            mpptMaxV: 550,
+            startUpV: 100,
+            mpptCount: 1,
+            inputsPerMppt: 2,
+            idcMaxPerMpptA: 16,
+            iscMaxPerMpptA: 20,
+            vacNomV: 230,
+            iacMaxA: 16,
+            stegApproved: false,
+          },
+          mppts: [{ stringsInParallel: 1, modulesPerString: 5 }],
+        },
+      ],
+    };
+    const result = runEngine(secondInverterNotStegApproved);
+    const c21Results = result.checks.filter((c) => c.id === 'C21');
+    expect(c21Results.some((c) => !c.pass)).toBe(true);
+  });
 });

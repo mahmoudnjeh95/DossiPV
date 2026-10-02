@@ -42,6 +42,10 @@ function resistivityFor(conductor: ConductorType): number {
  * table's highest (hottest, most conservative) key, since there is no higher key available to
  * prefer instead — verified by trace for K3_PVC (max key 60) with ambientTempC=80: the loop's
  * `key <= ambientTempC` condition is satisfied by every key including 60, so `chosen` ends at 60.
+ * Symmetrically, when ambientTempC is below every key in the table, `chosen` stays at its
+ * initial value `keys[0]` (the lowest, least conservative key) — still a real key present in
+ * the table, never undefined — verified by trace for K3_PR (min key 10) with ambientTempC=5:
+ * no key satisfies `key <= 5`, so the loop never reassigns `chosen` and it returns '10'.
  */
 function nearestTempKey(table: Record<string, number>, ambientTempC: number): string {
   const keys = Object.keys(table)
@@ -91,6 +95,10 @@ export function izCorrected(
     throw new UnsupportedInstallMethodError(installMethod);
   }
 
+  // `?? 1.0` here is unreachable dead code, not a live fail-open fallback: k2Index is clamped
+  // into [0, k2Table.length - 1] and both K2 tables (constants.ts) are fixed non-empty literal
+  // arrays, so the index always resolves. Kept only because noUncheckedIndexedAccess types the
+  // index access as possibly undefined; verified by trace, not left as a silent unsafe default.
   const k2Table =
     referenceMethod === 'E' || referenceMethod === 'F'
       ? K2_TRAY_PERFORATED_E_F
@@ -98,6 +106,10 @@ export function izCorrected(
   const k2Index = Math.min(groupedCircuits - 1, k2Table.length - 1);
   const k2 = k2Table[Math.max(0, k2Index)] ?? 1.0;
 
+  // `?? 1.0` here is likewise unreachable: nearestTempKey always returns a key that exists in
+  // its own input table (either the nearest key <= ambientTempC, or the lowest key when
+  // ambientTempC is below every tabled value — verified by trace, see nearestTempKey's own
+  // doc comment), so the lookup below never actually misses.
   const k3Table = insulation === 'PVC' ? K3_PVC : K3_PR;
   const k3 = k3Table[nearestTempKey(k3Table, ambientTempC)] ?? 1.0;
 

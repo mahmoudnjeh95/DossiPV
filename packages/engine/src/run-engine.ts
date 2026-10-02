@@ -41,7 +41,10 @@ import {
   checkC08,
   checkC09,
   checkC10,
+  checkC13,
   checkC16,
+  checkC19,
+  checkC21,
   type ChecksContext,
   type FuseCheckInput,
 } from './checks';
@@ -152,6 +155,25 @@ function evaluatePerMpptBlockChecks(
 }
 
 /**
+ * Runs the 3 single-inverter-dependent BLOCK/WARN checks (C13, C19, C21) for one inverter's
+ * own iacMaxA/phases/stegApproved — never array[0]'s. Called once per inverter entry so a
+ * second (or later) inverter with a mismatched breaker rating, phase count, or STEG approval
+ * status is never silently skipped (see runEngine's doc comment).
+ */
+function evaluatePerInverterChecks(
+  inverter: InverterInput,
+  acBreakerRatedCurrentA: number,
+  acRunIzCorrected: number,
+  sitePhases: 1 | 3,
+): CheckResult[] {
+  return [
+    checkC13(inverter.iacMaxA, acBreakerRatedCurrentA, acRunIzCorrected),
+    checkC19(sitePhases, inverter.phases),
+    checkC21(inverter.stegApproved),
+  ];
+}
+
+/**
  * Single entry point: validated project + equipment data in, every derived value and every
  * check's result out. Imported unchanged by the browser (live form validation) and the worker
  * (final generation) — spec §4's "single source of truth" guarantee depends on both call sites
@@ -162,11 +184,14 @@ export function runEngine(input: RunEngineInput): EngineResult {
 
   // Multi-inverter aggregation (P_DC_W, POWER_RATIO) works for any array shape via
   // totalDcPowerW/totalModuleCount. The Ns/Np/fuse-dependent BLOCK checks (C01, C02, C04, C07,
-  // C08, C09, C10, C16) are evaluated below once per representative (first) MPPT for the
-  // `derived` output — which remains a single representative string's values, as before — AND,
-  // separately, for EVERY MPPT of EVERY inverter entry via evaluatePerMpptBlockChecks(), so a
-  // second inverter or MPPT with an out-of-bounds string still produces hasBlockingFailure: true
-  // and a traceable failing check, rather than being silently skipped.
+  // C08, C09, C10, C16) and the single-inverter-dependent checks (C13, C19, C21) are evaluated
+  // below once per representative (first) MPPT/inverter for the `derived` output — which
+  // remains a single representative string's/inverter's values, as before — AND, separately,
+  // for EVERY MPPT of EVERY inverter entry via evaluatePerMpptBlockChecks(), and for EVERY
+  // inverter entry via evaluatePerInverterChecks(), so a second inverter or MPPT with an
+  // out-of-bounds string, mismatched phase count, under-rated breaker, or missing STEG
+  // approval still produces hasBlockingFailure: true (or a traceable WARN) rather than being
+  // silently skipped.
   const firstEntry = array[0];
   const firstMppt = firstEntry?.mppts[0];
   const ns = firstMppt?.modulesPerString ?? 0;
@@ -353,7 +378,24 @@ export function runEngine(input: RunEngineInput): EngineResult {
     }
   }
 
-  const checks = [...runAllChecks(checksContext), ...perMpptChecks];
+  // The array-wide 22-check run above already evaluates the 3 single-inverter-dependent
+  // checks (C13, C19, C21) for array[0].inverter via checksContext. To avoid silently
+  // ignoring every OTHER inverter's own breaker rating, phase count, or STEG approval status,
+  // re-run those same 3 checks for every inverter entry EXCEPT the first (which would just
+  // duplicate the result already in runAllChecks' output) and append every result.
+  const perInverterChecks: CheckResult[] = [];
+  for (const entry of array.slice(1)) {
+    perInverterChecks.push(
+      ...evaluatePerInverterChecks(
+        entry.inverter,
+        input.acBreaker.ratedCurrentA,
+        acRunIz,
+        input.site.phases,
+      ),
+    );
+  }
+
+  const checks = [...runAllChecks(checksContext), ...perMpptChecks, ...perInverterChecks];
   const hasBlockingFailure = checks.some((c) => c.level === 'BLOCK' && !c.pass);
 
   return {
