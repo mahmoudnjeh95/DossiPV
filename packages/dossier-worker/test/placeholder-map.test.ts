@@ -67,4 +67,28 @@ describe('buildPlaceholderValues', () => {
     const values = buildPlaceholderValues(makeContext());
     expect(values.EARTH_ROD_COUNT).toBe('3');
   });
+
+  it('formats STRING_VMP_STC with decimals:1 and unit "V", tracking the engine formula', () => {
+    const values = buildPlaceholderValues(makeContext());
+    const engineResult = runEngine(habibKhedhiraFixture);
+    const expectedNumber = engineResult.derived.STRING_VMP_STC!;
+    const expectedFormatted = new Intl.NumberFormat('fr-FR', {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(expectedNumber);
+    expect(values.STRING_VMP_STC).toBe(`${expectedFormatted} V`);
+  });
+
+  it('formats DU_DC_PCT and DU_AC_PCT with decimals:2 and unit "%", tracking the engine formula', () => {
+    const values = buildPlaceholderValues(makeContext());
+    const engineResult = runEngine(habibKhedhiraFixture);
+    for (const key of ['DU_DC_PCT', 'DU_AC_PCT'] as const) {
+      const expectedNumber = engineResult.derived[key]!;
+      const expectedFormatted = new Intl.NumberFormat('fr-FR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(expectedNumber);
+      expect(values[key]).toBe(`${expectedFormatted} %`);
+    }
+  });
 });
