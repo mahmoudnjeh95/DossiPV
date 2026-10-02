@@ -3,8 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "engines": { "node": ">=25.0.0" },
-  "workspaces": ["packages/*", "apps/*"],
+  "engines": {
+    "node": ">=25.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
@@ -13,11 +18,11 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "eslint": "^9.17.0",
-    "@typescript-eslint/parser": "^8.18.0",
     "@typescript-eslint/eslint-plugin": "^8.18.0",
-    "prettier": "^3.4.0"
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }
