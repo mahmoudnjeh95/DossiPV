@@ -3,6 +3,7 @@
   "references": [
     { "path": "packages/engine" },
     { "path": "packages/document-text" },
+    { "path": "packages/dossier-worker" },
     { "path": "apps/web" }
   ]
 }
