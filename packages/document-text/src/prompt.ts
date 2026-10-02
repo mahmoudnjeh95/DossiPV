@@ -19,7 +19,10 @@ Réponds uniquement avec les 6 sections demandées, dans un français clair et p
  * non-personal fields from DossierTextInput are ever interpolated here —
  * see types.ts's doc comment for the PII boundary this depends on.
  */
-export function buildDossierTextUserPrompt(input: DossierTextInput): string {
+export function buildDossierTextUserPrompt(
+  input: DossierTextInput,
+  allowedPlaceholderNames: string[],
+): string {
   return `Rédige les 6 sections du dossier technique pour cette installation photovoltaïque :
 
 - Module : ${input.moduleBrandModel}
@@ -39,5 +42,9 @@ Rédige :
 5. structure — description de la structure et du lestage
 6. conclusion — conclusion du dossier
 
-Rappel : aucun chiffre réel, uniquement des espaces réservés entre accolades.`;
+Espaces réservés autorisés — n'utilise AUCUN espace réservé en dehors de cette liste : ${allowedPlaceholderNames
+    .map((name) => `{${name}}`)
+    .join(', ')}.
+
+Rappel : aucun chiffre réel, uniquement des espaces réservés entre accolades, et uniquement parmi la liste ci-dessus.`;
 }

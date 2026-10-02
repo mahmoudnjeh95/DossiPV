@@ -62,12 +62,13 @@ export class DossierTextParseError extends Error {
 export async function generateDossierText(
   input: DossierTextInput,
   client: Anthropic,
+  allowedPlaceholderNames: string[],
 ): Promise<DossierTextSections> {
   const response = await client.messages.parse({
     model: 'claude-opus-5-5',
     max_tokens: 4096,
     system: DOSSIER_TEXT_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: buildDossierTextUserPrompt(input) }],
+    messages: [{ role: 'user', content: buildDossierTextUserPrompt(input, allowedPlaceholderNames) }],
     output_config: {
       format: dossierTextOutputFormat,
     },

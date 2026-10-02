@@ -27,20 +27,26 @@ describe('DOSSIER_TEXT_SYSTEM_PROMPT', () => {
 
 describe('buildDossierTextUserPrompt', () => {
   it('includes the equipment brand/model fields', () => {
-    const prompt = buildDossierTextUserPrompt(sampleInput);
+    const prompt = buildDossierTextUserPrompt(sampleInput, ['INVERTER_COUNT', 'EARTH_ROD_COUNT']);
     expect(prompt).toContain('LONGi LR7-72HGD-620M');
     expect(prompt).toContain('Sofar 1-4KTL2-G3');
   });
 
   it('mentions the fuse section only when dcFuseRequired is true', () => {
-    const withFuse = buildDossierTextUserPrompt({ ...sampleInput, dcFuseRequired: true });
-    const withoutFuse = buildDossierTextUserPrompt({ ...sampleInput, dcFuseRequired: false });
+    const withFuse = buildDossierTextUserPrompt(
+      { ...sampleInput, dcFuseRequired: true },
+      ['INVERTER_COUNT', 'EARTH_ROD_COUNT'],
+    );
+    const withoutFuse = buildDossierTextUserPrompt(
+      { ...sampleInput, dcFuseRequired: false },
+      ['INVERTER_COUNT', 'EARTH_ROD_COUNT'],
+    );
     expect(withFuse).toContain('fusible DC');
     expect(withoutFuse).not.toContain('(incluant la section fusible DC)');
   });
 
   it('never embeds the inverter count or earth rod count as a literal number — always a placeholder', () => {
-    const prompt = buildDossierTextUserPrompt(sampleInput);
+    const prompt = buildDossierTextUserPrompt(sampleInput, ['INVERTER_COUNT', 'EARTH_ROD_COUNT']);
     expect(prompt).toContain('{INVERTER_COUNT}');
     expect(prompt).toContain('{EARTH_ROD_COUNT}');
     // The count values themselves (1 inverter, 3 earth rods) must never appear as a
@@ -48,5 +54,13 @@ describe('buildDossierTextUserPrompt', () => {
     // string (e.g. "Sofar 1-4KTL2-G3", where "1" is part of the product name, not a count).
     expect(prompt).not.toMatch(/\bnombre d'onduleurs\s*:\s*\d/);
     expect(prompt).not.toMatch(/\d+\s*piquets de terre/);
+  });
+
+  it('lists every allowed placeholder name explicitly, not just examples', () => {
+    const allowedNames = ['P_DC_W', 'NS', 'NORME_CABLAGE'];
+    const prompt = buildDossierTextUserPrompt(sampleInput, allowedNames);
+    expect(prompt).toContain('{P_DC_W}');
+    expect(prompt).toContain('{NS}');
+    expect(prompt).toContain('{NORME_CABLAGE}');
   });
 });

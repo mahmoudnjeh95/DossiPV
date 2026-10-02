@@ -38,7 +38,12 @@ function fakeClientReturning(parsedResult: unknown): Anthropic {
 describe('generateDossierText', () => {
   it('returns the 6 sections when the client responds with clean placeholder-only text', async () => {
     const client = fakeClientReturning(cleanSections);
-    const result = await generateDossierText(sampleInput, client);
+    const result = await generateDossierText(sampleInput, client, [
+      'P_DC_W',
+      'NS',
+      'NORME_REF',
+      'EARTH_ROD_COUNT',
+    ]);
     expect(result).toEqual(cleanSections);
   });
 
@@ -48,9 +53,9 @@ describe('generateDossierText', () => {
       introduction: 'Ce dossier présente une installation de 3100 Wc.',
     };
     const client = fakeClientReturning(dirtySections);
-    await expect(generateDossierText(sampleInput, client)).rejects.toThrow(
-      RawNumberLeakError,
-    );
+    await expect(
+      generateDossierText(sampleInput, client, ['P_DC_W', 'NS', 'NORME_REF', 'EARTH_ROD_COUNT']),
+    ).rejects.toThrow(RawNumberLeakError);
   });
 
   it('never includes client-identifying data in the prompt sent to the client', async () => {
@@ -64,7 +69,7 @@ describe('generateDossierText', () => {
       },
     } as unknown as Anthropic;
 
-    await generateDossierText(sampleInput, client);
+    await generateDossierText(sampleInput, client, ['P_DC_W', 'NS', 'NORME_REF', 'EARTH_ROD_COUNT']);
 
     // sampleInput has no name/address/CIN fields at all (enforced by the
     // DossierTextInput type), so this is a structural guarantee, not just
