@@ -235,6 +235,7 @@ model PvModule {
   lengthMm              Float
   widthMm               Float
   weightKg              Float
+  noctC                 Float?
 
   createdAt             DateTime @default(now())
 
