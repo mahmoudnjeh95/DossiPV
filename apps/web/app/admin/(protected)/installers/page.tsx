@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { db } from '@dossipv/db';
+import { requireAuthenticatedSuperAdmin } from '../layout';
 
 export interface CompanyWithRelationsForList {
   id: string;
@@ -48,6 +49,11 @@ export function shapeInstallerRow(company: CompanyWithRelationsForList, now: Dat
 }
 
 export default async function InstallerListPage(): Promise<React.JSX.Element> {
+  // Defense-in-depth: the (protected) layout already guards this route, but this call makes
+  // the page's own access control explicit and independent of the layout's own correctness,
+  // matching sub-project #4's dashboard page, which does the same for the same reason.
+  await requireAuthenticatedSuperAdmin();
+
   const companies = await db.company.findMany({
     include: {
       subscription: { include: { plan: true } },
