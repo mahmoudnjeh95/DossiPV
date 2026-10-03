@@ -102,6 +102,29 @@ describe('RateLimiter', () => {
     vi.useRealTimers();
   });
 
+  it('locks out an attacker pacing (maxAttempts - 1) guesses per window forever (fixed-window bypass guard)', () => {
+    // A fixed-window counter that resets fully to 0 at a boundary lets an attacker submit
+    // (maxAttempts - 1) guesses, wait exactly for the window to roll over, then repeat
+    // forever without ever triggering a lockout. A sliding window must NOT allow this: as
+    // long as the attacker keeps guessing at a rate that would exceed maxAttempts within ANY
+    // trailing windowMs-long span, they must eventually get locked out.
+    vi.useFakeTimers();
+    const limiter = new RateLimiter(3, 60_000);
+
+    // Pace exactly 2 guesses, advance 59s (just under the window), repeat. Under a sliding
+    // window this must eventually lock, because any 60s span now contains more than 2
+    // guesses once the attacker's cadence overlaps two "rounds".
+    let locked = false;
+    for (let round = 0; round < 5 && !locked; round++) {
+      locked = limiter.recordFailure('a@example.com') || locked;
+      locked = limiter.recordFailure('a@example.com') || locked;
+      vi.advanceTimersByTime(59_000);
+    }
+    expect(locked).toBe(true);
+
+    vi.useRealTimers();
+  });
+
   it('does not grow without bound when flooded with distinct keys (resource-exhaustion guard)', () => {
     // Exercise well past MAX_TRACKED_KEYS (10_000) worth of distinct keys and confirm the
     // limiter keeps functioning (doesn't throw, doesn't slow to a crawl) rather than growing
