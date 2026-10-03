@@ -35,7 +35,30 @@ own named volume `dossipv_pgdata`, own container `dossipv-postgres-1`), bound to
   be rotated by the user independently of this spec — not required for any of this work since
   key-based auth is now in place.
 
-## 3. Decisions carried from brainstorming
+## 3. Prisma 7 architecture note (verified empirically, not assumed)
+
+Prisma 7 changed its configuration model significantly from the pattern used in Prisma 5/6
+(which this spec originally assumed before being corrected during plan-writing, via a real
+smoke-tested migration against the actual tunneled database — see the implementation plan's
+own notes on this). Three concrete differences that affect every later section:
+
+1. **`datasource.url` can no longer live in `schema.prisma`.** `url = env("DATABASE_URL")`
+   inside the `datasource db { ... }` block is rejected outright (`P1012`). The schema's
+   `datasource` block now only declares the `provider`; the actual connection URL moves to a
+   new `prisma.config.ts` file at the repo root (or wherever `--schema`/`--config` point), as
+   `defineConfig({ datasource: { url: process.env.DATABASE_URL } })`.
+2. **`PrismaClient` requires an explicit driver adapter at construction** — `new PrismaClient()`
+   with no arguments throws `PrismaClientInitializationError` ("A driver adapter is required
+   to connect to your database"). For PostgreSQL, this is `@prisma/adapter-pg`'s `PrismaPg`
+   class, constructed with the connection string and passed as `{ adapter }`.
+3. **The CLI's `db execute` subcommand only runs side-effecting SQL** (DDL/DML) and reports
+   success/failure — it does not print query results, so it cannot be used for ad-hoc `SELECT`
+   verification. Reading data back for verification purposes goes through the generated
+   client itself (`db.$queryRawUnsafe(...)` for raw SQL, or the generated model API for
+   anything the schema already models) — both of which are exercised throughout the seed
+   script and its own verification steps.
+
+## 4. Decisions carried from brainstorming
 
 - **ORM**: Prisma — chosen for migration tooling and type-safe client generation, and because
   the super-admin catalog CRUD screens benefit from its ergonomics.
@@ -66,7 +89,26 @@ own named volume `dossipv_pgdata`, own container `dossipv-postgres-1`), bound to
   `Payment` table is generic enough (`method` enum, nullable `gatewayReference`) to support
   either without a schema change when the Konnect integration is built.
 
-## 4. Prisma schema
+## 5. Prisma schema
+
+Two files, per the §3 architecture note: `schema.prisma` (models only — no connection URL)
+and a new `prisma.config.ts` that supplies it.
+
+```ts
+// packages/db/prisma.config.ts
+import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  migrations: {
+    path: 'prisma/migrations',
+  },
+  datasource: {
+    url: process.env.DATABASE_URL,
+  },
+});
+```
 
 ```prisma
 // packages/db/prisma/schema.prisma
@@ -76,7 +118,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ---------- Accounts & sessions ----------
@@ -883,7 +924,7 @@ model ClaudeUsageLog {
 }
 ```
 
-## 5. New package: `@dossipv/db`
+## 6. New package: `@dossipv/db`
 
 A new workspace package holding the Prisma schema, generated client, and migrations —
 matching the monorepo's existing package shape:
@@ -899,7 +940,7 @@ Other packages (`apps/web`, a future `@dossipv/document-pipeline`) depend on `@d
 query the database — matching the existing monorepo's dependency-direction discipline (no new
 package introduces a dependency cycle).
 
-## 6. Testing
+## 7. Testing
 
 Given this is schema-only (no business logic yet), testing is narrower than the engine's
 formula-level TDD:
@@ -912,7 +953,7 @@ formula-level TDD:
   smoke test that every table's required fields are actually satisfiable.
 - No unit tests for Prisma-generated code itself (nothing to unit test — it's generated).
 
-## 7. Open items for the implementation plan to resolve
+## 8. Open items for the implementation plan to resolve
 
 - Exact concurrent-session limit value (2? 3?) for the anti-sharing session cap — a config
   value, not fixed by this spec.
