@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteCableButton } from './delete-button';
+import { Cable, Add } from '@dossipv/icons';
 
 export default async function CableListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -10,8 +11,14 @@ export default async function CableListPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <h1>Câbles</h1>
-      <Link href="/admin/equipment/cables/new">Ajouter un câble</Link>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Cable size="lg" color="gold" />
+        Câbles
+      </h1>
+      <Link href="/admin/equipment/cables/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+        <Add size="sm" color="inherit" />
+        Ajouter un câble
+      </Link>
       <table>
         <thead>
           <tr>

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteAcIsolatorButton } from './delete-button';
+import { AcIsolator, Add } from '@dossipv/icons';
 
 export default async function AcIsolatorListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -10,8 +11,14 @@ export default async function AcIsolatorListPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <h1>Sectionneurs AC</h1>
-      <Link href="/admin/equipment/ac-isolators/new">Ajouter un sectionneur AC</Link>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <AcIsolator size="lg" color="gold" />
+        Sectionneurs AC
+      </h1>
+      <Link href="/admin/equipment/ac-isolators/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+        <Add size="sm" color="inherit" />
+        Ajouter un sectionneur AC
+      </Link>
       <table>
         <thead>
           <tr>

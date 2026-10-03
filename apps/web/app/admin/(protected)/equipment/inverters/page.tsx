@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteInverterButton } from './delete-button';
+import { Inverter, Add } from '@dossipv/icons';
 
 export default async function InverterListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -10,8 +11,14 @@ export default async function InverterListPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <h1>Onduleurs</h1>
-      <Link href="/admin/equipment/inverters/new">Ajouter un onduleur</Link>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Inverter size="lg" color="gold" />
+        Onduleurs
+      </h1>
+      <Link href="/admin/equipment/inverters/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+        <Add size="sm" color="inherit" />
+        Ajouter un onduleur
+      </Link>
       <table>
         <thead>
           <tr>

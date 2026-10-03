@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteAccessoryButton } from './delete-button';
+import { Accessory, Add } from '@dossipv/icons';
 
 export default async function AccessoryListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -10,8 +11,14 @@ export default async function AccessoryListPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <h1>Accessoires</h1>
-      <Link href="/admin/equipment/accessories/new">Ajouter un accessoire</Link>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Accessory size="lg" color="gold" />
+        Accessoires
+      </h1>
+      <Link href="/admin/equipment/accessories/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+        <Add size="sm" color="inherit" />
+        Ajouter un accessoire
+      </Link>
       <table>
         <thead>
           <tr>
