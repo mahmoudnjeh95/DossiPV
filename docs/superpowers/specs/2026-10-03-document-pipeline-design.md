@@ -102,24 +102,27 @@ packages/docx-template/
 ## 4. Snapshot shape
 
 ```ts
+// Every top-level section except cableRuns/capturedAt is nullable, matching the schema's own
+// optional relations on Project (a project can legitimately exist with some sections not yet
+// filled in) — the snapshot reflects that reality rather than assuming completeness.
 export interface ProjectSnapshot {
-  client: ProjectClient;        // full row, not just the FK
-  site: ProjectSite;
+  client: ProjectClient | null;   // full row when present, not just the FK
+  site: ProjectSite | null;
   arrayConfig: {
-    module: PvModule;             // full equipment row, captured by value
+    module: PvModule;              // full equipment row, captured by value
     inverters: {
-      inverter: Inverter;          // full equipment row, captured by value
+      inverter: Inverter;           // full equipment row, captured by value
       mppts: ProjectArrayMppt[];
     }[];
-  };
-  protections: ProjectProtections & {
+  } | null;
+  protections: (ProjectProtections & {
     dcSpd: Spd; dcSwitch: DcSwitch; dcFuse: DcFuse | null;
     acBreaker: AcBreaker; acSpd: Spd; acIsolator: AcIsolator | null;
-  };
-  cablingConfig: ProjectCablingConfig;
-  cableRuns: ProjectCableRun[];
-  structure: ProjectStructure;
-  earthing: ProjectEarthing;
+  }) | null;
+  cablingConfig: ProjectCablingConfig | null;
+  cableRuns: ProjectCableRun[];     // array relation — naturally empty, never null
+  structure: ProjectStructure | null;
+  earthing: ProjectEarthing | null;
   capturedAt: string; // ISO timestamp
 }
 ```
