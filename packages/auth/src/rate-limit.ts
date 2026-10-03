@@ -15,9 +15,25 @@ interface FailureRecord {
 /**
  * Caps how many distinct keys this limiter tracks at once. Without a bound, an attacker
  * submitting failed logins for an unbounded number of fabricated emails would grow the
- * internal map without limit (a memory-exhaustion DoS). When full, the oldest key that is NOT
- * currently locked out is evicted to make room (see evictToMakeRoomFor) — an active lockout
- * is never evicted early just to track a new, unrelated key.
+ * internal map without limit (a memory-exhaustion DoS). When full, a key is evicted to make
+ * room (see evictToMakeRoomFor) — preferring a non-locked key, falling back to the
+ * soonest-expiring lockout only when every tracked key is locked, so recordFailure() never
+ * silently drops a real failure.
+ *
+ * ACCEPTED, DOCUMENTED LIMITATIONS at this bound (not fixed further — see the design spec
+ * and plan ledger for the decision to stop iterating here after several review rounds each
+ * closing one narrow gap and surfacing another):
+ * - evictToMakeRoomFor() scans the whole map (O(MAX_TRACKED_KEYS)) once per call once the map
+ *   is full. An attacker who keeps the map saturated forces this scan on every subsequent
+ *   call from any key — a bounded CPU cost (10,000 iterations, not unbounded), not a crash or
+ *   memory-exhaustion risk, but real added latency under sustained flooding.
+ * - When the map is saturated with attacker-controlled locked keys, a legitimate user's
+ *   NON-locked in-progress failure count can itself be the one evicted (since eviction prefers
+ *   non-locked keys), resetting that user's own sliding-window count. This does not let an
+ *   attacker bypass THAT user's eventual lockout (they'd just need to fail again to re-trigger
+ *   it), but it is a real fairness/disruption cost under sustained flooding, not eliminated.
+ * Both require tracking per-source (e.g. IP-aware) state to fully resolve, which is out of
+ * this package's scope (see the email-keying trade-off note above).
  */
 const MAX_TRACKED_KEYS = 10_000;
 
