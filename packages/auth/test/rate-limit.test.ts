@@ -52,47 +52,22 @@ describe('RateLimiter', () => {
     expect(limiter.recordFailure('a@example.com')).toBe(true);
   });
 
-  it('doubles the effective lockout window each time the key is locked out again (exponential backoff)', () => {
+  it('uses a flat lockout window — a second consecutive lockout does not last any longer than the first', () => {
+    // Exponential backoff was deliberately removed: it would have made each subsequent
+    // lockout cycle MORE damaging to the victim for the attacker's same fixed cost per cycle
+    // (maxAttempts cheap requests), rewarding a patient targeted attacker rather than
+    // punishing them. A flat window avoids that — every lockout, first or fifth, lasts
+    // exactly `windowMs`.
     vi.useFakeTimers();
     const limiter = new RateLimiter(3, 60_000);
 
-    // First lockout: base window (60s).
     limiter.recordFailure('a@example.com');
     limiter.recordFailure('a@example.com');
     expect(limiter.recordFailure('a@example.com')).toBe(true);
-    expect(limiter.isLocked('a@example.com')).toBe(true);
-
-    // Just under the base window: still locked.
-    vi.advanceTimersByTime(59_000);
-    expect(limiter.isLocked('a@example.com')).toBe(true);
-
-    // Past the base window: unlocked, but the next lockout's window is now 120s (2x).
-    vi.advanceTimersByTime(2_000);
+    vi.advanceTimersByTime(60_001);
     expect(limiter.isLocked('a@example.com')).toBe(false);
 
-    limiter.recordFailure('a@example.com');
-    limiter.recordFailure('a@example.com');
-    expect(limiter.recordFailure('a@example.com')).toBe(true);
-
-    // 90s in: would have expired under the base 60s window, but the doubled 120s window
-    // for this second lockout means it's still locked — proves the backoff actually grew.
-    vi.advanceTimersByTime(90_000);
-    expect(limiter.isLocked('a@example.com')).toBe(true);
-
-    vi.useRealTimers();
-  });
-
-  it('clear() resets the backoff level, not just the current lockout', () => {
-    vi.useFakeTimers();
-    const limiter = new RateLimiter(3, 60_000);
-
-    limiter.recordFailure('a@example.com');
-    limiter.recordFailure('a@example.com');
-    limiter.recordFailure('a@example.com'); // first lockout, backoff level 1
-    limiter.clear('a@example.com');
-
-    // After clear(), a fresh set of failures should lock out for the BASE window again, not
-    // the doubled one — proving clear() resets lockoutsTriggered, not just the failure count.
+    // Second consecutive lockout cycle — must expire at the SAME 60s mark, not later.
     limiter.recordFailure('a@example.com');
     limiter.recordFailure('a@example.com');
     expect(limiter.recordFailure('a@example.com')).toBe(true);
@@ -100,6 +75,26 @@ describe('RateLimiter', () => {
     expect(limiter.isLocked('a@example.com')).toBe(false);
 
     vi.useRealTimers();
+  });
+
+  it('does not let a flood of unrelated keys evict and bypass an active lockout early', () => {
+    // An earlier version of evictOldestIfFull() treated a currently-locked record's "last
+    // activity" as 0 (since its timestamps array is empty while locked), making every active
+    // lockout look like the single oldest entry in the whole map — so an attacker flooding in
+    // MAX_TRACKED_KEYS distinct junk keys could force-evict a victim's active lockout and
+    // bypass it early. This proves that no longer happens.
+    const limiter = new RateLimiter(3, 60_000);
+
+    limiter.recordFailure('victim@example.com');
+    limiter.recordFailure('victim@example.com');
+    expect(limiter.recordFailure('victim@example.com')).toBe(true);
+    expect(limiter.isLocked('victim@example.com')).toBe(true);
+
+    for (let i = 0; i < 10_000; i++) {
+      limiter.recordFailure(`flood-${i}@example.com`);
+    }
+
+    expect(limiter.isLocked('victim@example.com')).toBe(true);
   });
 
   it('locks out an attacker pacing (maxAttempts - 1) guesses per window forever (fixed-window bypass guard)', () => {
