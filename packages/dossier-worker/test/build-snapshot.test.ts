@@ -4,14 +4,25 @@ import { buildProjectSnapshot, type ProjectSnapshot } from '../src/build-snapsho
 
 let companyId: string;
 let projectId: string;
+let pvModuleId: string;
+let inverterId: string;
+let cableId: string;
+
+// Each run gets its own brand/email suffix so concurrent or previously-aborted runs of this
+// same file never collide on a shared name — afterEach below also deletes catalog rows by the
+// exact id created in beforeEach, never by this shared brand, so one test's cleanup can never
+// fail trying to delete a row a DIFFERENT run (or a stale leftover) still references.
+let runId: string;
 
 beforeEach(async () => {
+  runId = crypto.randomUUID();
+
   const company = await db.company.create({
     data: {
       name: 'Snapshot Test Co',
       address: 'Test address',
       phone: '+216 00 000 000',
-      email: 'snapshot-test@example.com',
+      email: `snapshot-test-${runId}@example.com`,
       legalRepFullName: 'Test Rep',
       anmeCode: 'SNAP-0001',
       anmeCategory: 'BT',
@@ -23,7 +34,7 @@ beforeEach(async () => {
 
   const pvModule = await db.pvModule.create({
     data: {
-      brand: 'TestBrand',
+      brand: `TestBrand-${runId}`,
       model: 'TestModule',
       pmaxW: 400,
       vmpV: 40,
@@ -42,7 +53,7 @@ beforeEach(async () => {
   });
   const inverter = await db.inverter.create({
     data: {
-      brand: 'TestInv',
+      brand: `TestInv-${runId}`,
       model: 'TestModel',
       phases: 1,
       pacW: 3000,
@@ -62,7 +73,7 @@ beforeEach(async () => {
 
   const cable = await db.cable.create({
     data: {
-      brand: 'TestCable',
+      brand: `TestCable-${runId}`,
       model: 'TestDC',
       usage: 'DC_SOLAR',
       conductor: 'Cu',
@@ -70,6 +81,10 @@ beforeEach(async () => {
       sections: { create: [{ sectionMm2: 6, izA: 56, izReferenceMethod: 'B' }] },
     },
   });
+
+  pvModuleId = pvModule.id;
+  inverterId = inverter.id;
+  cableId = cable.id;
 
   const project = await db.project.create({
     data: {
@@ -133,10 +148,12 @@ afterEach(async () => {
   await db.projectSite.deleteMany({ where: { projectId } });
   await db.projectClient.deleteMany({ where: { projectId } });
   await db.project.delete({ where: { id: projectId } });
-  await db.pvModule.deleteMany({ where: { brand: 'TestBrand' } });
-  await db.inverter.deleteMany({ where: { brand: 'TestInv' } });
-  await db.cableSection.deleteMany({ where: { cable: { brand: 'TestCable' } } });
-  await db.cable.deleteMany({ where: { brand: 'TestCable' } });
+  // Deleted by the exact id this run created, never by the (now per-run-unique) brand name —
+  // scoping by id means one test's cleanup can never fail on a row a different run still owns.
+  await db.pvModule.delete({ where: { id: pvModuleId } });
+  await db.inverter.delete({ where: { id: inverterId } });
+  await db.cableSection.deleteMany({ where: { cableId } });
+  await db.cable.delete({ where: { id: cableId } });
   await db.company.delete({ where: { id: companyId } });
 });
 
@@ -144,16 +161,16 @@ describe('buildProjectSnapshot', () => {
   it('captures the module and inverter by VALUE, not just by id', async () => {
     const snapshot = await buildProjectSnapshot(projectId);
 
-    expect(snapshot.arrayConfig?.module.brand).toBe('TestBrand');
+    expect(snapshot.arrayConfig?.module.brand).toBe(`TestBrand-${runId}`);
     expect(snapshot.arrayConfig?.module.pmaxW).toBe(400);
-    expect(snapshot.arrayConfig?.inverters[0]!.inverter.brand).toBe('TestInv');
+    expect(snapshot.arrayConfig?.inverters[0]!.inverter.brand).toBe(`TestInv-${runId}`);
   });
 
   it("captures each cable run's cable and its sections by VALUE, not just the cableId", async () => {
     const snapshot = await buildProjectSnapshot(projectId);
 
     expect(snapshot.cableRuns).toHaveLength(1);
-    expect(snapshot.cableRuns[0]!.cable.brand).toBe('TestCable');
+    expect(snapshot.cableRuns[0]!.cable.brand).toBe(`TestCable-${runId}`);
     expect(snapshot.cableRuns[0]!.cable.sections[0]).toMatchObject({
       sectionMm2: 6,
       izA: 56,
