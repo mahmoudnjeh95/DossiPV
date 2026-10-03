@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { validateSuperAdminSession, type AuthenticatedSuperAdmin } from '@dossipv/auth';
+import { AdminShell } from '../../../components/admin-shell';
 
 const ADMIN_SESSION_COOKIE_NAME = 'dossipv_admin_session';
 
@@ -26,5 +27,5 @@ export async function requireAuthenticatedSuperAdmin(): Promise<AuthenticatedSup
 
 export default async function AdminProtectedLayout({ children }: { children: ReactNode }): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
-  return <>{children}</>;
+  return <AdminShell>{children}</AdminShell>;
 }
