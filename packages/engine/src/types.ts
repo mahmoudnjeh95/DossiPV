@@ -28,6 +28,9 @@ export interface PvModuleInput {
   lengthMm: number;
   widthMm: number;
   weightKg: number;
+  /** Nominal Operating Cell Temperature, °C. Optional — defaults to 45 (standard crystalline-
+   * silicon assumption) in the engine's own cell-temperature calculation when absent. */
+  noctC?: number;
 }
 
 export interface InverterInput {

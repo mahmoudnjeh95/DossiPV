@@ -235,6 +235,7 @@ model PvModule {
   lengthMm              Float
   widthMm               Float
   weightKg              Float
+  noctC                 Float?
 
   createdAt             DateTime @default(now())
 
@@ -732,6 +733,21 @@ model ProjectSimulation {
   systemLossesPct        Float?
 
   @@map("project_simulation")
+}
+
+model PvgisWeatherCache {
+  id                 String   @id @default(uuid())
+  latRounded         Float
+  lonRounded         Float
+  tiltDeg            Float
+  azimuthDeg         Float
+  year               Int
+  inPlaneDataJson    Json
+  horizontalDataJson Json
+  fetchedAt          DateTime @default(now())
+
+  @@unique([latRounded, lonRounded, tiltDeg, azimuthDeg, year])
+  @@map("pvgis_weather_cache")
 }
 
 model ProjectImagery {
