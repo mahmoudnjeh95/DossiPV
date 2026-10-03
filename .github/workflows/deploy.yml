@@ -1,0 +1,99 @@
+name: CI & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint, typecheck, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: packages/db
+        env:
+          # Only needed for `prisma generate`'s eager config load, never a
+          # real connection — no live database in this job.
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+        run: npm run generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  deploy:
+    name: Build & deploy to server
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and deploy over SSH
+        env:
+          SSH_HOST: ${{ secrets.DEPLOY_SSH_HOST }}
+          SSH_USER: ${{ secrets.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          POSTGRES_PASSWORD: ${{ secrets.DEPLOY_POSTGRES_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.DEPLOY_ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Pinned to the server's real host keys (captured first-hand over
+          # an already-trusted SSH session, not fetched over the network at
+          # CI time) — ssh-keyscan alone is trust-on-first-use and would
+          # accept whatever key a MITM presented on the runner's first
+          # connection.
+          cat deploy/known_hosts >> ~/.ssh/known_hosts
+
+          SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes $SSH_USER@$SSH_HOST"
+
+          # Ship the tracked source tree to a build dir on the server
+          # (same approach validated manually: tar the git-tracked files,
+          # stream over SSH, extract).
+          git archive --format=tar HEAD | $SSH "mkdir -p /home/debian/dossipv-release && tar -xf - -C /home/debian/dossipv-release"
+
+          # Build the image on the server, tagged with the commit SHA.
+          $SSH "cd /home/debian/dossipv-release && docker build -t dossipv-web:${{ github.sha }} -t dossipv-web:latest ."
+
+          # Write the runtime .env for compose (never echoed/logged; heredoc
+          # stays inside the remote shell).
+          $SSH "umask 077 && cat > /home/debian/dossipv/.env" <<EOF
+          POSTGRES_PASSWORD=$POSTGRES_PASSWORD
+          ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+          IMAGE_TAG=${{ github.sha }}
+          EOF
+
+          # Deploy the compose file from this checkout and roll the app
+          # service. Postgres is unaffected unless its config actually
+          # changed (compose only recreates services whose config differs).
+          cat deploy/docker-compose.yml | $SSH "cat > /home/debian/dossipv/docker-compose.yml"
+          $SSH "cd /home/debian/dossipv && docker compose up -d --remove-orphans"
+
+          # Clean up the build dir, and old dossipv-web images only (this
+          # server runs several unrelated apps — a blanket `docker image
+          # prune` would touch their images too). Keeps the current + the
+          # just-superseded tag, drops anything older.
+          $SSH "rm -rf /home/debian/dossipv-release"
+          $SSH "docker images dossipv-web --format '{{.Tag}}' | grep -v -E '^(latest|${{ github.sha }})$' | xargs -r -I{} docker rmi dossipv-web:{} || true"
