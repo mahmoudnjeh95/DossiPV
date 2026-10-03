@@ -78,4 +78,15 @@ describe('loginAction', () => {
 
     expect(JSON.stringify(result)).not.toContain('super-secret-password-value');
   });
+
+  it('treats a non-string email field (e.g. a submitted File) as invalid rather than stringifying it', async () => {
+    const formData = new FormData();
+    formData.set('email', new Blob(['x']), 'not-an-email.txt');
+    formData.set('password', 'any-password');
+
+    const result = await loginAction(undefined, formData);
+
+    expect(mockLogin).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Email ou mot de passe incorrect.' });
+  });
 });

@@ -15,14 +15,18 @@ export async function loginAction(
   _prevState: LoginActionState | undefined,
   formData: FormData,
 ): Promise<LoginActionState | undefined> {
-  const email = String(formData.get('email') ?? '');
-  const password = String(formData.get('password') ?? '');
+  const emailField = formData.get('email');
+  const passwordField = formData.get('password');
+
+  if (typeof emailField !== 'string' || typeof passwordField !== 'string') {
+    return { error: 'Email ou mot de passe incorrect.' };
+  }
 
   // Only the login() call is inside this try — redirect() below runs outside any catch that
   // could intercept its internal throw.
   let token: string;
   try {
-    const result = await login(email, password);
+    const result = await login(emailField, passwordField);
     token = result.token;
   } catch (error) {
     if (error instanceof InvalidCredentialsError) {
