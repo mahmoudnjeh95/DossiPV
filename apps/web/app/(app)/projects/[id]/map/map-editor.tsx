@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { computePanelLayout } from '@dossipv/engine';
 import { saveMapDataAction } from './actions';
 import { ACTIVE_MAP_PROVIDER } from './esri-provider';
+import { Map as MapIcon, Polygon as PolygonIcon, MarkerTech, MarkerMeter, MarkerEarth, Check } from '@dossipv/icons';
 
 // Leaflet's default marker icon paths are relative to its own CSS file and don't survive
 // Next.js's bundler — without this, markers render with no icon image and two 404s.
@@ -152,25 +153,33 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
 
   return (
     <main>
-      <h1>Carte du site</h1>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <MapIcon size="lg" color="gold" />
+        Carte du site
+      </h1>
       {tier === 'PREMIUM' && (
-        <div>
-          <button type="button" onClick={() => setDrawMode('polygon')}>
+        <div className="actions" style={{ marginBottom: 12 }}>
+          <button type="button" onClick={() => setDrawMode('polygon')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <PolygonIcon size="sm" color="inherit" />
             Dessiner le contour
           </button>
-          <button type="button" onClick={handleFinishPolygon} disabled={outline.length < 3}>
+          <button type="button" onClick={handleFinishPolygon} disabled={outline.length < 3} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Check size="sm" color="inherit" />
             Terminer le contour
           </button>
-          <button type="button" onClick={() => setDrawMode('technicalRoom')}>
+          <button type="button" onClick={() => setDrawMode('technicalRoom')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <MarkerTech size="sm" color="inherit" />
             Placer : Local technique
           </button>
-          <button type="button" onClick={() => setDrawMode('meter')}>
+          <button type="button" onClick={() => setDrawMode('meter')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <MarkerMeter size="sm" color="inherit" />
             Placer : Compteur STEG
           </button>
-          <button type="button" onClick={() => setDrawMode('earthPit')}>
+          <button type="button" onClick={() => setDrawMode('earthPit')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <MarkerEarth size="sm" color="inherit" />
             Placer : Piquet de terre
           </button>
-          <button type="button" onClick={handleAutoFill} disabled={outline.length < 3 || !moduleInfo}>
+          <button type="button" onClick={handleAutoFill} disabled={outline.length < 3 || !moduleInfo} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             Remplissage automatique
           </button>
         </div>

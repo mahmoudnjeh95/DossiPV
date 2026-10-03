@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../lib/labels';
+import { Projects, Add } from '@dossipv/icons';
 
 export default async function ProjectListPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
@@ -15,8 +16,12 @@ export default async function ProjectListPage(): Promise<React.JSX.Element> {
   return (
     <main>
       <div className="actions" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <h1 style={{ margin: 0 }}>Projets</h1>
-        <Link href="/projects/new" className="button">
+        <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Projects size="lg" color="gold" />
+          Projets
+        </h1>
+        <Link href="/projects/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Add size="sm" color="inherit" />
           Nouveau projet
         </Link>
       </div>
