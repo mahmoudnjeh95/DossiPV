@@ -1,0 +1,13 @@
+# Contains a real client's personal data (name, address, CIN-adjacent info) — never commit
+*.pdf
+node_modules/
+.env
+.env.local
+dist/
+build/
+.next/
+*.tsbuildinfo
+.superpowers/
+.worktrees/
+.claude/worktrees/
+.playwright-mcp/

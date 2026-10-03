@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/engine" },
+    { "path": "packages/document-text" },
+    { "path": "packages/dossier-worker" },
+    { "path": "packages/db" },
+    { "path": "packages/auth" },
+    { "path": "packages/pvgis-client" },
+    { "path": "packages/docx-template" },
+    { "path": "apps/web" }
+  ]
+}

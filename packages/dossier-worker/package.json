@@ -1,0 +1,21 @@
+{
+  "name": "@dossipv/dossier-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dossipv/db": "*",
+    "@dossipv/engine": "*",
+    "@dossipv/document-text": "*",
+    "@dossipv/pvgis-client": "*",
+    "@anthropic-ai/sdk": "^0.74.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4"
+  }
+}

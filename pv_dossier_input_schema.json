@@ -1,0 +1,667 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/pv-dossier-steg/v1",
+  "title": "PV Dossier Generator – Input Specification (STEG BT / Site isolé)",
+  "description": "Three top-level objects: companySettings (entered once), equipmentLibrary (entered once, reused), project (one per dossier). Keys are English for code; x-label holds the French UI label used in the dossier. x-rules at the bottom lists deterministic calculations and checks that MUST be implemented in code (not by the LLM).",
+  "type": "object",
+  "required": ["companySettings", "equipmentLibrary", "project"],
+  "properties": {
+    "companySettings": { "$ref": "#/$defs/CompanySettings" },
+    "equipmentLibrary": { "$ref": "#/$defs/EquipmentLibrary" },
+    "project": { "$ref": "#/$defs/Project" }
+  },
+
+  "$defs": {
+
+    "FileRef": {
+      "type": "object",
+      "description": "Uploaded file stored by the app (PDF/PNG/JPG).",
+      "required": ["fileId", "mimeType"],
+      "properties": {
+        "fileId": { "type": "string" },
+        "fileName": { "type": "string" },
+        "mimeType": { "type": "string", "enum": ["application/pdf", "image/png", "image/jpeg"] }
+      }
+    },
+
+    "GpsPoint": {
+      "type": "object",
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": 30.2, "maximum": 37.6, "x-label": "Latitude (°N, décimal)" },
+        "lon": { "type": "number", "minimum": 7.5, "maximum": 11.7, "x-label": "Longitude (°E, décimal)" }
+      },
+      "x-notes": "Bounds = Tunisia. Store decimal only; render DMS (36°24'14.4\"N) everywhere from this single value so cover page, situation plan and simulation can never disagree."
+    },
+
+    "CompanySettings": {
+      "type": "object",
+      "x-ui": { "section": "Paramètres société", "editableBy": "admin" },
+      "required": ["name", "logo", "address", "phone", "email", "anmeAccreditation", "legalRepresentative"],
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "x-label": "Raison sociale" },
+        "shortName": { "type": "string", "x-label": "Nom court (en-tête)", "examples": ["T.C.S.S"] },
+        "slogan": { "type": "string", "x-label": "Slogan" },
+        "logo": { "$ref": "#/$defs/FileRef", "x-label": "Logo" },
+        "address": { "type": "string", "x-label": "Adresse" },
+        "phone": { "type": "string", "pattern": "^\\+?216 ?[0-9 ]{8,11}$", "x-label": "Téléphone" },
+        "email": { "type": "string", "format": "email", "x-label": "Email" },
+        "taxId": { "type": "string", "x-label": "Matricule fiscal / Identifiant unique" },
+        "commercialRegister": { "type": "string", "x-label": "Registre de commerce" },
+        "legalRepresentative": {
+          "type": "object",
+          "required": ["fullName"],
+          "properties": {
+            "fullName": { "type": "string", "x-label": "Représentant légal" },
+            "role": { "type": "string", "default": "Gérant" }
+          }
+        },
+        "anmeAccreditation": {
+          "type": "object",
+          "required": ["code", "validFrom", "validTo", "certificate"],
+          "properties": {
+            "code": { "type": "string", "x-label": "Code d'agrément ANME", "examples": ["434"] },
+            "reference": { "type": "string", "x-label": "N° de référence du certificat" },
+            "category": {
+              "type": "string",
+              "enum": ["BT", "MT", "BT_MT"],
+              "default": "BT",
+              "x-label": "Catégorie d'agrément"
+            },
+            "validFrom": { "type": "string", "format": "date" },
+            "validTo": { "type": "string", "format": "date" },
+            "certificate": { "$ref": "#/$defs/FileRef", "x-label": "Certificat ANME (Annexe IP)" }
+          },
+          "x-validation": [
+            "BLOCK generation if validTo < project.dossierDate (expired accreditation).",
+            "WARN if validTo - today < 60 days."
+          ]
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Pre-filled values for new projects.",
+          "properties": {
+            "tMinC": { "type": "number", "default": -10 },
+            "tMaxC": { "type": "number", "default": 85 },
+            "maxVoltageDropPct": { "type": "number", "default": 3 },
+            "earthResistanceTargetOhm": { "type": "number", "default": 25 },
+            "designWindSpeedKmh": { "type": "number", "default": 120 },
+            "cosPhi": { "type": "number", "default": 0.8 }
+          }
+        }
+      }
+    },
+
+    "EquipmentBase": {
+      "type": "object",
+      "required": ["id", "brand", "model"],
+      "properties": {
+        "id": { "type": "string" },
+        "brand": { "type": "string" },
+        "model": { "type": "string" },
+        "datasheet": { "$ref": "#/$defs/FileRef" },
+        "anmeHomologation": {
+          "type": "object",
+          "properties": {
+            "reference": { "type": "string" },
+            "validTo": { "type": "string", "format": "date" },
+            "document": { "$ref": "#/$defs/FileRef" }
+          }
+        }
+      }
+    },
+
+    "EquipmentLibrary": {
+      "type": "object",
+      "x-ui": { "section": "Bibliothèque équipements" },
+      "properties": {
+        "modules": { "type": "array", "items": { "$ref": "#/$defs/PvModule" } },
+        "inverters": { "type": "array", "items": { "$ref": "#/$defs/Inverter" } },
+        "dcSpds": { "type": "array", "items": { "$ref": "#/$defs/Spd" } },
+        "acSpds": { "type": "array", "items": { "$ref": "#/$defs/Spd" } },
+        "dcSwitches": { "type": "array", "items": { "$ref": "#/$defs/DcSwitch" } },
+        "dcFuses": { "type": "array", "items": { "$ref": "#/$defs/DcFuse" } },
+        "acBreakers": { "type": "array", "items": { "$ref": "#/$defs/AcBreaker" } },
+        "acIsolators": { "type": "array", "items": { "$ref": "#/$defs/AcIsolator" } },
+        "cables": { "type": "array", "items": { "$ref": "#/$defs/Cable" } },
+        "accessories": { "type": "array", "items": { "$ref": "#/$defs/Accessory" } }
+      }
+    },
+
+    "PvModule": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["pmaxW", "vmpV", "impA", "vocV", "iscA", "tempCoeffVocPct", "tempCoeffIscPct", "tempCoeffPmaxPct", "irmA", "lengthMm", "widthMm", "weightKg", "maxSystemVoltageV"],
+      "properties": {
+        "pmaxW": { "type": "number", "exclusiveMinimum": 0, "x-label": "Puissance unitaire (Wc, STC)" },
+        "vmpV": { "type": "number", "exclusiveMinimum": 0, "x-label": "Vmpp (STC)" },
+        "impA": { "type": "number", "exclusiveMinimum": 0, "x-label": "Impp (STC)" },
+        "vocV": { "type": "number", "exclusiveMinimum": 0, "x-label": "Voc (STC)" },
+        "iscA": { "type": "number", "exclusiveMinimum": 0, "x-label": "Isc (STC)" },
+        "tempCoeffVocPct": { "type": "number", "maximum": 0, "x-label": "Coef. température Voc (%/°C)", "examples": [-0.23] },
+        "tempCoeffIscPct": { "type": "number", "minimum": 0, "x-label": "Coef. température Isc (%/°C)", "examples": [0.045] },
+        "tempCoeffPmaxPct": { "type": "number", "maximum": 0, "x-label": "Coef. température Pmax (%/°C)", "examples": [-0.28] },
+        "tempCoeffVmpPct": { "type": "number", "maximum": 0, "x-label": "Coef. température Vmp (%/°C) – optionnel", "x-notes": "If absent, use tempCoeffPmaxPct for Vmp correction." },
+        "irmA": { "type": "number", "exclusiveMinimum": 0, "x-label": "IRM / Max series fuse rating (A)" },
+        "maxSystemVoltageV": { "type": "number", "x-label": "Tension système max (V)" },
+        "bifacial": { "type": "boolean", "default": false },
+        "bifacialGainPct": { "type": "number", "minimum": 0, "maximum": 30, "default": 0, "x-label": "Gain bifacial retenu (%)" },
+        "lengthMm": { "type": "number" },
+        "widthMm": { "type": "number" },
+        "weightKg": { "type": "number" }
+      }
+    },
+
+    "Inverter": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["phases", "pacW", "sacVA", "vdcMaxV", "mpptMinV", "mpptMaxV", "startUpV", "mpptCount", "inputsPerMppt", "idcMaxPerMpptA", "iscMaxPerMpptA", "vacNomV", "iacMaxA"],
+      "properties": {
+        "phases": { "type": "integer", "enum": [1, 3], "x-label": "Monophasé (1) / Triphasé (3)" },
+        "pacW": { "type": "number", "x-label": "Puissance AC nominale (W)" },
+        "sacVA": { "type": "number", "x-label": "Puissance apparente max (VA)" },
+        "vdcMaxV": { "type": "number", "x-label": "Vdc max (V)" },
+        "mpptMinV": { "type": "number", "x-label": "Plage MPPT min (V)" },
+        "mpptMaxV": { "type": "number", "x-label": "Plage MPPT max (V)" },
+        "startUpV": { "type": "number", "x-label": "Tension de démarrage (V)" },
+        "mpptCount": { "type": "integer", "minimum": 1 },
+        "inputsPerMppt": { "type": "integer", "minimum": 1 },
+        "idcMaxPerMpptA": { "type": "number", "x-label": "Idc max / MPPT (A)" },
+        "iscMaxPerMpptA": { "type": "number", "x-label": "Isc max / MPPT (A)" },
+        "vacNomV": { "type": "number", "default": 230 },
+        "vacRangeV": { "type": "string", "examples": ["180-276"] },
+        "iacMaxA": { "type": "number", "x-label": "Iac max (A)" },
+        "integratedDcSwitch": { "type": "boolean", "default": false },
+        "stegApproved": { "type": "boolean", "x-label": "Figure sur la liste STEG des onduleurs homologués" }
+      },
+      "x-validation": ["mpptMinV < mpptMaxV <= vdcMaxV"]
+    },
+
+    "Spd": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["side", "type", "ucV", "upKV", "inKA"],
+      "properties": {
+        "side": { "type": "string", "enum": ["DC", "AC"] },
+        "type": { "type": "integer", "enum": [1, 2], "x-label": "Type 1 / Type 2" },
+        "poles": { "type": "integer" },
+        "ucV": { "type": "number", "x-label": "Ucpv (DC) / Uc (AC) (V)" },
+        "upKV": { "type": "number", "x-label": "Niveau de protection Up (kV)" },
+        "inKA": { "type": "number", "x-label": "In (kA)" },
+        "imaxKA": { "type": "number", "x-label": "Imax (kA)" },
+        "iscpvKA": { "type": "number", "x-label": "Iscpv (kA) – DC uniquement" }
+      }
+    },
+
+    "DcSwitch": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["ratedVoltageV", "ratedCurrentA", "poles"],
+      "properties": {
+        "ratedVoltageV": { "type": "number" },
+        "ratedCurrentA": { "type": "number" },
+        "poles": { "type": "integer" },
+        "breakingCapacityKA": { "type": "number" }
+      }
+    },
+
+    "DcFuse": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["ratedVoltageV", "ratedCurrentA"],
+      "properties": {
+        "ratedVoltageV": { "type": "number" },
+        "ratedCurrentA": { "type": "number" },
+        "class": { "type": "string", "default": "gPV" }
+      }
+    },
+
+    "AcBreaker": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["poles", "ratedVoltageV", "ratedCurrentA", "breakingCapacityKA", "residualSensitivityMA"],
+      "properties": {
+        "poles": { "type": "integer", "enum": [2, 4] },
+        "ratedVoltageV": { "type": "number" },
+        "ratedCurrentA": { "type": "number" },
+        "curve": { "type": "string", "enum": ["B", "C", "D"], "default": "C" },
+        "breakingCapacityKA": { "type": "number" },
+        "residualSensitivityMA": { "type": "integer", "enum": [30, 300] },
+        "residualType": { "type": "string", "enum": ["AC", "A", "F", "B"], "default": "A" }
+      }
+    },
+
+    "AcIsolator": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["ratedVoltageV", "ratedCurrentA", "poles"],
+      "properties": {
+        "ratedVoltageV": { "type": "number" },
+        "ratedCurrentA": { "type": "number" },
+        "poles": { "type": "integer" }
+      }
+    },
+
+    "Cable": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["usage", "conductor", "insulation", "sectionsMm2"],
+      "properties": {
+        "usage": { "type": "string", "enum": ["DC_SOLAR", "AC", "EARTH"] },
+        "conductor": { "type": "string", "enum": ["Cu", "Al"] },
+        "insulation": { "type": "string", "enum": ["PR", "PVC", "EPR", "XLPO"], "x-notes": "PR/EPR/XLPO use the PR column of table 52K." },
+        "standard": { "type": "string", "examples": ["H1Z2Z2-K / EN 50618", "U1000 R2V"] },
+        "sectionsMm2": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sectionMm2", "izA"],
+            "properties": {
+              "sectionMm2": { "type": "number" },
+              "izA": { "type": "number", "x-label": "Courant admissible Iz de référence (A)" },
+              "izReferenceMethod": { "type": "string", "enum": ["B", "C", "E", "F"] }
+            }
+          }
+        }
+      }
+    },
+
+    "Accessory": {
+      "allOf": [{ "$ref": "#/$defs/EquipmentBase" }],
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["MC4_CONNECTOR", "DISTRIBUTION_BLOCK", "CABLE_TRAY", "DC_ENCLOSURE", "AC_ENCLOSURE", "EARTH_ROD", "OTHER"] },
+        "spec": { "type": "string", "examples": ["MC4-30A-1000V", "Fj-207/100B", "Chemin 30/35"] }
+      }
+    },
+
+    "Project": {
+      "type": "object",
+      "required": ["meta", "client", "site", "array", "protections", "cabling", "structure", "earthing", "simulation", "annexes"],
+      "properties": {
+        "meta": { "$ref": "#/$defs/ProjectMeta" },
+        "client": { "$ref": "#/$defs/Client" },
+        "site": { "$ref": "#/$defs/Site" },
+        "array": { "$ref": "#/$defs/ArrayConfig" },
+        "protections": { "$ref": "#/$defs/Protections" },
+        "cabling": { "$ref": "#/$defs/Cabling" },
+        "structure": { "$ref": "#/$defs/Structure" },
+        "earthing": { "$ref": "#/$defs/Earthing" },
+        "simulation": { "$ref": "#/$defs/Simulation" },
+        "imagery": { "$ref": "#/$defs/Imagery" },
+        "offGrid": { "$ref": "#/$defs/OffGrid" },
+        "annexes": { "$ref": "#/$defs/Annexes" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "meta": { "properties": { "tier": { "const": "premium" } } } } },
+          "then": { "required": ["imagery"] }
+        },
+        {
+          "if": { "properties": { "site": { "properties": { "gridType": { "const": "ISOLATED" } } } } },
+          "then": { "required": ["offGrid"] }
+        }
+      ]
+    },
+
+    "ProjectMeta": {
+      "type": "object",
+      "required": ["tier", "dossierDate", "language"],
+      "properties": {
+        "tier": { "type": "string", "enum": ["standard", "premium"], "x-notes": "premium = includes satellite implantation plan + situation plan images." },
+        "dossierNumber": { "type": "string", "x-label": "N° Dossier" },
+        "dossierDate": { "type": "string", "format": "date", "x-notes": "Single date used on cover, plans and title blocks." },
+        "language": { "type": "string", "enum": ["fr"], "default": "fr" },
+        "status": { "type": "string", "enum": ["draft", "generated", "submitted", "approved", "rejected"], "default": "draft" },
+        "revision": { "type": "integer", "minimum": 0, "default": 0 }
+      }
+    },
+
+    "Client": {
+      "type": "object",
+      "x-ui": { "section": "Client" },
+      "required": ["fullName", "stegReference", "address"],
+      "properties": {
+        "civility": { "type": "string", "enum": ["M.", "Mme", "Société"] },
+        "fullName": { "type": "string", "x-label": "Client BT" },
+        "clientKind": { "type": "string", "enum": ["residential", "professional"], "default": "residential" },
+        "stegReference": { "type": "string", "pattern": "^[0-9 ]{8,14}$", "x-label": "Référence STEG (contrat BT)" },
+        "cin": { "type": "string", "pattern": "^[0-9]{8}$", "x-label": "N° CIN" },
+        "commercialRegister": { "type": "string", "x-label": "Registre de commerce (si professionnel)" },
+        "phone": { "type": "string" },
+        "address": { "type": "string", "x-label": "Adresse" },
+        "city": { "type": "string" },
+        "governorate": { "type": "string" },
+        "annualConsumptionKWh": { "type": "number", "minimum": 0, "x-label": "Consommation annuelle (kWh/an)" },
+        "subscribedPowerKVA": { "type": "number", "x-label": "Puissance souscrite (kVA)" }
+      },
+      "x-validation": ["WARN if PV annual production > 1.3 × annualConsumptionKWh (STEG sizing rules for net-metering)."]
+    },
+
+    "Site": {
+      "type": "object",
+      "x-ui": { "section": "Site" },
+      "required": ["gps", "gridType", "phases", "mountingType", "tiltDeg", "azimuthDeg", "lightningRod", "generator"],
+      "properties": {
+        "gps": { "$ref": "#/$defs/GpsPoint" },
+        "gridType": { "type": "string", "enum": ["BT", "MT", "ISOLATED"], "default": "BT", "x-label": "Raccordement" },
+        "phases": { "type": "integer", "enum": [1, 3], "x-label": "Réseau monophasé / triphasé" },
+        "mountingType": { "type": "string", "enum": ["FLAT_ROOF_BALLAST", "FLAT_ROOF_ANCHORED", "SLOPED_ROOF", "GROUND", "CARPORT"], "default": "FLAT_ROOF_BALLAST" },
+        "roofMaterial": { "type": "string", "x-label": "Nature du toit", "examples": ["Dalle béton", "Tuile", "Bac acier"] },
+        "buildingHeightM": { "type": "number", "minimum": 0 },
+        "tiltDeg": { "type": "number", "minimum": 0, "maximum": 60, "default": 30 },
+        "azimuthDeg": { "type": "number", "minimum": -180, "maximum": 180, "default": 0, "x-notes": "PVsyst convention: 0 = South, -90 = East, +90 = West." },
+        "shading": { "type": "string", "enum": ["NONE", "PARTIAL", "SIGNIFICANT"], "default": "NONE" },
+        "shadingNotes": { "type": "string" },
+        "lightningRod": { "type": "boolean", "x-label": "Bâtiment équipé d'un paratonnerre" },
+        "generator": { "type": "boolean", "x-label": "Bâtiment équipé d'un groupe électrogène" },
+        "installationPoint": { "$ref": "#/$defs/GpsPoint", "x-label": "Point d'implantation des panneaux" },
+        "technicalRoomPoint": { "$ref": "#/$defs/GpsPoint", "x-label": "Local technique" },
+        "meterPoint": { "$ref": "#/$defs/GpsPoint", "x-label": "Compteur STEG" },
+        "earthPitPoint": { "$ref": "#/$defs/GpsPoint", "x-label": "Regard de terre" },
+        "equipmentLocation": {
+          "type": "string",
+          "enum": ["TECHNICAL_ROOM", "OUTDOOR_SHADED", "OUTDOOR_SUN"],
+          "default": "TECHNICAL_ROOM",
+          "x-notes": "Drives ambient temperature for cable sizing: 50 °C local technique / shaded tray, 80 °C sun-exposed tray, 25 °C buried."
+        }
+      },
+      "x-validation": [
+        "If lightningRod = true → DC and AC SPD must be Type 1 (or Type 1+2).",
+        "phases must equal inverter.phases (or 3 × single-phase inverters balanced across phases)."
+      ]
+    },
+
+    "ArrayConfig": {
+      "type": "object",
+      "x-ui": { "section": "Champ PV & onduleurs" },
+      "required": ["moduleId", "inverters"],
+      "properties": {
+        "moduleId": { "type": "string", "x-ref": "equipmentLibrary.modules[].id" },
+        "tMinC": { "type": "number", "default": -10 },
+        "tMaxC": { "type": "number", "default": 85 },
+        "inverters": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["inverterId", "mppts"],
+            "properties": {
+              "inverterId": { "type": "string", "x-ref": "equipmentLibrary.inverters[].id" },
+              "phaseConnection": { "type": "string", "enum": ["L1", "L2", "L3", "3PH"] },
+              "mppts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": ["stringsInParallel", "modulesPerString"],
+                  "properties": {
+                    "stringsInParallel": { "type": "integer", "minimum": 1 },
+                    "modulesPerString": { "type": "integer", "minimum": 1 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "rowsDescription": { "type": "string", "x-label": "Disposition (ex: 1 rangée de 5 modules en portrait)" }
+      }
+    },
+
+    "Protections": {
+      "type": "object",
+      "x-ui": { "section": "Protections DC / AC" },
+      "required": ["dcSpdId", "dcSwitchId", "acBreakerId", "acSpdId"],
+      "properties": {
+        "dcSpdId": { "type": "string", "x-ref": "equipmentLibrary.dcSpds[].id" },
+        "dcSwitchId": { "type": "string", "x-ref": "equipmentLibrary.dcSwitches[].id" },
+        "dcFuseId": { "type": ["string", "null"], "x-ref": "equipmentLibrary.dcFuses[].id", "x-notes": "Required only when rule DC_FUSE_REQUIRED is true." },
+        "acBreakerId": { "type": "string", "x-ref": "equipmentLibrary.acBreakers[].id" },
+        "acSpdId": { "type": "string", "x-ref": "equipmentLibrary.acSpds[].id" },
+        "acIsolatorId": { "type": ["string", "null"], "x-ref": "equipmentLibrary.acIsolators[].id", "x-notes": "Required only when number of inverters > 1." },
+        "mainBreaker": {
+          "type": "object",
+          "properties": {
+            "ratedCurrentA": { "type": "number" },
+            "sensitivityMA": { "type": "integer" }
+          },
+          "x-label": "Disjoncteur général AC (si présent)"
+        },
+        "spdToEquipmentDistanceM": { "type": "number", "default": 1, "x-notes": "If > 10 m, Up must be < 50 % of equipment withstand (instead of 80 %)." },
+        "equipmentImpulseWithstandKV": { "type": "number", "default": 4, "x-label": "Tenue aux chocs des équipements (kV)" }
+      }
+    },
+
+    "CableRun": {
+      "type": "object",
+      "required": ["label", "cableId", "sectionMm2", "lengthM", "installMethod", "ambientContext"],
+      "properties": {
+        "label": { "type": "string", "examples": ["Ch PV 1_ond1", "Onduleur → Coffret AC", "Coffret AC → TGBT"] },
+        "cableId": { "type": "string", "x-ref": "equipmentLibrary.cables[].id" },
+        "sectionMm2": { "type": "number", "enum": [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120] },
+        "lengthM": { "type": "number", "exclusiveMinimum": 0, "maximum": 500, "x-notes": "One-way length; the formula applies the factor 2 / b." },
+        "installMethod": {
+          "type": "string",
+          "enum": ["1", "2", "3", "3A", "4", "4A", "5", "5A", "11", "11A", "12", "13", "14", "16", "17", "18", "21", "22", "61", "62", "63"],
+          "x-label": "Mode de pose (NF C 15-100 tab. 52C)",
+          "x-defaults": { "DC": "13", "AC": "3A" }
+        },
+        "ambientContext": {
+          "type": "string",
+          "enum": ["BURIED", "TECHNICAL_ROOM", "TRAY_SHADED", "TRAY_SUN"],
+          "x-lookup": { "BURIED": 25, "TECHNICAL_ROOM": 50, "TRAY_SHADED": 50, "TRAY_SUN": 80 }
+        },
+        "groupedCircuits": { "type": "integer", "minimum": 1, "default": 1, "x-label": "Nombre de circuits jointifs (K2)" },
+        "layers": { "type": "integer", "minimum": 1, "default": 1, "x-label": "Nombre de couches (K4)" }
+      }
+    },
+
+    "Cabling": {
+      "type": "object",
+      "x-ui": { "section": "Câblage" },
+      "required": ["dcRuns", "acRuns"],
+      "properties": {
+        "dcRuns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/CableRun" }, "x-notes": "One per string (+ optional DC box → inverter run)." },
+        "acRuns": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/CableRun" } },
+        "cosPhi": { "type": "number", "minimum": 0.7, "maximum": 1, "default": 0.8 },
+        "lambdaOhmPerM": { "type": "number", "default": 0.00008, "x-label": "Réactance linéique λ (Ω/m)" },
+        "maxVoltageDropPct": { "type": "number", "default": 3 },
+        "connectorId": { "type": "string", "x-ref": "equipmentLibrary.accessories[kind=MC4_CONNECTOR]" },
+        "cableTrayId": { "type": "string", "x-ref": "equipmentLibrary.accessories[kind=CABLE_TRAY]" }
+      }
+    },
+
+    "Structure": {
+      "type": "object",
+      "x-ui": { "section": "Structure & lestage" },
+      "required": ["material", "frameCount", "heightHM", "depthDM", "windSpeedKmh"],
+      "properties": {
+        "material": { "type": "string", "enum": ["ALUMINIUM", "GALVANIZED_STEEL"], "default": "ALUMINIUM" },
+        "frameDescription": { "type": "string", "examples": ["5 triangles en cornière aluminium 40/40/4"] },
+        "frameCount": { "type": "integer", "minimum": 1, "x-label": "Nombre de triangles / châssis" },
+        "railsDescription": { "type": "string", "examples": ["Tubes carrés 40/40/1.5"] },
+        "fixingDescription": { "type": "string", "examples": ["Pinces aluminium, boulons galvanisés"] },
+        "ballastPerFrame": { "type": "integer", "minimum": 0, "default": 2 },
+        "ballastMassKg": { "type": "number", "minimum": 0, "default": 75 },
+        "ballastType": { "type": "string", "default": "Dalle béton CC2" },
+        "structureWeightN": { "type": "number", "minimum": 0, "x-label": "Poids structure (N)" },
+        "heightHM": { "type": "number", "exclusiveMinimum": 0, "x-label": "H (m)" },
+        "depthDM": { "type": "number", "exclusiveMinimum": 0, "x-label": "D (m)" },
+        "windSpeedKmh": { "type": "number", "default": 120 },
+        "liftCoeffNPerM2": { "type": "number", "default": 339, "x-notes": "Template constant for 120 km/h @ 30°. Recompute if wind/tilt change." },
+        "dragCoeffNPerM2": { "type": "number", "default": 196, "x-notes": "Template constant for 120 km/h @ 30°." },
+        "tieDownCables": { "type": "string", "examples": ["2 câbles acier 4 mm² fixés à la bordure du toit"] },
+        "structureAttestation": { "$ref": "#/$defs/FileRef", "x-label": "Attestation bureau de contrôle (Annexe 3)" }
+      }
+    },
+
+    "Earthing": {
+      "type": "object",
+      "x-ui": { "section": "Mise à la terre" },
+      "required": ["mainEarthSectionMm2", "frameEarthSectionMm2", "rodCount", "rodLengthM"],
+      "properties": {
+        "mainEarthSectionMm2": { "type": "number", "default": 16 },
+        "frameEarthSectionMm2": { "type": "number", "default": 6 },
+        "earthToPitSectionMm2": { "type": "number", "default": 10 },
+        "rodCount": { "type": "integer", "minimum": 1, "default": 3 },
+        "rodLengthM": { "type": "number", "default": 1.5 },
+        "rodSpacingCm": { "type": "number", "default": 35 },
+        "pitSizeCm": { "type": "string", "default": "40 x 40" },
+        "targetResistanceOhm": { "type": "number", "default": 25 },
+        "earthCableId": { "type": "string", "x-ref": "equipmentLibrary.cables[usage=EARTH]" },
+        "distributionBlockId": { "type": "string", "x-ref": "equipmentLibrary.accessories[kind=DISTRIBUTION_BLOCK]" }
+      }
+    },
+
+    "Simulation": {
+      "type": "object",
+      "x-ui": { "section": "Simulation (Annexe 2)" },
+      "required": ["source"],
+      "properties": {
+        "source": { "type": "string", "enum": ["PVSYST_UPLOAD", "PVGIS_AUTO"], "default": "PVSYST_UPLOAD" },
+        "pvsystReport": { "$ref": "#/$defs/FileRef" },
+        "annualProductionKWh": { "type": "number", "x-notes": "Typed from PVsyst or filled by PVGIS." },
+        "specificYieldKWhPerKWp": { "type": "number" },
+        "performanceRatioPct": { "type": "number", "minimum": 50, "maximum": 95 },
+        "systemLossesPct": { "type": "number", "default": 14, "x-notes": "PVGIS input only." }
+      },
+      "allOf": [
+        { "if": { "properties": { "source": { "const": "PVSYST_UPLOAD" } } }, "then": { "required": ["pvsystReport", "annualProductionKWh"] } }
+      ],
+      "x-validation": [
+        "WARN if PVsyst latitude/longitude differ from site.gps by > 0.05°.",
+        "WARN if PVsyst module count, Pnom or inverter model differ from array config."
+      ]
+    },
+
+    "Imagery": {
+      "type": "object",
+      "x-ui": { "section": "Plans (option Premium)" },
+      "required": ["situationImage", "implantationImage", "southArrowDeg"],
+      "properties": {
+        "situationImage": { "$ref": "#/$defs/FileRef", "x-notes": "Satellite capture centred on site.gps (Static Maps API or user upload)." },
+        "implantationImage": { "$ref": "#/$defs/FileRef" },
+        "southArrowDeg": { "type": "number", "minimum": 0, "maximum": 360, "x-notes": "Arrow rotation on the implantation plan." },
+        "panelPolygon": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+          "x-notes": "Pixel coordinates of the panel field drawn by the user on the image."
+        },
+        "markers": {
+          "type": "object",
+          "properties": {
+            "technicalRoom": { "type": "array", "items": { "type": "number" } },
+            "meter": { "type": "array", "items": { "type": "number" } },
+            "earthPit": { "type": "array", "items": { "type": "number" } },
+            "cableRoute": { "type": "array", "items": { "type": "array", "items": { "type": "number" } } }
+          }
+        },
+        "imageryProvider": { "type": "string", "x-notes": "Keep provider attribution visible on the image (Google/Esri terms)." }
+      }
+    },
+
+    "OffGrid": {
+      "type": "object",
+      "x-ui": { "section": "Site isolé (non couvert par le modèle STEG BT)" },
+      "required": ["dailyLoadKWh", "autonomyDays", "batteryVoltageV", "batteryChemistry"],
+      "properties": {
+        "dailyLoadKWh": { "type": "number", "minimum": 0 },
+        "autonomyDays": { "type": "number", "minimum": 0.5, "default": 2 },
+        "batteryChemistry": { "type": "string", "enum": ["LiFePO4", "LEAD_ACID", "GEL", "AGM"] },
+        "batteryVoltageV": { "type": "number", "enum": [12, 24, 48] },
+        "maxDepthOfDischargePct": { "type": "number", "default": 80 },
+        "batteryModel": { "type": "string" },
+        "chargeControllerModel": { "type": "string" }
+      },
+      "x-notes": "The current template is for grid-tied BT. Isolated sites need an extra template section (battery sizing, charge controller, DC protection between battery and inverter)."
+    },
+
+    "Annexes": {
+      "type": "object",
+      "x-ui": { "section": "Annexes" },
+      "properties": {
+        "a1_adminDocs": {
+          "type": "object",
+          "properties": {
+            "cin": { "$ref": "#/$defs/FileRef" },
+            "commercialRegister": { "$ref": "#/$defs/FileRef" },
+            "stegContract": { "$ref": "#/$defs/FileRef" },
+            "lastPaidBill": { "$ref": "#/$defs/FileRef" }
+          }
+        },
+        "a3_structureAttestation": { "$ref": "#/$defs/FileRef" },
+        "extraFiles": { "type": "array", "items": { "$ref": "#/$defs/FileRef" } }
+      },
+      "x-notes": "Annexes 2, 4–9 are generated (simulation, single-line diagram, plans, wiring diagrams). Annexes 10–25 are pulled automatically from the equipment library datasheets/homologations."
+    }
+  },
+
+  "x-rules": {
+    "description": "Deterministic calculations. Implement in code; inject results into the template. Symbols: M = module, INV = inverter, Ns = modules per string, Np = strings in parallel on one MPPT.",
+    "constants": {
+      "rhoCu": 0.02314,
+      "rhoAl": 0.037,
+      "K3_PR": { "10": 1.15, "15": 1.12, "20": 1.08, "25": 1.04, "30": 1.0, "35": 0.96, "40": 0.91, "45": 0.87, "50": 0.82, "55": 0.76, "60": 0.71, "65": 0.65, "70": 0.58, "75": 0.5, "80": 0.41 },
+      "K3_PVC": { "10": 1.22, "15": 1.17, "20": 1.12, "25": 1.06, "30": 1.0, "35": 0.94, "40": 0.87, "45": 0.79, "50": 0.71, "55": 0.61, "60": 0.5 },
+      "K1_byMethod": { "1": 0.77, "2": 0.70, "3": 1.0, "3A": 0.9, "4": 1.0, "4A": 0.9, "5": 1.0, "5A": 0.9, "11": 1.0, "11A": 0.95, "12": 1.0, "13": 1.0, "14": 1.0, "16": 1.0, "17": 1.0, "18": 1.21 },
+      "K2_trayPerforated_E_F": [1.0, 0.88, 0.82, 0.77, 0.75, 0.73, 0.73, 0.72, 0.72],
+      "K2_enclosed_B_C": [1.0, 0.8, 0.7, 0.65, 0.6, 0.55, 0.55, 0.5, 0.5, 0.45, 0.4, 0.4],
+      "K4_layers": { "1": 1.0, "2": 0.8, "3": 0.73, "4": 0.7, "5": 0.7, "6": 0.68, "7": 0.68, "8": 0.68, "9": 0.66 }
+    },
+    "derived": [
+      { "id": "P_DC_W", "formula": "sum(Ns × Np over all MPPTs) × M.pmaxW" },
+      { "id": "MODULE_COUNT", "formula": "sum(Ns × Np)" },
+      { "id": "MODULE_AREA_M2", "formula": "MODULE_COUNT × M.lengthMm × M.widthMm / 1e6" },
+      { "id": "VOC_TMIN", "formula": "M.vocV × (1 + M.tempCoeffVocPct/100 × (tMinC − 25))" },
+      { "id": "VMP_TMIN", "formula": "M.vmpV × (1 + coeffVmp/100 × (tMinC − 25))", "notes": "coeffVmp = M.tempCoeffVmpPct ?? M.tempCoeffPmaxPct" },
+      { "id": "VMP_TMAX", "formula": "M.vmpV × (1 + coeffVmp/100 × (tMaxC − 25))" },
+      { "id": "ISC_TMAX", "formula": "M.iscA × (1 + M.tempCoeffIscPct/100 × (tMaxC − 25)) × (1 + bifacialGainPct/100)" },
+      { "id": "IMP_TMAX", "formula": "M.impA × (1 + M.tempCoeffIscPct/100 × (tMaxC − 25)) × (1 + bifacialGainPct/100)" },
+      { "id": "NS_MAX", "formula": "floor(INV.vdcMaxV / VOC_TMIN)" },
+      { "id": "NS_OPT_MAX", "formula": "floor(INV.mpptMaxV / VMP_TMIN)" },
+      { "id": "NS_MIN", "formula": "ceil(max(INV.mpptMinV, INV.startUpV) / VMP_TMAX)" },
+      { "id": "NP_MAX", "formula": "floor(INV.iscMaxPerMpptA / ISC_TMAX)" },
+      { "id": "NP_OPT", "formula": "floor(INV.idcMaxPerMpptA / IMP_TMAX)" },
+      { "id": "POWER_RATIO", "formula": "P_DC_W / sum(INV.pacW)" },
+      { "id": "NC_MAX_NO_FUSE", "formula": "floor(1 + M.irmA / M.iscA)" },
+      { "id": "DC_FUSE_REQUIRED", "formula": "Np > NC_MAX_NO_FUSE (per MPPT)" },
+      { "id": "STRING_VOC_TMIN", "formula": "Ns × VOC_TMIN" },
+      { "id": "STRING_VMP_STC", "formula": "Ns × M.vmpV" },
+      { "id": "ISC_FIELD_DESIGN", "formula": "1.25 × M.iscA × Np × (1 + bifacialGainPct/100)" },
+      { "id": "IZ_CORRECTED", "formula": "Iz × K1 × K2 × K3 × K4" },
+      { "id": "DU_DC_V", "formula": "2 × rho × L / S × M.impA × Np_on_run" },
+      { "id": "DU_DC_PCT", "formula": "100 × DU_DC_V / STRING_VMP_STC" },
+      { "id": "DU_AC_V", "formula": "b × (rho × L / S × cosPhi + lambda × L × sinPhi) × INV.iacMaxA", "notes": "b = 2 single-phase, 1 three-phase; sinPhi = sqrt(1 − cosPhi²)" },
+      { "id": "DU_AC_PCT", "formula": "100 × DU_AC_V / V", "notes": "V = 230 single-phase; 400 three-phase line-to-line (or 230 with b=1 phase-neutral, be consistent)" },
+      { "id": "F_WEIGHT_N", "formula": "frameCount × ballastPerFrame × ballastMassKg × 9.81 + MODULE_COUNT × M.weightKg × 9.81 + structureWeightN" },
+      { "id": "STABILITY_LHS", "formula": "(F_WEIGHT_N − liftCoeffNPerM2 × MODULE_AREA_M2) × depthDM" },
+      { "id": "STABILITY_RHS", "formula": "2 × dragCoeffNPerM2 × MODULE_AREA_M2 × heightHM" }
+    ],
+    "checks": [
+      { "id": "C01", "level": "BLOCK", "rule": "Ns ≤ NS_MAX", "message": "Tension Voc à Tmin dépasse Vdc max onduleur" },
+      { "id": "C02", "level": "BLOCK", "rule": "Ns ≥ NS_MIN", "message": "Vmp à Tmax sous la plage MPPT / tension de démarrage" },
+      { "id": "C03", "level": "WARN", "rule": "Ns ≤ NS_OPT_MAX", "message": "Vmp à Tmin au-dessus de la plage MPPT (écrêtage possible)" },
+      { "id": "C04", "level": "BLOCK", "rule": "Np ≤ NP_MAX", "message": "Isc champ dépasse Isc max MPPT" },
+      { "id": "C05", "level": "WARN", "rule": "Np ≤ NP_OPT", "message": "Imp champ dépasse Idc max MPPT (écrêtage courant)" },
+      { "id": "C06", "level": "BLOCK", "rule": "0.9 ≤ POWER_RATIO ≤ 1.3" },
+      { "id": "C07", "level": "BLOCK", "rule": "STRING_VOC_TMIN ≤ M.maxSystemVoltageV" },
+      { "id": "C08", "level": "BLOCK", "rule": "DC_FUSE_REQUIRED ⇒ dcFuse set AND 1.1×1.25×M.iscA ≤ fuse.ratedCurrentA ≤ M.irmA AND fuse.ratedVoltageV ≥ STRING_VOC_TMIN" },
+      { "id": "C09", "level": "BLOCK", "rule": "dcSwitch.ratedVoltageV ≥ STRING_VOC_TMIN AND dcSwitch.ratedCurrentA ≥ ISC_FIELD_DESIGN" },
+      { "id": "C10", "level": "BLOCK", "rule": "dcSpd.ucV ≥ 1.2 × Ns × M.vocV AND dcSpd.inKA ≥ 5 AND dcSpd.iscpvKA×1000 ≥ ISC_FIELD_DESIGN" },
+      { "id": "C11", "level": "BLOCK", "rule": "spd.upKV < 0.8 × equipmentImpulseWithstandKV (0.5 × if spdToEquipmentDistanceM > 10)" },
+      { "id": "C12", "level": "BLOCK", "rule": "site.lightningRod ⇒ dcSpd.type == 1 AND acSpd.type == 1" },
+      { "id": "C13", "level": "BLOCK", "rule": "INV.iacMaxA ≤ acBreaker.ratedCurrentA ≤ IZ_CORRECTED(AC run)" },
+      { "id": "C14", "level": "BLOCK", "rule": "acSpd.ucV ≥ 1.1 × 230" },
+      { "id": "C15", "level": "BLOCK", "rule": "inverterCount > 1 ⇒ acIsolator set AND acIsolator.ratedCurrentA > sum(INV.iacMaxA)" },
+      { "id": "C16", "level": "BLOCK", "rule": "IZ_CORRECTED(DC run) ≥ ISC_FIELD_DESIGN" },
+      { "id": "C17", "level": "BLOCK", "rule": "sum(DU_DC_PCT) ≤ maxVoltageDropPct AND sum(DU_AC_PCT) ≤ maxVoltageDropPct" },
+      { "id": "C18", "level": "BLOCK", "rule": "STABILITY_LHS > STABILITY_RHS", "message": "Lestage insuffisant – ajouter des dalles" },
+      { "id": "C19", "level": "BLOCK", "rule": "site.phases == INV.phases (or balanced single-phase set)" },
+      { "id": "C20", "level": "WARN", "rule": "Every equipment with anmeHomologation.validTo < dossierDate", "message": "Homologation expirée" },
+      { "id": "C21", "level": "WARN", "rule": "INV.stegApproved != true", "message": "Onduleur absent de la liste STEG" },
+      { "id": "C22", "level": "BLOCK", "rule": "companySettings.anmeAccreditation.validTo ≥ dossierDate" }
+    ],
+    "llmScope": "Claude API is used only for: introduction text, cable/earthing/structure descriptions and conclusion, written from the validated data. All numbers in the dossier must come from 'derived' values, never from LLM output."
+  }
+}
