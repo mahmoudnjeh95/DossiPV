@@ -5,6 +5,7 @@
     { "path": "packages/document-text" },
     { "path": "packages/dossier-worker" },
     { "path": "packages/db" },
+    { "path": "packages/auth" },
     { "path": "apps/web" }
   ]
 }
