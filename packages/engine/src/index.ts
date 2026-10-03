@@ -6,5 +6,6 @@ export * from './protections';
 export * from './cabling';
 export * from './structure';
 export * from './gps';
+export * from './panel-layout';
 export * from './checks';
 export * from './run-engine';
