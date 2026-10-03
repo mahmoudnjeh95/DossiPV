@@ -26,10 +26,17 @@ export function SimulationForm({ projectId, simulation }: { projectId: string; s
           Pertes système (%)
           <input type="number" name="systemLossesPct" step="any" min={0} max={100} defaultValue={simulation?.systemLossesPct ?? ''} />
         </label>
+        <label>
+          Rapport PVsyst (PDF)
+          <input type="file" name="pvsystReport" accept="application/pdf" />
+          <span className="hint">
+            {simulation?.pvsystReportFileId ? 'Un rapport est déjà enregistré ; en choisir un le remplace.' : 'Requis en mode « Rapport PVsyst ».'}
+          </span>
+        </label>
       </div>
       <p className="hint">
         En mode automatique, la simulation horaire est produite à partir des données PVGIS du point GPS du site lors de la
-        génération. Le dépôt du rapport PVsyst (PDF) sera disponible dès que le stockage de fichiers sera activé.
+        génération.
       </p>
     </SectionForm>
   );
