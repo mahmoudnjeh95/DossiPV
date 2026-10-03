@@ -92,4 +92,5 @@ const doc = new Document({
 
 const buffer = await Packer.toBuffer(doc);
 writeFileSync(join(import.meta.dirname, '..', 'template', 'dossier-template.docx'), buffer);
+// eslint-disable-next-line no-console -- one-time CLI authoring script, not shipped runtime code
 console.log('Template written to template/dossier-template.docx');
