@@ -52,7 +52,5 @@ describeIfSoffice('convertDocxToPdf', () => {
 });
 
 if (!sofficeAvailable()) {
-  // eslint-disable-next-line no-console -- intentional: tells a dev running locally without
-  // LibreOffice why this file's tests were skipped, rather than silently showing 0 tests.
   console.warn('convert-to-pdf.test.ts: soffice not found on PATH, skipping (the real server has it installed).');
 }

@@ -4,12 +4,12 @@ import { withRetry } from '../src/retry';
 describe('withRetry', () => {
   it('retries a network-level failure up to maxAttempts, returning the eventual success', async () => {
     let calls = 0;
-    const fn = vi.fn(async () => {
+    const fn = vi.fn(() => {
       calls += 1;
       if (calls < 3) {
-        throw new Error('fetch failed');
+        return Promise.reject(new Error('fetch failed'));
       }
-      return 'ok';
+      return Promise.resolve('ok');
     });
 
     const result = await withRetry(fn, { delaysMs: [0, 0] });
@@ -19,18 +19,14 @@ describe('withRetry', () => {
   });
 
   it('does not retry a non-network error — rethrows on the first attempt', async () => {
-    const fn = vi.fn(async () => {
-      throw new Error('400 Bad Request');
-    });
+    const fn = vi.fn(() => Promise.reject(new Error('400 Bad Request')));
 
     await expect(withRetry(fn, { delaysMs: [0, 0] })).rejects.toThrow('400 Bad Request');
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
   it('gives up after maxAttempts network failures and rethrows the last error', async () => {
-    const fn = vi.fn(async () => {
-      throw new Error('ECONNRESET');
-    });
+    const fn = vi.fn(() => Promise.reject(new Error('ECONNRESET')));
 
     await expect(withRetry(fn, { delaysMs: [0, 0] })).rejects.toThrow('ECONNRESET');
     expect(fn).toHaveBeenCalledTimes(3);

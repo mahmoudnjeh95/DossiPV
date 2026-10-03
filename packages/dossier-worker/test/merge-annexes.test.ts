@@ -48,7 +48,7 @@ async function makeOnePagePng(): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     const stream = png.pack();
-    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
     stream.on('end', () => resolve(Buffer.concat(chunks)));
     stream.on('error', reject);
   });
