@@ -497,6 +497,7 @@ model Project {
   imagery         ProjectImagery?
   offGrid         ProjectOffGrid?
   annexes         ProjectAnnexes?
+  jobs            DossierJob[]
 
   @@map("project")
 }
@@ -775,4 +776,53 @@ model ProjectAnnexExtraFile {
   file        File           @relation("ProjectAnnexExtraFile", fields: [fileId], references: [id])
 
   @@map("project_annex_extra_file")
+}
+
+model DossierJob {
+  id              String      @id @default(uuid())
+  projectId       String
+  project         Project     @relation(fields: [projectId], references: [id])
+  status          JobStatus   @default(PENDING)
+  failedStep      String?
+  failureReason   String?
+  inputSnapshot   Json
+  startedAt       DateTime    @default(now())
+  completedAt     DateTime?
+
+  checkResults    DossierCheckResult[]
+  usageLogs       ClaudeUsageLog[]
+
+  @@map("dossier_job")
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model DossierCheckResult {
+  id        String     @id @default(uuid())
+  jobId     String
+  job       DossierJob @relation(fields: [jobId], references: [id])
+  checkId   String
+  level     String
+  pass      Boolean
+  message   String
+
+  @@map("dossier_check_result")
+}
+
+model ClaudeUsageLog {
+  id            String     @id @default(uuid())
+  jobId         String
+  job           DossierJob @relation(fields: [jobId], references: [id])
+  model         String
+  inputTokens   Int
+  outputTokens  Int
+  costUsd       Decimal    @db.Decimal(10, 4)
+  createdAt     DateTime   @default(now())
+
+  @@map("claude_usage_log")
 }
