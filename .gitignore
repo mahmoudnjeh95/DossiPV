@@ -11,3 +11,4 @@ build/
 .worktrees/
 .claude/worktrees/
 .playwright-mcp/
+.file-storage/
