@@ -1,12 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { mockRedirect, mockSubscriptionUpdate, mockPaymentCreate } = vi.hoisted(() => ({
-  mockRedirect: vi.fn(),
-  mockSubscriptionUpdate: vi.fn(),
-  mockPaymentCreate: vi.fn(),
-}));
+const { mockGet, mockCookies, mockRedirect, mockValidateSuperAdminSession, mockSubscriptionUpdate, mockPaymentCreate } = vi.hoisted(() => {
+  const mockGet = vi.fn();
+  return {
+    mockGet,
+    mockCookies: vi.fn(() => Promise.resolve({ get: mockGet })),
+    mockRedirect: vi.fn(),
+    mockValidateSuperAdminSession: vi.fn(),
+    mockSubscriptionUpdate: vi.fn(),
+    mockPaymentCreate: vi.fn(),
+  };
+});
 
+vi.mock('next/headers', () => ({ cookies: mockCookies }));
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }));
+vi.mock('@dossipv/auth', async () => {
+  const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
+  return { ...actual, validateSuperAdminSession: mockValidateSuperAdminSession };
+});
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
   return {
@@ -27,7 +38,11 @@ import {
 } from '../app/admin/(protected)/installers/[id]/actions';
 
 beforeEach(() => {
+  mockGet.mockReset();
+  mockGet.mockReturnValue({ value: 'valid-admin-token' });
   mockRedirect.mockClear();
+  mockValidateSuperAdminSession.mockReset();
+  mockValidateSuperAdminSession.mockResolvedValue({ id: 'admin-1', email: 'admin@dossipv.tn' });
   mockSubscriptionUpdate.mockClear();
   mockPaymentCreate.mockClear();
 });
@@ -108,5 +123,60 @@ describe('updatePeriodEndAction', () => {
       data: { periodEnd: new Date('2027-01-01') },
     });
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+  });
+});
+
+describe('authorization — no action may mutate data without a valid super-admin session', () => {
+  class FakeNextRedirect extends Error {}
+
+  beforeEach(() => {
+    mockGet.mockReturnValue(undefined);
+    mockValidateSuperAdminSession.mockResolvedValue(null);
+    // Unlike the other describe blocks in this file, redirect() here must actually interrupt
+    // execution the way Next's real redirect() does (it throws internally) — otherwise code
+    // after an unauthenticated requireAuthenticatedSuperAdmin() call would appear safe under
+    // test while actually running straight through in a mocked-but-inaccurate test double.
+    mockRedirect.mockImplementation(() => {
+      throw new FakeNextRedirect();
+    });
+  });
+
+  afterEach(() => {
+    mockRedirect.mockReset();
+  });
+
+  it('suspendSubscriptionAction redirects to /admin/login and never calls subscription.update', async () => {
+    await expect(suspendSubscriptionAction('company-1')).rejects.toThrow(FakeNextRedirect);
+
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/login');
+  });
+
+  it('activateSubscriptionAction redirects to /admin/login and never calls subscription.update', async () => {
+    await expect(activateSubscriptionAction('company-1')).rejects.toThrow(FakeNextRedirect);
+
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/login');
+  });
+
+  it('recordPaymentAction redirects to /admin/login and never calls payment.create', async () => {
+    const formData = new FormData();
+    formData.set('amountTnd', '150.00');
+    formData.set('method', 'MANUAL');
+
+    await expect(recordPaymentAction('company-1', undefined, formData)).rejects.toThrow(FakeNextRedirect);
+
+    expect(mockPaymentCreate).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/login');
+  });
+
+  it('updatePeriodEndAction redirects to /admin/login and never calls subscription.update', async () => {
+    const formData = new FormData();
+    formData.set('periodEnd', '2027-01-01');
+
+    await expect(updatePeriodEndAction('company-1', formData)).rejects.toThrow(FakeNextRedirect);
+
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/login');
   });
 });

@@ -2,17 +2,20 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
+import { requireAuthenticatedSuperAdmin } from '../../layout';
 
 export interface RecordPaymentActionState {
   error: string;
 }
 
 export async function suspendSubscriptionAction(companyId: string): Promise<void> {
+  await requireAuthenticatedSuperAdmin();
   await db.subscription.update({ where: { companyId }, data: { status: 'SUSPENDED' } });
   redirect(`/admin/installers/${companyId}`);
 }
 
 export async function activateSubscriptionAction(companyId: string): Promise<void> {
+  await requireAuthenticatedSuperAdmin();
   await db.subscription.update({ where: { companyId }, data: { status: 'ACTIVE' } });
   redirect(`/admin/installers/${companyId}`);
 }
@@ -22,6 +25,8 @@ export async function recordPaymentAction(
   _prevState: RecordPaymentActionState | undefined,
   formData: FormData,
 ): Promise<RecordPaymentActionState | undefined> {
+  await requireAuthenticatedSuperAdmin();
+
   const amountField = formData.get('amountTnd');
   const methodField = formData.get('method');
   const noteField = formData.get('note');
@@ -49,6 +54,8 @@ export async function recordPaymentAction(
 }
 
 export async function updatePeriodEndAction(companyId: string, formData: FormData): Promise<void> {
+  await requireAuthenticatedSuperAdmin();
+
   const periodEndField = formData.get('periodEnd');
 
   if (typeof periodEndField !== 'string') {
