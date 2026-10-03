@@ -183,6 +183,7 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     lengthMm: dbModule.lengthMm,
     widthMm: dbModule.widthMm,
     weightKg: dbModule.weightKg,
+    ...(dbModule.noctC !== null ? { noctC: dbModule.noctC } : {}),
   };
 
   const array: InverterArrayEntry[] = arrayConfig.inverters.map((inv) => ({

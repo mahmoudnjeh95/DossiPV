@@ -8,7 +8,7 @@ export function SimulationForm({ projectId, simulation }: { projectId: string; s
   return (
     <SectionForm action={saveSimulationAction.bind(null, projectId)} cancelHref={`/projects/${projectId}`}>
       <div className="form-grid">
-        <SelectField name="source" label="Source de la simulation" options={SIMULATION_SOURCE_OPTIONS} defaultValue={simulation?.source ?? 'PVGIS_AUTO'} />
+        <SelectField name="source" label="Source de la simulation" options={SIMULATION_SOURCE_OPTIONS} defaultValue={simulation?.source ?? 'PVGIS_LIVE'} />
         <label>
           Production annuelle (kWh)
           <input type="number" name="annualProductionKWh" step="any" min={0} defaultValue={simulation?.annualProductionKWh ?? ''} />

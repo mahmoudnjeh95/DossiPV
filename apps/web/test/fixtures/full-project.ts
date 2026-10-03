@@ -126,6 +126,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
         lengthMm: 2278,
         widthMm: 1134,
         weightKg: 33.5,
+        noctC: null,
       },
       inverters: [
         {

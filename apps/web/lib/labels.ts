@@ -86,8 +86,13 @@ export const STRUCTURE_MATERIAL_OPTIONS: Option[] = [
   { value: 'GALVANIZED_STEEL', label: 'Acier galvanisé' },
 ];
 
+/**
+ * `PVGIS_LIVE` is the value the dossier-worker's runProductionSimulation() writes (sub-project
+ * #7); pv_dossier_input_schema.json still names this source `PVGIS_AUTO` — the worker is the
+ * writer, so the form follows the worker.
+ */
 export const SIMULATION_SOURCE_OPTIONS: Option[] = [
-  { value: 'PVGIS_AUTO', label: 'Simulation automatique (PVGIS)' },
+  { value: 'PVGIS_LIVE', label: 'Simulation automatique (PVGIS)' },
   { value: 'PVSYST_UPLOAD', label: 'Rapport PVsyst fourni' },
 ];
 
