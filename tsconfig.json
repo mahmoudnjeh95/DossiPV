@@ -4,6 +4,7 @@
     { "path": "packages/engine" },
     { "path": "packages/document-text" },
     { "path": "packages/dossier-worker" },
+    { "path": "packages/db" },
     { "path": "apps/web" }
   ]
 }
