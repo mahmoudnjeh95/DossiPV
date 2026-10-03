@@ -10,6 +10,22 @@ jobs:
   test:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: dossipv
+          POSTGRES_USER: dossipv
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dossipv -d dossipv"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://dossipv:ci-test-password@localhost:5432/dossipv
     steps:
       - uses: actions/checkout@v4
 
@@ -23,11 +39,11 @@ jobs:
 
       - name: Generate Prisma client
         working-directory: packages/db
-        env:
-          # Only needed for `prisma generate`'s eager config load, never a
-          # real connection — no live database in this job.
-          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
         run: npm run generate
+
+      - name: Apply database migrations
+        working-directory: packages/db
+        run: npx prisma migrate deploy
 
       - name: Lint
         run: npm run lint
@@ -59,7 +75,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Pinned to the server's real host keys (captured first-hand over
+          # an already-trusted SSH session, not fetched over the network at
+          # CI time) — ssh-keyscan alone is trust-on-first-use and would
+          # accept whatever key a MITM presented on the runner's first
+          # connection.
+          cat deploy/known_hosts >> ~/.ssh/known_hosts
 
           SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes $SSH_USER@$SSH_HOST"
 
