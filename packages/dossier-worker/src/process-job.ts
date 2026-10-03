@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { db } from '@dossipv/db';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
-import { generateDossierDocument, DossierGenerationBlockedError } from './generate-dossier-document';
+import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { mergeAnnexes, type AnnexFile } from './merge-annexes';
@@ -17,10 +17,30 @@ const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'te
 // behavior) — no new env var convention needed for this worker specifically.
 const anthropicClient = new Anthropic();
 
-async function fail(jobId: string, failedStep: string, failureReason: string): Promise<void> {
+// Generic, step-specific French messages shown to the installer — never the raw error message,
+// which can leak internals (file system paths, DB column/constraint names, SDK error bodies).
+// The real error is logged server-side for operators via console.error in each catch block below.
+const GENERIC_FAILURE_REASONS: Record<string, string> = {
+  snapshot: 'Instantané de la saisie illisible ou corrompu.',
+  text: 'La génération du texte du dossier a échoué.',
+  docx: 'La génération du document Word a échoué.',
+  pdf: 'La conversion en PDF a échoué.',
+  annexes: 'La fusion des annexes a échoué.',
+  save: "L'enregistrement du dossier a échoué.",
+};
+
+async function fail(jobId: string, failedStep: string, internalError: unknown): Promise<void> {
+  // Operator-facing log of the real cause; DossierJob.failureReason itself only ever gets the
+  // generic, installer-safe message below.
+  console.error(`processJob: job ${jobId} failed at step "${failedStep}":`, internalError);
   await db.dossierJob.update({
     where: { id: jobId },
-    data: { status: 'FAILED', failedStep, failureReason, completedAt: new Date() },
+    data: {
+      status: 'FAILED',
+      failedStep,
+      failureReason: GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.',
+      completedAt: new Date(),
+    },
   });
 }
 
@@ -58,7 +78,7 @@ export async function processJob(jobId: string): Promise<void> {
 
   const snapshot = parseJobSnapshot(job.inputSnapshot);
   if (!snapshot) {
-    return fail(jobId, 'snapshot', 'Instantané de la saisie illisible ou corrompu.');
+    return fail(jobId, 'snapshot', new Error('inputSnapshot failed parseJobSnapshot validation'));
   }
 
   let workerResult;
@@ -67,15 +87,12 @@ export async function processJob(jobId: string): Promise<void> {
       generateDossierDocument({ engineInput: snapshot.engineInput, projectMeta: snapshot.projectMeta }, anthropicClient),
     );
   } catch (error) {
-    if (error instanceof DossierGenerationBlockedError) {
-      return fail(jobId, 'text', error.message);
-    }
-    return fail(jobId, 'text', error instanceof Error ? error.message : String(error));
+    return fail(jobId, 'text', error);
   }
 
   const company = await db.company.findUnique({ where: { id: snapshot.companyId } });
   if (!company) {
-    return fail(jobId, 'docx', 'Société introuvable.');
+    return fail(jobId, 'docx', new Error(`Company ${snapshot.companyId} not found`));
   }
 
   let docxBuffer: Buffer;
@@ -90,14 +107,14 @@ export async function processJob(jobId: string): Promise<void> {
     const templateBuffer = await readFile(TEMPLATE_PATH);
     docxBuffer = fillDossierTemplate(templateBuffer, templateData);
   } catch (error) {
-    return fail(jobId, 'docx', error instanceof Error ? error.message : String(error));
+    return fail(jobId, 'docx', error);
   }
 
   let pdfBuffer: Buffer;
   try {
     pdfBuffer = await convertDocxToPdf(docxBuffer);
   } catch (error) {
-    return fail(jobId, 'pdf', error instanceof Error ? error.message : String(error));
+    return fail(jobId, 'pdf', error);
   }
 
   let annexesPdfBuffer: Buffer;
@@ -105,7 +122,7 @@ export async function processJob(jobId: string): Promise<void> {
     const annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId);
     annexesPdfBuffer = await mergeAnnexes(pdfBuffer, annexFiles);
   } catch (error) {
-    return fail(jobId, 'annexes', error instanceof Error ? error.message : String(error));
+    return fail(jobId, 'annexes', error);
   }
 
   try {
@@ -139,6 +156,6 @@ export async function processJob(jobId: string): Promise<void> {
       },
     });
   } catch (error) {
-    return fail(jobId, 'save', error instanceof Error ? error.message : String(error));
+    return fail(jobId, 'save', error);
   }
 }

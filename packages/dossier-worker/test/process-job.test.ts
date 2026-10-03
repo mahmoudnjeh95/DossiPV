@@ -108,7 +108,11 @@ describe('processJob — failure paths', () => {
 
     const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string; failedStep: string; failureReason: string } };
     expect(failCall.data.failedStep).toBe('text');
-    expect(failCall.data.failureReason).toBe('Claude unavailable');
+    // failureReason is a generic, installer-safe message — never the raw internal error text
+    // (which could leak internals like file paths or DB details). The real error is logged
+    // server-side only (see process-job.ts's own fail() helper).
+    expect(failCall.data.failureReason).not.toContain('Claude unavailable');
+    expect(failCall.data.failureReason).toBe('La génération du texte du dossier a échoué.');
   });
 
   it('fails with failedStep "docx" when the company cannot be found', async () => {
@@ -136,6 +140,17 @@ describe('processJob — failure paths', () => {
 
     const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { failedStep: string } };
     expect(failCall.data.failedStep).toBe('save');
+  });
+
+  it('never stores internal error details (file paths, DB errors) in the installer-visible failureReason', async () => {
+    mocks.convertDocxToPdf.mockRejectedValue(new Error('ENOENT: no such file or directory, open \'/var/data/secret-template.docx\''));
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { failureReason: string } };
+    expect(failCall.data.failureReason).not.toContain('/var/data');
+    expect(failCall.data.failureReason).not.toContain('ENOENT');
+    expect(failCall.data.failureReason).toBe('La conversion en PDF a échoué.');
   });
 });
 
