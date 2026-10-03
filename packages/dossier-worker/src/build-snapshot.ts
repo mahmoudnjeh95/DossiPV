@@ -10,12 +10,22 @@ const snapshotInclude = {
     },
   },
   protections: {
-    include: { dcSpd: true, dcSwitch: true, dcFuse: true, acBreaker: true, acSpd: true, acIsolator: true },
+    include: {
+      dcSpd: true,
+      dcSwitch: true,
+      dcFuse: true,
+      acBreaker: true,
+      acSpd: true,
+      acIsolator: true,
+    },
   },
-  cablingConfig: true,
-  cableRuns: true,
+  // Cable, connector, tray, earth cable and distribution block are catalog rows too: captured
+  // by value for the same reason as module/inverter/protections (spec §5 step 1 — a later
+  // catalog edit, e.g. to a cable section's Iz, must never change an already-generated dossier).
+  cablingConfig: { include: { connector: true, cableTray: true } },
+  cableRuns: { include: { cable: { include: { sections: true } } } },
   structure: true,
-  earthing: true,
+  earthing: { include: { earthCable: { include: { sections: true } }, distributionBlock: true } },
 } satisfies Prisma.ProjectInclude;
 
 type ProjectWithSnapshotRelations = Prisma.ProjectGetPayload<{ include: typeof snapshotInclude }>;

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { validateSession, type AuthenticatedCompanyUser } from '@dossipv/auth';
+import { AppShell } from '../../components/app-shell';
 
 const SESSION_COOKIE_NAME = 'dossipv_session';
 
@@ -28,7 +29,11 @@ export async function requireAuthenticatedCompanyUser(): Promise<AuthenticatedCo
   return user;
 }
 
-export default async function AppLayout({ children }: { children: ReactNode }): Promise<React.JSX.Element> {
-  await requireAuthenticatedCompanyUser();
-  return <>{children}</>;
+export default async function AppLayout({
+  children,
+}: {
+  children: ReactNode;
+}): Promise<React.JSX.Element> {
+  const user = await requireAuthenticatedCompanyUser();
+  return <AppShell userFullName={user.fullName}>{children}</AppShell>;
 }

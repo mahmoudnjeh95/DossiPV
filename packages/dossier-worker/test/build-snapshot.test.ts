@@ -60,16 +60,56 @@ beforeEach(async () => {
     },
   });
 
+  const cable = await db.cable.create({
+    data: {
+      brand: 'TestCable',
+      model: 'TestDC',
+      usage: 'DC_SOLAR',
+      conductor: 'Cu',
+      insulation: 'PR',
+      sections: { create: [{ sectionMm2: 6, izA: 56, izReferenceMethod: 'B' }] },
+    },
+  });
+
   const project = await db.project.create({
     data: {
       companyId,
       tier: 'STANDARD',
+      cableRuns: {
+        create: [
+          {
+            circuitType: 'DC',
+            label: 'Snapshot DC run',
+            cableId: cable.id,
+            sectionMm2: 6,
+            lengthM: 10,
+            installMethod: '13',
+            ambientContext: 'TRAY_SUN',
+          },
+        ],
+      },
       client: { create: { fullName: 'Snapshot Client', clientKind: 'INDIVIDUAL' } },
-      site: { create: { gpsLat: 36.8, gpsLon: 10.1, gridType: 'BT', phases: 1, mountingType: 'ROOF', tiltDeg: 30 } },
+      site: {
+        create: {
+          gpsLat: 36.8,
+          gpsLon: 10.1,
+          gridType: 'BT',
+          phases: 1,
+          mountingType: 'ROOF',
+          tiltDeg: 30,
+        },
+      },
       arrayConfig: {
         create: {
           moduleId: pvModule.id,
-          inverters: { create: [{ inverterId: inverter.id, mppts: { create: [{ stringsInParallel: 1, modulesPerString: 5 }] } }] },
+          inverters: {
+            create: [
+              {
+                inverterId: inverter.id,
+                mppts: { create: [{ stringsInParallel: 1, modulesPerString: 5 }] },
+              },
+            ],
+          },
         },
       },
     },
@@ -78,7 +118,10 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  const arrayConfig = await db.projectArrayConfig.findUnique({ where: { projectId }, include: { inverters: true } });
+  const arrayConfig = await db.projectArrayConfig.findUnique({
+    where: { projectId },
+    include: { inverters: true },
+  });
   if (arrayConfig) {
     for (const inv of arrayConfig.inverters) {
       await db.projectArrayMppt.deleteMany({ where: { arrayInverterId: inv.id } });
@@ -86,11 +129,14 @@ afterEach(async () => {
     await db.projectArrayInverter.deleteMany({ where: { arrayConfigId: arrayConfig.id } });
     await db.projectArrayConfig.delete({ where: { id: arrayConfig.id } });
   }
+  await db.projectCableRun.deleteMany({ where: { projectId } });
   await db.projectSite.deleteMany({ where: { projectId } });
   await db.projectClient.deleteMany({ where: { projectId } });
   await db.project.delete({ where: { id: projectId } });
   await db.pvModule.deleteMany({ where: { brand: 'TestBrand' } });
   await db.inverter.deleteMany({ where: { brand: 'TestInv' } });
+  await db.cableSection.deleteMany({ where: { cable: { brand: 'TestCable' } } });
+  await db.cable.deleteMany({ where: { brand: 'TestCable' } });
   await db.company.delete({ where: { id: companyId } });
 });
 
@@ -101,6 +147,18 @@ describe('buildProjectSnapshot', () => {
     expect(snapshot.arrayConfig?.module.brand).toBe('TestBrand');
     expect(snapshot.arrayConfig?.module.pmaxW).toBe(400);
     expect(snapshot.arrayConfig?.inverters[0]!.inverter.brand).toBe('TestInv');
+  });
+
+  it("captures each cable run's cable and its sections by VALUE, not just the cableId", async () => {
+    const snapshot = await buildProjectSnapshot(projectId);
+
+    expect(snapshot.cableRuns).toHaveLength(1);
+    expect(snapshot.cableRuns[0]!.cable.brand).toBe('TestCable');
+    expect(snapshot.cableRuns[0]!.cable.sections[0]).toMatchObject({
+      sectionMm2: 6,
+      izA: 56,
+      izReferenceMethod: 'B',
+    });
   });
 
   it('round-trips losslessly through JSON.stringify/JSON.parse', async () => {
