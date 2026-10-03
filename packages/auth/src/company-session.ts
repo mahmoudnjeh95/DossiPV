@@ -37,6 +37,18 @@ export interface LoginResult {
   token: string;
 }
 
+/**
+ * A precomputed bcrypt hash of a random, unknown password — never matches any real password.
+ * Used only to give the unknown-email login path the same bcrypt.compare() cost as the
+ * known-email path, so the two are indistinguishable by response TIMING, not just by error
+ * message. Without this, an unknown email returns after one fast DB lookup while a known
+ * email with a wrong password additionally pays bcrypt's deliberately slow compare — a
+ * reliable timing side-channel for user enumeration even though both throw the identical
+ * InvalidCredentialsError with the identical message (found by an automated security review
+ * after the identical-message test alone didn't catch it; that test never measured timing).
+ */
+export const DUMMY_PASSWORD_HASH = '$2b$12$CwTycUXWue0Thq9StjUM0uJ8r6zQ1qg5ZYzgKfOjQ5Z2XqUxOR8Vq';
+
 export async function login(email: string, plainPassword: string): Promise<LoginResult> {
   // Fast-path rejection before touching the database at all. The authoritative check is each
   // recordFailure() call's own return value below — this isLocked() call only avoids the
@@ -48,15 +60,12 @@ export async function login(email: string, plainPassword: string): Promise<Login
   }
 
   const user = await db.companyUser.findUnique({ where: { email } });
-  if (!user) {
-    if (loginRateLimiter.recordFailure(email)) {
-      throw new TooManyAttemptsError();
-    }
-    throw new InvalidCredentialsError();
-  }
 
-  const passwordMatches = await verifyPassword(plainPassword, user.passwordHash);
-  if (!passwordMatches) {
+  // Always run bcrypt.compare(), even for an unknown email, against a fixed dummy hash — see
+  // DUMMY_PASSWORD_HASH's own comment for why this matters beyond just the error message.
+  const passwordMatches = await verifyPassword(plainPassword, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+
+  if (!user || !passwordMatches) {
     if (loginRateLimiter.recordFailure(email)) {
       throw new TooManyAttemptsError();
     }

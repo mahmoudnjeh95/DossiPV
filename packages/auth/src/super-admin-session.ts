@@ -2,7 +2,7 @@ import { db } from '@dossipv/db';
 import { verifyPassword } from './password';
 import { generateToken, hashToken } from './tokens';
 import { RateLimiter } from './rate-limit';
-import { InvalidCredentialsError, TooManyAttemptsError, SESSION_LIFETIME_MS } from './company-session';
+import { InvalidCredentialsError, TooManyAttemptsError, SESSION_LIFETIME_MS, DUMMY_PASSWORD_HASH } from './company-session';
 
 const RATE_LIMIT_MAX_ATTEMPTS = 10;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
@@ -28,15 +28,13 @@ export async function loginSuperAdmin(email: string, plainPassword: string): Pro
   }
 
   const admin = await db.superAdmin.findUnique({ where: { email } });
-  if (!admin) {
-    if (superAdminRateLimiter.recordFailure(email)) {
-      throw new TooManyAttemptsError();
-    }
-    throw new InvalidCredentialsError();
-  }
 
-  const passwordMatches = await verifyPassword(plainPassword, admin.passwordHash);
-  if (!passwordMatches) {
+  // Always run bcrypt.compare(), even for an unknown email — see DUMMY_PASSWORD_HASH's own
+  // comment in company-session.ts for why this closes a timing-based user-enumeration gap
+  // that the identical error message alone does not.
+  const passwordMatches = await verifyPassword(plainPassword, admin?.passwordHash ?? DUMMY_PASSWORD_HASH);
+
+  if (!admin || !passwordMatches) {
     if (superAdminRateLimiter.recordFailure(email)) {
       throw new TooManyAttemptsError();
     }

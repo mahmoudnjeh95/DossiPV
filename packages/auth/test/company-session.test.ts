@@ -84,6 +84,45 @@ describe('login', () => {
     expect(unknownEmailMessage).not.toBe('');
   });
 
+  it('takes roughly the same time for an unknown email as for a wrong password (no timing side-channel)', async () => {
+    // The identical-message test above does not prove the two paths are indistinguishable —
+    // bcrypt.compare() is deliberately slow, so if the unknown-email path skipped it (as an
+    // earlier version did), an attacker could reliably tell the two cases apart by response
+    // TIME alone even with identical error messages. This measures that directly.
+    const timeUnknownEmail = async (): Promise<number> => {
+      const start = performance.now();
+      try {
+        await login(`definitely-not-registered-${Date.now()}@example.com`, TEST_PASSWORD);
+      } catch {
+        // expected
+      }
+      return performance.now() - start;
+    };
+    const timeWrongPassword = async (): Promise<number> => {
+      const start = performance.now();
+      try {
+        await login(userEmail, 'wrong-password');
+      } catch {
+        // expected
+      }
+      return performance.now() - start;
+    };
+
+    // Average a few samples each way to reduce noise; both paths must do one DB lookup plus
+    // one bcrypt.compare() at the same cost factor, so they should land in the same ballpark.
+    const unknownTimes = [await timeUnknownEmail(), await timeUnknownEmail(), await timeUnknownEmail()];
+    const wrongPasswordTimes = [await timeWrongPassword(), await timeWrongPassword(), await timeWrongPassword()];
+    const avg = (arr: number[]): number => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const unknownAvg = avg(unknownTimes);
+    const wrongPasswordAvg = avg(wrongPasswordTimes);
+
+    // Generous tolerance (2x) since this runs against a real network-connected database with
+    // naturally variable latency — the point is to catch an order-of-magnitude gap (e.g. one
+    // path skipping bcrypt entirely), not to assert near-exact timing equality.
+    expect(unknownAvg).toBeLessThan(wrongPasswordAvg * 2);
+    expect(wrongPasswordAvg).toBeLessThan(unknownAvg * 2);
+  });
+
   it('evicts exactly the oldest session when already at the cap (boundary case, not cap-1 or cap+1)', async () => {
     const seededTokens: string[] = [];
     for (let i = 0; i < MAX_CONCURRENT_SESSIONS_PER_COMPANY; i++) {
