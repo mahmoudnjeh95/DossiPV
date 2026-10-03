@@ -59,7 +59,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Pinned to the server's real host keys (captured first-hand over
+          # an already-trusted SSH session, not fetched over the network at
+          # CI time) — ssh-keyscan alone is trust-on-first-use and would
+          # accept whatever key a MITM presented on the runner's first
+          # connection.
+          cat deploy/known_hosts >> ~/.ssh/known_hosts
 
           SSH="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes $SSH_USER@$SSH_HOST"
 
