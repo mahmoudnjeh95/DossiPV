@@ -5,3 +5,150 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model File {
+  id         String   @id @default(uuid())
+  fileName   String
+  mimeType   String // "pdf" | "png" | "jpeg"
+  storageKey String // path/key into whatever object storage is used — decided at implementation time
+  createdAt  DateTime @default(now())
+
+  companyLogoFor           Company[] @relation("CompanyLogo")
+  companyAnmeCertificateFor Company[] @relation("CompanyAnmeCertificate")
+
+  @@map("file")
+}
+
+enum ProjectTier {
+  STANDARD
+  PREMIUM
+}
+
+model Company {
+  id                       String    @id @default(uuid())
+  name                     String
+  shortName                String?
+  slogan                   String?
+  logoFileId               String?
+  logo                     File?     @relation("CompanyLogo", fields: [logoFileId], references: [id])
+  address                  String
+  phone                    String
+  email                    String
+  taxId                    String?
+  commercialRegister       String?
+  legalRepFullName         String
+  legalRepRole             String    @default("Gérant")
+  anmeCode                 String
+  anmeReference            String?
+  anmeCategory             String
+  anmeValidFrom            DateTime
+  anmeValidTo              DateTime
+  anmeCertificateFileId    String?
+  anmeCertificate          File?     @relation("CompanyAnmeCertificate", fields: [anmeCertificateFileId], references: [id])
+  defaultTMinC             Float     @default(-10)
+  defaultTMaxC             Float     @default(85)
+  defaultMaxVoltageDropPct Float     @default(3)
+  defaultEarthResistanceTargetOhm Float?
+  defaultDesignWindSpeedKmh Float    @default(120)
+  defaultCosPhi            Float     @default(0.8)
+  createdAt                DateTime  @default(now())
+
+  users        CompanyUser[]
+  subscription Subscription?
+  payments     Payment[]
+
+  @@map("company")
+}
+
+model CompanyUser {
+  id           String          @id @default(uuid())
+  companyId    String
+  company      Company         @relation(fields: [companyId], references: [id])
+  email        String          @unique
+  passwordHash String
+  fullName     String
+  role         CompanyUserRole @default(MEMBER)
+  createdAt    DateTime        @default(now())
+
+  sessions Session[]
+
+  @@map("company_user")
+}
+
+enum CompanyUserRole {
+  OWNER
+  MEMBER
+}
+
+model Session {
+  id            String      @id @default(uuid())
+  companyUserId String
+  companyUser   CompanyUser @relation(fields: [companyUserId], references: [id])
+  tokenHash     String      @unique
+  createdAt     DateTime    @default(now())
+  lastSeenAt    DateTime    @default(now())
+  expiresAt     DateTime
+
+  @@map("session")
+}
+
+model SuperAdmin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  @@map("super_admin")
+}
+
+model Plan {
+  id                  String      @id @default(uuid())
+  name                String
+  monthlyDossierLimit Int
+  priceTnd            Decimal     @db.Decimal(10, 2)
+  tier                ProjectTier
+  createdAt           DateTime    @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plan")
+}
+
+model Subscription {
+  id          String             @id @default(uuid())
+  companyId   String             @unique
+  company     Company            @relation(fields: [companyId], references: [id])
+  planId      String
+  plan        Plan               @relation(fields: [planId], references: [id])
+  status      SubscriptionStatus @default(ACTIVE)
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime           @default(now())
+
+  @@map("subscription")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+model Payment {
+  id               String        @id @default(uuid())
+  companyId        String
+  company          Company       @relation(fields: [companyId], references: [id])
+  amountTnd        Decimal       @db.Decimal(10, 2)
+  method           PaymentMethod
+  gatewayReference String?
+  note             String?
+  recordedByAdmin  Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+
+  @@map("payment")
+}
+
+enum PaymentMethod {
+  MANUAL
+  KONNECT
+}
