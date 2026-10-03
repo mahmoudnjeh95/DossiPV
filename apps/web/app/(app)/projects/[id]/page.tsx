@@ -8,6 +8,7 @@ import { computeSectionStatuses } from '../../../../lib/project-sections';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../../lib/labels';
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
+import { ChecksPanel } from '../../../../components/checks-panel';
 import { GenerateButton } from './generate-button';
 
 const DERIVED_LABELS: { key: string; label: string; unit: string; decimals: number }[] = [
@@ -34,64 +35,6 @@ function formatNumber(value: number, decimals: number): string {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);
-}
-
-function ChecksPanel({ result }: { result: EngineResult }): React.JSX.Element {
-  const failing = result.checks.filter((c) => !c.pass);
-  const blocking = failing.filter((c) => c.level === 'BLOCK');
-  const warnings = failing.filter((c) => c.level === 'WARN');
-  const passing = result.checks.filter((c) => c.pass);
-
-  return (
-    <>
-      {blocking.length === 0 && warnings.length === 0 && (
-        <div className="banner banner-ok">Les 22 contrôles sont satisfaits.</div>
-      )}
-      {blocking.length > 0 && (
-        <>
-          <h3 style={{ margin: '8px 0' }}>
-            <span className="badge badge-danger">Bloquant</span> {blocking.length} contrôle(s) à
-            corriger
-          </h3>
-          <ul className="check-list">
-            {blocking.map((c, index) => (
-              <li key={`${c.id}-${index}`}>
-                <span className="check-id">{c.id}</span>
-                <span>{c.message}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {warnings.length > 0 && (
-        <>
-          <h3 style={{ margin: '8px 0' }}>
-            <span className="badge badge-warn">Avertissement</span> {warnings.length} point(s) à
-            vérifier
-          </h3>
-          <ul className="check-list">
-            {warnings.map((c, index) => (
-              <li key={`${c.id}-${index}`}>
-                <span className="check-id">{c.id}</span>
-                <span>{c.message}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      <details style={{ marginTop: 8 }}>
-        <summary className="muted">{passing.length} contrôle(s) satisfait(s)</summary>
-        <ul className="check-list" style={{ marginTop: 6 }}>
-          {passing.map((c, index) => (
-            <li key={`${c.id}-${index}`}>
-              <span className="check-id">{c.id}</span>
-              <span className="muted">{c.message}</span>
-            </li>
-          ))}
-        </ul>
-      </details>
-    </>
-  );
 }
 
 export default async function ProjectOverviewPage({
@@ -211,7 +154,7 @@ export default async function ProjectOverviewPage({
           ) : engineError ? (
             <div className="banner banner-danger">{engineError}</div>
           ) : engineResult ? (
-            <ChecksPanel result={engineResult} />
+            <ChecksPanel checks={engineResult.checks} />
           ) : null}
         </section>
       </div>
@@ -270,7 +213,11 @@ export default async function ProjectOverviewPage({
               <tbody>
                 {project.jobs.map((job) => (
                   <tr key={job.id}>
-                    <td>{job.startedAt.toLocaleString('fr-FR')}</td>
+                    <td>
+                      <Link href={`/projects/${project.id}/jobs/${job.id}`}>
+                        {job.startedAt.toLocaleString('fr-FR')}
+                      </Link>
+                    </td>
                     <td>
                       <span
                         className={`badge ${job.status === 'SUCCEEDED' ? 'badge-ok' : job.status === 'FAILED' ? 'badge-danger' : ''}`}
