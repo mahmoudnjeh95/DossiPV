@@ -42,33 +42,49 @@ export class RateLimiter {
   ) {}
 
   /**
-   * Picks a key to evict to make room for a new one, never a key that's currently locked out.
-   * An earlier version considered every key (including active lockouts) by "last activity",
-   * and a locked record's empty `timestamps` array made it look like the oldest entry in the
-   * whole map regardless of real recency — so an attacker could flood in MAX_TRACKED_KEYS
-   * junk keys to force-evict a victim's active lockout and bypass it early. Excluding locked
-   * keys from eviction entirely closes that: a lockout, once active, can never be evicted
-   * before it naturally expires. If every tracked key happens to be currently locked (the map
-   * is literally full of active lockouts), there is nothing safe to evict; the new key is
-   * simply not tracked for this one call, which only degrades to "this one request isn't
-   * rate-limited" rather than "an existing lockout gets bypassed."
+   * Picks a key to evict to make room for a new one, preferring a non-locked key by oldest
+   * activity. An earlier version considered every key (including active lockouts) by "last
+   * activity", and a locked record's empty `timestamps` array made it look like the oldest
+   * entry in the whole map regardless of real recency — so an attacker could flood in
+   * MAX_TRACKED_KEYS junk keys to force-evict a victim's active lockout and bypass it early.
+   * A second attempt fixed that by never evicting an active lockout at all — but that let an
+   * attacker flood the map with MAX_TRACKED_KEYS self-inflicted lockouts to starve out room
+   * entirely, making recordFailure() for every OTHER email silently stop tracking failures at
+   * all (a fail-open bypass: an unrecorded failure never contributes to a real lockout). The
+   * correct balance: prefer evicting a non-locked key (oldest activity first), but if every
+   * single tracked key happens to be locked, evict the one closest to expiring rather than
+   * refuse to evict at all — this never disables rate limiting, and the worst case is one
+   * attacker-controlled lockout ending at most `windowMs` early, which is bounded and far
+   * better than silently not tracking a real victim's failures at all.
    */
-  private evictToMakeRoomFor(excludingKey: string): boolean {
-    if (this.failures.size < MAX_TRACKED_KEYS || this.failures.has(excludingKey)) return true;
+  private evictToMakeRoomFor(excludingKey: string): void {
+    if (this.failures.size < MAX_TRACKED_KEYS || this.failures.has(excludingKey)) return;
+
+    let oldestUnlockedKey: string | undefined;
+    let oldestUnlockedActivity = Infinity;
+    let soonestExpiringLockedKey: string | undefined;
+    let soonestExpiry = Infinity;
     const now = Date.now();
-    let oldestKey: string | undefined;
-    let oldestActivity = Infinity;
+
     for (const [key, record] of this.failures) {
-      if (now < record.lockedUntil) continue; // never evict an active lockout
+      if (now < record.lockedUntil) {
+        if (record.lockedUntil < soonestExpiry) {
+          soonestExpiry = record.lockedUntil;
+          soonestExpiringLockedKey = key;
+        }
+        continue;
+      }
       const activity = record.timestamps[record.timestamps.length - 1] ?? 0;
-      if (activity < oldestActivity) {
-        oldestActivity = activity;
-        oldestKey = key;
+      if (activity < oldestUnlockedActivity) {
+        oldestUnlockedActivity = activity;
+        oldestUnlockedKey = key;
       }
     }
-    if (oldestKey === undefined) return false; // map is full of active lockouts; nothing safe to evict
-    this.failures.delete(oldestKey);
-    return true;
+
+    const evictKey = oldestUnlockedKey ?? soonestExpiringLockedKey;
+    if (evictKey !== undefined) {
+      this.failures.delete(evictKey);
+    }
   }
 
   /**
@@ -91,13 +107,7 @@ export class RateLimiter {
       return true;
     }
 
-    const hadRoom = this.evictToMakeRoomFor(key);
-    if (!hadRoom) {
-      // Map is full of other keys' active lockouts and this is a brand-new key with nowhere
-      // to go — don't track it (degrades to "this one request isn't rate-limited" rather
-      // than evicting someone else's real lockout to make room).
-      return false;
-    }
+    this.evictToMakeRoomFor(key);
 
     const stillInWindow = existing.timestamps.filter((t) => now - t < this.windowMs);
     stillInWindow.push(now);

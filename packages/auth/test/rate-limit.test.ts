@@ -77,6 +77,31 @@ describe('RateLimiter', () => {
     vi.useRealTimers();
   });
 
+  it('always records a failure even when the map is completely full of other active lockouts (no fail-open)', () => {
+    // An earlier version refused to evict ANY currently-locked key, so once an attacker
+    // flooded the map with MAX_TRACKED_KEYS self-inflicted lockouts, recordFailure() for a
+    // real victim's email had nowhere to go and silently returned false without recording
+    // anything — meaning that email could NEVER be rate-limited for as long as the map
+    // stayed full (a fail-open bypass: an unrecorded failure never contributes toward a real
+    // lockout). This proves a failure for a brand-new key still gets tracked and still counts
+    // toward locking that key out, even when every other slot is already locked.
+    const limiter = new RateLimiter(3, 60_000);
+
+    // Fill the map entirely with OTHER keys, each locked out.
+    for (let i = 0; i < 10_000; i++) {
+      const key = `attacker-flood-${i}@example.com`;
+      limiter.recordFailure(key);
+      limiter.recordFailure(key);
+      limiter.recordFailure(key); // 3rd failure locks this key
+    }
+
+    // A brand-new victim email's failures must still be recorded and still lock it out —
+    // not silently dropped just because the map is full of someone else's lockouts.
+    expect(limiter.recordFailure('real-victim@example.com')).toBe(false);
+    expect(limiter.recordFailure('real-victim@example.com')).toBe(false);
+    expect(limiter.recordFailure('real-victim@example.com')).toBe(true);
+  });
+
   it('does not let a flood of unrelated keys evict and bypass an active lockout early', () => {
     // An earlier version of evictOldestIfFull() treated a currently-locked record's "last
     // activity" as 0 (since its timestamps array is empty while locked), making every active
