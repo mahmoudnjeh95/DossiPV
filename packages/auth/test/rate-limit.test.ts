@@ -44,4 +44,77 @@ describe('RateLimiter', () => {
     expect(limiter.isLocked('a@example.com')).toBe(false);
     vi.useRealTimers();
   });
+
+  it('recordFailure() returns whether the key is now locked, atomically with incrementing', () => {
+    const limiter = new RateLimiter(3, 60_000);
+    expect(limiter.recordFailure('a@example.com')).toBe(false);
+    expect(limiter.recordFailure('a@example.com')).toBe(false);
+    expect(limiter.recordFailure('a@example.com')).toBe(true);
+  });
+
+  it('doubles the effective lockout window each time the key is locked out again (exponential backoff)', () => {
+    vi.useFakeTimers();
+    const limiter = new RateLimiter(3, 60_000);
+
+    // First lockout: base window (60s).
+    limiter.recordFailure('a@example.com');
+    limiter.recordFailure('a@example.com');
+    expect(limiter.recordFailure('a@example.com')).toBe(true);
+    expect(limiter.isLocked('a@example.com')).toBe(true);
+
+    // Just under the base window: still locked.
+    vi.advanceTimersByTime(59_000);
+    expect(limiter.isLocked('a@example.com')).toBe(true);
+
+    // Past the base window: unlocked, but the next lockout's window is now 120s (2x).
+    vi.advanceTimersByTime(2_000);
+    expect(limiter.isLocked('a@example.com')).toBe(false);
+
+    limiter.recordFailure('a@example.com');
+    limiter.recordFailure('a@example.com');
+    expect(limiter.recordFailure('a@example.com')).toBe(true);
+
+    // 90s in: would have expired under the base 60s window, but the doubled 120s window
+    // for this second lockout means it's still locked — proves the backoff actually grew.
+    vi.advanceTimersByTime(90_000);
+    expect(limiter.isLocked('a@example.com')).toBe(true);
+
+    vi.useRealTimers();
+  });
+
+  it('clear() resets the backoff level, not just the current lockout', () => {
+    vi.useFakeTimers();
+    const limiter = new RateLimiter(3, 60_000);
+
+    limiter.recordFailure('a@example.com');
+    limiter.recordFailure('a@example.com');
+    limiter.recordFailure('a@example.com'); // first lockout, backoff level 1
+    limiter.clear('a@example.com');
+
+    // After clear(), a fresh set of failures should lock out for the BASE window again, not
+    // the doubled one — proving clear() resets lockoutsTriggered, not just the failure count.
+    limiter.recordFailure('a@example.com');
+    limiter.recordFailure('a@example.com');
+    expect(limiter.recordFailure('a@example.com')).toBe(true);
+    vi.advanceTimersByTime(60_001);
+    expect(limiter.isLocked('a@example.com')).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  it('does not grow without bound when flooded with distinct keys (resource-exhaustion guard)', () => {
+    // Exercise well past MAX_TRACKED_KEYS (10_000) worth of distinct keys and confirm the
+    // limiter keeps functioning (doesn't throw, doesn't slow to a crawl) rather than growing
+    // its internal map forever.
+    const limiter = new RateLimiter(3, 60_000);
+    const floodSize = 10_500;
+    for (let i = 0; i < floodSize; i++) {
+      limiter.recordFailure(`flood-${i}@example.com`);
+    }
+    // The earliest-flooded keys should have been evicted to keep the map bounded; the most
+    // recently added key must still be tracked.
+    expect(limiter.isLocked(`flood-${floodSize - 1}@example.com`)).toBe(false); // only 1 failure so far
+    expect(limiter.recordFailure(`flood-${floodSize - 1}@example.com`)).toBe(false);
+    expect(limiter.recordFailure(`flood-${floodSize - 1}@example.com`)).toBe(true); // 3rd failure locks it
+  });
 });

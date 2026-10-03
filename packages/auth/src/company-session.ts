@@ -38,19 +38,28 @@ export interface LoginResult {
 }
 
 export async function login(email: string, plainPassword: string): Promise<LoginResult> {
+  // Fast-path rejection before touching the database at all. The authoritative check is each
+  // recordFailure() call's own return value below — this isLocked() call only avoids the
+  // wasted work of a DB lookup + bcrypt compare for a key that's already locked; it is not
+  // what actually enforces the lock (see the comment on recordFailure() in rate-limit.ts for
+  // why checking isLocked() separately from recordFailure() would race).
   if (loginRateLimiter.isLocked(email)) {
     throw new TooManyAttemptsError();
   }
 
   const user = await db.companyUser.findUnique({ where: { email } });
   if (!user) {
-    loginRateLimiter.recordFailure(email);
+    if (loginRateLimiter.recordFailure(email)) {
+      throw new TooManyAttemptsError();
+    }
     throw new InvalidCredentialsError();
   }
 
   const passwordMatches = await verifyPassword(plainPassword, user.passwordHash);
   if (!passwordMatches) {
-    loginRateLimiter.recordFailure(email);
+    if (loginRateLimiter.recordFailure(email)) {
+      throw new TooManyAttemptsError();
+    }
     throw new InvalidCredentialsError();
   }
 
