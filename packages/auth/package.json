@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "create-super-admin": "node scripts/create-super-admin.mjs"
   },
   "dependencies": {
     "@dossipv/db": "*",

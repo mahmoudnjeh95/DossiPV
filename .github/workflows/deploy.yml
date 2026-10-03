@@ -10,6 +10,22 @@ jobs:
   test:
     name: Lint, typecheck, test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: dossipv
+          POSTGRES_USER: dossipv
+          POSTGRES_PASSWORD: ci-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dossipv -d dossipv"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://dossipv:ci-test-password@localhost:5432/dossipv
     steps:
       - uses: actions/checkout@v4
 
@@ -23,11 +39,11 @@ jobs:
 
       - name: Generate Prisma client
         working-directory: packages/db
-        env:
-          # Only needed for `prisma generate`'s eager config load, never a
-          # real connection — no live database in this job.
-          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
         run: npm run generate
+
+      - name: Apply database migrations
+        working-directory: packages/db
+        run: npx prisma migrate deploy
 
       - name: Lint
         run: npm run lint

@@ -274,6 +274,14 @@ async function seedJobAndUsageLog(projectId: string): Promise<JobSeedResult> {
 }
 
 async function main(): Promise<void> {
+  // The seed inserts fake rows (placeholder password hashes, demo clients). Running it against
+  // a database that already holds data — above all production, e.g. through the SSH tunnel —
+  // would pollute it, so only an empty database is accepted.
+  const existingRows = (await db.company.count()) + (await db.pvModule.count());
+  if (existingRows > 0) {
+    throw new Error('Refusing to seed: the database already contains data. Seed a fresh local database only.');
+  }
+
   const equipment = await seedGlobalEquipment();
   const { company } = await seedCompanyAndAccounts();
   const { standardProject } = await seedProjects(company.id, equipment);
