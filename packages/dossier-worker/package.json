@@ -9,13 +9,16 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@dossipv/db": "*",
-    "@dossipv/engine": "*",
     "@dossipv/document-text": "*",
+    "@dossipv/engine": "*",
     "@dossipv/pvgis-client": "*",
-    "@anthropic-ai/sdk": "^0.74.0"
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
-    "@types/node": "^26.6.4"
+    "@types/node": "^26.6.4",
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0"
   }
 }
