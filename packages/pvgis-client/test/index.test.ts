@@ -13,16 +13,17 @@ describe('fetchPvgisHourlyData', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({
-        outputs: {
-          hourly: [
-            { time: '20200101:0809', 'Gb(i)': 100, 'Gd(i)': 50, 'Gr(i)': 2, T2m: 9.0 },
-            { time: '20200101:0909', 'Gb(i)': 200, 'Gd(i)': 60, 'Gr(i)': 3, T2m: 10.5 },
-          ],
-        },
-      }),
+      json: () =>
+        Promise.resolve({
+          outputs: {
+            hourly: [
+              { time: '20200101:0809', 'Gb(i)': 100, 'Gd(i)': 50, 'Gr(i)': 2, T2m: 9.0 },
+              { time: '20200101:0909', 'Gb(i)': 200, 'Gd(i)': 60, 'Gr(i)': 3, T2m: 10.5 },
+            ],
+          },
+        }),
     });
-    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    globalThis.fetch = mockFetch;
 
     const rows = await fetchPvgisHourlyData(36.8, 10.18, 30, -10, 2020);
 
@@ -44,13 +45,13 @@ describe('fetchPvgisHourlyData', () => {
   });
 
   it('throws PvgisFetchError on a non-200 response', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 429 }) as unknown as typeof fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
 
     await expect(fetchPvgisHourlyData(36.8, 10.18, 30, -10, 2020)).rejects.toThrow(PvgisFetchError);
   });
 
   it('throws PvgisFetchError when the response has no outputs.hourly array', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) }) as unknown as typeof fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({}) });
 
     await expect(fetchPvgisHourlyData(36.8, 10.18, 30, -10, 2020)).rejects.toThrow(PvgisFetchError);
   });
