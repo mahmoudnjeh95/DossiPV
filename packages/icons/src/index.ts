@@ -19,5 +19,5 @@ export { Map, LocationPin, Polygon, MarkerTech, MarkerMeter, MarkerEarth, Compas
 // Admin icons
 export { Users, Company, Subscription, Payment, Lock, Unlock, Shield, Database } from './categories/admin';
 
-// 3D Logo (placeholder export - will be filled in Task 5)
-// export { SolarixProLogo } from './3d-logo';
+// 3D Logo
+export { SolarixProLogo } from './3d-logo';
