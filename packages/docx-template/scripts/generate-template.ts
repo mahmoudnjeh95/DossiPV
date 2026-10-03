@@ -35,7 +35,7 @@ const doc = new Document({
         new Paragraph('{solution}'),
         new Paragraph('Module : {moduleBrandModel}'),
         new Paragraph('Onduleur : {inverterBrandModel}'),
-        new Paragraph('Puissance DC : {pDcW} W'),
+        new Paragraph('Puissance DC : {pDcW}'),
         new Paragraph('Nombre de modules : {moduleCount}'),
 
         new Paragraph({ text: 'Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
