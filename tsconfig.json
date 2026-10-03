@@ -7,6 +7,7 @@
     { "path": "packages/db" },
     { "path": "packages/auth" },
     { "path": "packages/pvgis-client" },
+    { "path": "packages/docx-template" },
     { "path": "apps/web" }
   ]
 }
