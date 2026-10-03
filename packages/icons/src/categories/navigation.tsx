@@ -1,13 +1,23 @@
 import React from 'react';
-import { IconProps } from '../types';
+import { IconProps, ICON_SIZES, ICON_COLORS } from '../types';
 
 function wrapIcon(name: string, path: string | string[]) {
-  return function IconComponent(props: IconProps) {
+  return function IconComponent({ size, color, ...svgProps }: IconProps) {
+    const px = ICON_SIZES[size ?? 'md'];
+    const stroke = ICON_COLORS[color ?? 'inherit'];
     const paths = Array.isArray(path) ? path : [path];
     return (
-      <svg viewBox="0 0 24 24" {...props}>
+      <svg
+        viewBox="0 0 24 24"
+        width={px}
+        height={px}
+        stroke={stroke}
+        strokeWidth="1.5"
+        fill="none"
+        {...svgProps}
+      >
         {paths.map((p, i) => (
-          <path key={i} d={p} stroke="currentColor" strokeWidth="1.5" fill="none" />
+          <path key={i} d={p} />
         ))}
       </svg>
     );
