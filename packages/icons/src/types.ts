@@ -1,7 +1,9 @@
+import type { SVGAttributes } from 'react';
+
 export type IconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type IconColor = 'inherit' | 'gold' | 'orange' | 'success' | 'error' | 'warning' | 'info';
 
-export interface IconProps extends React.SVGAttributes<SVGSVGElement> {
+export interface IconProps extends SVGAttributes<SVGSVGElement> {
   size?: IconSize;
   color?: IconColor;
 }
