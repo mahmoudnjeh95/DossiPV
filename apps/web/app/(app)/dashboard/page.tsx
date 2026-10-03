@@ -8,6 +8,8 @@ import {
 } from '../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
+import { StatsCard } from './stats-card';
+import { Dashboard, Projects, ChartBar, KwHours, Add } from '@dossipv/icons';
 
 export default async function DashboardPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
@@ -36,50 +38,34 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <h1>Bienvenue, {user.fullName}</h1>
+      <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Dashboard size="lg" color="gold" />
+        Bienvenue, {user.fullName}
+      </h1>
+
       <SubscriptionBanner subscription={subscription} />
 
-      <div className="card-grid">
-        <section className="card">
-          <h2>Abonnement</h2>
-          {subscription ? (
-            <>
-              <p className="stat">{subscription.planName}</p>
-              <p className="muted">
-                {TIER_LABELS[subscription.tier]} · jusqu&apos;au{' '}
-                {subscription.periodEnd.toLocaleDateString('fr-FR')}
-              </p>
-            </>
-          ) : (
-            <p className="muted">Aucun abonnement actif.</p>
-          )}
-        </section>
-        <section className="card">
-          <h2>Dossiers ce mois</h2>
-          <p className="stat">
-            {used}
-            {subscription ? ` / ${subscription.monthlyDossierLimit}` : ''}
-          </p>
-          <p className="muted">
-            Un projet compte une seule fois, quel que soit le nombre de régénérations.
-          </p>
-        </section>
-        <section className="card">
-          <h2>Projets</h2>
-          <p className="stat">{projectCount}</p>
-          <p className="actions">
-            <Link href="/projects/new" className="button">
-              Nouveau projet
-            </Link>
-            <Link href="/projects" className="button secondary">
-              Tous les projets
-            </Link>
-          </p>
-        </section>
+      <div className="card-grid" style={{ marginBottom: 16 }}>
+        <StatsCard icon={Projects} label="Projets" value={projectCount} />
+        <StatsCard
+          icon={ChartBar}
+          label="Dossiers ce mois"
+          value={subscription ? `${used} / ${subscription.monthlyDossierLimit}` : String(used)}
+        />
+        {subscription && (
+          <StatsCard icon={KwHours} label="Abonnement" value={subscription.planName} />
+        )}
       </div>
 
       <section className="card">
-        <h2>Derniers projets</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>Derniers projets</h2>
+          <Link href="/projects/new" className="button" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Add size="sm" color="inherit" />
+            Nouveau projet
+          </Link>
+        </div>
+
         {recentProjects.length === 0 ? (
           <p className="muted">
             Aucun projet pour l&apos;instant. Créez votre premier projet pour commencer un dossier.
@@ -112,6 +98,12 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
             </table>
           </div>
         )}
+
+        <div className="actions" style={{ marginTop: 12 }}>
+          <Link href="/projects" className="button secondary">
+            Tous les projets
+          </Link>
+        </div>
       </section>
     </main>
   );
