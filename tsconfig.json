@@ -6,6 +6,7 @@
     { "path": "packages/dossier-worker" },
     { "path": "packages/db" },
     { "path": "packages/auth" },
+    { "path": "packages/pvgis-client" },
     { "path": "apps/web" }
   ]
 }
