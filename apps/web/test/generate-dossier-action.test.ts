@@ -173,6 +173,13 @@ describe('generateDossierAction', () => {
       module: { brand: 'LONGi', pmaxW: 620 },
     });
     expect(data.data.inputSnapshot.protections).toMatchObject({ dcSpd: { iscpvKA: 0.02 } });
+    expect(data.data.inputSnapshot.cableRuns).toMatchObject([
+      { cable: { sections: [{ izA: 56 }] } },
+      { cable: { model: 'U-1000 R2V' } },
+    ]);
+    expect(data.data.inputSnapshot.earthing).toMatchObject({
+      earthCable: { model: 'H07V-U', sections: [{ sectionMm2: 16 }] },
+    });
     expect(data.data.inputSnapshot).toHaveProperty('capturedAt');
     expect(JSON.parse(JSON.stringify(data.data.inputSnapshot))).toMatchObject({
       earthing: { rodCount: 3 },

@@ -1,5 +1,10 @@
 import type { Prisma } from '@dossipv/db';
-import type { RunEngineInput, CableRunInput, PvModuleInput, InverterArrayEntry } from '@dossipv/engine';
+import type {
+  RunEngineInput,
+  CableRunInput,
+  PvModuleInput,
+  InverterArrayEntry,
+} from '@dossipv/engine';
 import { AMBIENT_TEMP_BY_CONTEXT } from './labels';
 
 /**
@@ -10,12 +15,23 @@ export const PROJECT_ENGINE_INCLUDE = {
   company: true,
   client: true,
   site: true,
-  arrayConfig: { include: { module: true, inverters: { include: { inverter: true, mppts: true } } } },
-  protections: { include: { dcSpd: true, dcSwitch: true, dcFuse: true, acBreaker: true, acSpd: true, acIsolator: true } },
-  cablingConfig: true,
+  arrayConfig: {
+    include: { module: true, inverters: { include: { inverter: true, mppts: true } } },
+  },
+  protections: {
+    include: {
+      dcSpd: true,
+      dcSwitch: true,
+      dcFuse: true,
+      acBreaker: true,
+      acSpd: true,
+      acIsolator: true,
+    },
+  },
+  cablingConfig: { include: { connector: true, cableTray: true } },
   cableRuns: { include: { cable: { include: { sections: true } } } },
   structure: true,
-  earthing: true,
+  earthing: { include: { earthCable: { include: { sections: true } }, distributionBlock: true } },
   simulation: true,
   jobs: { orderBy: { startedAt: 'desc' } },
 } satisfies Prisma.ProjectInclude;
@@ -51,12 +67,21 @@ function buildCableRun(
 ): CableRunInput | null {
   const section = run.cable.sections.find((s) => s.sectionMm2 === run.sectionMm2);
   if (!section) {
-    missing.push(`Câblage : la section ${run.sectionMm2} mm² n'existe pas pour le câble ${run.cable.brand} ${run.cable.model} (${circuitLabel}).`);
+    missing.push(
+      `Câblage : la section ${run.sectionMm2} mm² n'existe pas pour le câble ${run.cable.brand} ${run.cable.model} (${circuitLabel}).`,
+    );
     return null;
   }
   const referenceMethod = section.izReferenceMethod;
-  if (referenceMethod !== 'B' && referenceMethod !== 'C' && referenceMethod !== 'E' && referenceMethod !== 'F') {
-    missing.push(`Câblage : méthode de référence « ${referenceMethod} » inconnue (${circuitLabel}).`);
+  if (
+    referenceMethod !== 'B' &&
+    referenceMethod !== 'C' &&
+    referenceMethod !== 'E' &&
+    referenceMethod !== 'F'
+  ) {
+    missing.push(
+      `Câblage : méthode de référence « ${referenceMethod} » inconnue (${circuitLabel}).`,
+    );
     return null;
   }
   const conductor = run.cable.conductor;
@@ -65,7 +90,12 @@ function buildCableRun(
     return null;
   }
   const insulation = run.cable.insulation;
-  if (insulation !== 'PR' && insulation !== 'PVC' && insulation !== 'EPR' && insulation !== 'XLPO') {
+  if (
+    insulation !== 'PR' &&
+    insulation !== 'PVC' &&
+    insulation !== 'EPR' &&
+    insulation !== 'XLPO'
+  ) {
     missing.push(`Câblage : isolant « ${insulation} » inconnu (${circuitLabel}).`);
     return null;
   }
@@ -113,7 +143,9 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
   if (!protections) {
     missing.push('Protections : section non renseignée.');
   } else if (protections.dcSpd.iscpvKA === null) {
-    missing.push(`Protections : le parafoudre DC ${protections.dcSpd.brand} ${protections.dcSpd.model} n'a pas de valeur Iscpv dans le catalogue.`);
+    missing.push(
+      `Protections : le parafoudre DC ${protections.dcSpd.brand} ${protections.dcSpd.model} n'a pas de valeur Iscpv dans le catalogue.`,
+    );
   }
   const cablingConfig = project.cablingConfig;
   if (!cablingConfig) {
@@ -144,7 +176,9 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
   if (arrayConfig) {
     for (const inv of arrayConfig.inverters) {
       if (!isPhases(inv.inverter.phases)) {
-        missing.push(`Champ PV : l'onduleur ${inv.inverter.brand} ${inv.inverter.model} a un nombre de phases invalide.`);
+        missing.push(
+          `Champ PV : l'onduleur ${inv.inverter.brand} ${inv.inverter.model} a un nombre de phases invalide.`,
+        );
       }
     }
   }
@@ -203,7 +237,10 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
       iacMaxA: inv.inverter.iacMaxA,
       stegApproved: inv.inverter.stegApproved,
     },
-    mppts: inv.mppts.map((mppt) => ({ stringsInParallel: mppt.stringsInParallel, modulesPerString: mppt.modulesPerString })),
+    mppts: inv.mppts.map((mppt) => ({
+      stringsInParallel: mppt.stringsInParallel,
+      modulesPerString: mppt.modulesPerString,
+    })),
   }));
 
   const input: RunEngineInput = {
@@ -211,9 +248,15 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     array,
     tMinC: arrayConfig.tMinC,
     tMaxC: arrayConfig.tMaxC,
-    dcSwitch: { ratedVoltageV: protections.dcSwitch.ratedVoltageV, ratedCurrentA: protections.dcSwitch.ratedCurrentA },
+    dcSwitch: {
+      ratedVoltageV: protections.dcSwitch.ratedVoltageV,
+      ratedCurrentA: protections.dcSwitch.ratedCurrentA,
+    },
     dcFuse: protections.dcFuse
-      ? { ratedCurrentA: protections.dcFuse.ratedCurrentA, ratedVoltageV: protections.dcFuse.ratedVoltageV }
+      ? {
+          ratedCurrentA: protections.dcFuse.ratedCurrentA,
+          ratedVoltageV: protections.dcFuse.ratedVoltageV,
+        }
       : null,
     dcSpd: {
       ucV: protections.dcSpd.ucV,
@@ -223,8 +266,14 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
       type: protections.dcSpd.type,
     },
     acBreaker: { ratedCurrentA: protections.acBreaker.ratedCurrentA },
-    acSpd: { ucV: protections.acSpd.ucV, upKV: protections.acSpd.upKV, type: protections.acSpd.type },
-    acIsolator: protections.acIsolator ? { ratedCurrentA: protections.acIsolator.ratedCurrentA } : null,
+    acSpd: {
+      ucV: protections.acSpd.ucV,
+      upKV: protections.acSpd.upKV,
+      type: protections.acSpd.type,
+    },
+    acIsolator: protections.acIsolator
+      ? { ratedCurrentA: protections.acIsolator.ratedCurrentA }
+      : null,
     equipmentImpulseWithstandKV: protections.equipmentImpulseWithstandKV,
     spdToEquipmentDistanceM: protections.spdToEquipmentDistanceM,
     dcRun,
