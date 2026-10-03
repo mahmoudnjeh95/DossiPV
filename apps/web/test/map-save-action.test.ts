@@ -56,7 +56,15 @@ const samplePayload: MapSavePayload = {
   meterPointLon: 10.1002,
   earthPitPointLat: 36.8003,
   earthPitPointLon: 10.1003,
-  geometry: { outline: [{ lat: 36.8, lon: 10.1 }], panelRows: [], manualOverride: false },
+  geometry: {
+    outline: [
+      { lat: 36.8, lon: 10.1 },
+      { lat: 36.8001, lon: 10.1 },
+      { lat: 36.8001, lon: 10.1001 },
+    ],
+    panelRows: [],
+    manualOverride: false,
+  },
 };
 
 describe('saveMapDataAction', () => {
@@ -118,5 +126,78 @@ describe('saveMapDataAction', () => {
 
     expect(mockImageryUpsert).not.toHaveBeenCalled();
     expect(result).toEqual({ error: "Le contour et le remplissage automatique nécessitent l'abonnement Premium." });
+  });
+});
+
+describe('saveMapDataAction input validation', () => {
+  beforeEach(() => {
+    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1', tier: 'PREMIUM' });
+  });
+
+  it.each([
+    ['NaN latitude', { ...samplePayload, gpsLat: Number.NaN }],
+    ['Infinity longitude', { ...samplePayload, gpsLon: Number.POSITIVE_INFINITY }],
+    ['out-of-range latitude (> 90)', { ...samplePayload, gpsLat: 91 }],
+    ['out-of-range latitude (< -90)', { ...samplePayload, gpsLat: -91 }],
+    ['out-of-range longitude (> 180)', { ...samplePayload, gpsLon: 181 }],
+    ['out-of-range longitude (< -180)', { ...samplePayload, gpsLon: -181 }],
+  ])('rejects %s without writing anything', async (_label, payload) => {
+    const result = await saveMapDataAction('project-1', payload);
+
+    expect(mockSiteUpdate).not.toHaveBeenCalled();
+    expect(mockImageryUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Coordonnées invalides.' });
+  });
+
+  it('rejects an out-of-range pin coordinate without writing anything', async () => {
+    const result = await saveMapDataAction('project-1', { ...samplePayload, technicalRoomPointLat: 200 });
+
+    expect(mockSiteUpdate).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Coordonnées invalides.' });
+  });
+
+  it('rejects a geometry outline containing an out-of-range point', async () => {
+    const result = await saveMapDataAction('project-1', {
+      ...samplePayload,
+      geometry: { outline: [{ lat: 36.8, lon: 999 }], panelRows: [], manualOverride: false },
+    });
+
+    expect(mockImageryUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Coordonnées invalides.' });
+  });
+
+  it('rejects an outline with fewer than 3 points when geometry is provided', async () => {
+    const result = await saveMapDataAction('project-1', {
+      ...samplePayload,
+      geometry: { outline: [{ lat: 36.8, lon: 10.1 }], panelRows: [], manualOverride: false },
+    });
+
+    expect(mockImageryUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Coordonnées invalides.' });
+  });
+
+  it('rejects an outline exceeding a reasonable maximum vertex count', async () => {
+    const hugeOutline = Array.from({ length: 1001 }, (_, i) => ({ lat: 36.8 + i * 0.0001, lon: 10.1 }));
+    const result = await saveMapDataAction('project-1', {
+      ...samplePayload,
+      geometry: { outline: hugeOutline, panelRows: [], manualOverride: false },
+    });
+
+    expect(mockImageryUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Coordonnées invalides.' });
+  });
+
+  it('accepts a valid payload at the boundary of the lat/lon range', async () => {
+    mockSiteUpdate.mockResolvedValue({});
+    mockImageryUpsert.mockResolvedValue({});
+
+    const result = await saveMapDataAction('project-1', {
+      ...samplePayload,
+      gpsLat: 90,
+      gpsLon: -180,
+    });
+
+    expect(result).toBeUndefined();
+    expect(mockSiteUpdate).toHaveBeenCalled();
   });
 });
