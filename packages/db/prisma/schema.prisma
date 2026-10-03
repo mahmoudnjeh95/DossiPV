@@ -16,6 +16,25 @@ model File {
   companyLogoFor           Company[] @relation("CompanyLogo")
   companyAnmeCertificateFor Company[] @relation("CompanyAnmeCertificate")
 
+  pvModuleDatasheetFor      PvModule[]   @relation("PvModuleDatasheet")
+  pvModuleHomologationFor   PvModule[]   @relation("PvModuleHomologation")
+  inverterDatasheetFor      Inverter[]   @relation("InverterDatasheet")
+  inverterHomologationFor   Inverter[]   @relation("InverterHomologation")
+  spdDatasheetFor           Spd[]        @relation("SpdDatasheet")
+  spdHomologationFor        Spd[]        @relation("SpdHomologation")
+  dcSwitchDatasheetFor      DcSwitch[]   @relation("DcSwitchDatasheet")
+  dcSwitchHomologationFor   DcSwitch[]   @relation("DcSwitchHomologation")
+  dcFuseDatasheetFor        DcFuse[]     @relation("DcFuseDatasheet")
+  dcFuseHomologationFor     DcFuse[]     @relation("DcFuseHomologation")
+  acBreakerDatasheetFor     AcBreaker[]  @relation("AcBreakerDatasheet")
+  acBreakerHomologationFor  AcBreaker[]  @relation("AcBreakerHomologation")
+  acIsolatorDatasheetFor    AcIsolator[] @relation("AcIsolatorDatasheet")
+  acIsolatorHomologationFor AcIsolator[] @relation("AcIsolatorHomologation")
+  cableDatasheetFor         Cable[]      @relation("CableDatasheet")
+  cableHomologationFor      Cable[]      @relation("CableHomologation")
+  accessoryDatasheetFor     Accessory[]  @relation("AccessoryDatasheet")
+  accessoryHomologationFor  Accessory[]  @relation("AccessoryHomologation")
+
   @@map("file")
 }
 
@@ -56,6 +75,15 @@ model Company {
   users        CompanyUser[]
   subscription Subscription?
   payments     Payment[]
+  pvModules    PvModule[]
+  inverters    Inverter[]
+  spds         Spd[]
+  dcSwitches   DcSwitch[]
+  dcFuses      DcFuse[]
+  acBreakers   AcBreaker[]
+  acIsolators  AcIsolator[]
+  cables       Cable[]
+  accessories  Accessory[]
 
   @@map("company")
 }
@@ -151,4 +179,264 @@ model Payment {
 enum PaymentMethod {
   MANUAL
   KONNECT
+}
+
+model PvModule {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("PvModuleDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("PvModuleHomologation", fields: [homologationFileId], references: [id])
+
+  pmaxW                 Float
+  vmpV                  Float
+  impA                  Float
+  vocV                  Float
+  iscA                  Float
+  tempCoeffVocPct       Float
+  tempCoeffIscPct       Float
+  tempCoeffPmaxPct      Float
+  tempCoeffVmpPct       Float?
+  irmA                  Float
+  maxSystemVoltageV     Float
+  bifacial              Boolean  @default(false)
+  bifacialGainPct       Float?
+  lengthMm              Float
+  widthMm               Float
+  weightKg              Float
+
+  createdAt             DateTime @default(now())
+
+  @@map("pv_module")
+}
+
+model Inverter {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("InverterDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("InverterHomologation", fields: [homologationFileId], references: [id])
+
+  phases                Int
+  pacW                  Float
+  sacVA                 Float
+  vdcMaxV               Float
+  mpptMinV              Float
+  mpptMaxV              Float
+  startUpV              Float
+  mpptCount             Int
+  inputsPerMppt         Int
+  idcMaxPerMpptA        Float
+  iscMaxPerMpptA        Float
+  vacNomV               Float
+  vacRangeV             String?
+  iacMaxA               Float
+  integratedDcSwitch    Boolean  @default(false)
+  stegApproved          Boolean  @default(false)
+
+  createdAt             DateTime @default(now())
+
+  @@map("inverter")
+}
+
+model Spd {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("SpdDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("SpdHomologation", fields: [homologationFileId], references: [id])
+
+  side                  SpdSide
+  type                  Int
+  poles                 Int
+  ucV                   Float
+  upKV                  Float
+  inKA                  Float
+  imaxKA                Float
+  iscpvKA               Float?
+
+  createdAt             DateTime @default(now())
+
+  @@map("spd")
+}
+
+enum SpdSide {
+  DC
+  AC
+}
+
+model DcSwitch {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("DcSwitchDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("DcSwitchHomologation", fields: [homologationFileId], references: [id])
+
+  ratedVoltageV         Float
+  ratedCurrentA         Float
+  poles                 Int
+
+  createdAt             DateTime @default(now())
+
+  @@map("dc_switch")
+}
+
+model DcFuse {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("DcFuseDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("DcFuseHomologation", fields: [homologationFileId], references: [id])
+
+  ratedVoltageV         Float
+  ratedCurrentA         Float
+
+  createdAt             DateTime @default(now())
+
+  @@map("dc_fuse")
+}
+
+model AcBreaker {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("AcBreakerDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("AcBreakerHomologation", fields: [homologationFileId], references: [id])
+
+  ratedCurrentA         Float
+  curve                 String?
+  breakingCapacityKA    Float?
+
+  createdAt             DateTime @default(now())
+
+  @@map("ac_breaker")
+}
+
+model AcIsolator {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("AcIsolatorDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("AcIsolatorHomologation", fields: [homologationFileId], references: [id])
+
+  ratedCurrentA         Float
+
+  createdAt             DateTime @default(now())
+
+  @@map("ac_isolator")
+}
+
+model Cable {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("CableDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("CableHomologation", fields: [homologationFileId], references: [id])
+
+  usage                 CableUsage
+  conductor             String
+  insulation            String
+  standard              String?
+
+  createdAt             DateTime @default(now())
+
+  sections              CableSection[]
+
+  @@map("cable")
+}
+
+enum CableUsage {
+  DC_SOLAR
+  AC
+  EARTH
+}
+
+model CableSection {
+  id                String  @id @default(uuid())
+  cableId           String
+  cable             Cable   @relation(fields: [cableId], references: [id])
+  sectionMm2        Float
+  izA               Float
+  izReferenceMethod String
+
+  @@map("cable_section")
+}
+
+model Accessory {
+  id                    String   @id @default(uuid())
+  ownerCompanyId        String?
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  brand                 String
+  model                 String
+  datasheetFileId       String?
+  datasheet             File?    @relation("AccessoryDatasheet", fields: [datasheetFileId], references: [id])
+  homologationReference String?
+  homologationValidTo   DateTime?
+  homologationFileId    String?
+  homologationDocument  File?    @relation("AccessoryHomologation", fields: [homologationFileId], references: [id])
+
+  kind                  AccessoryKind
+  spec                  String?
+
+  createdAt             DateTime @default(now())
+
+  @@map("accessory")
+}
+
+enum AccessoryKind {
+  MC4_CONNECTOR
+  DISTRIBUTION_BLOCK
+  CABLE_TRAY
+  DC_ENCLOSURE
+  AC_ENCLOSURE
+  EARTH_ROD
+  OTHER
 }
