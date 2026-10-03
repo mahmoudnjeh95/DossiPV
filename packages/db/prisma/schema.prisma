@@ -35,6 +35,16 @@ model File {
   accessoryDatasheetFor     Accessory[]  @relation("AccessoryDatasheet")
   accessoryHomologationFor  Accessory[]  @relation("AccessoryHomologation")
 
+  projectStructureAttestationFor ProjectStructure[]  @relation("ProjectStructureAttestation")
+  projectSimulationPvsystReportFor ProjectSimulation[] @relation("ProjectSimulationPvsystReport")
+  projectImagerySituationImageFor ProjectImagery[]    @relation("SituationImage")
+  projectImageryImplantationImageFor ProjectImagery[] @relation("ImplantationImage")
+  annexCinFor               ProjectAnnexes[] @relation("AnnexCin")
+  annexCommercialRegisterFor ProjectAnnexes[] @relation("AnnexCommercialRegister")
+  annexStegContractFor      ProjectAnnexes[] @relation("AnnexStegContract")
+  annexLastPaidBillFor      ProjectAnnexes[] @relation("AnnexLastPaidBill")
+  projectAnnexExtraFiles    ProjectAnnexExtraFile[] @relation("ProjectAnnexExtraFile")
+
   @@map("file")
 }
 
@@ -84,6 +94,7 @@ model Company {
   acIsolators  AcIsolator[]
   cables       Cable[]
   accessories  Accessory[]
+  projects     Project[]
 
   @@map("company")
 }
@@ -213,6 +224,8 @@ model PvModule {
 
   createdAt             DateTime @default(now())
 
+  arrayConfigs ProjectArrayConfig[]
+
   @@map("pv_module")
 }
 
@@ -248,6 +261,8 @@ model Inverter {
 
   createdAt             DateTime @default(now())
 
+  arrayInverters ProjectArrayInverter[]
+
   @@map("inverter")
 }
 
@@ -274,6 +289,9 @@ model Spd {
   iscpvKA               Float?
 
   createdAt             DateTime @default(now())
+
+  protectionsDc ProjectProtections[] @relation("DcSpd")
+  protectionsAc ProjectProtections[] @relation("AcSpd")
 
   @@map("spd")
 }
@@ -302,6 +320,8 @@ model DcSwitch {
 
   createdAt             DateTime @default(now())
 
+  protections ProjectProtections[]
+
   @@map("dc_switch")
 }
 
@@ -322,6 +342,8 @@ model DcFuse {
   ratedCurrentA         Float
 
   createdAt             DateTime @default(now())
+
+  protections ProjectProtections[]
 
   @@map("dc_fuse")
 }
@@ -345,6 +367,8 @@ model AcBreaker {
 
   createdAt             DateTime @default(now())
 
+  protections ProjectProtections[]
+
   @@map("ac_breaker")
 }
 
@@ -364,6 +388,8 @@ model AcIsolator {
   ratedCurrentA         Float
 
   createdAt             DateTime @default(now())
+
+  protections ProjectProtections[]
 
   @@map("ac_isolator")
 }
@@ -389,6 +415,8 @@ model Cable {
   createdAt             DateTime @default(now())
 
   sections              CableSection[]
+  cableRuns             ProjectCableRun[]
+  earthingCableFor      ProjectEarthing[]
 
   @@map("cable")
 }
@@ -428,6 +456,10 @@ model Accessory {
 
   createdAt             DateTime @default(now())
 
+  connectorFor         ProjectCablingConfig[] @relation("Connector")
+  cableTrayFor         ProjectCablingConfig[] @relation("CableTray")
+  distributionBlockFor ProjectEarthing[]      @relation("DistributionBlock")
+
   @@map("accessory")
 }
 
@@ -439,4 +471,308 @@ enum AccessoryKind {
   AC_ENCLOSURE
   EARTH_ROD
   OTHER
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  companyId       String
+  company         Company       @relation(fields: [companyId], references: [id])
+  tier            ProjectTier   @default(STANDARD)
+  dossierNumber   String?
+  dossierDate     DateTime?
+  status          ProjectStatus @default(DRAFT)
+  revision        Int           @default(1)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  client          ProjectClient?
+  site            ProjectSite?
+  arrayConfig     ProjectArrayConfig?
+  protections     ProjectProtections?
+  cablingConfig   ProjectCablingConfig?
+  cableRuns       ProjectCableRun[]
+  structure       ProjectStructure?
+  earthing        ProjectEarthing?
+  simulation      ProjectSimulation?
+  imagery         ProjectImagery?
+  offGrid         ProjectOffGrid?
+  annexes         ProjectAnnexes?
+
+  @@map("project")
+}
+
+enum ProjectStatus {
+  DRAFT
+  GENERATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+model ProjectClient {
+  id                    String  @id @default(uuid())
+  projectId             String  @unique
+  project               Project @relation(fields: [projectId], references: [id])
+  civility              String?
+  fullName              String
+  clientKind            String
+  stegReference         String?
+  cin                   String?
+  commercialRegister    String?
+  phone                 String?
+  address               String?
+  city                  String?
+  governorate           String?
+  annualConsumptionKWh  Float?
+  subscribedPowerKVA    Float?
+
+  @@map("project_client")
+}
+
+model ProjectSite {
+  id                       String  @id @default(uuid())
+  projectId                String  @unique
+  project                  Project @relation(fields: [projectId], references: [id])
+  gpsLat                   Float
+  gpsLon                   Float
+  gridType                 String
+  phases                   Int
+  mountingType             String
+  roofMaterial             String?
+  buildingHeightM          Float?
+  tiltDeg                  Float
+  azimuthDeg               Float?
+  shading                  String?
+  shadingNotes             String?
+  lightningRod             Boolean @default(false)
+  generator                Boolean @default(false)
+  installationPointLat     Float?
+  installationPointLon     Float?
+  technicalRoomPointLat    Float?
+  technicalRoomPointLon    Float?
+  meterPointLat            Float?
+  meterPointLon            Float?
+  earthPitPointLat         Float?
+  earthPitPointLon         Float?
+  equipmentLocation        String?
+
+  @@map("project_site")
+}
+
+model ProjectArrayConfig {
+  id              String   @id @default(uuid())
+  projectId       String   @unique
+  project         Project  @relation(fields: [projectId], references: [id])
+  moduleId        String
+  module          PvModule @relation(fields: [moduleId], references: [id])
+  tMinC           Float    @default(-10)
+  tMaxC           Float    @default(85)
+  rowsDescription String?
+
+  inverters       ProjectArrayInverter[]
+
+  @@map("project_array_config")
+}
+
+model ProjectArrayInverter {
+  id                String             @id @default(uuid())
+  arrayConfigId     String
+  arrayConfig       ProjectArrayConfig @relation(fields: [arrayConfigId], references: [id])
+  inverterId        String
+  inverter          Inverter           @relation(fields: [inverterId], references: [id])
+  phaseConnection   String?
+
+  mppts             ProjectArrayMppt[]
+
+  @@map("project_array_inverter")
+}
+
+model ProjectArrayMppt {
+  id                 String               @id @default(uuid())
+  arrayInverterId     String
+  arrayInverter       ProjectArrayInverter @relation(fields: [arrayInverterId], references: [id])
+  stringsInParallel   Int
+  modulesPerString    Int
+
+  @@map("project_array_mppt")
+}
+
+model ProjectProtections {
+  id                       String      @id @default(uuid())
+  projectId                String      @unique
+  project                  Project     @relation(fields: [projectId], references: [id])
+  dcSpdId                  String
+  dcSpd                    Spd         @relation("DcSpd", fields: [dcSpdId], references: [id])
+  dcSwitchId               String
+  dcSwitch                 DcSwitch    @relation(fields: [dcSwitchId], references: [id])
+  dcFuseId                 String?
+  dcFuse                   DcFuse?     @relation(fields: [dcFuseId], references: [id])
+  acBreakerId              String
+  acBreaker                AcBreaker   @relation(fields: [acBreakerId], references: [id])
+  acSpdId                  String
+  acSpd                    Spd         @relation("AcSpd", fields: [acSpdId], references: [id])
+  acIsolatorId             String?
+  acIsolator               AcIsolator? @relation(fields: [acIsolatorId], references: [id])
+  mainBreakerRatedCurrentA  Float?
+  mainBreakerSensitivityMA  Int?
+  spdToEquipmentDistanceM   Float       @default(1)
+  equipmentImpulseWithstandKV Float     @default(4)
+
+  @@map("project_protections")
+}
+
+model ProjectCableRun {
+  id               String      @id @default(uuid())
+  projectId        String
+  project          Project     @relation(fields: [projectId], references: [id])
+  circuitType      CircuitType
+  label            String
+  cableId          String
+  cable            Cable       @relation(fields: [cableId], references: [id])
+  sectionMm2       Float
+  lengthM          Float
+  installMethod    String
+  ambientContext   String
+  groupedCircuits  Int         @default(1)
+  layers           Int         @default(1)
+
+  @@map("project_cable_run")
+}
+
+enum CircuitType {
+  DC
+  AC
+}
+
+model ProjectCablingConfig {
+  id                 String     @id @default(uuid())
+  projectId          String     @unique
+  project            Project    @relation(fields: [projectId], references: [id])
+  cosPhi             Float      @default(0.8)
+  lambdaOhmPerM      Float
+  maxVoltageDropPct  Float      @default(3)
+  connectorId        String?
+  connector          Accessory? @relation("Connector", fields: [connectorId], references: [id])
+  cableTrayId        String?
+  cableTray          Accessory? @relation("CableTray", fields: [cableTrayId], references: [id])
+
+  @@map("project_cabling_config")
+}
+
+model ProjectStructure {
+  id                   String  @id @default(uuid())
+  projectId            String  @unique
+  project              Project @relation(fields: [projectId], references: [id])
+  material             String
+  frameDescription     String?
+  frameCount           Int
+  railsDescription     String?
+  fixingDescription    String?
+  ballastPerFrame      Int?
+  ballastMassKg        Float?
+  ballastType          String?
+  structureWeightN     Float
+  heightHM             Float
+  depthDM              Float
+  windSpeedKmh         Float   @default(120)
+  liftCoeffNPerM2      Float?
+  dragCoeffNPerM2      Float?
+  tieDownCables        String?
+  structureAttestationFileId String?
+  structureAttestation File?   @relation("ProjectStructureAttestation", fields: [structureAttestationFileId], references: [id])
+
+  @@map("project_structure")
+}
+
+model ProjectEarthing {
+  id                       String     @id @default(uuid())
+  projectId                String     @unique
+  project                  Project    @relation(fields: [projectId], references: [id])
+  mainEarthSectionMm2      Float
+  frameEarthSectionMm2     Float
+  earthToPitSectionMm2     Float
+  rodCount                 Int
+  rodLengthM               Float
+  rodSpacingCm             Float?
+  pitSizeCm                String?
+  targetResistanceOhm      Float
+  earthCableId             String
+  earthCable               Cable      @relation(fields: [earthCableId], references: [id])
+  distributionBlockId      String?
+  distributionBlock        Accessory? @relation("DistributionBlock", fields: [distributionBlockId], references: [id])
+
+  @@map("project_earthing")
+}
+
+model ProjectSimulation {
+  id                     String  @id @default(uuid())
+  projectId              String  @unique
+  project                Project @relation(fields: [projectId], references: [id])
+  source                 String
+  pvsystReportFileId     String?
+  pvsystReport           File?   @relation("ProjectSimulationPvsystReport", fields: [pvsystReportFileId], references: [id])
+  annualProductionKWh    Float?
+  specificYieldKWhPerKWp Float?
+  performanceRatioPct    Float?
+  systemLossesPct        Float?
+
+  @@map("project_simulation")
+}
+
+model ProjectImagery {
+  id                   String  @id @default(uuid())
+  projectId            String  @unique
+  project              Project @relation(fields: [projectId], references: [id])
+  situationImageFileId String?
+  situationImage       File?   @relation("SituationImage", fields: [situationImageFileId], references: [id])
+  implantationImageFileId String?
+  implantationImage    File?   @relation("ImplantationImage", fields: [implantationImageFileId], references: [id])
+  southArrowDeg        Float?
+  geometry             Json
+  imageryProvider      String?
+
+  @@map("project_imagery")
+}
+
+model ProjectOffGrid {
+  id                        String  @id @default(uuid())
+  projectId                 String  @unique
+  project                   Project @relation(fields: [projectId], references: [id])
+  dailyLoadKWh              Float
+  autonomyDays              Float
+  batteryChemistry          String
+  batteryVoltageV           Int
+  maxDepthOfDischargePct    Float
+  batteryModel              String?
+  chargeControllerModel     String?
+
+  @@map("project_off_grid")
+}
+
+model ProjectAnnexes {
+  id                        String  @id @default(uuid())
+  projectId                 String  @unique
+  project                   Project @relation(fields: [projectId], references: [id])
+  cinFileId                 String?
+  cin                       File?   @relation("AnnexCin", fields: [cinFileId], references: [id])
+  commercialRegisterFileId  String?
+  commercialRegister        File?   @relation("AnnexCommercialRegister", fields: [commercialRegisterFileId], references: [id])
+  stegContractFileId        String?
+  stegContract              File?   @relation("AnnexStegContract", fields: [stegContractFileId], references: [id])
+  lastPaidBillFileId        String?
+  lastPaidBill              File?   @relation("AnnexLastPaidBill", fields: [lastPaidBillFileId], references: [id])
+
+  extraFiles                ProjectAnnexExtraFile[]
+
+  @@map("project_annexes")
+}
+
+model ProjectAnnexExtraFile {
+  id          String         @id @default(uuid())
+  annexesId   String
+  annexes     ProjectAnnexes @relation(fields: [annexesId], references: [id])
+  fileId      String
+  file        File           @relation("ProjectAnnexExtraFile", fields: [fileId], references: [id])
+
+  @@map("project_annex_extra_file")
 }
