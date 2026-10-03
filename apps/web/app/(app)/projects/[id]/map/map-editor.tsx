@@ -2,11 +2,20 @@
 
 import { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polygon, useMapEvents } from 'react-leaflet';
-import type { Marker as LeafletMarker, LeafletEvent, LeafletMouseEvent } from 'leaflet';
+import L, { type Marker as LeafletMarker, type LeafletEvent, type LeafletMouseEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { computePanelLayout } from '@dossipv/engine';
 import { saveMapDataAction } from './actions';
 import { ACTIVE_MAP_PROVIDER } from './esri-provider';
+
+// Leaflet's default marker icon paths are relative to its own CSS file and don't survive
+// Next.js's bundler — without this, markers render with no icon image and two 404s.
+delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const METERS_PER_DEGREE_LAT = 111_320;
 
@@ -37,7 +46,7 @@ export function computePolygonAreaM2(points: { lat: number; lon: number }[]): nu
   return Math.abs(twiceArea) / 2;
 }
 
-interface MapEditorProps {
+export interface MapEditorProps {
   projectId: string;
   tier: 'STANDARD' | 'PREMIUM';
   site: {

@@ -10,3 +10,4 @@ build/
 .superpowers/
 .worktrees/
 .claude/worktrees/
+.playwright-mcp/

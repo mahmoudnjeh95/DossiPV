@@ -8,7 +8,7 @@ export default [
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['*.config.js', '*.config.ts', '*.workspace.ts', '.sdd-scripts/**'],
+    ignores: ['*.config.js', '**/*.config.js', '*.config.ts', '**/*.config.ts', '*.workspace.ts', '.sdd-scripts/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

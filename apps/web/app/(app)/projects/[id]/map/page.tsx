@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
-import { MapEditor } from './map-editor';
+import { MapEditorClientOnly as MapEditor } from './map-editor-loader';
 
 export interface MapPageData {
   project: { id: string; tier: 'STANDARD' | 'PREMIUM' };
