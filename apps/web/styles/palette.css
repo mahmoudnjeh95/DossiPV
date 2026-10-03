@@ -1,0 +1,60 @@
+:root {
+  /* Primary Solar/Energy Colors */
+  --color-gold: #FFA500;
+  --color-gold-dark: #FF8C00;
+  --color-gold-light: #FFD700;
+
+  /* Neutral Colors */
+  --color-navy: #1A2332;
+  --color-gray-light: #F5F5F5;
+  --color-gray-neutral: #333333;
+  --color-gray-border: #CCCCCC;
+
+  /* Semantic Colors */
+  --color-success: #10B981;
+  --color-error: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg-primary: var(--color-navy);
+    --color-bg-secondary: #232e3f;
+    --color-text-primary: #f5f5f5;
+    --color-text-secondary: #cccccc;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg-primary: white;
+    --color-bg-secondary: var(--color-gray-light);
+    --color-text-primary: var(--color-gray-neutral);
+    --color-text-secondary: #666666;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+}

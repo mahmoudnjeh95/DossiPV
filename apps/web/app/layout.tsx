@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import '@/styles/palette.css';
+import '@/styles/icons.css';
 import './globals.css';
 
 export const metadata = {

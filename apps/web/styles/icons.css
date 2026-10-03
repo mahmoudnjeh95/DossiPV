@@ -1,0 +1,84 @@
+/* Icon Sizing Utilities */
+.icon-xs {
+  width: 16px;
+  height: 16px;
+}
+
+.icon-sm {
+  width: 20px;
+  height: 20px;
+}
+
+.icon-md {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-lg {
+  width: 32px;
+  height: 32px;
+}
+
+.icon-xl {
+  width: 48px;
+  height: 48px;
+}
+
+/* Icon Color Utilities */
+.icon-gold {
+  color: var(--color-gold);
+}
+
+.icon-orange {
+  color: var(--color-gold-dark);
+}
+
+.icon-success {
+  color: var(--color-success);
+}
+
+.icon-error {
+  color: var(--color-error);
+}
+
+.icon-warning {
+  color: var(--color-warning);
+}
+
+.icon-info {
+  color: var(--color-info);
+}
+
+.icon-navy {
+  color: var(--color-navy);
+}
+
+/* Icon in Buttons */
+button .icon,
+a .icon {
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+/* Navigation Icon States */
+.nav-item .icon {
+  color: var(--color-navy);
+  transition: color 200ms ease-in-out;
+}
+
+.nav-item:hover .icon,
+.nav-item.active .icon {
+  color: var(--color-gold);
+}
+
+/* Card Icon Styling */
+.card .icon {
+  color: var(--color-gold);
+  margin-bottom: 0.5rem;
+}
+
+/* Stat Card Icon */
+.stat-card .icon {
+  font-size: 2rem;
+  color: var(--color-gold);
+}
