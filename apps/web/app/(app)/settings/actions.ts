@@ -50,15 +50,6 @@ export async function saveCompanyAction(
     return { error: 'Société introuvable.' };
   }
 
-  const logoResult = await uploadIfPresent(formData, 'logo');
-  if (logoResult && 'error' in logoResult) {
-    return { error: logoResult.error };
-  }
-  const anmeCertificateResult = await uploadIfPresent(formData, 'anmeCertificate');
-  if (anmeCertificateResult && 'error' in anmeCertificateResult) {
-    return { error: anmeCertificateResult.error };
-  }
-
   const reader = new FormReader(formData);
   const anmeValidFromRaw = reader.text('anmeValidFrom', 'Début de validité ANME', 10);
   const anmeValidToRaw = reader.text('anmeValidTo', 'Fin de validité ANME', 10);
@@ -93,6 +84,15 @@ export async function saveCompanyAction(
   }
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
+  }
+
+  const logoResult = await uploadIfPresent(formData, 'logo');
+  if (logoResult && 'error' in logoResult) {
+    return { error: logoResult.error };
+  }
+  const anmeCertificateResult = await uploadIfPresent(formData, 'anmeCertificate');
+  if (anmeCertificateResult && 'error' in anmeCertificateResult) {
+    return { error: anmeCertificateResult.error };
   }
 
   let logoFileId: string | undefined;

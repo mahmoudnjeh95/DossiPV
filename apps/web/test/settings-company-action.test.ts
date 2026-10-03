@@ -149,6 +149,22 @@ describe('saveCompanyAction — logo and ANME certificate uploads', () => {
     expect(updateCallArg.data.anmeCertificateFileId).toBe('file-anme-1');
   });
 
+  it('does not write a file to disk when a non-file field fails validation (no orphaned upload)', async () => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'png' });
+    mockSaveFile.mockResolvedValue({ storageKey: 'company/abc-logo.png' });
+
+    const formData = buildFormData({ anmeValidTo: '2020-01-01' }); // before anmeValidFrom -> rejected
+    const fakeLogo = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'logo.png', { type: 'image/png' });
+    formData.set('logo', fakeLogo);
+
+    const result = await saveCompanyAction(undefined, formData);
+
+    expect(result?.error).toContain('postérieure au début');
+    expect(mockSaveFile).not.toHaveBeenCalled();
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
+  });
+
   it('saves successfully with no files uploaded, keeping existing file ids untouched', async () => {
     mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: 'existing-logo', anmeCertificateFileId: 'existing-anme' });
     mockCompanyUpdate.mockResolvedValue({ id: 'company-1' });
