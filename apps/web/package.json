@@ -9,6 +9,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@dossipv/auth": "*",
+    "@dossipv/db": "*",
     "@dossipv/engine": "*",
     "next": "^16.0.0",
     "react": "^19.0.0",
