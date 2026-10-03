@@ -9,8 +9,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@dossipv/db": "*",
     "@dossipv/engine": "*",
     "@dossipv/document-text": "*",
+    "@dossipv/pvgis-client": "*",
     "@anthropic-ai/sdk": "^0.74.0"
   },
   "devDependencies": {
