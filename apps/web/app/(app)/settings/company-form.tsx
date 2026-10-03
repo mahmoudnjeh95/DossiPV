@@ -25,6 +25,8 @@ export interface CompanyFormValues {
   defaultEarthResistanceTargetOhm: number | null;
   defaultDesignWindSpeedKmh: number;
   defaultCosPhi: number;
+  hasLogo: boolean;
+  hasAnmeCertificate: boolean;
 }
 
 export function CompanyForm({ company }: { company: CompanyFormValues }): React.JSX.Element {
@@ -75,6 +77,13 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
             Fonction
             <input type="text" name="legalRepRole" defaultValue={company.legalRepRole} required maxLength={100} />
           </label>
+          <label>
+            Logo (PNG ou JPEG)
+            <input type="file" name="logo" accept="image/png,image/jpeg" />
+            <span className="hint">
+              {company.hasLogo ? 'Un logo est déjà enregistré ; choisir un fichier le remplace.' : 'Imprimé sur chaque page du dossier généré.'}
+            </span>
+          </label>
         </div>
       </fieldset>
 
@@ -105,6 +114,13 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
             Valide jusqu&apos;au
             <input type="date" name="anmeValidTo" defaultValue={company.anmeValidTo} required />
             <span className="hint">Une accréditation expirée bloque la génération (contrôle C22).</span>
+          </label>
+          <label>
+            Attestation d&apos;accréditation (PDF)
+            <input type="file" name="anmeCertificate" accept="application/pdf" />
+            <span className="hint">
+              {company.hasAnmeCertificate ? 'Une attestation est déjà enregistrée ; choisir un fichier la remplace.' : 'Jointe en annexe du dossier généré.'}
+            </span>
           </label>
         </div>
       </fieldset>

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
+import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { catalogScope, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { FormReader } from '../../../../../lib/form-reader';
@@ -499,6 +500,41 @@ export async function saveEarthingAction(
 }
 
 // ---------------------------------------------------------------------------------------------
+// Shared file-upload helpers (Simulation's PVsyst report, Annexes' documents)
+// ---------------------------------------------------------------------------------------------
+
+interface UploadSuccess {
+  storageKey: string;
+  mimeType: string;
+  fileName: string;
+}
+
+interface ValidatedFile {
+  buffer: Buffer;
+  mimeType: string;
+  fileName: string;
+}
+
+/** Reads and validates a field's file (if present) without writing anything to disk yet. */
+async function validateFileField(formData: FormData, fieldName: string): Promise<ValidatedFile | null | { error: string }> {
+  const field = formData.get(fieldName);
+  if (!(field instanceof File) || field.size === 0) {
+    return null;
+  }
+  const buffer = Buffer.from(await field.arrayBuffer());
+  const validation = validateUploadedFile(buffer, field.type, field.size);
+  if (!validation.valid) {
+    return { error: validation.error };
+  }
+  return { buffer, mimeType: validation.mimeType, fileName: field.name };
+}
+
+async function saveValidatedFile(validated: ValidatedFile): Promise<UploadSuccess> {
+  const { storageKey } = await saveFile(validated.buffer, validated.fileName, validated.mimeType);
+  return { storageKey, mimeType: validated.mimeType, fileName: validated.fileName };
+}
+
+// ---------------------------------------------------------------------------------------------
 // Simulation
 // ---------------------------------------------------------------------------------------------
 
@@ -511,6 +547,8 @@ export async function saveSimulationAction(
   if (!owned) {
     return { error: 'Projet introuvable.' };
   }
+
+  const existing = await db.projectSimulation.findUnique({ where: { projectId }, select: { pvsystReportFileId: true } });
 
   const reader = new FormReader(formData);
   const data = {
@@ -527,6 +565,129 @@ export async function saveSimulationAction(
     return { error: reader.errorMessage() };
   }
 
-  await db.projectSimulation.upsert({ where: { projectId }, create: { projectId, ...data }, update: data });
+  // Validate the report before writing anything to disk, so an earlier mistake in the text
+  // fields above (caught by reader.hasErrors) can never leave an orphaned upload behind.
+  const validatedReport = await validateFileField(formData, 'pvsystReport');
+  if (validatedReport && 'error' in validatedReport) {
+    return { error: validatedReport.error };
+  }
+
+  let pvsystReportFileId: string | undefined;
+  if (validatedReport) {
+    const saved = await saveValidatedFile(validatedReport);
+    const file = await db.file.create({ data: { fileName: saved.fileName, mimeType: saved.mimeType, storageKey: saved.storageKey } });
+    pvsystReportFileId = file.id;
+  }
+
+  const fullData = { ...data, ...(pvsystReportFileId ? { pvsystReportFileId } : {}) };
+  await db.projectSimulation.upsert({ where: { projectId }, create: { projectId, ...fullData }, update: fullData });
+
+  if (pvsystReportFileId && existing?.pvsystReportFileId) {
+    const oldFile = await db.file.findUnique({ where: { id: existing.pvsystReportFileId } });
+    if (oldFile) {
+      await deleteFile(oldFile.storageKey);
+      await db.file.delete({ where: { id: oldFile.id } });
+    }
+  }
+
   return done(projectId, 'simulation');
+}
+
+// ---------------------------------------------------------------------------------------------
+// Annexes
+// ---------------------------------------------------------------------------------------------
+
+const ANNEX_FIELDS = ['cin', 'commercialRegister', 'stegContract', 'lastPaidBill'] as const;
+const ANNEX_FILE_ID_KEYS = {
+  cin: 'cinFileId',
+  commercialRegister: 'commercialRegisterFileId',
+  stegContract: 'stegContractFileId',
+  lastPaidBill: 'lastPaidBillFileId',
+} as const;
+
+export async function saveAnnexesAction(
+  projectId: string,
+  _prev: SectionActionState | undefined,
+  formData: FormData,
+): Promise<SectionActionState | undefined> {
+  const owned = await requireOwnedProjectId(projectId);
+  if (!owned) {
+    return { error: 'Projet introuvable.' };
+  }
+
+  const existing = await db.projectAnnexes.findUnique({ where: { projectId } });
+
+  // Phase 1: validate every file (named fields + repeatable extras) with no disk writes yet,
+  // so a later field's rejection can never orphan an earlier field's already-saved file.
+  const validated: Record<(typeof ANNEX_FIELDS)[number], ValidatedFile | null> = {
+    cin: null,
+    commercialRegister: null,
+    stegContract: null,
+    lastPaidBill: null,
+  };
+  for (const field of ANNEX_FIELDS) {
+    const result = await validateFileField(formData, field);
+    if (result && 'error' in result) {
+      return { error: result.error };
+    }
+    validated[field] = result;
+  }
+
+  const extraFiles = formData.getAll('extraFiles').filter((f): f is File => f instanceof File && f.size > 0);
+  const validatedExtraFiles: ValidatedFile[] = [];
+  for (const extraFile of extraFiles) {
+    const buffer = Buffer.from(await extraFile.arrayBuffer());
+    const validation = validateUploadedFile(buffer, extraFile.type, extraFile.size);
+    if (!validation.valid) {
+      return { error: validation.error };
+    }
+    validatedExtraFiles.push({ buffer, mimeType: validation.mimeType, fileName: extraFile.name });
+  }
+
+  // Phase 2: every file is known-valid — now it's safe to write to disk and create File rows.
+  const newFileIds: Partial<Record<string, string>> = {};
+  for (const field of ANNEX_FIELDS) {
+    const toSave = validated[field];
+    if (toSave) {
+      const saved = await saveValidatedFile(toSave);
+      const file = await db.file.create({ data: { fileName: saved.fileName, mimeType: saved.mimeType, storageKey: saved.storageKey } });
+      newFileIds[ANNEX_FILE_ID_KEYS[field]] = file.id;
+    }
+  }
+  const extraFileUploads: UploadSuccess[] = [];
+  for (const toSave of validatedExtraFiles) {
+    extraFileUploads.push(await saveValidatedFile(toSave));
+  }
+
+  await db.$transaction(async (tx) => {
+    const annexes = await tx.projectAnnexes.upsert({
+      where: { projectId },
+      create: { projectId, ...newFileIds },
+      update: newFileIds,
+    });
+
+    if (extraFileUploads.length > 0) {
+      const extraFileRows = await Promise.all(
+        extraFileUploads.map((upload) =>
+          tx.file.create({ data: { fileName: upload.fileName, mimeType: upload.mimeType, storageKey: upload.storageKey } }),
+        ),
+      );
+      await tx.projectAnnexExtraFile.deleteMany({ where: { annexesId: annexes.id } });
+      await tx.projectAnnexExtraFile.createMany({ data: extraFileRows.map((file) => ({ annexesId: annexes.id, fileId: file.id })) });
+    }
+  });
+
+  for (const field of ANNEX_FIELDS) {
+    const newId = newFileIds[ANNEX_FILE_ID_KEYS[field]];
+    const oldId = existing?.[ANNEX_FILE_ID_KEYS[field]];
+    if (newId && oldId) {
+      const oldFile = await db.file.findUnique({ where: { id: oldId } });
+      if (oldFile) {
+        await deleteFile(oldFile.storageKey);
+        await db.file.delete({ where: { id: oldFile.id } });
+      }
+    }
+  }
+
+  return done(projectId, 'annexes');
 }

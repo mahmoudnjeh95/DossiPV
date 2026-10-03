@@ -9,7 +9,8 @@ export type SectionKey =
   | 'structure'
   | 'earthing'
   | 'simulation'
-  | 'map';
+  | 'map'
+  | 'annexes';
 
 export interface SectionStatus {
   key: SectionKey;
@@ -101,5 +102,28 @@ export function computeSectionStatuses(project: ProjectForEngine): SectionStatus
       complete: project.simulation !== null,
       summary: project.simulation ? (project.simulation.source === 'PVSYST_UPLOAD' ? 'Rapport PVsyst' : 'PVGIS automatique') : null,
     },
+    {
+      key: 'annexes',
+      // Optional: never blocks generation (not consumed by the engine), only merged into the
+      // final PDF's annex pages if present — always shown "complete" so it never appears as a
+      // missing required section.
+      label: 'Annexes',
+      href: `${base}/sections/annexes`,
+      complete: true,
+      summary: annexesSummary(project.annexes),
+    },
   ];
+}
+
+function annexesSummary(annexes: ProjectForEngine['annexes']): string | null {
+  if (!annexes) {
+    return null;
+  }
+  const count =
+    (annexes.cinFileId !== null ? 1 : 0) +
+    (annexes.commercialRegisterFileId !== null ? 1 : 0) +
+    (annexes.stegContractFileId !== null ? 1 : 0) +
+    (annexes.lastPaidBillFileId !== null ? 1 : 0) +
+    annexes.extraFiles.length;
+  return count > 0 ? `${count} fichier(s)` : null;
 }

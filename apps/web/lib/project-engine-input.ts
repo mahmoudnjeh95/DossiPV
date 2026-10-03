@@ -33,6 +33,7 @@ export const PROJECT_ENGINE_INCLUDE = {
   structure: true,
   earthing: { include: { earthCable: { include: { sections: true } }, distributionBlock: true } },
   simulation: true,
+  annexes: { include: { extraFiles: true } },
   jobs: { orderBy: { startedAt: 'desc' } },
 } satisfies Prisma.ProjectInclude;
 

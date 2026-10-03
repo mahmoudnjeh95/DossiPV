@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
+import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { FormReader } from '../../../lib/form-reader';
 
@@ -10,6 +11,28 @@ export interface SaveCompanyActionState {
 }
 
 const ANME_CATEGORIES = ['BT', 'MT', 'BT_MT'] as const;
+
+interface UploadSuccess {
+  storageKey: string;
+  mimeType: string;
+  fileName: string;
+}
+
+async function uploadIfPresent(formData: FormData, fieldName: string): Promise<UploadSuccess | null | { error: string }> {
+  const field = formData.get(fieldName);
+  if (!(field instanceof File) || field.size === 0) {
+    return null;
+  }
+
+  const buffer = Buffer.from(await field.arrayBuffer());
+  const validation = validateUploadedFile(buffer, field.type, field.size);
+  if (!validation.valid) {
+    return { error: validation.error };
+  }
+
+  const { storageKey } = await saveFile(buffer, field.name, field.type);
+  return { storageKey, mimeType: validation.mimeType, fileName: field.name };
+}
 
 /**
  * Updates the caller's own company record. Everything here ends up printed on every page of a
@@ -21,6 +44,11 @@ export async function saveCompanyAction(
   formData: FormData,
 ): Promise<SaveCompanyActionState | undefined> {
   const user = await requireAuthenticatedCompanyUser();
+
+  const existing = await db.company.findUnique({ where: { id: user.companyId }, select: { logoFileId: true, anmeCertificateFileId: true } });
+  if (!existing) {
+    return { error: 'Société introuvable.' };
+  }
 
   const reader = new FormReader(formData);
   const anmeValidFromRaw = reader.text('anmeValidFrom', 'Début de validité ANME', 10);
@@ -58,7 +86,52 @@ export async function saveCompanyAction(
     return { error: reader.errorMessage() };
   }
 
-  await db.company.update({ where: { id: user.companyId }, data: { ...data, anmeValidFrom, anmeValidTo } });
+  const logoResult = await uploadIfPresent(formData, 'logo');
+  if (logoResult && 'error' in logoResult) {
+    return { error: logoResult.error };
+  }
+  const anmeCertificateResult = await uploadIfPresent(formData, 'anmeCertificate');
+  if (anmeCertificateResult && 'error' in anmeCertificateResult) {
+    return { error: anmeCertificateResult.error };
+  }
+
+  let logoFileId: string | undefined;
+  if (logoResult) {
+    const file = await db.file.create({ data: { fileName: logoResult.fileName, mimeType: logoResult.mimeType, storageKey: logoResult.storageKey } });
+    logoFileId = file.id;
+  }
+  let anmeCertificateFileId: string | undefined;
+  if (anmeCertificateResult) {
+    const file = await db.file.create({ data: { fileName: anmeCertificateResult.fileName, mimeType: anmeCertificateResult.mimeType, storageKey: anmeCertificateResult.storageKey } });
+    anmeCertificateFileId = file.id;
+  }
+
+  await db.company.update({
+    where: { id: user.companyId },
+    data: {
+      ...data,
+      anmeValidFrom,
+      anmeValidTo,
+      ...(logoFileId ? { logoFileId } : {}),
+      ...(anmeCertificateFileId ? { anmeCertificateFileId } : {}),
+    },
+  });
+
+  if (logoFileId && existing.logoFileId) {
+    const oldFile = await db.file.findUnique({ where: { id: existing.logoFileId } });
+    if (oldFile) {
+      await deleteFile(oldFile.storageKey);
+      await db.file.delete({ where: { id: oldFile.id } });
+    }
+  }
+  if (anmeCertificateFileId && existing.anmeCertificateFileId) {
+    const oldFile = await db.file.findUnique({ where: { id: existing.anmeCertificateFileId } });
+    if (oldFile) {
+      await deleteFile(oldFile.storageKey);
+      await db.file.delete({ where: { id: oldFile.id } });
+    }
+  }
+
   redirect('/settings?saved=1');
   return undefined;
 }

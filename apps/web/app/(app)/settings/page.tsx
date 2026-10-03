@@ -99,6 +99,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           defaultEarthResistanceTargetOhm: company.defaultEarthResistanceTargetOhm,
           defaultDesignWindSpeedKmh: company.defaultDesignWindSpeedKmh,
           defaultCosPhi: company.defaultCosPhi,
+          hasLogo: company.logoFileId !== null,
+          hasAnmeCertificate: company.anmeCertificateFileId !== null,
         }}
       />
     </main>

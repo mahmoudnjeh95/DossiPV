@@ -1,0 +1,59 @@
+# Production compose file for the DossiPV server (217.182.205.137).
+# Lives in the repo so changes are versioned; the deploy workflow copies this
+# file to /home/debian/dossipv/docker-compose.yml and runs `docker compose up`
+# there. The `postgres` service mirrors what's already running on the server
+# (same container name / volume / network) so adding `app` here and deploying
+# does not recreate or disturb the existing database.
+#
+# `app` is bound to 127.0.0.1 only — nginx (outside Docker) is the only public
+# entry point, proxying from the public port to 127.0.0.1:3100. See
+# deploy/nginx-dossipv.conf.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: dossipv-postgres-1
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dossipv
+      POSTGRES_USER: dossipv
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - '127.0.0.1:5433:5432'
+    volumes:
+      - dossipv_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dossipv -d dossipv']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dossipv_default
+
+  app:
+    image: dossipv-web:${IMAGE_TAG:-latest}
+    container_name: dossipv-app-1
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://dossipv:${POSTGRES_PASSWORD}@postgres:5432/dossipv
+      FILE_STORAGE_ROOT: /app/apps/web/.file-storage
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    ports:
+      - '127.0.0.1:3100:3000'
+    volumes:
+      - dossipv_files:/app/apps/web/.file-storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dossipv_default
+
+networks:
+  dossipv_default:
+    name: dossipv_default
+
+volumes:
+  dossipv_pgdata:
+    name: dossipv_pgdata
+  dossipv_files:
+    name: dossipv_files
