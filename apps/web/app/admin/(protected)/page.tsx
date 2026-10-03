@@ -1,5 +1,7 @@
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from './layout';
+import { AdminStatsCard } from './components/admin-stats-card';
+import { Users, ChartBar, Revenue, Payment } from '@dossipv/icons';
 
 export function getMonthStart(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -40,12 +42,21 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
   return (
     <main>
       <h1>Tableau de bord</h1>
-      <ul>
-        <li>Installateurs actifs : {stats.activeInstallers}</li>
-        <li>Dossiers générés ce mois : {stats.dossiersThisMonth}</li>
-        <li>Coût Claude ce mois : {stats.claudeCostThisMonthUsd.toFixed(2)} $</li>
-        <li>Revenu total : {stats.totalRevenueTnd.toFixed(2)} TND</li>
-      </ul>
+
+      <div className="card-grid">
+        <AdminStatsCard icon={Users} label="Installateurs actifs" value={stats.activeInstallers} />
+        <AdminStatsCard icon={ChartBar} label="Dossiers ce mois" value={stats.dossiersThisMonth} />
+        <AdminStatsCard
+          icon={Revenue}
+          label="Coût Claude ce mois"
+          value={`${stats.claudeCostThisMonthUsd.toFixed(2)} $`}
+        />
+        <AdminStatsCard
+          icon={Payment}
+          label="Revenu total"
+          value={`${stats.totalRevenueTnd.toFixed(2)} TND`}
+        />
+      </div>
     </main>
   );
 }
