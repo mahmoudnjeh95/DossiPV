@@ -16,12 +16,33 @@ export interface GenerateDossierActionState {
   error: string;
 }
 
-/** Shape of `DossierJob.inputSnapshot` written by the installer app — the worker reads this. */
+type ProjectForSnapshot = Prisma.ProjectGetPayload<{ include: typeof PROJECT_ENGINE_INCLUDE }>;
+
+/**
+ * Shape of `DossierJob.inputSnapshot` written by the installer app. It is a superset of two
+ * contracts so the worker can read whichever it needs:
+ *
+ * - the dossier-worker's `ProjectSnapshot` (sub-project #8, `build-snapshot.ts`): every
+ *   project section as its full Prisma row, equipment captured BY VALUE so a later catalog
+ *   edit never changes an already-generated dossier (master spec §5 step 1), plus
+ *   `capturedAt`;
+ * - the engine-ready `engineInput` and the placeholder-map `projectMeta`, already validated
+ *   against the 22 checks at the moment the installer clicked "Générer".
+ */
 export interface DossierJobSnapshotV1 {
   version: 1;
   projectId: string;
   companyId: string;
   tier: 'STANDARD' | 'PREMIUM';
+  capturedAt: string;
+  client: ProjectForSnapshot['client'];
+  site: ProjectForSnapshot['site'];
+  arrayConfig: ProjectForSnapshot['arrayConfig'];
+  protections: ProjectForSnapshot['protections'];
+  cablingConfig: ProjectForSnapshot['cablingConfig'];
+  cableRuns: ProjectForSnapshot['cableRuns'];
+  structure: ProjectForSnapshot['structure'];
+  earthing: ProjectForSnapshot['earthing'];
   engineInput: RunEngineInput;
   projectMeta: ProjectMetaForWorker;
 }
@@ -90,6 +111,15 @@ export async function generateDossierAction(
     projectId: project.id,
     companyId: project.companyId,
     tier: project.tier,
+    capturedAt: now.toISOString(),
+    client: project.client,
+    site: project.site,
+    arrayConfig: project.arrayConfig,
+    protections: project.protections,
+    cablingConfig: project.cablingConfig,
+    cableRuns: project.cableRuns,
+    structure: project.structure,
+    earthing: project.earthing,
     engineInput: engineInput.input,
     projectMeta: engineInput.meta,
   };

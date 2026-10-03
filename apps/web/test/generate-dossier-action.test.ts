@@ -168,6 +168,15 @@ describe('generateDossierAction', () => {
     });
     expect(data.data.inputSnapshot.engineInput).toMatchObject({ tMinC: -10, tMaxC: 85 });
     expect(data.data.inputSnapshot.projectMeta).toMatchObject({ earthRodCount: 3 });
+    // Equipment captured by value (worker's ProjectSnapshot contract), not just by id.
+    expect(data.data.inputSnapshot.arrayConfig).toMatchObject({
+      module: { brand: 'LONGi', pmaxW: 620 },
+    });
+    expect(data.data.inputSnapshot.protections).toMatchObject({ dcSpd: { iscpvKA: 0.02 } });
+    expect(data.data.inputSnapshot).toHaveProperty('capturedAt');
+    expect(JSON.parse(JSON.stringify(data.data.inputSnapshot))).toMatchObject({
+      earthing: { rodCount: 3 },
+    });
     expect(mocks.projectUpdate).toHaveBeenCalledWith({
       where: { id: 'project-1' },
       data: { dossierDate: expect.any(Date) as Date },
