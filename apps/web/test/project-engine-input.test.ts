@@ -94,6 +94,7 @@ describe('computeSectionStatuses', () => {
       structure: true,
       earthing: true,
       simulation: false,
+      annexes: true,
     });
     expect(statuses.find((s) => s.key === 'array')?.summary).toBe(
       '5 modules LONGi LR7-72HGD-620M, 1 onduleur(s)',
@@ -104,5 +105,21 @@ describe('computeSectionStatuses', () => {
     const project = buildFullProject();
     project.client!.stegReference = null;
     expect(computeSectionStatuses(project).find((s) => s.key === 'client')?.complete).toBe(false);
+  });
+
+  it('annexes section is always complete (optional, not an engine input) and summarizes attached file count', () => {
+    const noAnnexes = computeSectionStatuses(buildFullProject());
+    expect(noAnnexes.find((s) => s.key === 'annexes')?.complete).toBe(true);
+    expect(noAnnexes.find((s) => s.key === 'annexes')?.summary).toBeNull();
+
+    const withAnnexes = computeSectionStatuses(
+      buildFullProject({
+        annexes: {
+          id: 'annexes-1', projectId: 'project-1', cinFileId: 'file-1', commercialRegisterFileId: null,
+          stegContractFileId: 'file-2', lastPaidBillFileId: null, extraFiles: [{ id: 'extra-1', annexesId: 'annexes-1', fileId: 'file-3' }],
+        },
+      }),
+    );
+    expect(withAnnexes.find((s) => s.key === 'annexes')?.summary).toBe('3 fichier(s)');
   });
 });

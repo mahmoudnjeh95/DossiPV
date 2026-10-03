@@ -349,6 +349,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       distributionBlock: null,
     },
     simulation: null,
+    annexes: null,
     jobs: [],
   };
   return { ...project, ...overrides };

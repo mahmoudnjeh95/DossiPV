@@ -11,6 +11,7 @@ import { EarthingForm } from '../forms/earthing-form';
 import { SimulationForm } from '../forms/simulation-form';
 import { ArrayForm } from '../forms/array-form';
 import { CablingForm } from '../forms/cabling-form';
+import { AnnexesForm } from '../forms/annexes-form';
 
 const SECTION_TITLES: Record<string, string> = {
   client: 'Client',
@@ -21,6 +22,7 @@ const SECTION_TITLES: Record<string, string> = {
   structure: 'Structure',
   earthing: 'Mise à la terre',
   simulation: 'Simulation de production',
+  annexes: 'Annexes',
 };
 
 export default async function SectionPage({ params }: { params: Promise<{ id: string; section: string }> }): Promise<React.JSX.Element> {
@@ -44,6 +46,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       structure: true,
       earthing: true,
       simulation: true,
+      annexes: { include: { extraFiles: true } },
     },
   });
   if (!project) {
@@ -211,6 +214,20 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
     }
     case 'simulation':
       body = <SimulationForm projectId={project.id} simulation={project.simulation} />;
+      break;
+    case 'annexes':
+      body = (
+        <AnnexesForm
+          projectId={project.id}
+          annexes={{
+            hasCin: project.annexes?.cinFileId != null,
+            hasCommercialRegister: project.annexes?.commercialRegisterFileId != null,
+            hasStegContract: project.annexes?.stegContractFileId != null,
+            hasLastPaidBill: project.annexes?.lastPaidBillFileId != null,
+            extraFileCount: project.annexes?.extraFiles.length ?? 0,
+          }}
+        />
+      );
       break;
     default:
       notFound();
