@@ -137,7 +137,21 @@ model SuperAdmin {
   passwordHash String
   createdAt    DateTime @default(now())
 
+  sessions SuperAdminSession[]
+
   @@map("super_admin")
+}
+
+model SuperAdminSession {
+  id           String     @id @default(uuid())
+  superAdminId String
+  superAdmin   SuperAdmin @relation(fields: [superAdminId], references: [id])
+  tokenHash    String     @unique
+  createdAt    DateTime   @default(now())
+  lastSeenAt   DateTime   @default(now())
+  expiresAt    DateTime
+
+  @@map("super_admin_session")
 }
 
 model Plan {
