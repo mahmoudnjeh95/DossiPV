@@ -1,6 +1,33 @@
 import { db } from '../src/index.ts';
 
-async function seedGlobalEquipment() {
+type EquipmentSeedResult = {
+  pvModule: Awaited<ReturnType<typeof db.pvModule.create>>;
+  inverter: Awaited<ReturnType<typeof db.inverter.create>>;
+  dcSpd: Awaited<ReturnType<typeof db.spd.create>>;
+  acSpd: Awaited<ReturnType<typeof db.spd.create>>;
+  dcSwitch: Awaited<ReturnType<typeof db.dcSwitch.create>>;
+  acBreaker: Awaited<ReturnType<typeof db.acBreaker.create>>;
+  cable: Awaited<ReturnType<typeof db.cable.create>>;
+  earthCable: Awaited<ReturnType<typeof db.cable.create>>;
+};
+
+type CompanySeedResult = {
+  company: Awaited<ReturnType<typeof db.company.create>>;
+  owner: Awaited<ReturnType<typeof db.companyUser.create>>;
+};
+
+type ProjectsSeedResult = {
+  standardProject: Awaited<ReturnType<typeof db.project.create>>;
+  premiumProject: Awaited<ReturnType<typeof db.project.create>>;
+  offGridProject: Awaited<ReturnType<typeof db.project.create>>;
+};
+
+type JobSeedResult = {
+  job: Awaited<ReturnType<typeof db.dossierJob.create>>;
+  log: Awaited<ReturnType<typeof db.claudeUsageLog.create>>;
+};
+
+async function seedGlobalEquipment(): Promise<EquipmentSeedResult> {
   const pvModule = await db.pvModule.create({
     data: {
       brand: 'LONGi',
@@ -78,7 +105,7 @@ async function seedGlobalEquipment() {
   return { pvModule, inverter, dcSpd, acSpd, dcSwitch, acBreaker, cable, earthCable };
 }
 
-async function seedCompanyAndAccounts() {
+async function seedCompanyAndAccounts(): Promise<CompanySeedResult> {
   const plan = await db.plan.create({
     data: { name: 'Standard', monthlyDossierLimit: 10, priceTnd: 199.99, tier: 'STANDARD' },
   });
@@ -129,8 +156,8 @@ async function seedCompanyAndAccounts() {
 
 async function seedProjects(
   companyId: string,
-  equipment: Awaited<ReturnType<typeof seedGlobalEquipment>>,
-) {
+  equipment: EquipmentSeedResult,
+): Promise<ProjectsSeedResult> {
   // Baseline STANDARD project with PVSYST_UPLOAD simulation — exercises that conditional
   // branch (Review Focus item 2).
   const standardProject = await db.project.create({
@@ -218,7 +245,7 @@ async function seedProjects(
   return { standardProject, premiumProject, offGridProject };
 }
 
-async function seedJobAndUsageLog(projectId: string) {
+async function seedJobAndUsageLog(projectId: string): Promise<JobSeedResult> {
   const job = await db.dossierJob.create({
     data: {
       projectId,
@@ -246,12 +273,12 @@ async function seedJobAndUsageLog(projectId: string) {
   return { job, log };
 }
 
-async function main() {
+async function main(): Promise<void> {
   const equipment = await seedGlobalEquipment();
   const { company } = await seedCompanyAndAccounts();
   const { standardProject } = await seedProjects(company.id, equipment);
   await seedJobAndUsageLog(standardProject.id);
-  console.log('Seed complete.');
+  console.error('Seed complete.');
 }
 
 main()

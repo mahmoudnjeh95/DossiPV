@@ -11,7 +11,6 @@ import { PrismaClient } from '@prisma/client';
  * DATABASE_URL implicitly.
  */
 declare global {
-  // eslint-disable-next-line no-var
   var __dossipvPrisma: PrismaClient | undefined;
 }
 
