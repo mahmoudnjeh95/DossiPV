@@ -44,6 +44,9 @@ model File {
   annexStegContractFor      ProjectAnnexes[] @relation("AnnexStegContract")
   annexLastPaidBillFor      ProjectAnnexes[] @relation("AnnexLastPaidBill")
   projectAnnexExtraFiles    ProjectAnnexExtraFile[] @relation("ProjectAnnexExtraFile")
+  dossierJobDocxFor       DossierJob[] @relation("DossierJobDocx")
+  dossierJobPdfFor        DossierJob[] @relation("DossierJobPdf")
+  dossierJobAnnexesPdfFor DossierJob[] @relation("DossierJobAnnexesPdf")
 
   @@map("file")
 }
@@ -818,6 +821,13 @@ model DossierJob {
   inputSnapshot   Json
   startedAt       DateTime    @default(now())
   completedAt     DateTime?
+
+  docxFileId       String?
+  docx             File?    @relation("DossierJobDocx", fields: [docxFileId], references: [id])
+  pdfFileId        String?
+  pdf              File?    @relation("DossierJobPdf", fields: [pdfFileId], references: [id])
+  annexesPdfFileId String?
+  annexesPdf       File?    @relation("DossierJobAnnexesPdf", fields: [annexesPdfFileId], references: [id])
 
   checkResults    DossierCheckResult[]
   usageLogs       ClaudeUsageLog[]
