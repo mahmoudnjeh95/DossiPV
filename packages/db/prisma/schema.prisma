@@ -195,7 +195,7 @@ enum PaymentMethod {
 model PvModule {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -232,7 +232,7 @@ model PvModule {
 model Inverter {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -269,7 +269,7 @@ model Inverter {
 model Spd {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -304,7 +304,7 @@ enum SpdSide {
 model DcSwitch {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -328,7 +328,7 @@ model DcSwitch {
 model DcFuse {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -351,7 +351,7 @@ model DcFuse {
 model AcBreaker {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -375,7 +375,7 @@ model AcBreaker {
 model AcIsolator {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -397,7 +397,7 @@ model AcIsolator {
 model Cable {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
@@ -441,7 +441,7 @@ model CableSection {
 model Accessory {
   id                    String   @id @default(uuid())
   ownerCompanyId        String?
-  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id])
+  ownerCompany          Company? @relation(fields: [ownerCompanyId], references: [id], onDelete: Restrict)
   brand                 String
   model                 String
   datasheetFileId       String?
