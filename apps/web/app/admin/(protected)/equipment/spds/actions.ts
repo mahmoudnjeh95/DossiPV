@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
@@ -169,6 +170,7 @@ export async function deleteSpdAction(
   }
 
   await db.spd.delete({ where: { id: spdId } });
+  revalidatePath('/admin/equipment/spds');
 
   if (existing.datasheetFileId) {
     const file = await db.file.findUnique({ where: { id: existing.datasheetFileId } });

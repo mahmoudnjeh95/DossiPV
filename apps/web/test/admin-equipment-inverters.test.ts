@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const {
-  mockGet, mockCookies, mockRedirect, mockValidateSuperAdminSession,
+  mockGet, mockCookies, mockRedirect, mockRevalidatePath, mockValidateSuperAdminSession,
   mockInverterFindUnique, mockInverterCreate, mockInverterUpdate, mockInverterDelete,
   mockFileCreate, mockFileFindUnique, mockFileDelete,
   mockSaveFile, mockDeleteFile, mockValidateUploadedFile,
@@ -11,6 +11,7 @@ const {
     mockGet,
     mockCookies: vi.fn(() => Promise.resolve({ get: mockGet })),
     mockRedirect: vi.fn(),
+    mockRevalidatePath: vi.fn(),
     mockValidateSuperAdminSession: vi.fn(),
     mockInverterFindUnique: vi.fn(),
     mockInverterCreate: vi.fn(),
@@ -27,6 +28,7 @@ const {
 
 vi.mock('next/headers', () => ({ cookies: mockCookies }));
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }));
+vi.mock('next/cache', () => ({ revalidatePath: mockRevalidatePath }));
 vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
   return { ...actual, validateSuperAdminSession: mockValidateSuperAdminSession };
@@ -53,6 +55,7 @@ beforeEach(() => {
   mockGet.mockReset();
   mockGet.mockReturnValue({ value: 'valid-admin-token' });
   mockRedirect.mockClear();
+  mockRevalidatePath.mockClear();
   mockValidateSuperAdminSession.mockReset();
   mockValidateSuperAdminSession.mockResolvedValue({ id: 'admin-1', email: 'admin@dossipv.tn' });
   mockInverterFindUnique.mockClear();
@@ -138,6 +141,7 @@ describe('deleteInverterAction', () => {
     const result = await deleteInverterAction('inverter-1', undefined);
 
     expect(mockInverterDelete).toHaveBeenCalledWith({ where: { id: 'inverter-1' } });
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/equipment/inverters');
     expect(result).toBeUndefined();
   });
 

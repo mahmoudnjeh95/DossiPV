@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
@@ -159,6 +160,7 @@ export async function deleteDcSwitchAction(
   }
 
   await db.dcSwitch.delete({ where: { id: dcSwitchId } });
+  revalidatePath('/admin/equipment/dc-switches');
 
   if (existing.datasheetFileId) {
     const file = await db.file.findUnique({ where: { id: existing.datasheetFileId } });

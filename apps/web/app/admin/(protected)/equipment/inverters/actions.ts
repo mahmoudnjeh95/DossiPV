@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
@@ -188,6 +189,7 @@ export async function deleteInverterAction(
   }
 
   await db.inverter.delete({ where: { id: inverterId } });
+  revalidatePath('/admin/equipment/inverters');
 
   if (existing.datasheetFileId) {
     const file = await db.file.findUnique({ where: { id: existing.datasheetFileId } });
