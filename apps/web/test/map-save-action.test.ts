@@ -61,7 +61,7 @@ const samplePayload: MapSavePayload = {
 
 describe('saveMapDataAction', () => {
   it("updates ProjectSite and upserts ProjectImagery when the project belongs to the caller's company", async () => {
-    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1' });
+    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1', tier: 'PREMIUM' });
     mockSiteUpdate.mockResolvedValue({});
     mockImageryUpsert.mockResolvedValue({});
 
@@ -99,7 +99,7 @@ describe('saveMapDataAction', () => {
   });
 
   it('skips the ProjectImagery upsert when geometry is omitted (Standard tier, single-pin only)', async () => {
-    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1' });
+    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1', tier: 'STANDARD' });
     mockSiteUpdate.mockResolvedValue({});
 
     const withoutGeometry: typeof samplePayload = { ...samplePayload };
@@ -108,5 +108,15 @@ describe('saveMapDataAction', () => {
 
     expect(mockSiteUpdate).toHaveBeenCalled();
     expect(mockImageryUpsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects a geometry payload sent for a Standard-tier project, even if the client sends one anyway', async () => {
+    mockProjectFindFirst.mockResolvedValue({ id: 'project-1', companyId: 'company-1', tier: 'STANDARD' });
+    mockSiteUpdate.mockResolvedValue({});
+
+    const result = await saveMapDataAction('project-1', samplePayload);
+
+    expect(mockImageryUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: "Le contour et le remplissage automatique nécessitent l'abonnement Premium." });
   });
 });

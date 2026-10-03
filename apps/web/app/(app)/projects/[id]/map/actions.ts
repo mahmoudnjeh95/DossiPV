@@ -36,6 +36,10 @@ export async function saveMapDataAction(
     return { error: 'Projet introuvable.' };
   }
 
+  if (payload.geometry && project.tier !== 'PREMIUM') {
+    return { error: "Le contour et le remplissage automatique nécessitent l'abonnement Premium." };
+  }
+
   await db.projectSite.update({
     where: { projectId },
     data: {
