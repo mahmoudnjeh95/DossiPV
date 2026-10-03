@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'url';
 import { db } from '@dossipv/db';
 import { processJob } from './process-job';
 
@@ -62,7 +63,11 @@ export async function main(): Promise<void> {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// process.argv[1] is a plain path (relative or absolute, OS-specific separators); import.meta.url
+// is always an absolute, percent-encoded file:// URL — comparing them directly as strings (the
+// naive `file://${process.argv[1]}` form) never matches. pathToFileURL() normalizes argv[1] into
+// the same URL form before comparing.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     console.error('Dossier worker crashed:', error);
     process.exit(1);
