@@ -1,4 +1,5 @@
 import { db } from '@dossipv/db';
+import { requireAuthenticatedSuperAdmin } from './layout';
 
 export function getMonthStart(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -30,6 +31,10 @@ export async function computeDashboardStats(now: Date): Promise<DashboardStats> 
 }
 
 export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
+  // Defense-in-depth: see the matching comment on the installer list page for why this call
+  // is here even though the (protected) layout already guards this route.
+  await requireAuthenticatedSuperAdmin();
+
   const stats = await computeDashboardStats(new Date());
 
   return (
