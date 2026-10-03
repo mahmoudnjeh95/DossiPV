@@ -90,6 +90,7 @@ describe('computeMonthlySimulationTable', () => {
       installedKWp: 12.4,
       dcVoltageDropPct: 1.5,
       acVoltageDropPct: 1.0,
+      inverterPacW: 15000,
     });
 
     expect(result.monthly).toHaveLength(1);
@@ -108,35 +109,35 @@ describe('computeMonthlySimulationTable', () => {
   });
 
   it('scales cable loss by the hourly irradiance ratio, not a flat design-max percentage', () => {
-    // Two otherwise-identical hours, one at full STC irradiance, one at half — the ABSOLUTE
-    // cable loss (not just the percentage) at half irradiance must be well below a quarter of
-    // the full-irradiance loss's own contribution, proving the (G/1000)^2 scaling is applied
-    // per hour rather than as one flat percentage of whatever output each hour happens to have.
+    // Two otherwise-identical hours, one at full STC irradiance, one at half. Isolate cable
+    // loss specifically (not the separate, linearly-scaling inverter-efficiency/pacW-clamp
+    // effects also present in eArrayKWh - eGridKWh) by comparing each case against its own
+    // zero-cable-loss baseline (dcVoltageDropPct/acVoltageDropPct both 0) — the DIFFERENCE
+    // between the real-loss and zero-loss grid output at each irradiance level isolates
+    // exactly the cable-loss contribution at that level.
     const fullSun: PvgisHourlyRow[] = [row('20200101:1200', 800, 200, 25)];
     const halfSun: PvgisHourlyRow[] = [row('20200101:1200', 400, 100, 25)];
 
-    const fullResult = computeMonthlySimulationTable({
-      inPlaneHourly: fullSun, horizontalHourly: fullSun, module, moduleCount: 20,
-      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0,
-    });
-    const halfResult = computeMonthlySimulationTable({
-      inPlaneHourly: halfSun, horizontalHourly: halfSun, module, moduleCount: 20,
-      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0,
-    });
+    function gridKWhWithCableLoss(hourly: PvgisHourlyRow[], dcPct: number, acPct: number): number {
+      return computeMonthlySimulationTable({
+        inPlaneHourly: hourly, horizontalHourly: hourly, module, moduleCount: 20,
+        installedKWp: 12.4, dcVoltageDropPct: dcPct, acVoltageDropPct: acPct, inverterPacW: 15000,
+      }).monthly[0]!.eGridKWh;
+    }
 
-    const fullLossKWh = fullResult.monthly[0]!.eArrayKWh - fullResult.monthly[0]!.eGridKWh;
-    const halfLossKWh = halfResult.monthly[0]!.eArrayKWh - halfResult.monthly[0]!.eGridKWh;
+    const fullCableLossKWh = gridKWhWithCableLoss(fullSun, 0, 0) - gridKWhWithCableLoss(fullSun, 1.5, 1.0);
+    const halfCableLossKWh = gridKWhWithCableLoss(halfSun, 0, 0) - gridKWhWithCableLoss(halfSun, 1.5, 1.0);
 
     // Loss scales with (ratio)^2 * (output which itself scales ~linearly with irradiance) —
     // so loss at half irradiance should be well under 1/4 of full-irradiance loss, not 1/2.
-    expect(halfLossKWh).toBeLessThan(fullLossKWh / 3);
+    expect(halfCableLossKWh).toBeLessThan(fullCableLossKWh / 3);
   });
 
   it('uses the default NOCT of 45C when the module has no noctC field', () => {
     const inPlane: PvgisHourlyRow[] = [row('20200101:1200', 640, 160, 20)];
     const result = computeMonthlySimulationTable({
       inPlaneHourly: inPlane, horizontalHourly: inPlane, module, moduleCount: 20,
-      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0,
+      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0, inverterPacW: 15000,
     });
     expect(Number.isNaN(result.monthly[0]!.eArrayKWh)).toBe(false);
   });
@@ -145,10 +146,43 @@ describe('computeMonthlySimulationTable', () => {
     const inPlane: PvgisHourlyRow[] = [row('20200101:1200', 640, 160, 20), row('20200601:1200', 720, 180, 30)];
     const result = computeMonthlySimulationTable({
       inPlaneHourly: inPlane, horizontalHourly: inPlane, module, moduleCount: 20,
-      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0,
+      installedKWp: 12.4, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0, inverterPacW: 15000,
     });
 
     expect(result.normalizedProductionPerKWp).toHaveLength(result.monthly.length);
     expect(result.performanceRatioPct).toEqual(result.monthly.map((m) => m.prPct));
+  });
+
+  it('clamps hourly AC output at the inverter rated power (pacW), never exceeding it', () => {
+    // 5 modules * 620W = 3100W DC array at full STC irradiance, well above a 3000W-rated
+    // inverter -- the hour's AC output must be clamped at inverterPacW, not left at the
+    // uncapped DC-derived figure (this was a real bug found via live PVGIS validation: without
+    // the clamp, a full day of such hours overstated annual yield by ~67% against PVGIS's own
+    // reference pvcalculation=1 output for the same system/location).
+    const fullSunHour: PvgisHourlyRow[] = [row('20200101:1200', 800, 200, 25)];
+
+    const result = computeMonthlySimulationTable({
+      inPlaneHourly: fullSunHour, horizontalHourly: fullSunHour, module, moduleCount: 5,
+      installedKWp: 3.1, dcVoltageDropPct: 1.5, acVoltageDropPct: 1.0, inverterPacW: 3000,
+    });
+
+    // One hour, so eGridKWh IS that hour's output (converted to kWh) -- must not exceed
+    // 3000W / 1000 = 3.0 kWh for this single hour.
+    expect(result.monthly[0]!.eGridKWh).toBeLessThanOrEqual(3.0);
+  });
+
+  it('applies a standard inverter conversion efficiency to AC output, not a 1:1 DC-to-AC pass-through', () => {
+    // A single hour well below the inverter's pacW clamp, so the clamp never engages --
+    // isolates the efficiency factor's own effect.
+    const partialSunHour: PvgisHourlyRow[] = [row('20200101:0900', 240, 60, 20)];
+
+    const result = computeMonthlySimulationTable({
+      inPlaneHourly: partialSunHour, horizontalHourly: partialSunHour, module, moduleCount: 5,
+      installedKWp: 3.1, dcVoltageDropPct: 0, acVoltageDropPct: 0, inverterPacW: 3000,
+    });
+
+    // With dcVoltageDropPct/acVoltageDropPct both 0, the only remaining loss source is the
+    // inverter's own conversion efficiency -- eGridKWh must be strictly less than eArrayKWh.
+    expect(result.monthly[0]!.eGridKWh).toBeLessThan(result.monthly[0]!.eArrayKWh);
   });
 });

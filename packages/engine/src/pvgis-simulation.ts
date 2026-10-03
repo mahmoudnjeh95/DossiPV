@@ -5,6 +5,13 @@ const DEFAULT_NOCT_C = 45;
 const STC_IRRADIANCE_WM2 = 1000;
 const NOCT_IRRADIANCE_WM2 = 800;
 const NOCT_AMBIENT_C = 20;
+/**
+ * Standard crystalline-silicon string-inverter conversion efficiency (DC-to-AC), applied on
+ * top of (not instead of) the inverter's own rated AC power clamp below — the engine has no
+ * per-inverter efficiency-curve field (InverterInput never modeled one), so this fixed figure
+ * is the acknowledged, documented stand-in until a real efficiency-curve field exists.
+ */
+const DEFAULT_INVERTER_EFFICIENCY_PCT = 97;
 
 export function cellTempFromIrradiance(ambientTempC: number, irradianceWM2: number, noctC: number | undefined): number {
   const resolvedNoct = noctC ?? DEFAULT_NOCT_C;
@@ -95,6 +102,10 @@ export interface ComputeMonthlySimulationTableInput {
   installedKWp: number;
   dcVoltageDropPct: number;
   acVoltageDropPct: number;
+  /** Inverter's rated continuous AC output power, watts (InverterInput.pacW) — hourly AC
+   * output is clamped at this value, since a DC array routinely exceeds the inverter's rated
+   * capacity at midday (a correctly-sized system is sized that way on purpose). */
+  inverterPacW: number;
 }
 
 export function computeMonthlySimulationTable(input: ComputeMonthlySimulationTableInput): SimulationChartData {
@@ -114,7 +125,9 @@ export function computeMonthlySimulationTable(input: ComputeMonthlySimulationTab
       const irradianceRatioSquared = irradianceRatio * irradianceRatio;
       const dcLossFraction = (input.dcVoltageDropPct / 100) * irradianceRatioSquared;
       const acLossFraction = (input.acVoltageDropPct / 100) * irradianceRatioSquared;
-      const hourGridWh = hourArrayWh * (1 - dcLossFraction) * (1 - acLossFraction);
+      const afterCableLossWh = hourArrayWh * (1 - dcLossFraction) * (1 - acLossFraction);
+      const afterInverterEfficiencyWh = afterCableLossWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100);
+      const hourGridWh = Math.min(afterInverterEfficiencyWh, input.inverterPacW);
 
       eArrayWh += Math.max(0, hourArrayWh);
       eGridWh += Math.max(0, hourGridWh);

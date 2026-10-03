@@ -89,7 +89,7 @@ async function getOrFetchWeatherData(
 export async function runProductionSimulation(projectId: string): Promise<SimulationChartData> {
   const project = await db.project.findUniqueOrThrow({
     where: { id: projectId },
-    include: { site: true, arrayConfig: { include: { module: true, inverters: { include: { mppts: true } } } } },
+    include: { site: true, arrayConfig: { include: { module: true, inverters: { include: { inverter: true, mppts: true } } } } },
   });
 
   if (!project.site || !project.arrayConfig) {
@@ -109,6 +109,7 @@ export async function runProductionSimulation(projectId: string): Promise<Simula
     0,
   );
   const installedKWp = (project.arrayConfig.module.pmaxW * moduleCount) / 1000;
+  const inverterPacW = project.arrayConfig.inverters.reduce((total, inverter) => total + inverter.inverter.pacW, 0);
 
   const result = computeMonthlySimulationTable({
     inPlaneHourly: inPlane,
@@ -118,6 +119,7 @@ export async function runProductionSimulation(projectId: string): Promise<Simula
     installedKWp,
     dcVoltageDropPct: 1.5, // placeholder until the engine's own cabling results are threaded through
     acVoltageDropPct: 1.0,
+    inverterPacW,
   });
 
   const annualKWh = result.monthly.reduce((sum, row) => sum + row.eGridKWh, 0);
