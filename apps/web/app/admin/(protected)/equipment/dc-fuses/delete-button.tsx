@@ -1,0 +1,16 @@
+'use client';
+
+import { useActionState } from 'react';
+import { deleteDcFuseAction, type DcFuseActionState } from './actions';
+
+export function DeleteDcFuseButton({ dcFuseId }: { dcFuseId: string }): React.JSX.Element {
+  const boundAction = deleteDcFuseAction.bind(null, dcFuseId);
+  const [state, formAction, pending] = useActionState<DcFuseActionState | undefined>(boundAction, undefined);
+
+  return (
+    <form action={formAction}>
+      <button type="submit" disabled={pending}>Supprimer</button>
+      {state?.error && <p role="alert">{state.error}</p>}
+    </form>
+  );
+}
