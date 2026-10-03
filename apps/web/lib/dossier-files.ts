@@ -1,9 +1,8 @@
 /**
- * Generated dossier files for a job. The schema has no file rows for generated output yet
- * (master spec §5 step 8 — dossier.docx, dossier.pdf, annexes.pdf — is deferred by the
- * document-pipeline spec, and the File.storageKey layout is still "decided at implementation
- * time"). This adapter is the single place the results page asks for them, so wiring the real
- * storage later is a change here and nowhere in the page.
+ * Generated dossier files for a job, read from DossierJob.docxFileId/pdfFileId/annexesPdfFileId
+ * (populated by @dossipv/dossier-worker's processJob once a job succeeds). Returns only the
+ * kinds that actually have a saved file yet — a PENDING/RUNNING job, or one that failed before
+ * saving any output, correctly yields an empty list rather than a broken link.
  */
 export interface DossierFileView {
   kind: 'docx' | 'pdf' | 'annexes';
@@ -11,7 +10,27 @@ export interface DossierFileView {
   href: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- the job is the lookup key once storage exists
-export function listJobFiles(_job: { id: string; status: string }): DossierFileView[] {
-  return [];
+const FILE_KIND_LABELS: Record<DossierFileView['kind'], string> = {
+  docx: 'Document Word (.docx)',
+  pdf: 'Dossier complet (PDF)',
+  annexes: 'Annexes seules (PDF)',
+};
+
+export function listJobFiles(
+  job: { id: string; docxFileId: string | null; pdfFileId: string | null; annexesPdfFileId: string | null },
+  projectId: string,
+): DossierFileView[] {
+  const entries: { kind: DossierFileView['kind']; fileId: string | null }[] = [
+    { kind: 'docx', fileId: job.docxFileId },
+    { kind: 'pdf', fileId: job.pdfFileId },
+    { kind: 'annexes', fileId: job.annexesPdfFileId },
+  ];
+
+  return entries
+    .filter((entry) => entry.fileId !== null)
+    .map((entry) => ({
+      kind: entry.kind,
+      label: FILE_KIND_LABELS[entry.kind],
+      href: `/projects/${projectId}/jobs/${job.id}/files/${entry.kind}`,
+    }));
 }

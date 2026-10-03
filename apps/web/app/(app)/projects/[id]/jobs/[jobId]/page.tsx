@@ -64,7 +64,7 @@ export default async function DossierJobPage({
   const snapshot = parseJobSnapshot(job.inputSnapshot);
   const summary = snapshot ? summarizeSnapshot(snapshot) : null;
   const steps = derivePipelineSteps(job);
-  const files = listJobFiles(job);
+  const files = listJobFiles(job, projectId);
   const clientName = job.project.client?.fullName ?? 'Projet';
   const jobIndex = job.project.jobs.findIndex((j) => j.id === job.id);
   const revisionLabel =
