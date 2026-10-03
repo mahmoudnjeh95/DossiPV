@@ -735,6 +735,21 @@ model ProjectSimulation {
   @@map("project_simulation")
 }
 
+model PvgisWeatherCache {
+  id                 String   @id @default(uuid())
+  latRounded         Float
+  lonRounded         Float
+  tiltDeg            Float
+  azimuthDeg         Float
+  year               Int
+  inPlaneDataJson    Json
+  horizontalDataJson Json
+  fetchedAt          DateTime @default(now())
+
+  @@unique([latRounded, lonRounded, tiltDeg, azimuthDeg, year])
+  @@map("pvgis_weather_cache")
+}
+
 model ProjectImagery {
   id                   String  @id @default(uuid())
   projectId            String  @unique
