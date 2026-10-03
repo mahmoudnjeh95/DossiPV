@@ -64,4 +64,58 @@ describe('loadMapPageData', () => {
 
     expect(result).toBeNull();
   });
+
+  it('computes moduleInfo by summing stringsInParallel x modulesPerString across every MPPT of every inverter', async () => {
+    mockProjectFindFirst.mockResolvedValue({
+      id: 'project-1',
+      tier: 'PREMIUM',
+      site: {
+        gpsLat: 36.8,
+        gpsLon: 10.1,
+        technicalRoomPointLat: null,
+        technicalRoomPointLon: null,
+        meterPointLat: null,
+        meterPointLon: null,
+        earthPitPointLat: null,
+        earthPitPointLon: null,
+        tiltDeg: 30,
+      },
+      imagery: null,
+      arrayConfig: {
+        module: { lengthMm: 2278, widthMm: 1134 },
+        inverters: [
+          { mppts: [{ stringsInParallel: 2, modulesPerString: 10 }, { stringsInParallel: 1, modulesPerString: 8 }] },
+          { mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] },
+        ],
+      },
+    });
+
+    const result = await loadMapPageData('project-1');
+
+    expect(result?.moduleInfo).toEqual({ count: 2 * 10 + 1 * 8 + 1 * 5, lengthM: 2.278, widthM: 1.134, tiltDeg: 30 });
+  });
+
+  it('returns a null moduleInfo when the project has no array config yet', async () => {
+    mockProjectFindFirst.mockResolvedValue({
+      id: 'project-1',
+      tier: 'PREMIUM',
+      site: {
+        gpsLat: 36.8,
+        gpsLon: 10.1,
+        technicalRoomPointLat: null,
+        technicalRoomPointLon: null,
+        meterPointLat: null,
+        meterPointLon: null,
+        earthPitPointLat: null,
+        earthPitPointLon: null,
+        tiltDeg: 30,
+      },
+      imagery: null,
+      arrayConfig: null,
+    });
+
+    const result = await loadMapPageData('project-1');
+
+    expect(result?.moduleInfo).toBeNull();
+  });
 });

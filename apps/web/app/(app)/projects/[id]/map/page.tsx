@@ -16,6 +16,7 @@ export interface MapPageData {
     earthPitPointLon: number | null;
   };
   geometry: unknown;
+  moduleInfo: { count: number; lengthM: number; widthM: number; tiltDeg: number } | null;
 }
 
 export async function loadMapPageData(projectId: string): Promise<MapPageData | null> {
@@ -23,11 +24,30 @@ export async function loadMapPageData(projectId: string): Promise<MapPageData | 
 
   const project = await db.project.findFirst({
     where: { id: projectId, companyId: user.companyId },
-    include: { site: true, imagery: true },
+    include: {
+      site: true,
+      imagery: true,
+      arrayConfig: { include: { module: true, inverters: { include: { mppts: true } } } },
+    },
   });
 
   if (!project || !project.site) {
     return null;
+  }
+
+  let moduleInfo: MapPageData['moduleInfo'] = null;
+  if (project.arrayConfig) {
+    const moduleCount = project.arrayConfig.inverters.reduce(
+      (total, inverter) =>
+        total + inverter.mppts.reduce((mpptTotal, mppt) => mpptTotal + mppt.stringsInParallel * mppt.modulesPerString, 0),
+      0,
+    );
+    moduleInfo = {
+      count: moduleCount,
+      lengthM: project.arrayConfig.module.lengthMm / 1000,
+      widthM: project.arrayConfig.module.widthMm / 1000,
+      tiltDeg: project.site.tiltDeg,
+    };
   }
 
   return {
@@ -43,6 +63,7 @@ export async function loadMapPageData(projectId: string): Promise<MapPageData | 
       earthPitPointLon: project.site.earthPitPointLon,
     },
     geometry: project.imagery?.geometry ?? null,
+    moduleInfo,
   };
 }
 
@@ -54,5 +75,13 @@ export default async function MapPage({ params }: { params: Promise<{ id: string
     notFound();
   }
 
-  return <MapEditor projectId={data.project.id} tier={data.project.tier} site={data.site} geometry={data.geometry} />;
+  return (
+    <MapEditor
+      projectId={data.project.id}
+      tier={data.project.tier}
+      site={data.site}
+      geometry={data.geometry}
+      moduleInfo={data.moduleInfo}
+    />
+  );
 }
