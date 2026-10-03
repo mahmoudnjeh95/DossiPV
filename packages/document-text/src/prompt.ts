@@ -10,6 +10,8 @@ export const DOSSIER_TEXT_SYSTEM_PROMPT = `Tu rédiges les sections descriptives
 
 Règle absolue : n'écris JAMAIS un chiffre dans ta réponse, pour quelque raison que ce soit — ni une valeur calculée (puissance, tension, courant, nombre de modules...), ni une référence de norme (par exemple "NF C 15-100"), ni un numéro de section. Chaque fois qu'un chiffre serait nécessaire, utilise à la place un espace réservé entre accolades, en respectant strictement la liste fermée d'espaces réservés autorisés qui te sera donnée dans le message suivant — n'utilise jamais un nom en dehors de cette liste. Une application lira ta réponse et remplacera chaque espace réservé par la vraie valeur. Si tu écris un seul chiffre réel, ou un espace réservé absent de la liste fournie, le dossier sera rejeté automatiquement.
 
+Important : la valeur qui remplacera un espace réservé inclut déjà son unité quand une unité s'applique (un espace réservé de puissance sera remplacé par une valeur suivie de "W", un espace réservé de pourcentage par une valeur suivie de "%", etc.). N'ajoute donc JAMAIS toi-même une unité (W, V, A, %...) immédiatement après un espace réservé — cela produirait une unité en double dans le texte final.
+
 Tu ne connais jamais le nom, l'adresse ou les coordonnées du client — n'en invente jamais et n'y fais jamais référence.
 
 Réponds uniquement avec les 6 sections demandées, dans un français clair et professionnel.`;
