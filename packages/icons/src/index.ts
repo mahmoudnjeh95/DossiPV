@@ -4,8 +4,8 @@ export { Icon } from './Icon';
 // Navigation icons
 export { Home, Dashboard, Projects, Library, Settings, Logout, Menu, Close, Search } from './categories/navigation';
 
-// Equipment icons (placeholder exports - will be filled in Task 3)
-// export { PvModule, Inverter, Spd, DcSwitch, DcFuse, AcBreaker, AcIsolator, Cable, Accessory } from './categories/equipment';
+// Equipment icons
+export { PvModule, Inverter, Spd, DcSwitch, DcFuse, AcBreaker, AcIsolator, Cable, Accessory } from './categories/equipment';
 
 // Action icons (placeholder exports - will be filled in Task 4)
 // export { Edit, Delete, Add, Check, Error, Warning, Info, Loading, Eye, EyeOff } from './categories/actions';
