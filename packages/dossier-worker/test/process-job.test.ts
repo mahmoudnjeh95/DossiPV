@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { PDFDocument } from 'pdf-lib';
 
 const mocks = vi.hoisted(() => ({
   dossierJobFindUniqueOrThrow: vi.fn(),
@@ -12,6 +13,13 @@ const mocks = vi.hoisted(() => ({
   fillDossierTemplate: vi.fn(),
   convertDocxToPdf: vi.fn(),
   mergeAnnexes: vi.fn(),
+  mergeDocumentFragments: vi.fn(),
+  renderCoverPage: vi.fn(),
+  renderDrawingPages: vi.fn(),
+  generatePage37Layout: vi.fn(),
+  fetchSatelliteImage: vi.fn(),
+  renderSitePlanPages: vi.fn(),
+  renderTableOfContents: vi.fn(),
   saveFile: vi.fn(),
   readFile: vi.fn(),
 }));
@@ -33,7 +41,13 @@ vi.mock('@dossipv/db', async () => {
 vi.mock('../src/generate-dossier-document', () => ({ generateDossierDocument: mocks.generateDossierDocument, DossierGenerationBlockedError: class extends Error {} }));
 vi.mock('@dossipv/docx-template', () => ({ fillDossierTemplate: mocks.fillDossierTemplate }));
 vi.mock('../src/convert-to-pdf', () => ({ convertDocxToPdf: mocks.convertDocxToPdf }));
-vi.mock('../src/merge-annexes', () => ({ mergeAnnexes: mocks.mergeAnnexes }));
+vi.mock('../src/merge-annexes', () => ({ mergeAnnexes: mocks.mergeAnnexes, mergeDocumentFragments: mocks.mergeDocumentFragments }));
+vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
+vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
+vi.mock('../src/generate-page-37-layout', () => ({ generatePage37Layout: mocks.generatePage37Layout }));
+vi.mock('../src/fetch-satellite-image', () => ({ fetchSatelliteImage: mocks.fetchSatelliteImage }));
+vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
+vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents }));
 vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: vi.fn(() => '/fake/path') }));
 vi.mock('fs/promises', async () => {
   const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
@@ -51,14 +65,49 @@ const validSnapshot = {
     dcFuse: null,
     acIsolator: null,
     module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 },
+    dcRun: { sectionMm2: 6, lengthM: 20 },
+    acRun: { sectionMm2: 10, lengthM: 15 },
   },
   projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
   client: { fullName: 'Ahmed', address: 'Tunis', stegReference: 'STEG-1' },
   cableRuns: [],
 };
 
-beforeEach(() => {
+const premiumSnapshot = {
+  ...validSnapshot,
+  tier: 'PREMIUM',
+  site: { gpsLat: 36.8, gpsLon: 10.2, technicalRoomPointLat: 36.801, technicalRoomPointLon: 10.201, meterPointLat: 36.799, meterPointLon: 10.199, earthPitPointLat: null, earthPitPointLon: null },
+};
+
+// processJob reads the real page count of the body PDF and the drawings PDF (pdf-lib's
+// PDFDocument.load) to compute the TOC's fragment-level page numbers, so those two mocks must
+// return genuine PDFs. The other fragments are only handed on to the (mocked) merge, so
+// recognisable fake buffers are enough there.
+async function makePdf(pageCount: number): Promise<Buffer> {
+  const doc = await PDFDocument.create();
+  for (let i = 0; i < pageCount; i += 1) {
+    doc.addPage([200, 200]);
+  }
+  return Buffer.from(await doc.save());
+}
+
+const COVER_PDF = Buffer.from('%PDF-fake-cover');
+const TOC_PDF = Buffer.from('%PDF-fake-toc');
+const SITE_PLAN_PDF = Buffer.from('%PDF-fake-site-plan');
+const ASSEMBLED_PDF = Buffer.from('%PDF-fake-assembled');
+const SATELLITE_TILE = Buffer.from('fake satellite tile');
+const PAGE_37_LAYOUT = { panelRectangle: [{ lat: 36.8, lon: 10.2 }], wireRoute: [{ lat: 36.8, lon: 10.2 }] };
+let bodyPdf: Buffer;
+let drawingsPdf: Buffer;
+
+function findSucceededUpdate(): unknown {
+  return mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED');
+}
+
+beforeEach(async () => {
   vi.clearAllMocks();
+  bodyPdf = await makePdf(3);
+  drawingsPdf = await makePdf(2);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
   mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: null });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
@@ -87,8 +136,15 @@ beforeEach(() => {
     },
   });
   mocks.fillDossierTemplate.mockReturnValue(Buffer.from('fake docx'));
-  mocks.convertDocxToPdf.mockResolvedValue(Buffer.from('%PDF-fake'));
+  mocks.convertDocxToPdf.mockResolvedValue(bodyPdf);
   mocks.mergeAnnexes.mockResolvedValue(Buffer.from('%PDF-merged'));
+  mocks.mergeDocumentFragments.mockResolvedValue(ASSEMBLED_PDF);
+  mocks.renderCoverPage.mockResolvedValue(COVER_PDF);
+  mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
+  mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
+  mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
+  mocks.renderSitePlanPages.mockResolvedValue(SITE_PLAN_PDF);
+  mocks.renderTableOfContents.mockResolvedValue(TOC_PDF);
   mocks.saveFile.mockResolvedValue({ storageKey: 'dossier/fake.bin' });
   mocks.fileCreate.mockResolvedValue({ id: 'file-x' });
   mocks.readFile.mockResolvedValue(Buffer.from('template bytes'));
@@ -219,5 +275,140 @@ describe('processJob — equipment datasheet collection', () => {
     expect(uniqueIds.has('file-module-datasheet')).toBe(true);
     expect(uniqueIds.has('file-inverter-datasheet')).toBe(true);
     expect(findManyCall.where.id.in.filter((id) => id === 'file-inverter-datasheet')).toHaveLength(1);
+  });
+});
+
+describe('processJob — full fragment assembly (Premium tier)', () => {
+  it('calls every new renderer and merges fragments in the documented order for a PREMIUM project', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+
+    await processJob('job-1');
+
+    expect(mocks.renderCoverPage).toHaveBeenCalled();
+    expect(mocks.renderDrawingPages).toHaveBeenCalled();
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalled();
+    expect(mocks.generatePage37Layout).toHaveBeenCalled();
+    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'PREMIUM' }));
+    expect(mocks.renderTableOfContents).toHaveBeenCalled();
+    expect(mocks.mergeDocumentFragments).toHaveBeenCalled();
+  });
+
+  it('skips fetchSatelliteImage and generatePage37Layout entirely for a STANDARD project (no network/API call)', async () => {
+    await processJob('job-1'); // validSnapshot's default tier is STANDARD
+
+    expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
+    expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
+    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'STANDARD' }));
+  });
+});
+
+describe('processJob — fragment assembly details', () => {
+  it('merges cover → TOC → body → drawings → map pages in that order, saves that as dossier.pdf, and feeds it to the annexes merge', async () => {
+    await processJob('job-1');
+
+    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([COVER_PDF, TOC_PDF, bodyPdf, drawingsPdf, SITE_PLAN_PDF], []);
+    expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
+    expect(mocks.mergeAnnexes).toHaveBeenCalledWith(ASSEMBLED_PDF, []);
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('gives the TOC exact fragment-level page numbers from the real body and drawings page counts', async () => {
+    mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
+
+    await processJob('job-1');
+
+    // Cover = page 1, TOC = page 2, body = pages 3-7, drawings = pages 8-9, map pages from 10.
+    const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
+    expect(entries.find((e) => e.title === 'Annexe — Schémas électriques')?.pageNumber).toBe(8);
+    expect(entries.find((e) => e.title === 'Annexe — Plans de situation')?.pageNumber).toBe(10);
+  });
+
+  it('builds the cover page and the drawings from the company and the frozen snapshot', async () => {
+    await processJob('job-1');
+
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ companyName: 'SolarPro', clientFullName: 'Ahmed', companyLogoBuffer: null }));
+    expect(mocks.renderDrawingPages).toHaveBeenCalledWith(
+      expect.objectContaining({
+        moduleLabel: 'X',
+        inverters: [{ inverterLabel: 'Y (1)', pacW: 4000, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+        dcSwitchLabel: '—',
+        dcRun: { sectionMm2: 6, lengthM: 20 },
+        acRun: { sectionMm2: 10, lengthM: 15 },
+        earthRodCount: 1,
+      }),
+    );
+  });
+
+  it('passes the placed site points (null when not placed) to the page-37 layout call and the premium renderer', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    const expectedPoints = { technicalRoom: { lat: 36.801, lon: 10.201 }, meter: { lat: 36.799, lon: 10.199 }, earthPit: null };
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledWith({ lat: 36.8, lon: 10.2 });
+    expect(mocks.generatePage37Layout).toHaveBeenCalledWith({ satelliteImage: SATELLITE_TILE, points: expectedPoints }, expect.anything());
+    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith({
+      tier: 'PREMIUM',
+      clientFullName: 'Ahmed',
+      clientAddress: 'Tunis',
+      gps: { lat: 36.8, lon: 10.2 },
+      installerName: 'SolarPro',
+      premiumData: { page37SatelliteImage: SATELLITE_TILE, page38SatelliteImage: SATELLITE_TILE, layout: PAGE_37_LAYOUT, points: expectedPoints },
+    });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('falls back to the empty-frame site plan, with no network/API call, for a PREMIUM project whose site is not located yet', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...premiumSnapshot, site: null } });
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
+    expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
+    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'STANDARD', premiumData: null, gps: { lat: 0, lon: 0 } }));
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('retries a transient Esri tile fetch failure instead of failing the job', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await processJob('job-1');
+
+    // 1 failed attempt + 1 retried success (page 37) + 1 fetch for page 38.
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+});
+
+describe('processJob — failure paths of the fragment-assembly steps', () => {
+  // An unreadable body/drawings PDF fails at the step that produced it (its page count is read
+  // there), not later at the TOC or the merge.
+  const failureCases: { failedStep: string; tier: 'STANDARD' | 'PREMIUM'; arrange: () => void }[] = [
+    { failedStep: 'pdf', tier: 'STANDARD', arrange: () => mocks.convertDocxToPdf.mockResolvedValue(Buffer.from('not a pdf')) },
+    { failedStep: 'cover', tier: 'STANDARD', arrange: () => mocks.renderCoverPage.mockRejectedValue(new Error('cover boom')) },
+    { failedStep: 'drawings', tier: 'STANDARD', arrange: () => mocks.renderDrawingPages.mockRejectedValue(new Error('drawings boom')) },
+    { failedStep: 'drawings', tier: 'STANDARD', arrange: () => mocks.renderDrawingPages.mockResolvedValue(Buffer.from('not a pdf')) },
+    { failedStep: 'map-pages', tier: 'PREMIUM', arrange: () => mocks.fetchSatelliteImage.mockRejectedValue(new Error('satellite tile boom')) },
+    { failedStep: 'map-pages', tier: 'STANDARD', arrange: () => mocks.renderSitePlanPages.mockRejectedValue(new Error('site plan boom')) },
+    { failedStep: 'page-37-layout', tier: 'PREMIUM', arrange: () => mocks.generatePage37Layout.mockRejectedValue(new Error('page-37 layout boom')) },
+    { failedStep: 'toc', tier: 'STANDARD', arrange: () => mocks.renderTableOfContents.mockRejectedValue(new Error('toc boom')) },
+    { failedStep: 'assembly', tier: 'STANDARD', arrange: () => mocks.mergeDocumentFragments.mockRejectedValue(new Error('assembly boom')) },
+  ];
+
+  it.each(failureCases)('fails with failedStep $failedStep ($tier) and a step-specific generic message', async ({ failedStep, tier, arrange }) => {
+    if (tier === 'PREMIUM') {
+      mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    }
+    arrange();
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string; failedStep: string; failureReason: string } };
+    expect(failCall.data.status).toBe('FAILED');
+    expect(failCall.data.failedStep).toBe(failedStep);
+    expect(failCall.data.failureReason).not.toContain('boom');
+    expect(failCall.data.failureReason).not.toBe('La génération du dossier a échoué.'); // not the unknown-step fallback
+    expect(mocks.saveFile).not.toHaveBeenCalled();
   });
 });

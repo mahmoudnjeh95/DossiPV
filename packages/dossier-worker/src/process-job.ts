@@ -1,15 +1,22 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
+import { PDFDocument } from 'pdf-lib';
 import { db } from '@dossipv/db';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
-import { mergeAnnexes, type AnnexFile } from './merge-annexes';
+import { mergeAnnexes, mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
 import { withRetry } from './retry';
+import { renderCoverPage } from './render-cover-page';
+import { renderDrawingPages } from './render-drawings';
+import { generatePage37Layout, type Page37Layout, type Page37Points } from './generate-page-37-layout';
+import { fetchSatelliteImage } from './fetch-satellite-image';
+import { renderSitePlanPages, type SitePlanPremiumData } from './render-site-plan-pages';
+import { renderTableOfContents } from './render-toc';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 
@@ -25,6 +32,12 @@ const GENERIC_FAILURE_REASONS: Record<string, string> = {
   text: 'La génération du texte du dossier a échoué.',
   docx: 'La génération du document Word a échoué.',
   pdf: 'La conversion en PDF a échoué.',
+  cover: 'La génération de la page de garde a échoué.',
+  drawings: 'La génération des schémas électriques a échoué.',
+  'map-pages': 'La génération des plans de situation a échoué.',
+  'page-37-layout': "L'analyse de l'image satellite pour le plan d'implantation a échoué.",
+  toc: 'La génération de la table des matières a échoué.',
+  assembly: "L'assemblage du dossier PDF a échoué.",
   annexes: 'La fusion des annexes a échoué.',
   save: "L'enregistrement du dossier a échoué.",
 };
@@ -127,11 +140,132 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'docx', error);
   }
 
-  let pdfBuffer: Buffer;
+  // Fragment assembly. Final page order: cover → TOC → body → drawings (pages 35-36) → map pages
+  // (37-38). The TOC is rendered last because it needs the other fragments' real page counts.
+  // Each fragment's page count is read inside the step that produced it, so an unreadable
+  // fragment fails at the step responsible for it rather than at the TOC.
+  let bodyPdfBuffer: Buffer;
+  let bodyPageCount: number;
   try {
-    pdfBuffer = await convertDocxToPdf(docxBuffer);
+    bodyPdfBuffer = await convertDocxToPdf(docxBuffer);
+    bodyPageCount = (await PDFDocument.load(bodyPdfBuffer)).getPageCount();
   } catch (error) {
     return fail(jobId, 'pdf', error);
+  }
+
+  let coverPageBuffer: Buffer;
+  try {
+    coverPageBuffer = await renderCoverPage({
+      companyName: company.name,
+      // Logo fetch is a follow-up: company.logoFileId exists but isn't resolved to a Buffer here
+      // yet. renderCoverPage already handles a null logo gracefully.
+      companyLogoBuffer: null,
+      dossierNumber: snapshot.dossierNumber,
+      clientFullName: snapshot.client?.fullName ?? '',
+      dossierDate: snapshot.dossierDate ?? new Date().toISOString().slice(0, 10),
+    });
+  } catch (error) {
+    return fail(jobId, 'cover', error);
+  }
+
+  let drawingsBuffer: Buffer;
+  let drawingsPageCount: number;
+  try {
+    const protections = snapshot.protections;
+    const equipmentLabel = (device: { brand: string; model: string } | null | undefined): string =>
+      device ? `${device.brand} ${device.model}` : '—';
+    drawingsBuffer = await renderDrawingPages({
+      moduleLabel: snapshot.projectMeta.moduleBrandModel,
+      inverters: snapshot.engineInput.array.map((entry, i) => ({
+        inverterLabel: `${snapshot.projectMeta.inverterBrandModel} (${i + 1})`,
+        pacW: entry.inverter.pacW,
+        mppts: entry.mppts,
+      })),
+      dcSwitchLabel: equipmentLabel(protections?.dcSwitch),
+      dcSpdLabel: equipmentLabel(protections?.dcSpd),
+      acSpdLabel: equipmentLabel(protections?.acSpd),
+      acBreakerLabel: equipmentLabel(protections?.acBreaker),
+      dcRun: { sectionMm2: snapshot.engineInput.dcRun.sectionMm2, lengthM: snapshot.engineInput.dcRun.lengthM },
+      acRun: { sectionMm2: snapshot.engineInput.acRun.sectionMm2, lengthM: snapshot.engineInput.acRun.lengthM },
+      earthRodCount: snapshot.projectMeta.earthRodCount,
+    });
+    drawingsPageCount = (await PDFDocument.load(drawingsBuffer)).getPageCount();
+  } catch (error) {
+    return fail(jobId, 'drawings', error);
+  }
+
+  // Pages 37-38: a Premium project with a located site gets real satellite imagery plus the
+  // AI-reasoned page-37 layout. Anything else (Standard tier, or a Premium project whose site
+  // isn't located yet) gets the empty title-block frames, with zero network or API calls.
+  let sitePlanPremiumData: SitePlanPremiumData | null = null;
+  const premiumSite = snapshot.tier === 'PREMIUM' ? snapshot.site : null;
+  if (premiumSite) {
+    const points: Page37Points = {
+      technicalRoom: premiumSite.technicalRoomPointLat !== null && premiumSite.technicalRoomPointLon !== null ? { lat: premiumSite.technicalRoomPointLat, lon: premiumSite.technicalRoomPointLon } : null,
+      meter: premiumSite.meterPointLat !== null && premiumSite.meterPointLon !== null ? { lat: premiumSite.meterPointLat, lon: premiumSite.meterPointLon } : null,
+      earthPit: premiumSite.earthPitPointLat !== null && premiumSite.earthPitPointLon !== null ? { lat: premiumSite.earthPitPointLat, lon: premiumSite.earthPitPointLon } : null,
+    };
+    const sitePoint = { lat: premiumSite.gpsLat, lon: premiumSite.gpsLon };
+
+    let page37Image: Buffer;
+    let page38Image: Buffer;
+    try {
+      page37Image = await withRetry(() => fetchSatelliteImage(sitePoint));
+      page38Image = await withRetry(() => fetchSatelliteImage(sitePoint));
+    } catch (error) {
+      return fail(jobId, 'map-pages', error);
+    }
+
+    let layout: Page37Layout;
+    try {
+      layout = await withRetry(() => generatePage37Layout({ satelliteImage: page37Image, points }, anthropicClient));
+    } catch (error) {
+      return fail(jobId, 'page-37-layout', error);
+    }
+
+    sitePlanPremiumData = { page37SatelliteImage: page37Image, page38SatelliteImage: page38Image, layout, points };
+  }
+
+  let sitePlanBuffer: Buffer;
+  try {
+    sitePlanBuffer = await renderSitePlanPages({
+      tier: sitePlanPremiumData ? 'PREMIUM' : 'STANDARD',
+      clientFullName: snapshot.client?.fullName ?? '',
+      clientAddress: snapshot.client?.address ?? '',
+      gps: snapshot.site ? { lat: snapshot.site.gpsLat, lon: snapshot.site.gpsLon } : { lat: 0, lon: 0 },
+      installerName: company.name,
+      premiumData: sitePlanPremiumData,
+    });
+  } catch (error) {
+    return fail(jobId, 'map-pages', error);
+  }
+
+  let tocBuffer: Buffer;
+  try {
+    // Page numbers assume the cover and the TOC take one page each (7 entries always fit on one
+    // TOC page). The fragment-level numbers (where the drawings and the map pages start) are
+    // exact, from the real page counts above. The in-body sub-section numbers are deliberately
+    // approximate fixed offsets: finding the page each prose section lands on inside the
+    // LibreOffice-rendered body would mean parsing the body PDF's text layout, which is out of
+    // scope for v1's TOC.
+    tocBuffer = await renderTableOfContents([
+      { title: 'I. Préambule', pageNumber: 3 },
+      { title: 'II. Présentation du projet', pageNumber: 3 },
+      { title: 'III. Description de la solution technique', pageNumber: 4 },
+      { title: 'IV. Câblage', pageNumber: bodyPageCount - 2 > 4 ? bodyPageCount - 2 : 5 },
+      { title: 'V. Mise à la terre', pageNumber: bodyPageCount },
+      { title: 'Annexe — Schémas électriques', pageNumber: 3 + bodyPageCount },
+      { title: 'Annexe — Plans de situation', pageNumber: 3 + bodyPageCount + drawingsPageCount },
+    ]);
+  } catch (error) {
+    return fail(jobId, 'toc', error);
+  }
+
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await mergeDocumentFragments([coverPageBuffer, tocBuffer, bodyPdfBuffer, drawingsBuffer, sitePlanBuffer], []);
+  } catch (error) {
+    return fail(jobId, 'assembly', error);
   }
 
   let annexesPdfBuffer: Buffer;
