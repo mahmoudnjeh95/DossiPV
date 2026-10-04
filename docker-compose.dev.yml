@@ -1,0 +1,29 @@
+# Local development database. NOT used in production (see deploy/docker-compose.yml).
+#
+#   npm run db:up      start it
+#   npm run db:down    stop it (data is kept in the dossipv_dev_pgdata volume)
+#
+# It listens on 127.0.0.1:5432, deliberately NOT 5433: port 5433 is what the SSH
+# tunnel to the production server uses, so the two can never be mixed up.
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: dossipv-dev-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dossipv
+      POSTGRES_USER: dossipv
+      POSTGRES_PASSWORD: dev
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - dossipv_dev_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U dossipv -d dossipv']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dossipv_dev_pgdata:

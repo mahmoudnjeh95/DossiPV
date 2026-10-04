@@ -15,7 +15,13 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "setup:env": "node scripts/setup-env.mjs",
+    "db:up": "docker compose -f docker-compose.dev.yml up -d --wait",
+    "db:down": "docker compose -f docker-compose.dev.yml down",
+    "db:migrate": "npm run migrate:deploy --workspace=@dossipv/db",
+    "db:seed": "npm run seed --workspace=@dossipv/db",
+    "create-super-admin": "node packages/auth/scripts/create-super-admin.mjs"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.18.0",
