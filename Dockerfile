@@ -11,7 +11,7 @@
 # package.json requires Node >=25; the server's own system Node (v20) is
 # intentionally NOT used — everything runs inside this container.
 
-ARG NODE_VERSION=25-alpine
+ARG NODE_VERSION=24-alpine
 
 # ---- deps: install once, reused by builder ----
 FROM node:${NODE_VERSION} AS deps
