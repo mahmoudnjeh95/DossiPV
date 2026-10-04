@@ -26,6 +26,7 @@ COPY packages/document-text/package.json packages/document-text/package.json
 COPY packages/dossier-worker/package.json packages/dossier-worker/package.json
 COPY packages/engine/package.json packages/engine/package.json
 COPY packages/file-storage/package.json packages/file-storage/package.json
+COPY packages/icons/package.json packages/icons/package.json
 COPY packages/pvgis-client/package.json packages/pvgis-client/package.json
 
 RUN npm ci
