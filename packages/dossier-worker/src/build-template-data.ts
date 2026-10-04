@@ -29,6 +29,10 @@ function formatPlaceholder(name: 'P_DC_W' | 'MODULE_COUNT', derived: Record<stri
   return def.unit ? `${formatted} ${def.unit}` : formatted;
 }
 
+function fmt(value: number, decimals = 1): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
+}
+
 export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplateData {
   const { workerResult, engineInput, projectMeta, snapshot, companyInfo } = input;
 
@@ -66,5 +70,26 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     })),
     dcFuseRequired: engineInput.dcFuse !== null,
     acIsolatorRequired: engineInput.acIsolator !== null,
+    moduleSpecPmaxW: fmt(engineInput.module.pmaxW, 0),
+    moduleSpecVmpV: fmt(engineInput.module.vmpV),
+    moduleSpecImpA: fmt(engineInput.module.impA),
+    moduleSpecVocV: fmt(engineInput.module.vocV),
+    moduleSpecIscA: fmt(engineInput.module.iscA),
+    inverterSpecPacW: fmt(engineInput.array[0]!.inverter.pacW, 0),
+    inverterSpecVdcMaxV: fmt(engineInput.array[0]!.inverter.vdcMaxV),
+    inverterSpecMpptMinV: fmt(engineInput.array[0]!.inverter.mpptMinV),
+    inverterSpecMpptMaxV: fmt(engineInput.array[0]!.inverter.mpptMaxV),
+    stringSizingNsMin: fmt(workerResult.engineResult.derived.NS_MIN!, 0),
+    stringSizingNsMax: fmt(workerResult.engineResult.derived.NS_MAX!, 0),
+    stringSizingNsOptMax: fmt(workerResult.engineResult.derived.NS_OPT_MAX!, 0),
+    stringSizingNpMax: fmt(workerResult.engineResult.derived.NP_MAX!, 0),
+    stringSizingNpOpt: fmt(workerResult.engineResult.derived.NP_OPT!, 0),
+    voltageDropDuDcV: fmt(workerResult.engineResult.derived.DU_DC_V!),
+    voltageDropDuDcPct: fmt(workerResult.engineResult.derived.DU_DC_PCT!, 2),
+    voltageDropDuAcV: fmt(workerResult.engineResult.derived.DU_AC_V!),
+    voltageDropDuAcPct: fmt(workerResult.engineResult.derived.DU_AC_PCT!, 2),
+    stabilityWeightN: fmt(workerResult.engineResult.derived.F_WEIGHT_N!, 0),
+    stabilityLhs: fmt(workerResult.engineResult.derived.STABILITY_LHS!, 0),
+    stabilityRhs: fmt(workerResult.engineResult.derived.STABILITY_RHS!, 0),
   };
 }

@@ -70,6 +70,72 @@ describe('buildTemplateData', () => {
     expect(data.acIsolatorRequired).toBe(false);
   });
 
+  it('exposes full module/inverter electrical specs and the engine calculation-result tables as flat string fields', () => {
+    // Fields are flat (moduleSpecPmaxW, not a nested moduleSpecs.pmaxW object) — confirmed
+    // empirically that this installed docxtemplater version (3.71.0) does NOT resolve
+    // dotted-path tags against a nested render-data object; {moduleSpecs.pmaxW} renders as the
+    // literal string "undefined". Every tag in this template must be a flat top-level key,
+    // exactly matching this codebase's existing DossierTemplateData fields (pDcW, moduleCount).
+    const result = buildTemplateData({
+      workerResult: {
+        ...workerResult,
+        engineResult: {
+          ...workerResult.engineResult,
+          derived: {
+            ...workerResult.engineResult.derived,
+            NS_MIN: 10,
+            NS_MAX: 14,
+            NS_OPT_MAX: 13,
+            NP_MAX: 2,
+            NP_OPT: 2,
+            DU_DC_V: 2.3,
+            DU_DC_PCT: 0.74,
+            DU_AC_V: 1.1,
+            DU_AC_PCT: 0.48,
+            F_WEIGHT_N: 1200,
+            STABILITY_LHS: 1500,
+            STABILITY_RHS: 1200,
+          },
+        },
+      },
+      engineInput: {
+        ...engineInput,
+        module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 } as never,
+        array: [
+          {
+            inverter: { pacW: 4000, vdcMaxV: 1000, mpptMinV: 80, mpptMaxV: 550 } as never,
+            mppts: engineInput.array[0]!.mppts,
+          },
+        ],
+      },
+      projectMeta,
+      snapshot: { client: null, cableRuns: [] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(result.moduleSpecPmaxW).toEqual(expect.any(String));
+    expect(result.moduleSpecVmpV).toEqual(expect.any(String));
+    expect(result.moduleSpecImpA).toEqual(expect.any(String));
+    expect(result.moduleSpecVocV).toEqual(expect.any(String));
+    expect(result.moduleSpecIscA).toEqual(expect.any(String));
+    expect(result.inverterSpecPacW).toEqual(expect.any(String));
+    expect(result.inverterSpecVdcMaxV).toEqual(expect.any(String));
+    expect(result.inverterSpecMpptMinV).toEqual(expect.any(String));
+    expect(result.inverterSpecMpptMaxV).toEqual(expect.any(String));
+    expect(result.stringSizingNsMin).toEqual(expect.any(String));
+    expect(result.stringSizingNsMax).toEqual(expect.any(String));
+    expect(result.stringSizingNsOptMax).toEqual(expect.any(String));
+    expect(result.stringSizingNpMax).toEqual(expect.any(String));
+    expect(result.stringSizingNpOpt).toEqual(expect.any(String));
+    expect(result.voltageDropDuDcV).toEqual(expect.any(String));
+    expect(result.voltageDropDuDcPct).toEqual(expect.any(String));
+    expect(result.voltageDropDuAcV).toEqual(expect.any(String));
+    expect(result.voltageDropDuAcPct).toEqual(expect.any(String));
+    expect(result.stabilityWeightN).toEqual(expect.any(String));
+    expect(result.stabilityLhs).toEqual(expect.any(String));
+    expect(result.stabilityRhs).toEqual(expect.any(String));
+  });
+
   it('falls back to empty strings for a null client rather than throwing', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,

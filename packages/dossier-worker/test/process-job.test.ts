@@ -46,7 +46,12 @@ const validSnapshot = {
   version: 1,
   projectId: 'project-1',
   companyId: 'company-1',
-  engineInput: { array: [{ inverter: {}, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }], dcFuse: null, acIsolator: null },
+  engineInput: {
+    array: [{ inverter: { pacW: 4000, vdcMaxV: 1000, mpptMinV: 80, mpptMaxV: 550 }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+    dcFuse: null,
+    acIsolator: null,
+    module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 },
+  },
   projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
   client: { fullName: 'Ahmed', address: 'Tunis', stegReference: 'STEG-1' },
   cableRuns: [],
@@ -60,7 +65,26 @@ beforeEach(() => {
   mocks.fileFindMany.mockResolvedValue([]);
   mocks.generateDossierDocument.mockResolvedValue({
     sections: { introduction: 'i', solution: 's', cabling: 'c', earthing: 'e', structure: 'st', conclusion: 'co' },
-    engineResult: { derived: { P_DC_W: 3100, MODULE_COUNT: 5 }, checks: [{ id: 'C01', level: 'BLOCK', pass: true, message: 'ok' }], hasBlockingFailure: false },
+    engineResult: {
+      derived: {
+        P_DC_W: 3100,
+        MODULE_COUNT: 5,
+        NS_MIN: 10,
+        NS_MAX: 14,
+        NS_OPT_MAX: 13,
+        NP_MAX: 2,
+        NP_OPT: 2,
+        DU_DC_V: 2.3,
+        DU_DC_PCT: 0.74,
+        DU_AC_V: 1.1,
+        DU_AC_PCT: 0.48,
+        F_WEIGHT_N: 1200,
+        STABILITY_LHS: 1500,
+        STABILITY_RHS: 1200,
+      },
+      checks: [{ id: 'C01', level: 'BLOCK', pass: true, message: 'ok' }],
+      hasBlockingFailure: false,
+    },
   });
   mocks.fillDossierTemplate.mockReturnValue(Buffer.from('fake docx'));
   mocks.convertDocxToPdf.mockResolvedValue(Buffer.from('%PDF-fake'));
