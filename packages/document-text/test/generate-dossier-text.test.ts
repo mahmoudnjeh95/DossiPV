@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { generateDossierText } from '../src/generate-dossier-text';
 import { RawNumberLeakError } from '../src/validate-no-raw-numbers';
 import type { DossierTextInput, DossierTextSections } from '../src/types';
@@ -77,5 +77,20 @@ describe('generateDossierText', () => {
     // technical fields we expect, nothing invented.
     expect(capturedPrompt).toContain(sampleInput.moduleBrandModel);
     expect(capturedPrompt).not.toMatch(/\bclient\b|\bnom\b|\badresse\b/i);
+  });
+
+  it('calls Claude with model claude-sonnet-5-5, not claude-opus-5-5', async () => {
+    const mockParse = vi.fn(() => Promise.resolve({ parsed_output: cleanSections }));
+    const mockClient = {
+      messages: {
+        parse: mockParse,
+      },
+    } as unknown as Anthropic;
+
+    await generateDossierText(sampleInput, mockClient, ['P_DC_W']);
+
+    expect(mockParse).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'claude-sonnet-5-5' }),
+    );
   });
 });
