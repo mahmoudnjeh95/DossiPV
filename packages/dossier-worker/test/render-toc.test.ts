@@ -14,6 +14,12 @@ describe('renderTableOfContents', () => {
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
+  it('does not throw on a title outside WinAnsi', async () => {
+    const buffer = await renderTableOfContents([{ title: `Annexe — حبيب ${String.fromCodePoint(0xfb01)}che`, pageNumber: 3 }]);
+
+    expect((await PDFDocument.load(buffer)).getPageCount()).toBe(1);
+  });
+
   it('overflows to a second page rather than truncating when there are many entries', async () => {
     const manyEntries = Array.from({ length: 60 }, (_, i) => ({ title: `Section ${i + 1}`, pageNumber: i + 3 }));
 

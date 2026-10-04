@@ -38,4 +38,25 @@ describe('renderSitePlanPages', () => {
     const doc = await PDFDocument.load(buffer);
     expect(doc.getPageCount()).toBe(2);
   });
+
+  it.each(['STANDARD', 'PREMIUM'] as const)('does not throw on an Arabic client name / address / installer name (%s)', async (tier) => {
+    const buffer = await renderSitePlanPages({
+      tier,
+      clientFullName: 'حبيب خذيرة',
+      clientAddress: `Rue ğ${String.fromCodePoint(0x202f)}Łódź`,
+      gps: { lat: 36.8, lon: 10.2 },
+      installerName: 'شركة الطاقة',
+      premiumData:
+        tier === 'PREMIUM'
+          ? {
+              page37SatelliteImage: Buffer.from('x'),
+              page38SatelliteImage: Buffer.from('x'),
+              layout: { panelRectangle: [], wireRoute: [] },
+              points: { technicalRoom: null, meter: null, earthPit: null },
+            }
+          : null,
+    });
+
+    expect((await PDFDocument.load(buffer)).getPageCount()).toBe(2);
+  });
 });

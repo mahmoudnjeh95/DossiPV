@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { drawPdfText } from './pdf-text';
 
 export interface TocEntry {
   title: string;
@@ -18,7 +19,7 @@ export async function renderTableOfContents(entries: TocEntry[]): Promise<Buffer
 
   const rowsPerPage = Math.floor((PAGE_HEIGHT - TOP_MARGIN - BOTTOM_MARGIN) / ROW_HEIGHT);
   let page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  page.drawText('Table des matières', { x: 50, y: PAGE_HEIGHT - 50, size: 20, font: titleFont, color: rgb(0, 0, 0) });
+  drawPdfText(page, 'Table des matières', { x: 50, y: PAGE_HEIGHT - 50, size: 20, font: titleFont, color: rgb(0, 0, 0) });
   let y = PAGE_HEIGHT - TOP_MARGIN;
   let rowOnPage = 0;
 
@@ -28,7 +29,7 @@ export async function renderTableOfContents(entries: TocEntry[]): Promise<Buffer
       y = PAGE_HEIGHT - 50;
       rowOnPage = 0;
     }
-    page.drawText(entry.title, { x: 50, y, size: 11, font, color: rgb(0, 0, 0) });
+    drawPdfText(page, entry.title, { x: 50, y, size: 11, font, color: rgb(0, 0, 0) });
     page.drawText(String(entry.pageNumber), { x: PAGE_WIDTH - 80, y, size: 11, font, color: rgb(0, 0, 0) });
     y -= ROW_HEIGHT;
     rowOnPage += 1;

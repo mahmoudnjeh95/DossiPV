@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { Page37Layout, Page37Points } from './generate-page-37-layout';
+import { drawPdfText } from './pdf-text';
 
 export interface SitePlanPremiumData {
   page37SatelliteImage: Buffer;
@@ -34,7 +35,7 @@ async function embedImageSafely(doc: PDFDocument, buffer: Buffer): Promise<impor
 
 function drawFrame(doc: PDFDocument, title: string, font: import('pdf-lib').PDFFont): import('pdf-lib').PDFPage {
   const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  page.drawText(title, { x: 40, y: PAGE_HEIGHT - 40, size: 16, font, color: rgb(0, 0, 0) });
+  drawPdfText(page, title, { x: 40, y: PAGE_HEIGHT - 40, size: 16, font, color: rgb(0, 0, 0) });
   page.drawRectangle({ x: 40, y: 100, width: PAGE_WIDTH - 80, height: PAGE_HEIGHT - 200, borderColor: rgb(0, 0, 0), borderWidth: 1 });
   return page;
 }
@@ -45,10 +46,10 @@ export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Bu
 
   if (input.tier === 'STANDARD' || !input.premiumData) {
     const page37 = drawFrame(doc, "Schéma d'implantation et de connexion", font);
-    page37.drawText('À compléter par l\'installateur', { x: 60, y: PAGE_HEIGHT / 2, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
+    drawPdfText(page37, 'À compléter par l\'installateur', { x: 60, y: PAGE_HEIGHT / 2, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
 
     const page38 = drawFrame(doc, 'Plan de Situation', font);
-    page38.drawText('À compléter par l\'installateur', { x: 60, y: PAGE_HEIGHT / 2, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
+    drawPdfText(page38, 'À compléter par l\'installateur', { x: 60, y: PAGE_HEIGHT / 2, size: 12, font, color: rgb(0.4, 0.4, 0.4) });
 
     return Buffer.from(await doc.save());
   }
@@ -56,7 +57,7 @@ export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Bu
   const { page37SatelliteImage, page38SatelliteImage, layout, points } = input.premiumData;
 
   const page37 = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  page37.drawText("Schéma d'implantation et de connexion", { x: 40, y: PAGE_HEIGHT - 40, size: 16, font, color: rgb(0, 0, 0) });
+  drawPdfText(page37, "Schéma d'implantation et de connexion", { x: 40, y: PAGE_HEIGHT - 40, size: 16, font, color: rgb(0, 0, 0) });
   const img37 = await embedImageSafely(doc, page37SatelliteImage);
   const imageBoxY = 200;
   const imageBoxH = PAGE_HEIGHT - 300;
@@ -65,7 +66,7 @@ export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Bu
     page37.drawImage(img37, { x: 40, y: imageBoxY, width: imageBoxW, height: imageBoxH });
   } else {
     page37.drawRectangle({ x: 40, y: imageBoxY, width: imageBoxW, height: imageBoxH, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-    page37.drawText('Image satellite indisponible', { x: 60, y: imageBoxY + imageBoxH / 2, size: 12, font, color: rgb(0.6, 0, 0) });
+    drawPdfText(page37, 'Image satellite indisponible', { x: 60, y: imageBoxY + imageBoxH / 2, size: 12, font, color: rgb(0.6, 0, 0) });
   }
 
   // Overlay the AI-reasoned panel rectangle and wire route as simple normalized-bbox shapes —
@@ -94,25 +95,25 @@ export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Bu
     }
   }
 
-  if (points.technicalRoom) page37.drawText('Local Technique', { x: 50, y: imageBoxY + imageBoxH - 20, size: 9, font, color: rgb(0, 0, 0) });
-  if (points.meter) page37.drawText('Compteur STEG', { x: 50, y: imageBoxY + 10, size: 9, font, color: rgb(0, 0, 0) });
+  if (points.technicalRoom) drawPdfText(page37, 'Local Technique', { x: 50, y: imageBoxY + imageBoxH - 20, size: 9, font, color: rgb(0, 0, 0) });
+  if (points.meter) drawPdfText(page37, 'Compteur STEG', { x: 50, y: imageBoxY + 10, size: 9, font, color: rgb(0, 0, 0) });
 
-  page37.drawText(`Client : ${input.clientFullName}`, { x: 40, y: 150, size: 10, font, color: rgb(0, 0, 0) });
-  page37.drawText(`Installateur : ${input.installerName}`, { x: 40, y: 130, size: 10, font, color: rgb(0, 0, 0) });
+  drawPdfText(page37, `Client : ${input.clientFullName}`, { x: 40, y: 150, size: 10, font, color: rgb(0, 0, 0) });
+  drawPdfText(page37, `Installateur : ${input.installerName}`, { x: 40, y: 130, size: 10, font, color: rgb(0, 0, 0) });
 
   const page38 = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  page38.drawText('Plan de Situation', { x: 40, y: PAGE_HEIGHT - 40, size: 20, font, color: rgb(0, 0, 0) });
+  drawPdfText(page38, 'Plan de Situation', { x: 40, y: PAGE_HEIGHT - 40, size: 20, font, color: rgb(0, 0, 0) });
   const img38 = await embedImageSafely(doc, page38SatelliteImage);
   if (img38) {
     page38.drawImage(img38, { x: 40, y: imageBoxY, width: imageBoxW, height: imageBoxH });
   } else {
     page38.drawRectangle({ x: 40, y: imageBoxY, width: imageBoxW, height: imageBoxH, borderColor: rgb(0, 0, 0), borderWidth: 1 });
-    page38.drawText('Image satellite indisponible', { x: 60, y: imageBoxY + imageBoxH / 2, size: 12, font, color: rgb(0.6, 0, 0) });
+    drawPdfText(page38, 'Image satellite indisponible', { x: 60, y: imageBoxY + imageBoxH / 2, size: 12, font, color: rgb(0.6, 0, 0) });
   }
-  page38.drawText(`Client : ${input.clientFullName}`, { x: 40, y: 150, size: 12, font, color: rgb(0, 0, 0) });
-  page38.drawText(`Adresse : ${input.clientAddress}`, { x: 40, y: 130, size: 12, font, color: rgb(0, 0, 0) });
-  page38.drawText(`Coordonnées : ${input.gps.lat.toFixed(5)}, ${input.gps.lon.toFixed(5)}`, { x: 40, y: 110, size: 12, font, color: rgb(0, 0, 0) });
-  page38.drawText(`Installateur : ${input.installerName}`, { x: 40, y: 80, size: 12, font, color: rgb(0, 0, 0) });
+  drawPdfText(page38, `Client : ${input.clientFullName}`, { x: 40, y: 150, size: 12, font, color: rgb(0, 0, 0) });
+  drawPdfText(page38, `Adresse : ${input.clientAddress}`, { x: 40, y: 130, size: 12, font, color: rgb(0, 0, 0) });
+  drawPdfText(page38, `Coordonnées : ${input.gps.lat.toFixed(5)}, ${input.gps.lon.toFixed(5)}`, { x: 40, y: 110, size: 12, font, color: rgb(0, 0, 0) });
+  drawPdfText(page38, `Installateur : ${input.installerName}`, { x: 40, y: 80, size: 12, font, color: rgb(0, 0, 0) });
 
   return Buffer.from(await doc.save());
 }
