@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { logoutAction } from '../app/(app)/actions';
-import { SolarixProLogo, Dashboard, Projects, Library, Settings, Logout } from '@dossipv/icons';
+import { Dashboard, Projects, Library, Settings, Logout } from '@dossipv/icons';
+import { BrandMark } from './brand-mark';
 
 export interface AppShellProps {
   userFullName: string;
@@ -31,9 +32,9 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
     <>
       <header className="app-header">
         <div className="app-header-inner">
-          <Link href="/dashboard" className="app-brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SolarixProLogo size="sm" />
-            SOLARIX PRO
+          <Link href="/dashboard" className="app-brand" aria-label="DossiPV, tableau de bord">
+            <BrandMark compact />
+
           </Link>
           <nav className="app-nav" aria-label="Navigation principale">
             {NAV_LINKS.map((link) => {
@@ -49,7 +50,7 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
           <div className="app-user">
             <span>{userFullName}</span>
             <form action={logoutAction}>
-              <button type="submit" className="secondary small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button type="submit" className="secondary small app-logout">
                 <Logout size="xs" color="inherit" />
                 Se déconnecter
               </button>
