@@ -13,7 +13,9 @@ async function appendAnnex(merged: PDFDocument, annex: AnnexFile): Promise<void>
       merged.addPage(page);
     }
   } else {
-    const image = annex.mimeType === 'png' ? await merged.embedPng(annex.buffer) : await merged.embedJpg(annex.buffer);
+    // Standalone copy: pdf-lib ignores a pooled Buffer's byteOffset (see embedImageSafely).
+    const bytes = Uint8Array.from(annex.buffer);
+    const image = annex.mimeType === 'png' ? await merged.embedPng(bytes) : await merged.embedJpg(bytes);
     const page = merged.addPage([image.width, image.height]);
     page.drawImage(image, { x: 0, y: 0, width: image.width, height: image.height });
   }

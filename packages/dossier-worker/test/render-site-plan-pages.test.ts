@@ -163,6 +163,20 @@ describe('renderSitePlanPages — Premium page 37', () => {
     expect(pageText(page37!)).toContain('Local technique (non placé)');
   });
 
+  it('embeds a small JPEG that lives in the shared Buffer pool (pdf-lib ignores byteOffset)', async () => {
+    const small = encodeJpeg({ data: new Uint8Array(16 * 16 * 4).fill(150), width: 16, height: 16 }, 80).data;
+    Buffer.from('padding so the next small Buffer is not at the start of the pool');
+    const pooled = Buffer.from(small);
+    expect(pooled.byteOffset, 'fixture must be a pooled Buffer for this test to mean anything').toBeGreaterThan(0);
+
+    const [page37] = await extractPdfContent(
+      await renderSitePlanPages({ ...baseInput, tier: 'PREMIUM', premiumData: premiumData({ image: { buffer: pooled, widthPx: IMAGE_PX, heightPx: IMAGE_PX } }) }),
+    );
+
+    satelliteImage(page37!);
+    expect(pageText(page37!)).not.toContain('Image satellite indisponible');
+  });
+
   it('shows "Image satellite indisponible" and skips the overlay if the image cannot be embedded', async () => {
     const [page37] = await extractPdfContent(
       await renderSitePlanPages({
