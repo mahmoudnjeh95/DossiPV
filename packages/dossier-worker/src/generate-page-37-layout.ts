@@ -40,8 +40,14 @@ const page37OutputFormat = {
   schema: {
     type: 'object',
     properties: {
-      panelRectangle: { type: 'array', items: { type: 'object', properties: { lat: { type: 'number' }, lon: { type: 'number' } }, required: ['lat', 'lon'] } },
-      wireRoute: { type: 'array', items: { type: 'object', properties: { lat: { type: 'number' }, lon: { type: 'number' } }, required: ['lat', 'lon'] } },
+      panelRectangle: {
+        type: 'array',
+        items: { type: 'object', properties: { lat: { type: 'number' }, lon: { type: 'number' } }, required: ['lat', 'lon'], additionalProperties: false },
+      },
+      wireRoute: {
+        type: 'array',
+        items: { type: 'object', properties: { lat: { type: 'number' }, lon: { type: 'number' } }, required: ['lat', 'lon'], additionalProperties: false },
+      },
     },
     required: ['panelRectangle', 'wireRoute'],
     additionalProperties: false,
