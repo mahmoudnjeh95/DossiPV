@@ -10,7 +10,7 @@ describe('fetchSatelliteImage', () => {
     const fakeBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // PNG magic bytes
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
-      arrayBuffer: async () => fakeBytes.buffer,
+      arrayBuffer: () => Promise.resolve(fakeBytes.buffer),
     } as Response);
 
     const result = await fetchSatelliteImage({ lat: 36.8, lon: 10.2 });
