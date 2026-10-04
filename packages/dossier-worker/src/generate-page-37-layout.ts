@@ -73,7 +73,7 @@ export async function generatePage37Layout(input: Page37LayoutInput, client: Ant
       {
         role: 'user',
         content: [
-          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: input.satelliteImage.toString('base64') } },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: input.satelliteImage.toString('base64') } },
           { type: 'text', text: describePoints(input.points) },
         ],
       },

@@ -58,4 +58,14 @@ describe('generatePage37Layout', () => {
       expect.objectContaining({ model: 'claude-sonnet-5-5' }),
     );
   });
+
+  it('declares the image media_type as image/jpeg — Esri World Imagery tiles are served as JPEG, not PNG, confirmed by a real 400 from the Claude API against a mismatched media_type during live verification', async () => {
+    const { client, parseMock } = fakeClient({ panelRectangle: [], wireRoute: [] });
+
+    await generatePage37Layout({ satelliteImage: Buffer.from('fake-jpeg-bytes'), points: samplePoints }, client);
+
+    const call = parseMock.mock.calls[0]![0] as { messages: { content: { type: string; source?: { media_type?: string } }[] }[] };
+    const imageBlock = call.messages[0]!.content.find((block) => block.type === 'image');
+    expect(imageBlock?.source?.media_type).toBe('image/jpeg');
+  });
 });
