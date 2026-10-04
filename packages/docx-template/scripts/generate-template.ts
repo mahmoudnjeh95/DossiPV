@@ -28,17 +28,15 @@ const doc = new Document({
       children: [
         new Paragraph({ text: '{companyName}', heading: HeadingLevel.TITLE }),
         new Paragraph('{companyAddress} — {companyPhone} — {companyEmail}'),
-        new Paragraph({ text: 'Dossier technique BT', heading: HeadingLevel.HEADING_1 }),
-
-        new Paragraph({ text: 'I. Préambule', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberPreambule} Préambule', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Nom : {clientFullName}'),
         new Paragraph('Adresse : {clientAddress}'),
         new Paragraph('Référence STEG : {clientStegReference}'),
 
-        new Paragraph({ text: 'II. Présentation du projet', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberPresentation} Présentation du projet', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{introduction}'),
 
-        new Paragraph({ text: 'III. Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberSolution} Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{solution}'),
         new Paragraph({ text: "III.1 Caractéristiques du module", heading: HeadingLevel.HEADING_2 }),
         new Paragraph('Module : {moduleBrandModel}'),
@@ -50,9 +48,12 @@ const doc = new Document({
           ['Courant Isc (A)', '{moduleSpecIscA}'],
         ]),
         new Paragraph({ text: "III.2 Caractéristiques de l'onduleur", heading: HeadingLevel.HEADING_2 }),
-        new Paragraph('Onduleur : {inverterBrandModel}'),
+        // A mixed-model array lists every inverter's own brand/model and power here (I7) — the
+        // DC-side voltage/MPPT range fields below stay single-value since this slice doesn't
+        // carry them per entry, and in practice every inverter on one array shares a compatible
+        // DC input range by design (spec §3.3's own single-inverter wording).
+        new Paragraph('{#inverters}{inverterLabel} : {inverterBrandModel} — {pacW} W{/inverters}'),
         specTable([
-          ['Puissance AC (W)', '{inverterSpecPacW}'],
           ['Tension DC max (V)', '{inverterSpecVdcMaxV}'],
           ['Plage MPPT min (V)', '{inverterSpecMpptMinV}'],
           ['Plage MPPT max (V)', '{inverterSpecMpptMaxV}'],
@@ -70,7 +71,7 @@ const doc = new Document({
 
         new Paragraph({ text: 'III.4 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
         new Paragraph('{#inverters}'),
-        new Paragraph('{inverterLabel}'),
+        new Paragraph('{inverterLabel} ({inverterBrandModel})'),
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           rows: [
@@ -80,7 +81,7 @@ const doc = new Document({
         }),
         new Paragraph('{/inverters}'),
 
-        new Paragraph({ text: 'IV. Câblage', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberCablage} Câblage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{cabling}'),
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
@@ -104,10 +105,10 @@ const doc = new Document({
           ['Chute de tension AC (%)', '{voltageDropDuAcPct}'],
         ]),
 
-        new Paragraph({ text: 'V. Mise à la terre', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberTerre} Mise à la terre', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{earthing}'),
 
-        new Paragraph({ text: 'VI. Structure et lestage', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberStructure} Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),
         specTable([
           ['Poids total (N)', '{stabilityWeightN}'],
@@ -116,16 +117,16 @@ const doc = new Document({
         ]),
 
         new Paragraph('{#dcFuseRequired}'),
-        new Paragraph({ text: 'VII. Protection DC — fusible', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberFusible} Protection DC — fusible', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Un fusible DC est requis pour cette configuration.'),
         new Paragraph('{/dcFuseRequired}'),
 
         new Paragraph('{#acIsolatorRequired}'),
-        new Paragraph({ text: 'VIII. Protection AC — sectionneur', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberSectionneur} Protection AC — sectionneur', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Un sectionneur AC est requis (plusieurs onduleurs).'),
         new Paragraph('{/acIsolatorRequired}'),
 
-        new Paragraph({ text: 'IX. Conclusion', heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: '{sectionNumberConclusion} Conclusion', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{conclusion}'),
       ],
     },

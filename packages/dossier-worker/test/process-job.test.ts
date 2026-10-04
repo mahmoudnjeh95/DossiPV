@@ -105,7 +105,6 @@ async function makePdf(pageCount: number): Promise<Buffer> {
 
 const COVER_PDF = Buffer.from('%PDF-fake-cover');
 const TOC_PDF = Buffer.from('%PDF-fake-toc');
-const SITE_PLAN_PDF = Buffer.from('%PDF-fake-site-plan');
 const ASSEMBLED_PDF = Buffer.from('%PDF-fake-assembled');
 const SATELLITE_TILE = Buffer.from('fake satellite tile');
 const PAGE_37_LAYOUT = {
@@ -114,6 +113,10 @@ const PAGE_37_LAYOUT = {
 };
 let bodyPdf: Buffer;
 let drawingsPdf: Buffer;
+// A real 2-page PDF (pages 37-38 always render exactly 2 pages, both tiers) — processJob now
+// reads this fragment's own page count (for the TOC's Annexes entry), so it must be a real,
+// loadable PDF like bodyPdf/drawingsPdf, not a recognisable fake buffer.
+let sitePlanPdf: Buffer;
 
 function findSucceededUpdate(): unknown {
   return mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED');
@@ -123,6 +126,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   bodyPdf = await makePdf(3);
   drawingsPdf = await makePdf(2);
+  sitePlanPdf = await makePdf(2);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
   mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: null });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
@@ -158,7 +162,7 @@ beforeEach(async () => {
   mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
   mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
-  mocks.renderSitePlanPages.mockResolvedValue(SITE_PLAN_PDF);
+  mocks.renderSitePlanPages.mockResolvedValue(sitePlanPdf);
   mocks.renderTableOfContents.mockResolvedValue(TOC_PDF);
   mocks.saveFile.mockResolvedValue({ storageKey: 'dossier/fake.bin' });
   mocks.fileCreate.mockResolvedValue({ id: 'file-x' });
@@ -294,6 +298,36 @@ describe('processJob — equipment datasheet collection', () => {
     expect(uniqueIds.has('file-inverter-datasheet')).toBe(true);
     expect(findManyCall.where.id.in.filter((id) => id === 'file-inverter-datasheet')).toHaveLength(1);
   });
+
+  it('includes cable, connector, cable-tray, and earth distribution-block datasheets (I3), and contributes a shared cable datasheet exactly once even when two cable runs reference the same catalog row (spec §6)', async () => {
+    const snapshotWithCablesAndAccessories = {
+      ...validSnapshot,
+      cableRuns: [
+        { label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13', cable: { brand: 'Generic', model: 'H1Z2Z2-K', datasheetFileId: 'file-cable-datasheet' } },
+        { label: 'DC-2', sectionMm2: 6, lengthM: 15, installMethod: '13', cable: { brand: 'Generic', model: 'H1Z2Z2-K', datasheetFileId: 'file-cable-datasheet' } },
+      ],
+      cablingConfig: {
+        connector: { brand: 'Stäubli', model: 'MC4', datasheetFileId: 'file-connector-datasheet' },
+        cableTray: { brand: 'Generic', model: 'Tray-1', datasheetFileId: 'file-tray-datasheet' },
+      },
+      earthing: { rodCount: 3, distributionBlock: { brand: 'Generic', model: 'DB-1', datasheetFileId: 'file-db-datasheet' } },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshotWithCablesAndAccessories });
+    mocks.fileFindMany.mockResolvedValue([
+      { id: 'file-cable-datasheet', mimeType: 'pdf', storageKey: 'cable.pdf' },
+      { id: 'file-connector-datasheet', mimeType: 'pdf', storageKey: 'connector.pdf' },
+      { id: 'file-tray-datasheet', mimeType: 'pdf', storageKey: 'tray.pdf' },
+      { id: 'file-db-datasheet', mimeType: 'pdf', storageKey: 'db.pdf' },
+    ]);
+
+    await processJob('job-1');
+
+    const findManyCall = mocks.fileFindMany.mock.calls[0]![0] as { where: { id: { in: string[] } } };
+    expect(findManyCall.where.id.in).toContain('file-connector-datasheet');
+    expect(findManyCall.where.id.in).toContain('file-tray-datasheet');
+    expect(findManyCall.where.id.in).toContain('file-db-datasheet');
+    expect(findManyCall.where.id.in.filter((id) => id === 'file-cable-datasheet')).toHaveLength(1);
+  });
 });
 
 describe('processJob — full fragment assembly (Premium tier)', () => {
@@ -326,22 +360,69 @@ describe('processJob — fragment assembly details', () => {
 
     // Master spec §5 step 8: dossier.pdf carries the annexes merged in; annexes.pdf is
     // annexes-only (no cover/body/drawings/map-page fragments).
-    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([COVER_PDF, TOC_PDF, bodyPdf, drawingsPdf, SITE_PLAN_PDF], []);
+    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([COVER_PDF, TOC_PDF, bodyPdf, drawingsPdf, sitePlanPdf], []);
     expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([], []);
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'annexes.pdf', 'application/pdf');
     expect(findSucceededUpdate()).toBeDefined();
   });
 
-  it('gives the TOC exact fragment-level page numbers from the real body and drawings page counts', async () => {
+  it('gives the TOC exact fragment-level page numbers from the real body, drawings, and site-plan page counts (C3)', async () => {
     mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
 
     await processJob('job-1');
 
-    // Cover = page 1, TOC = page 2, body = pages 3-7, drawings = pages 8-9, map pages from 10.
+    // Cover = page 1, TOC = page 2, body = pages 3-7, drawings = pages 8-9, map pages = pages 10-11.
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
-    expect(entries.find((e) => e.title === 'Annexe — Schémas électriques')?.pageNumber).toBe(8);
-    expect(entries.find((e) => e.title === 'Annexe — Plans de situation')?.pageNumber).toBe(10);
+    expect(entries.find((e) => e.title === 'Schémas électriques')?.pageNumber).toBe(8);
+    expect(entries.find((e) => e.title === 'Plans de situation')?.pageNumber).toBe(10);
+    expect(entries.find((e) => e.title === 'Annexes')?.pageNumber).toBe(12);
+  });
+
+  it('lists every in-body section (I-VI, IX, and the conditional VII/VIII), each within the body page range and in increasing order — never pointing at the TOC itself or out of order (C3)', async () => {
+    // engineInput's default fixture has dcFuse: null, acIsolator: null, so VII/VIII are both absent
+    // — the most common configuration the final review flagged as skipping straight from VI to IX.
+    mocks.convertDocxToPdf.mockResolvedValue(await makePdf(2));
+
+    await processJob('job-1');
+
+    const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
+    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Description de la solution technique', 'IV. Câblage', 'V. Mise à la terre', 'VI. Structure et lestage', 'IX. Conclusion'];
+    const bodyEntries = bodyTitles.map((title) => entries.find((e) => e.title === title)!);
+
+    for (const entry of bodyEntries) {
+      expect(entry).toBeDefined();
+      // Body = pages 3-4 (bodyPageCount 2, BODY_START_PAGE 3) — every in-body entry must land there.
+      expect(entry.pageNumber).toBeGreaterThanOrEqual(3);
+      expect(entry.pageNumber).toBeLessThanOrEqual(4);
+    }
+    for (let i = 1; i < bodyEntries.length; i += 1) {
+      expect(bodyEntries[i]!.pageNumber).toBeGreaterThanOrEqual(bodyEntries[i - 1]!.pageNumber);
+    }
+    expect(entries.find((e) => e.title === 'VII. Protection DC — fusible')).toBeUndefined();
+    expect(entries.find((e) => e.title === 'VIII. Protection AC — sectionneur')).toBeUndefined();
+  });
+
+  it('includes VII and VIII, correctly ordered with the rest, when the engine input requires a DC fuse and an AC isolator (C3)', async () => {
+    const snapshotWithFuseAndIsolator = {
+      ...validSnapshot,
+      engineInput: { ...validSnapshot.engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshotWithFuseAndIsolator });
+
+    await processJob('job-1');
+
+    const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
+    const titles = entries.map((e) => e.title);
+    expect(titles).toContain('VII. Protection DC — fusible');
+    expect(titles).toContain('VIII. Protection AC — sectionneur');
+    const viIndex = titles.indexOf('VI. Structure et lestage');
+    const viiIndex = titles.indexOf('VII. Protection DC — fusible');
+    const viiiIndex = titles.indexOf('VIII. Protection AC — sectionneur');
+    const ixIndex = titles.indexOf('IX. Conclusion');
+    expect(viIndex).toBeLessThan(viiIndex);
+    expect(viiIndex).toBeLessThan(viiiIndex);
+    expect(viiiIndex).toBeLessThan(ixIndex);
   });
 
   it('builds the cover page and the drawings from the company and the frozen snapshot', async () => {

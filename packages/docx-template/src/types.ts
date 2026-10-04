@@ -25,7 +25,6 @@ export interface DossierTemplateData {
   moduleSpecImpA: string;
   moduleSpecVocV: string;
   moduleSpecIscA: string;
-  inverterSpecPacW: string;
   inverterSpecVdcMaxV: string;
   inverterSpecMpptMinV: string;
   inverterSpecMpptMaxV: string;
@@ -41,8 +40,25 @@ export interface DossierTemplateData {
   stabilityWeightN: string;
   stabilityLhs: string;
   stabilityRhs: string;
+  // Computed in code (build-template-data.ts), never hardcoded as literal template text — the
+  // VII/VIII sections are each only present when their own template condition is true, and a
+  // hardcoded "IX" would otherwise skip straight from "VI" in the common case where both are
+  // absent. Each already includes the trailing ".", e.g. "VI.".
+  sectionNumberPreambule: string;
+  sectionNumberPresentation: string;
+  sectionNumberSolution: string;
+  sectionNumberCablage: string;
+  sectionNumberTerre: string;
+  sectionNumberStructure: string;
+  sectionNumberFusible: string;
+  sectionNumberSectionneur: string;
+  sectionNumberConclusion: string;
   inverters: {
     inverterLabel: string;
+    // Each inverter's own brand/model (not projectMeta.inverterBrandModel, which is only the
+    // first inverter's — a mixed-model array must show the right model on every row).
+    inverterBrandModel: string;
+    pacW: string;
     mppts: { mpptLabel: string; stringsInParallel: number; modulesPerString: number }[];
   }[];
   cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];

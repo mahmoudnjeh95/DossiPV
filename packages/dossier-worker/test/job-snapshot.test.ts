@@ -50,7 +50,8 @@ describe('parseJobSnapshot', () => {
       arrayConfig: { module: { brand: 'LONGi', model: 'LR7-72HGD-620M' }, inverters: [{ inverter: { brand: 'Sofar', model: '1-4KTL2-G3' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }] },
       protections: { dcSwitch: { brand: 'ZJ BENY', model: 'BB1H-63' } },
       structure: { material: 'ALUMINIUM', frameCount: 5 },
-      earthing: { rodCount: 3 },
+      earthing: { rodCount: 3, distributionBlock: { brand: 'Generic', model: 'DB-1', datasheetFileId: 'file-db' } },
+      cablingConfig: { connector: { brand: 'Stäubli', model: 'MC4', datasheetFileId: 'file-connector' }, cableTray: null },
     };
 
     const parsed = parseJobSnapshot(raw);
@@ -64,6 +65,9 @@ describe('parseJobSnapshot', () => {
     expect(parsed!.protections?.dcSwitch?.brand).toBe('ZJ BENY');
     expect(parsed!.structure?.frameCount).toBe(5);
     expect(parsed!.earthing?.rodCount).toBe(3);
+    expect(parsed!.earthing?.distributionBlock?.brand).toBe('Generic');
+    expect(parsed!.cablingConfig?.connector?.brand).toBe('Stäubli');
+    expect(parsed!.cablingConfig?.cableTray).toBeNull();
   });
 
   it('still parses a snapshot missing the new optional fields (back-compat with narrower snapshots already in the DB)', () => {
@@ -82,6 +86,7 @@ describe('parseJobSnapshot', () => {
     expect(parsed).not.toBeNull();
     expect(parsed!.site).toBeNull();
     expect(parsed!.arrayConfig).toBeNull();
+    expect(parsed!.cablingConfig).toBeNull();
     expect(parsed!.tier).toBe('STANDARD');
   });
 });

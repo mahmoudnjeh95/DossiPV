@@ -86,6 +86,23 @@ async function collectAnnexFiles(projectId: string, companyId: string, snapshot:
   if (snapshot.earthing?.earthCable) {
     equipmentFileIds.push(snapshot.earthing.earthCable.datasheetFileId, snapshot.earthing.earthCable.homologationFileId);
   }
+  if (snapshot.earthing?.distributionBlock) {
+    equipmentFileIds.push(snapshot.earthing.distributionBlock.datasheetFileId, snapshot.earthing.distributionBlock.homologationFileId);
+  }
+  if (snapshot.cablingConfig?.connector) {
+    equipmentFileIds.push(snapshot.cablingConfig.connector.datasheetFileId, snapshot.cablingConfig.connector.homologationFileId);
+  }
+  if (snapshot.cablingConfig?.cableTray) {
+    equipmentFileIds.push(snapshot.cablingConfig.cableTray.datasheetFileId, snapshot.cablingConfig.cableTray.homologationFileId);
+  }
+  // cableRuns[].cable — a cable catalog row referenced by multiple runs (e.g. the same DC cable
+  // used for two parallel strings) must contribute its datasheet once, not once per run; the
+  // Set below (built from ALL equipmentFileIds together) already de-duplicates this correctly.
+  for (const run of snapshot.cableRuns) {
+    if (run.cable) {
+      equipmentFileIds.push(run.cable.datasheetFileId, run.cable.homologationFileId);
+    }
+  }
 
   const fileIds = new Set([
     company?.anmeCertificateFileId,
@@ -139,7 +156,11 @@ export async function processJob(jobId: string): Promise<void> {
       workerResult,
       engineInput: snapshot.engineInput,
       projectMeta: snapshot.projectMeta,
-      snapshot: { client: snapshot.client, cableRuns: snapshot.cableRuns },
+      snapshot: {
+        client: snapshot.client,
+        cableRuns: snapshot.cableRuns,
+        inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
+      },
       companyInfo: { name: company.name, address: company.address, phone: company.phone, email: company.email },
     });
     const templateBuffer = await readFile(TEMPLATE_PATH);
@@ -201,11 +222,17 @@ export async function processJob(jobId: string): Promise<void> {
       device ? `${device.brand} ${device.model}` : '—';
     drawingsBuffer = await renderDrawingPages({
       moduleLabel: snapshot.projectMeta.moduleBrandModel,
-      inverters: snapshot.engineInput.array.map((entry, i) => ({
-        inverterLabel: `${snapshot.projectMeta.inverterBrandModel} (${i + 1})`,
-        pacW: entry.inverter.pacW,
-        mppts: entry.mppts,
-      })),
+      inverters: snapshot.engineInput.array.map((entry, i) => {
+        // Each inverter's OWN brand/model (I7) — projectMeta.inverterBrandModel is only the
+        // first inverter's; a mixed-model array must not show the wrong model on every row.
+        const snapshotInverter = snapshot.arrayConfig?.inverters[i]?.inverter;
+        const label = snapshotInverter ? `${snapshotInverter.brand} ${snapshotInverter.model}` : snapshot.projectMeta.inverterBrandModel;
+        return {
+          inverterLabel: `${label} (${i + 1})`,
+          pacW: entry.inverter.pacW,
+          mppts: entry.mppts,
+        };
+      }),
       dcSwitchLabel: equipmentLabel(protections?.dcSwitch),
       dcSpdLabel: equipmentLabel(protections?.dcSpd),
       acSpdLabel: equipmentLabel(protections?.acSpd),
@@ -294,6 +321,7 @@ export async function processJob(jobId: string): Promise<void> {
   }
 
   let sitePlanBuffer: Buffer;
+  let sitePlanPageCount: number;
   try {
     sitePlanBuffer = await renderSitePlanPages({
       tier: sitePlanPremiumData ? 'PREMIUM' : 'STANDARD',
@@ -307,27 +335,53 @@ export async function processJob(jobId: string): Promise<void> {
       dossierNumber: snapshot.dossierNumber,
       premiumData: sitePlanPremiumData,
     });
+    sitePlanPageCount = (await PDFDocument.load(sitePlanBuffer)).getPageCount();
   } catch (error) {
     return fail(jobId, 'map-pages', error);
   }
 
+  const dcFuseRequired = snapshot.engineInput.dcFuse !== null;
+  const acIsolatorRequired = snapshot.engineInput.acIsolator !== null;
+
   let tocBuffer: Buffer;
   try {
-    // Page numbers assume the cover and the TOC take one page each (7 entries always fit on one
-    // TOC page). The fragment-level numbers (where the drawings and the map pages start) are
-    // exact, from the real page counts above. The in-body sub-section numbers are deliberately
-    // approximate fixed offsets: finding the page each prose section lands on inside the
-    // LibreOffice-rendered body would mean parsing the body PDF's text layout, which is out of
-    // scope for v1's TOC.
-    tocBuffer = await renderTableOfContents([
-      { title: 'I. Préambule', pageNumber: 3 },
-      { title: 'II. Présentation du projet', pageNumber: 3 },
-      { title: 'III. Description de la solution technique', pageNumber: 4 },
-      { title: 'IV. Câblage', pageNumber: bodyPageCount - 2 > 4 ? bodyPageCount - 2 : 5 },
-      { title: 'V. Mise à la terre', pageNumber: bodyPageCount },
-      { title: 'Annexe — Schémas électriques', pageNumber: 3 + bodyPageCount },
-      { title: 'Annexe — Plans de situation', pageNumber: 3 + bodyPageCount + drawingsPageCount },
-    ]);
+    // pdf-lib exposes no API to read the body PDF's real heading/outline destinations (the
+    // precise fix), so this is the stopgap the final review accepted: every in-body section gets
+    // a monotonically increasing page number, clamped to the body's own page range
+    // (bodyStartPage..bodyStartPage+bodyPageCount-1) so no entry can point outside the body or
+    // out of order — unlike the previous formula, which mixed absolute and body-relative numbers
+    // and could point an earlier section at a later page.
+    const BODY_START_PAGE = 3; // 1 = cover, 2 = TOC
+    const inBodySectionCount =
+      5 + // I-V always present
+      1 + // VI Structure et lestage
+      (dcFuseRequired ? 1 : 0) + // VII
+      (acIsolatorRequired ? 1 : 0) + // VIII
+      1; // IX Conclusion
+    const pageForSection = (index: number): number => {
+      // index is 0-based among inBodySectionCount sections, spread evenly across the body's
+      // real page count so order and range are both guaranteed, never guessed per-section.
+      const span = Math.max(1, bodyPageCount - 1);
+      const offset = Math.round((index / Math.max(1, inBodySectionCount - 1)) * span);
+      return BODY_START_PAGE + Math.min(offset, bodyPageCount - 1);
+    };
+
+    let sectionIndex = 0;
+    const tocEntries = [
+      { title: 'I. Préambule', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'II. Présentation du projet', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'III. Description de la solution technique', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'IV. Câblage', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'V. Mise à la terre', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'VI. Structure et lestage', pageNumber: pageForSection(sectionIndex++) },
+      ...(dcFuseRequired ? [{ title: 'VII. Protection DC — fusible', pageNumber: pageForSection(sectionIndex++) }] : []),
+      ...(acIsolatorRequired ? [{ title: 'VIII. Protection AC — sectionneur', pageNumber: pageForSection(sectionIndex++) }] : []),
+      { title: 'IX. Conclusion', pageNumber: pageForSection(sectionIndex++) },
+      { title: 'Schémas électriques', pageNumber: BODY_START_PAGE + bodyPageCount },
+      { title: 'Plans de situation', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount },
+      { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount + sitePlanPageCount },
+    ];
+    tocBuffer = await renderTableOfContents(tocEntries);
   } catch (error) {
     return fail(jobId, 'toc', error);
   }

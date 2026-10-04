@@ -45,7 +45,13 @@ export interface SnapshotStructure {
 export interface SnapshotEarthing {
   rodCount: number;
   earthCable?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
+  distributionBlock?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
   [key: string]: unknown;
+}
+
+export interface SnapshotCablingConfig {
+  connector?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
+  cableTray?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
 }
 
 export interface WorkerJobSnapshot {
@@ -64,6 +70,7 @@ export interface WorkerJobSnapshot {
   protections: SnapshotProtections | null;
   structure: SnapshotStructure | null;
   earthing: SnapshotEarthing | null;
+  cablingConfig: SnapshotCablingConfig | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -129,5 +136,6 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     protections: optionalRecord(value.protections) as unknown as SnapshotProtections | null,
     structure: optionalRecord(value.structure) as unknown as SnapshotStructure | null,
     earthing: optionalRecord(value.earthing) as unknown as SnapshotEarthing | null,
+    cablingConfig: optionalRecord(value.cablingConfig) as unknown as SnapshotCablingConfig | null,
   };
 }

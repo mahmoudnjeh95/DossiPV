@@ -23,7 +23,7 @@ const workerResult: DossierWorkerResult = {
 const engineInput = {
   array: [
     {
-      inverter: {} as never,
+      inverter: { pacW: 3000, vdcMaxV: 550, mpptMinV: 90, mpptMaxV: 550 } as never,
       mppts: [{ stringsInParallel: 1, modulesPerString: 5 }],
     },
   ],
@@ -31,7 +31,7 @@ const engineInput = {
   acSpd: {} as never, acIsolator: null, equipmentImpulseWithstandKV: 0, spdToEquipmentDistanceM: 0,
   dcRun: {} as never, acRun: {} as never, cosPhi: 0.95, lambdaOhmPerM: 0, maxVoltageDropPct: 3,
   structure: {} as never, site: { phases: 1 as const, lightningRod: false, gps: { lat: 0, lon: 0 } },
-  module: {} as never, tMinC: -10, tMaxC: 85,
+  module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 } as never, tMinC: -10, tMaxC: 85,
 } as unknown as RunEngineInput;
 
 const projectMeta: ProjectMeta = {
@@ -52,6 +52,7 @@ describe('buildTemplateData', () => {
       snapshot: {
         client: { fullName: 'Ahmed Ben Ali', address: '45 Avenue Habib Bourguiba, Sousse', stegReference: 'STEG-2026-001' },
         cableRuns: [{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }],
+        inverterBrandModels: ['Sofar 1-4KTL2-G3'],
       },
       companyInfo: { name: 'SolarPro Tunisie', address: '12 Rue de la République, Tunis', phone: '+216 71 000 000', email: 'contact@solarpro.tn' },
     });
@@ -64,7 +65,9 @@ describe('buildTemplateData', () => {
     expect(data.inverterBrandModel).toBe('Sofar 1-4KTL2-G3');
     expect(data.pDcW).toBe('3 100 W');
     expect(data.moduleCount).toBe('5');
-    expect(data.inverters).toEqual([{ inverterLabel: 'Onduleur 1', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }] }]);
+    // fr-FR Intl.NumberFormat uses U+202F (narrow no-break space) as its thousands separator,
+    // not a plain space — same gotcha this codebase has hit before (see pDcW above, '3 100 W').
+    expect(data.inverters).toEqual([{ inverterLabel: 'Onduleur 1', inverterBrandModel: 'Sofar 1-4KTL2-G3', pacW: '3 000', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }] }]);
     expect(data.cableRuns).toEqual([{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }]);
     expect(data.dcFuseRequired).toBe(false);
     expect(data.acIsolatorRequired).toBe(false);
@@ -109,7 +112,7 @@ describe('buildTemplateData', () => {
         ],
       },
       projectMeta,
-      snapshot: { client: null, cableRuns: [] },
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
     });
 
@@ -118,7 +121,6 @@ describe('buildTemplateData', () => {
     expect(result.moduleSpecImpA).toEqual(expect.any(String));
     expect(result.moduleSpecVocV).toEqual(expect.any(String));
     expect(result.moduleSpecIscA).toEqual(expect.any(String));
-    expect(result.inverterSpecPacW).toEqual(expect.any(String));
     expect(result.inverterSpecVdcMaxV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMinV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMaxV).toEqual(expect.any(String));
@@ -139,7 +141,7 @@ describe('buildTemplateData', () => {
   it('falls back to empty strings for a null client rather than throwing', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
-      snapshot: { client: null, cableRuns: [] },
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
     });
 
@@ -147,5 +149,86 @@ describe('buildTemplateData', () => {
     expect(data.clientAddress).toBe('');
     expect(data.clientStegReference).toBe('');
     expect(data.cableRuns).toEqual([]);
+  });
+
+  it('computes section numbers I-VI, IX with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
+    const data = buildTemplateData({
+      workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(data.sectionNumberPreambule).toBe('I.');
+    expect(data.sectionNumberPresentation).toBe('II.');
+    expect(data.sectionNumberSolution).toBe('III.');
+    expect(data.sectionNumberCablage).toBe('IV.');
+    expect(data.sectionNumberTerre).toBe('V.');
+    expect(data.sectionNumberStructure).toBe('VI.');
+    expect(data.sectionNumberFusible).toBe('');
+    expect(data.sectionNumberSectionneur).toBe('');
+    // The regression this fix closes: VI must be followed directly by VII (not a hardcoded "IX"
+    // left over from when the DC fuse/AC isolator sections existed) when both are absent.
+    expect(data.sectionNumberConclusion).toBe('VII.');
+  });
+
+  it('renumbers VII, VIII, IX correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
+    const data = buildTemplateData({
+      workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(data.sectionNumberStructure).toBe('VI.');
+    expect(data.sectionNumberFusible).toBe('VII.');
+    expect(data.sectionNumberSectionneur).toBe('');
+    expect(data.sectionNumberConclusion).toBe('VIII.');
+  });
+
+  it('numbers all nine sections I-IX when both the DC fuse and the AC isolator sections are required (I4)', () => {
+    const data = buildTemplateData({
+      workerResult,
+      engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
+      projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(data.sectionNumberFusible).toBe('VII.');
+    expect(data.sectionNumberSectionneur).toBe('VIII.');
+    expect(data.sectionNumberConclusion).toBe('IX.');
+  });
+
+  it("uses each inverter's OWN brand/model from the snapshot, not projectMeta's first-inverter-only string, for a mixed-model array (I7)", () => {
+    const mixedEngineInput: RunEngineInput = {
+      ...engineInput,
+      array: [
+        { inverter: { pacW: 3000, vdcMaxV: 550, mpptMinV: 90, mpptMaxV: 550 } as never, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] },
+        { inverter: { pacW: 5000, vdcMaxV: 600, mpptMinV: 100, mpptMaxV: 600 } as never, mppts: [{ stringsInParallel: 1, modulesPerString: 8 }] },
+      ],
+    };
+
+    const data = buildTemplateData({
+      workerResult,
+      engineInput: mixedEngineInput,
+      projectMeta, // projectMeta.inverterBrandModel is 'Sofar 1-4KTL2-G3' — the FIRST inverter only
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3', 'Huawei SUN2000-5KTL'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(data.inverters).toHaveLength(2);
+    expect(data.inverters[0]!.inverterBrandModel).toBe('Sofar 1-4KTL2-G3');
+    expect(data.inverters[1]!.inverterBrandModel).toBe('Huawei SUN2000-5KTL');
+    expect(data.inverters[0]!.pacW).toBe('3 000');
+    expect(data.inverters[1]!.pacW).toBe('5 000');
+  });
+
+  it("falls back to projectMeta.inverterBrandModel when the snapshot's inverterBrandModels array is shorter than the engine's array (defensive, should not throw)", () => {
+    const data = buildTemplateData({
+      workerResult, engineInput, projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: [] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(data.inverters[0]!.inverterBrandModel).toBe(projectMeta.inverterBrandModel);
   });
 });

@@ -10,6 +10,10 @@ export interface BuildTemplateDataInput {
   snapshot: {
     client: { fullName: string; address: string | null; stegReference: string | null } | null;
     cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];
+    // Each inverter's own brand/model, by snapshot array index — projectMeta.inverterBrandModel
+    // is only the FIRST inverter's model (see I7: a mixed-model array must not show the wrong
+    // model on every other inverter's row).
+    inverterBrandModels: string[];
   };
   companyInfo: { name: string; address: string; phone: string; email: string };
 }
@@ -33,8 +37,54 @@ function fmt(value: number, decimals = 1): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
 }
 
+const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'] as const;
+
+/**
+ * Computes each section's roman numeral in code instead of hardcoding it as literal template
+ * text, so the VII (DC fuse) and VIII (AC isolator) sections — each only present when their own
+ * {#dcFuseRequired}/{#acIsolatorRequired} condition is true — never leave a gap in the sequence
+ * (e.g. "VI. Structure" directly followed by literal "IX. Conclusion" when both are absent, the
+ * most common single-inverter/no-fuse configuration).
+ */
+function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
+  sectionNumberPreambule: string;
+  sectionNumberPresentation: string;
+  sectionNumberSolution: string;
+  sectionNumberCablage: string;
+  sectionNumberTerre: string;
+  sectionNumberStructure: string;
+  sectionNumberFusible: string;
+  sectionNumberSectionneur: string;
+  sectionNumberConclusion: string;
+} {
+  let n = 0;
+  const next = (): string => `${ROMAN_NUMERALS[n++]!}.`;
+  const sectionNumberPreambule = next();
+  const sectionNumberPresentation = next();
+  const sectionNumberSolution = next();
+  const sectionNumberCablage = next();
+  const sectionNumberTerre = next();
+  const sectionNumberStructure = next();
+  const sectionNumberFusible = dcFuseRequired ? next() : '';
+  const sectionNumberSectionneur = acIsolatorRequired ? next() : '';
+  const sectionNumberConclusion = next();
+  return {
+    sectionNumberPreambule,
+    sectionNumberPresentation,
+    sectionNumberSolution,
+    sectionNumberCablage,
+    sectionNumberTerre,
+    sectionNumberStructure,
+    sectionNumberFusible,
+    sectionNumberSectionneur,
+    sectionNumberConclusion,
+  };
+}
+
 export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplateData {
   const { workerResult, engineInput, projectMeta, snapshot, companyInfo } = input;
+  const dcFuseRequired = engineInput.dcFuse !== null;
+  const acIsolatorRequired = engineInput.acIsolator !== null;
 
   return {
     companyName: companyInfo.name,
@@ -55,7 +105,13 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     pDcW: formatPlaceholder('P_DC_W', workerResult.engineResult.derived),
     moduleCount: formatPlaceholder('MODULE_COUNT', workerResult.engineResult.derived),
     inverters: engineInput.array.map((entry, index) => ({
+      // Each inverter's OWN brand/model/power (projectMeta.inverterBrandModel is the FIRST
+      // inverter's model only — using it for every entry misrepresents a mixed-model array on the
+      // regulatory drawings and spec table; see render-drawings' own per-inverter labels, which
+      // read this same per-entry field).
       inverterLabel: `Onduleur ${index + 1}`,
+      inverterBrandModel: snapshot.inverterBrandModels[index] ?? projectMeta.inverterBrandModel,
+      pacW: fmt(entry.inverter.pacW, 0),
       mppts: entry.mppts.map((mppt, mpptIndex) => ({
         mpptLabel: `MPPT ${mpptIndex + 1}`,
         stringsInParallel: mppt.stringsInParallel,
@@ -68,14 +124,14 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
       lengthM: run.lengthM,
       installMethod: run.installMethod,
     })),
-    dcFuseRequired: engineInput.dcFuse !== null,
-    acIsolatorRequired: engineInput.acIsolator !== null,
+    dcFuseRequired,
+    acIsolatorRequired,
+    ...computeSectionNumbers(dcFuseRequired, acIsolatorRequired),
     moduleSpecPmaxW: fmt(engineInput.module.pmaxW, 0),
     moduleSpecVmpV: fmt(engineInput.module.vmpV),
     moduleSpecImpA: fmt(engineInput.module.impA),
     moduleSpecVocV: fmt(engineInput.module.vocV),
     moduleSpecIscA: fmt(engineInput.module.iscA),
-    inverterSpecPacW: fmt(engineInput.array[0]!.inverter.pacW, 0),
     inverterSpecVdcMaxV: fmt(engineInput.array[0]!.inverter.vdcMaxV),
     inverterSpecMpptMinV: fmt(engineInput.array[0]!.inverter.mpptMinV),
     inverterSpecMpptMaxV: fmt(engineInput.array[0]!.inverter.mpptMaxV),

@@ -44,7 +44,6 @@ const baseData: DossierTemplateData = {
   moduleSpecImpA: '15,05',
   moduleSpecVocV: '49,3',
   moduleSpecIscA: '15,85',
-  inverterSpecPacW: '4000',
   inverterSpecVdcMaxV: '1000',
   inverterSpecMpptMinV: '80',
   inverterSpecMpptMaxV: '550',
@@ -60,9 +59,20 @@ const baseData: DossierTemplateData = {
   stabilityWeightN: '1200',
   stabilityLhs: '1500',
   stabilityRhs: '1200',
+  sectionNumberPreambule: 'I.',
+  sectionNumberPresentation: 'II.',
+  sectionNumberSolution: 'III.',
+  sectionNumberCablage: 'IV.',
+  sectionNumberTerre: 'V.',
+  sectionNumberStructure: 'VI.',
+  sectionNumberFusible: '',
+  sectionNumberSectionneur: '',
+  sectionNumberConclusion: 'VII.',
   inverters: [
     {
       inverterLabel: 'Onduleur 1',
+      inverterBrandModel: 'Sofar 1-4KTL2-G3',
+      pacW: '4000',
       mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }],
     },
   ],
@@ -96,12 +106,14 @@ describe('fillDossierTemplate', () => {
       inverters: [
         {
           inverterLabel: 'Onduleur 1',
+          inverterBrandModel: 'Sofar 1-4KTL2-G3',
+          pacW: '3000',
           mppts: [
             { mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 },
             { mpptLabel: 'MPPT 2', stringsInParallel: 2, modulesPerString: 4 },
           ],
         },
-        { inverterLabel: 'Onduleur 2', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 6 }] },
+        { inverterLabel: 'Onduleur 2', inverterBrandModel: 'Sofar 1-4KTL2-G3', pacW: '3000', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 6 }] },
       ],
     };
 
@@ -113,12 +125,57 @@ describe('fillDossierTemplate', () => {
     expect(text).toContain('MPPT 2');
   });
 
+  it('shows each inverter\'s OWN brand/model and power in a mixed-model array, not the first inverter repeated (I7)', () => {
+    const mixedData: DossierTemplateData = {
+      ...baseData,
+      inverterBrandModel: 'Sofar 1-4KTL2-G3',
+      inverters: [
+        { inverterLabel: 'Onduleur 1', inverterBrandModel: 'Sofar 1-4KTL2-G3', pacW: '3000', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }] },
+        { inverterLabel: 'Onduleur 2', inverterBrandModel: 'Huawei SUN2000-5KTL', pacW: '5000', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 8 }] },
+      ],
+    };
+
+    const result = fillDossierTemplate(templateBuffer, mixedData);
+    const text = extractText(result);
+
+    expect(text).toContain('Sofar 1-4KTL2-G3');
+    expect(text).toContain('Huawei SUN2000-5KTL');
+    expect(text).toContain('3000');
+    expect(text).toContain('5000');
+  });
+
   it('renders the DC fuse section when dcFuseRequired is true, omits it when false', () => {
     const withFuse = extractText(fillDossierTemplate(templateBuffer, { ...baseData, dcFuseRequired: true }));
     const withoutFuse = extractText(fillDossierTemplate(templateBuffer, { ...baseData, dcFuseRequired: false }));
 
     expect(withFuse).toContain('fusible DC est requis');
     expect(withoutFuse).not.toContain('fusible DC est requis');
+  });
+
+  it('prints the section numbers the caller computes, never a hardcoded literal (I4) — VI is directly followed by the given Conclusion number when VII/VIII are both absent', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, { ...baseData, dcFuseRequired: false, acIsolatorRequired: false, sectionNumberStructure: 'VI.', sectionNumberConclusion: 'VII.' }));
+
+    expect(text).toContain('VI. Structure et lestage');
+    expect(text).toContain('VII. Conclusion');
+    // The literal "IX" this fix removed must never appear when both conditional sections are absent.
+    expect(text).not.toContain('IX. Conclusion');
+  });
+
+  it('prints VII and VIII with the numbers the caller computes when both conditional sections are present', () => {
+    const text = extractText(
+      fillDossierTemplate(templateBuffer, {
+        ...baseData,
+        dcFuseRequired: true,
+        acIsolatorRequired: true,
+        sectionNumberFusible: 'VII.',
+        sectionNumberSectionneur: 'VIII.',
+        sectionNumberConclusion: 'IX.',
+      }),
+    );
+
+    expect(text).toContain('VII. Protection DC — fusible');
+    expect(text).toContain('VIII. Protection AC — sectionneur');
+    expect(text).toContain('IX. Conclusion');
   });
 
   it('renders the AC isolator section when acIsolatorRequired is true, omits it when false', () => {
@@ -139,7 +196,6 @@ describe('fillDossierTemplate', () => {
       moduleSpecImpA: '13,33',
       moduleSpecVocV: '55,9',
       moduleSpecIscA: '13,92',
-      inverterSpecPacW: '3000',
       inverterSpecVdcMaxV: '550',
       inverterSpecMpptMinV: '90',
       inverterSpecMpptMaxV: '550',
