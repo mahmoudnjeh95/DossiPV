@@ -25,6 +25,20 @@ describe('withRetry', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it('retries whatever a custom isRetryable predicate accepts (e.g. a page-37 layout validation failure)', async () => {
+    class LayoutError extends Error {}
+    let calls = 0;
+    const fn = vi.fn(() => {
+      calls += 1;
+      return calls < 2 ? Promise.reject(new LayoutError('point outside the image')) : Promise.resolve('ok');
+    });
+
+    const result = await withRetry(fn, { delaysMs: [0, 0], isRetryable: (e) => e instanceof LayoutError });
+
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   it('gives up after maxAttempts network failures and rethrows the last error', async () => {
     const fn = vi.fn(() => Promise.reject(new Error('ECONNRESET')));
 

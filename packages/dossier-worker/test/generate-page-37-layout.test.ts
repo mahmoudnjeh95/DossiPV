@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { generatePage37Layout, Page37LayoutParseError } from '../src/generate-page-37-layout';
+import {
+  generatePage37Layout,
+  validatePage37Layout,
+  isRetryablePage37LayoutError,
+  Page37LayoutParseError,
+  Page37LayoutOutOfBoundsError,
+  type Page37LayoutInput,
+} from '../src/generate-page-37-layout';
 
 function fakeClient(parsedOutput: unknown): { client: import('@anthropic-ai/sdk').default; parseMock: ReturnType<typeof vi.fn> } {
   const parseMock = vi.fn().mockResolvedValue({ parsed_output: parsedOutput });
@@ -11,61 +18,138 @@ function fakeClient(parsedOutput: unknown): { client: import('@anthropic-ai/sdk'
   return { client, parseMock };
 }
 
-const samplePoints = {
-  technicalRoom: { lat: 36.801, lon: 10.201 },
-  meter: { lat: 36.799, lon: 10.199 },
-  earthPit: { lat: 36.8005, lon: 10.2005 },
+const baseInput: Page37LayoutInput = {
+  satelliteImage: Buffer.from('fake-jpeg'),
+  imageWidthPx: 640,
+  imageHeightPx: 640,
+  metersPerPixel: 0.24,
+  sitePoint: { x: 320, y: 320 },
+  points: { technicalRoom: { x: 400, y: 300 }, meter: { x: 250, y: 420 }, earthPit: { x: 380, y: 360 } },
+  arrayAreaM2: 30,
 };
 
+const validLayout = {
+  panelRectangle: [{ x: 290, y: 290 }, { x: 350, y: 290 }, { x: 350, y: 330 }, { x: 290, y: 330 }],
+  wireRoute: [{ x: 350, y: 310 }, { x: 400, y: 300 }, { x: 250, y: 420 }],
+};
+
+function promptText(parseMock: ReturnType<typeof vi.fn>): string {
+  const call = parseMock.mock.calls[0]![0] as { system: string; messages: { content: { type: string; text?: string }[] }[] };
+  return call.messages[0]!.content.find((block) => block.type === 'text')!.text!;
+}
+
 describe('generatePage37Layout', () => {
-  it('returns the parsed panel rectangle and wire route on a valid response', async () => {
-    const { client } = fakeClient({
-      panelRectangle: [{ lat: 36.8, lon: 10.2 }, { lat: 36.8001, lon: 10.2 }, { lat: 36.8001, lon: 10.2001 }, { lat: 36.8, lon: 10.2001 }],
-      wireRoute: [{ lat: 36.8, lon: 10.2 }, { lat: 36.801, lon: 10.201 }],
-    });
+  it('returns the panel quad and wire route in image pixels on a valid response', async () => {
+    const { client } = fakeClient(validLayout);
 
-    const result = await generatePage37Layout({ satelliteImage: Buffer.from('fake-png'), points: samplePoints }, client);
+    const result = await generatePage37Layout(baseInput, client);
 
-    expect(result.panelRectangle).toHaveLength(4);
-    expect(result.wireRoute).toHaveLength(2);
+    expect(result).toEqual(validLayout);
+  });
+
+  it('tells the model the image size, the scale, and every point in PIXEL coordinates (not lat/lon)', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout(baseInput, client);
+
+    const text = promptText(parseMock);
+    expect(text).toContain('640 x 640 pixels');
+    expect(text).toContain('0.24 m par pixel');
+    expect(text).toContain('Point du site (bâtiment à équiper) : x=320, y=320');
+    expect(text).toContain('Local technique : x=400, y=300');
+    expect(text).toContain('Compteur STEG : x=250, y=420');
+    expect(text).toContain('Prise de terre : x=380, y=360');
+    expect(text).toContain('0 <= x <= 640');
+    expect(text).not.toMatch(/lat=|lon=/);
+    const system = (parseMock.mock.calls[0]![0] as { system: string }).system;
+    expect(system).toContain('PIXELS');
+  });
+
+  it('still sends a non-empty description (the site point) when only some points are placed', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout({ ...baseInput, points: { technicalRoom: null, meter: { x: 250, y: 420 }, earthPit: null } }, client);
+
+    const text = promptText(parseMock);
+    expect(text).toContain('Compteur STEG');
+    expect(text).not.toContain('Local technique');
+    expect(text).not.toContain('Prise de terre');
   });
 
   it('throws Page37LayoutParseError when Claude returns no parsed output', async () => {
     const { client } = fakeClient(null);
 
-    await expect(
-      generatePage37Layout({ satelliteImage: Buffer.from('fake-png'), points: samplePoints }, client),
-    ).rejects.toThrow(Page37LayoutParseError);
+    await expect(generatePage37Layout(baseInput, client)).rejects.toThrow(Page37LayoutParseError);
   });
 
-  it('throws Page37LayoutParseError when a coordinate is out of valid lat/lon range (malformed response)', async () => {
-    const { client } = fakeClient({
-      panelRectangle: [{ lat: 999, lon: 10.2 }],
-      wireRoute: [],
-    });
+  it.each([
+    ['x beyond the image width', { ...validLayout, wireRoute: [{ x: 350, y: 310 }, { x: 641, y: 300 }] }],
+    ['negative y', { ...validLayout, panelRectangle: [{ x: 290, y: -1 }, ...validLayout.panelRectangle.slice(1)] }],
+    ['y beyond the image height', { ...validLayout, wireRoute: [{ x: 350, y: 310 }, { x: 300, y: 9999 }] }],
+  ])('rejects a coordinate outside the image (%s) as an out-of-bounds layout error, never returning it', async (_label, layout) => {
+    const { client } = fakeClient(layout);
 
-    await expect(
-      generatePage37Layout({ satelliteImage: Buffer.from('fake-png'), points: samplePoints }, client),
-    ).rejects.toThrow(Page37LayoutParseError);
+    const error = await generatePage37Layout(baseInput, client).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Page37LayoutOutOfBoundsError);
+    expect(error).toBeInstanceOf(Page37LayoutParseError);
   });
 
   it('calls Claude with model claude-sonnet-5-5', async () => {
-    const { client, parseMock } = fakeClient({ panelRectangle: [], wireRoute: [] });
+    const { client, parseMock } = fakeClient(validLayout);
 
-    await generatePage37Layout({ satelliteImage: Buffer.from('fake-png'), points: samplePoints }, client);
+    await generatePage37Layout(baseInput, client);
 
-    expect(parseMock).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'claude-sonnet-5-5' }),
-    );
+    expect(parseMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'claude-sonnet-5-5' }));
   });
 
-  it('declares the image media_type as image/jpeg — Esri World Imagery tiles are served as JPEG, not PNG, confirmed by a real 400 from the Claude API against a mismatched media_type during live verification', async () => {
-    const { client, parseMock } = fakeClient({ panelRectangle: [], wireRoute: [] });
+  it('declares the image media_type as image/jpeg — the stitched Esri image is JPEG', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
 
-    await generatePage37Layout({ satelliteImage: Buffer.from('fake-jpeg-bytes'), points: samplePoints }, client);
+    await generatePage37Layout(baseInput, client);
 
     const call = parseMock.mock.calls[0]![0] as { messages: { content: { type: string; source?: { media_type?: string } }[] }[] };
     const imageBlock = call.messages[0]!.content.find((block) => block.type === 'image');
     expect(imageBlock?.source?.media_type).toBe('image/jpeg');
+  });
+
+  it('keeps additionalProperties:false on the nested array-item schemas (the structured-output API rejects them otherwise)', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout(baseInput, client);
+
+    const schema = (parseMock.mock.calls[0]![0] as { output_config: { format: { schema: { additionalProperties: boolean; properties: Record<string, { items: { additionalProperties: boolean; required: string[] } }> } } } }).output_config.format.schema;
+    expect(schema.additionalProperties).toBe(false);
+    for (const key of ['panelRectangle', 'wireRoute']) {
+      expect(schema.properties[key]!.items.additionalProperties).toBe(false);
+      expect(schema.properties[key]!.items.required).toEqual(['x', 'y']);
+    }
+  });
+});
+
+describe('validatePage37Layout', () => {
+  it('accepts a layout touching the image edges exactly', () => {
+    const edge = { panelRectangle: [{ x: 0, y: 0 }, { x: 640, y: 0 }, { x: 640, y: 640 }, { x: 0, y: 640 }], wireRoute: [{ x: 0, y: 0 }, { x: 640, y: 640 }] };
+    expect(validatePage37Layout(edge, 640, 640)).toBe(edge);
+  });
+
+  it('rejects a panel "rectangle" that does not have exactly 4 corners', () => {
+    expect(() => validatePage37Layout({ ...validLayout, panelRectangle: validLayout.panelRectangle.slice(0, 3) }, 640, 640)).toThrow(/exactly 4 corners/);
+  });
+
+  it('rejects a wire route with fewer than 2 points', () => {
+    expect(() => validatePage37Layout({ ...validLayout, wireRoute: [{ x: 1, y: 1 }] }, 640, 640)).toThrow(/at least 2 points/);
+  });
+
+  it('rejects a degenerate (zero-area) panel quad', () => {
+    const flat = [{ x: 10, y: 10 }, { x: 100, y: 10 }, { x: 200, y: 10 }, { x: 300, y: 10 }];
+    expect(() => validatePage37Layout({ ...validLayout, panelRectangle: flat }, 640, 640)).toThrow(/degenerate/);
+  });
+});
+
+describe('isRetryablePage37LayoutError', () => {
+  it('treats parse and out-of-bounds failures as retryable call failures (spec §5), and nothing else', () => {
+    expect(isRetryablePage37LayoutError(new Page37LayoutParseError('x'))).toBe(true);
+    expect(isRetryablePage37LayoutError(new Page37LayoutOutOfBoundsError('x'))).toBe(true);
+    expect(isRetryablePage37LayoutError(new Error('400 invalid_request_error'))).toBe(false);
   });
 });

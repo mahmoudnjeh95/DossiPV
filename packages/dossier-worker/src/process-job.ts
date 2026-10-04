@@ -10,11 +10,19 @@ import { buildTemplateData } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
-import { withRetry } from './retry';
+import { withRetry, isRetryableError } from './retry';
 import { renderCoverPage } from './render-cover-page';
 import { renderDrawingPages } from './render-drawings';
-import { generatePage37Layout, type Page37Layout, type Page37Points } from './generate-page-37-layout';
-import { fetchSatelliteImage } from './fetch-satellite-image';
+import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
+import {
+  fetchSatelliteImage,
+  metersPerPixel,
+  planImplantationView,
+  planSituationView,
+  projectToImage,
+  type LatLon,
+  type PixelPoint,
+} from './fetch-satellite-image';
 import { renderSitePlanPages, type SitePlanPremiumData } from './render-site-plan-pages';
 import { renderTableOfContents } from './render-toc';
 
@@ -154,16 +162,32 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'pdf', error);
   }
 
+  let companyLogoBuffer: Buffer | null = null;
+  if (company.logoFileId) {
+    try {
+      const logoFile = await db.file.findUnique({ where: { id: company.logoFileId } });
+      if (logoFile) {
+        const { getFilePath } = await import('@dossipv/file-storage');
+        companyLogoBuffer = await readFile(getFilePath(logoFile.storageKey));
+      }
+    } catch {
+      // A missing/corrupt logo file must never fail the whole dossier — the cover and site-plan
+      // pages already render gracefully without one (embedLogo/embedImageSafely both no-op on null).
+      companyLogoBuffer = null;
+    }
+  }
+
   let coverPageBuffer: Buffer;
   try {
     coverPageBuffer = await renderCoverPage({
       companyName: company.name,
-      // Logo fetch is a follow-up: company.logoFileId exists but isn't resolved to a Buffer here
-      // yet. renderCoverPage already handles a null logo gracefully.
-      companyLogoBuffer: null,
+      companyLogoBuffer,
       dossierNumber: snapshot.dossierNumber,
       clientFullName: snapshot.client?.fullName ?? '',
-      dossierDate: snapshot.dossierDate ?? new Date().toISOString().slice(0, 10),
+      // engineInput.dossierDate is the persisted date the engine's own checks (C20/C22) ran
+      // against — using it here keeps the cover consistent with what was actually validated,
+      // rather than a fresh "today" that could differ from a regenerated dossier's original run.
+      dossierDate: snapshot.engineInput.dossierDate,
     });
   } catch (error) {
     return fail(jobId, 'cover', error);
@@ -201,30 +225,72 @@ export async function processJob(jobId: string): Promise<void> {
   let sitePlanPremiumData: SitePlanPremiumData | null = null;
   const premiumSite = snapshot.tier === 'PREMIUM' ? snapshot.site : null;
   if (premiumSite) {
-    const points: Page37Points = {
-      technicalRoom: premiumSite.technicalRoomPointLat !== null && premiumSite.technicalRoomPointLon !== null ? { lat: premiumSite.technicalRoomPointLat, lon: premiumSite.technicalRoomPointLon } : null,
-      meter: premiumSite.meterPointLat !== null && premiumSite.meterPointLon !== null ? { lat: premiumSite.meterPointLat, lon: premiumSite.meterPointLon } : null,
-      earthPit: premiumSite.earthPitPointLat !== null && premiumSite.earthPitPointLon !== null ? { lat: premiumSite.earthPitPointLat, lon: premiumSite.earthPitPointLon } : null,
+    const geoPoint = (lat: number | null, lon: number | null): LatLon | null => (lat !== null && lon !== null ? { lat, lon } : null);
+    const geoPoints = {
+      technicalRoom: geoPoint(premiumSite.technicalRoomPointLat, premiumSite.technicalRoomPointLon),
+      meter: geoPoint(premiumSite.meterPointLat, premiumSite.meterPointLon),
+      earthPit: geoPoint(premiumSite.earthPitPointLat, premiumSite.earthPitPointLon),
     };
-    const sitePoint = { lat: premiumSite.gpsLat, lon: premiumSite.gpsLon };
+    const sitePoint: LatLon = { lat: premiumSite.gpsLat, lon: premiumSite.gpsLon };
+    const placedPoints = [geoPoints.technicalRoom, geoPoints.meter, geoPoints.earthPit].filter((p): p is LatLon => p !== null);
+
+    // Page 37 covers the site and every placed point at the best zoom; page 38 is a
+    // neighbourhood-scale view centred on the site. Both have exact pixel bounds, so every GPS
+    // point is projected to the image pixel it really falls on.
+    const implantationView = planImplantationView([sitePoint, ...placedPoints]);
+    const situationView = planSituationView(sitePoint);
 
     let page37Image: Buffer;
     let page38Image: Buffer;
     try {
-      page37Image = await withRetry(() => fetchSatelliteImage(sitePoint));
-      page38Image = await withRetry(() => fetchSatelliteImage(sitePoint));
+      page37Image = await withRetry(() => fetchSatelliteImage(implantationView));
+      page38Image = await withRetry(() => fetchSatelliteImage(situationView));
     } catch (error) {
       return fail(jobId, 'map-pages', error);
     }
 
-    let layout: Page37Layout;
-    try {
-      layout = await withRetry(() => generatePage37Layout({ satelliteImage: page37Image, points }, anthropicClient));
-    } catch (error) {
-      return fail(jobId, 'page-37-layout', error);
+    const toPixels = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(implantationView, p) : null);
+    const pixelPoints: Page37Points = {
+      technicalRoom: toPixels(geoPoints.technicalRoom),
+      meter: toPixels(geoPoints.meter),
+      earthPit: toPixels(geoPoints.earthPit),
+    };
+
+    // With no point placed on the map there is nothing to route the wiring to: skip the vision
+    // call and show the satellite photo without an overlay rather than fail the job.
+    let layout: Page37Layout | null = null;
+    if (placedPoints.length > 0) {
+      const moduleCount = snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0);
+      const { lengthMm, widthMm } = snapshot.engineInput.module;
+      const arrayAreaM2 = lengthMm && widthMm ? (moduleCount * lengthMm * widthMm) / 1e6 : null;
+      try {
+        layout = await withRetry(
+          () =>
+            generatePage37Layout(
+              {
+                satelliteImage: page37Image,
+                imageWidthPx: implantationView.widthPx,
+                imageHeightPx: implantationView.heightPx,
+                metersPerPixel: metersPerPixel(implantationView, sitePoint.lat),
+                sitePoint: projectToImage(implantationView, sitePoint),
+                points: pixelPoints,
+                arrayAreaM2,
+              },
+              anthropicClient,
+            ),
+          // Spec §5: a layout failing validation (incl. out-of-bounds coordinates) is retried
+          // like a network error, and only then fails the job — never drawn.
+          { isRetryable: (error) => isRetryableError(error) || isRetryablePage37LayoutError(error) },
+        );
+      } catch (error) {
+        return fail(jobId, 'page-37-layout', error);
+      }
     }
 
-    sitePlanPremiumData = { page37SatelliteImage: page37Image, page38SatelliteImage: page38Image, layout, points };
+    sitePlanPremiumData = {
+      page37: { image: { buffer: page37Image, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx }, layout, points: pixelPoints },
+      page38: { image: { buffer: page38Image, widthPx: situationView.widthPx, heightPx: situationView.heightPx }, sitePin: projectToImage(situationView, sitePoint) },
+    };
   }
 
   let sitePlanBuffer: Buffer;
@@ -235,6 +301,10 @@ export async function processJob(jobId: string): Promise<void> {
       clientAddress: snapshot.client?.address ?? '',
       gps: snapshot.site ? { lat: snapshot.site.gpsLat, lon: snapshot.site.gpsLon } : { lat: 0, lon: 0 },
       installerName: company.name,
+      installerContact: { address: company.address, phone: company.phone, email: company.email },
+      companyLogoBuffer,
+      dossierDate: snapshot.engineInput.dossierDate,
+      dossierNumber: snapshot.dossierNumber,
       premiumData: sitePlanPremiumData,
     });
   } catch (error) {

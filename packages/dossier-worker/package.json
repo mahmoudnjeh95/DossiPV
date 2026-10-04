@@ -14,10 +14,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@dossipv/db": "*",
-    "@dossipv/docx-template": "*",
     "@dossipv/document-text": "*",
+    "@dossipv/docx-template": "*",
     "@dossipv/engine": "*",
     "@dossipv/pvgis-client": "*",
+    "jpeg-js": "^0.4.4",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {

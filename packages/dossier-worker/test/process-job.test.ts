@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   companyFindUnique: vi.fn(),
   projectFindUnique: vi.fn(),
   fileFindMany: vi.fn(),
+  fileFindUnique: vi.fn(),
   fileCreate: vi.fn(),
   checkResultCreateMany: vi.fn(),
   generateDossierDocument: vi.fn(),
@@ -33,7 +34,7 @@ vi.mock('@dossipv/db', async () => {
       dossierJob: { findUniqueOrThrow: mocks.dossierJobFindUniqueOrThrow, update: mocks.dossierJobUpdate },
       company: { findUnique: mocks.companyFindUnique },
       project: { findUnique: mocks.projectFindUnique },
-      file: { findMany: mocks.fileFindMany, create: mocks.fileCreate },
+      file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
       dossierCheckResult: { createMany: mocks.checkResultCreateMany },
     },
   };
@@ -44,8 +45,16 @@ vi.mock('../src/convert-to-pdf', () => ({ convertDocxToPdf: mocks.convertDocxToP
 vi.mock('../src/merge-annexes', () => ({ mergeAnnexes: mocks.mergeAnnexes, mergeDocumentFragments: mocks.mergeDocumentFragments }));
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
-vi.mock('../src/generate-page-37-layout', () => ({ generatePage37Layout: mocks.generatePage37Layout }));
-vi.mock('../src/fetch-satellite-image', () => ({ fetchSatelliteImage: mocks.fetchSatelliteImage }));
+// Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
+// classes stay real, so the test exercises the real geometry process-job hands to the renderer.
+vi.mock('../src/generate-page-37-layout', async () => ({
+  ...(await vi.importActual<typeof import('../src/generate-page-37-layout')>('../src/generate-page-37-layout')),
+  generatePage37Layout: mocks.generatePage37Layout,
+}));
+vi.mock('../src/fetch-satellite-image', async () => ({
+  ...(await vi.importActual<typeof import('../src/fetch-satellite-image')>('../src/fetch-satellite-image')),
+  fetchSatelliteImage: mocks.fetchSatelliteImage,
+}));
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
 vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents }));
 vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: vi.fn(() => '/fake/path') }));
@@ -55,12 +64,15 @@ vi.mock('fs/promises', async () => {
 });
 
 import { processJob } from '../src/process-job';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage } from '../src/fetch-satellite-image';
+import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 
 const validSnapshot = {
   version: 1,
   projectId: 'project-1',
   companyId: 'company-1',
   engineInput: {
+    dossierDate: '2026-10-03',
     array: [{ inverter: { pacW: 4000, vdcMaxV: 1000, mpptMinV: 80, mpptMaxV: 550 }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
     dcFuse: null,
     acIsolator: null,
@@ -96,7 +108,10 @@ const TOC_PDF = Buffer.from('%PDF-fake-toc');
 const SITE_PLAN_PDF = Buffer.from('%PDF-fake-site-plan');
 const ASSEMBLED_PDF = Buffer.from('%PDF-fake-assembled');
 const SATELLITE_TILE = Buffer.from('fake satellite tile');
-const PAGE_37_LAYOUT = { panelRectangle: [{ lat: 36.8, lon: 10.2 }], wireRoute: [{ lat: 36.8, lon: 10.2 }] };
+const PAGE_37_LAYOUT = {
+  panelRectangle: [{ x: 250, y: 250 }, { x: 300, y: 250 }, { x: 300, y: 290 }, { x: 250, y: 290 }],
+  wireRoute: [{ x: 300, y: 270 }, { x: 400, y: 200 }],
+};
 let bodyPdf: Buffer;
 let drawingsPdf: Buffer;
 
@@ -345,22 +360,114 @@ describe('processJob — fragment assembly details', () => {
     );
   });
 
-  it('passes the placed site points (null when not placed) to the page-37 layout call and the premium renderer', async () => {
-    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
-    const expectedPoints = { technicalRoom: { lat: 36.801, lon: 10.201 }, meter: { lat: 36.799, lon: 10.199 }, earthPit: null };
+  it('resolves company.logoFileId to a real buffer and passes it to both the cover page and the site-plan pages (I5)', async () => {
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-logo', anmeCertificateFileId: null });
+    mocks.fileFindUnique.mockResolvedValue({ id: 'file-logo', storageKey: 'logo.png', mimeType: 'png' });
+    const logoBuffer = Buffer.from('fake-logo-png-bytes');
+    mocks.readFile.mockImplementation((path: string) => Promise.resolve(path === '/fake/path' ? logoBuffer : Buffer.from('template bytes')));
 
     await processJob('job-1');
 
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledWith({ lat: 36.8, lon: 10.2 });
-    expect(mocks.generatePage37Layout).toHaveBeenCalledWith({ satelliteImage: SATELLITE_TILE, points: expectedPoints }, expect.anything());
+    expect(mocks.fileFindUnique).toHaveBeenCalledWith({ where: { id: 'file-logo' } });
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ companyLogoBuffer: logoBuffer }));
+    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ companyLogoBuffer: logoBuffer }));
+  });
+
+  it('does not fail the job when the logo file row exists but cannot be read from disk (I5 resilience)', async () => {
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-missing-logo', anmeCertificateFileId: null });
+    mocks.fileFindUnique.mockResolvedValue({ id: 'file-missing-logo', storageKey: 'gone.png', mimeType: 'png' });
+    mocks.readFile.mockImplementation((path: string) => (path === '/fake/path' ? Promise.reject(new Error('ENOENT')) : Promise.resolve(Buffer.from('template bytes'))));
+
+    await processJob('job-1');
+
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ companyLogoBuffer: null }));
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('fetches a page-37 view covering the site and every placed point, and a separate lower-zoom page-38 view centred on the site', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    const site = { lat: 36.8, lon: 10.2 };
+    const placed = [{ lat: 36.801, lon: 10.201 }, { lat: 36.799, lon: 10.199 }];
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    const implantationView = planImplantationView([site, ...placed]);
+    const situationView = planSituationView(site);
+    expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(1, implantationView);
+    expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(2, situationView);
+    expect(situationView.zoom).toBeLessThan(implantationView.zoom);
+    for (const p of [site, ...placed]) {
+      expect(isInsideImage(implantationView, projectToImage(implantationView, p))).toBe(true);
+    }
+  });
+
+  it('hands the vision call and the renderer the placed points projected to image PIXELS (null when not placed)', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    const site = { lat: 36.8, lon: 10.2 };
+    const view = planImplantationView([site, { lat: 36.801, lon: 10.201 }, { lat: 36.799, lon: 10.199 }]);
+    const expectedPoints = {
+      technicalRoom: projectToImage(view, { lat: 36.801, lon: 10.201 }),
+      meter: projectToImage(view, { lat: 36.799, lon: 10.199 }),
+      earthPit: null,
+    };
+
+    await processJob('job-1');
+
+    expect(mocks.generatePage37Layout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        satelliteImage: SATELLITE_TILE,
+        imageWidthPx: view.widthPx,
+        imageHeightPx: view.heightPx,
+        sitePoint: projectToImage(view, site),
+        points: expectedPoints,
+      }),
+      expect.anything(),
+    );
+    const situationView = planSituationView(site);
     expect(mocks.renderSitePlanPages).toHaveBeenCalledWith({
       tier: 'PREMIUM',
       clientFullName: 'Ahmed',
       clientAddress: 'Tunis',
       gps: { lat: 36.8, lon: 10.2 },
       installerName: 'SolarPro',
-      premiumData: { page37SatelliteImage: SATELLITE_TILE, page38SatelliteImage: SATELLITE_TILE, layout: PAGE_37_LAYOUT, points: expectedPoints },
+      installerContact: { address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyLogoBuffer: null,
+      dossierDate: '2026-10-03',
+      dossierNumber: null,
+      premiumData: {
+        page37: { image: { buffer: SATELLITE_TILE, widthPx: view.widthPx, heightPx: view.heightPx }, layout: PAGE_37_LAYOUT, points: expectedPoints },
+        page38: { image: { buffer: SATELLITE_TILE, widthPx: situationView.widthPx, heightPx: situationView.heightPx }, sitePin: projectToImage(situationView, site) },
+      },
     });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('skips the vision call for a PREMIUM project with NO map point placed, and renders the satellite photo without an overlay', async () => {
+    const noPoints = {
+      ...premiumSnapshot,
+      site: { ...premiumSnapshot.site, technicalRoomPointLat: null, technicalRoomPointLon: null, meterPointLat: null, meterPointLon: null },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: noPoints });
+
+    await processJob('job-1');
+
+    expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    const renderInput = mocks.renderSitePlanPages.mock.calls[0]![0] as { tier: string; premiumData: { page37: { layout: unknown; points: unknown } } };
+    expect(renderInput.tier).toBe('PREMIUM');
+    expect(renderInput.premiumData.page37.layout).toBeNull();
+    expect(renderInput.premiumData.page37.points).toEqual({ technicalRoom: null, meter: null, earthPit: null });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('retries the vision call when Claude returns a coordinate outside the image, instead of drawing it or failing at once', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.generatePage37Layout.mockRejectedValueOnce(new Page37LayoutOutOfBoundsError('wireRoute point (9999, 1) is outside the image'));
+
+    await processJob('job-1');
+
+    expect(mocks.generatePage37Layout).toHaveBeenCalledTimes(2);
     expect(findSucceededUpdate()).toBeDefined();
   });
 
