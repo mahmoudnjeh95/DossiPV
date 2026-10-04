@@ -46,7 +46,7 @@ const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 
  * (e.g. "VI. Structure" directly followed by literal "IX. Conclusion" when both are absent, the
  * most common single-inverter/no-fuse configuration).
  */
-function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
+export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
   sectionNumberPreambule: string;
   sectionNumberPresentation: string;
   sectionNumberSolution: string;

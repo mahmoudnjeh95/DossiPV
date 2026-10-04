@@ -6,7 +6,7 @@ import { db } from '@dossipv/db';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
-import { buildTemplateData } from './build-template-data';
+import { buildTemplateData, computeSectionNumbers } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
@@ -366,17 +366,23 @@ export async function processJob(jobId: string): Promise<void> {
       return BODY_START_PAGE + Math.min(offset, bodyPageCount - 1);
     };
 
+    // Built from the SAME computeSectionNumbers() the body template itself uses (via
+    // buildTemplateData, below) — never a second, separately hardcoded set of roman numerals,
+    // which previously drifted out of sync with the body whenever VII/VIII were absent (a real
+    // regression the scoped re-review caught: the body said "VII. Conclusion" while the TOC still
+    // said "IX. Conclusion" for the same no-fuse/no-isolator project).
+    const sectionNumbers = computeSectionNumbers(dcFuseRequired, acIsolatorRequired);
     let sectionIndex = 0;
     const tocEntries = [
-      { title: 'I. Préambule', pageNumber: pageForSection(sectionIndex++) },
-      { title: 'II. Présentation du projet', pageNumber: pageForSection(sectionIndex++) },
-      { title: 'III. Description de la solution technique', pageNumber: pageForSection(sectionIndex++) },
-      { title: 'IV. Câblage', pageNumber: pageForSection(sectionIndex++) },
-      { title: 'V. Mise à la terre', pageNumber: pageForSection(sectionIndex++) },
-      { title: 'VI. Structure et lestage', pageNumber: pageForSection(sectionIndex++) },
-      ...(dcFuseRequired ? [{ title: 'VII. Protection DC — fusible', pageNumber: pageForSection(sectionIndex++) }] : []),
-      ...(acIsolatorRequired ? [{ title: 'VIII. Protection AC — sectionneur', pageNumber: pageForSection(sectionIndex++) }] : []),
-      { title: 'IX. Conclusion', pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberPreambule} Préambule`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberPresentation} Présentation du projet`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberSolution} Description de la solution technique`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberCablage} Câblage`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberTerre} Mise à la terre`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberStructure} Structure et lestage`, pageNumber: pageForSection(sectionIndex++) },
+      ...(dcFuseRequired ? [{ title: `${sectionNumbers.sectionNumberFusible} Protection DC — fusible`, pageNumber: pageForSection(sectionIndex++) }] : []),
+      ...(acIsolatorRequired ? [{ title: `${sectionNumbers.sectionNumberSectionneur} Protection AC — sectionneur`, pageNumber: pageForSection(sectionIndex++) }] : []),
+      { title: `${sectionNumbers.sectionNumberConclusion} Conclusion`, pageNumber: pageForSection(sectionIndex++) },
       { title: 'Schémas électriques', pageNumber: BODY_START_PAGE + bodyPageCount },
       { title: 'Plans de situation', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount },
       { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount + sitePlanPageCount },

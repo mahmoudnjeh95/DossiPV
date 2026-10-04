@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
+import { computeSectionNumbers } from '../src/build-template-data';
 
 const mocks = vi.hoisted(() => ({
   dossierJobFindUniqueOrThrow: vi.fn(),
@@ -387,7 +388,10 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
-    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Description de la solution technique', 'IV. Câblage', 'V. Mise à la terre', 'VI. Structure et lestage', 'IX. Conclusion'];
+    // Conclusion is "VII." here (not a hardcoded "IX.") — with no DC fuse and no AC isolator,
+    // VI is directly followed by VII, exactly matching computeSectionNumbers()'s own output
+    // (see build-template-data.test.ts's identical no-gap assertion for the body side).
+    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Description de la solution technique', 'IV. Câblage', 'V. Mise à la terre', 'VI. Structure et lestage', 'VII. Conclusion'];
     const bodyEntries = bodyTitles.map((title) => entries.find((e) => e.title === title)!);
 
     for (const entry of bodyEntries) {
@@ -423,6 +427,45 @@ describe('processJob — fragment assembly details', () => {
     expect(viIndex).toBeLessThan(viiIndex);
     expect(viiIndex).toBeLessThan(viiiIndex);
     expect(viiiIndex).toBeLessThan(ixIndex);
+  });
+
+  it.each([
+    [false, false],
+    [true, false],
+    [false, true],
+    [true, true],
+  ])('TOC section titles always match computeSectionNumbers() output exactly — never a second, separately hardcoded set of numerals (dcFuseRequired=%s, acIsolatorRequired=%s)', async (dcFuseRequired, acIsolatorRequired) => {
+    // Regression test for a real bug the scoped re-review caught: the TOC titles were hardcoded
+    // literal text, so they drifted out of sync with the body's own dynamically computed numbers
+    // the moment VII/VIII weren't both present (the body said "VII. Conclusion", the TOC still
+    // said "IX. Conclusion"). The TOC must use the SAME source of truth as the body template.
+    const snapshot = {
+      ...validSnapshot,
+      engineInput: {
+        ...validSnapshot.engineInput,
+        dcFuse: dcFuseRequired ? { ratedCurrentA: 16, ratedVoltageV: 1000 } : null,
+        acIsolator: acIsolatorRequired ? { ratedCurrentA: 25 } : null,
+      },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshot });
+
+    await processJob('job-1');
+
+    const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
+    const n = computeSectionNumbers(dcFuseRequired, acIsolatorRequired);
+    expect(entries.map((e) => e.title)).toEqual(
+      expect.arrayContaining([
+        `${n.sectionNumberPreambule} Préambule`,
+        `${n.sectionNumberPresentation} Présentation du projet`,
+        `${n.sectionNumberSolution} Description de la solution technique`,
+        `${n.sectionNumberCablage} Câblage`,
+        `${n.sectionNumberTerre} Mise à la terre`,
+        `${n.sectionNumberStructure} Structure et lestage`,
+        `${n.sectionNumberConclusion} Conclusion`,
+        ...(dcFuseRequired ? [`${n.sectionNumberFusible} Protection DC — fusible`] : []),
+        ...(acIsolatorRequired ? [`${n.sectionNumberSectionneur} Protection AC — sectionneur`] : []),
+      ]),
+    );
   });
 
   it('builds the cover page and the drawings from the company and the frozen snapshot', async () => {
