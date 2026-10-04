@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { PNG } from 'pngjs';
-import { mergeAnnexes } from '../src/merge-annexes';
+import { mergeAnnexes, mergeDocumentFragments } from '../src/merge-annexes';
 
-async function makeOnePagePdf(): Promise<Buffer> {
+async function makeOnePagePdf(size: [number, number] = [200, 200]): Promise<Buffer> {
   const doc = await PDFDocument.create();
-  doc.addPage([200, 200]);
+  doc.addPage(size);
   return Buffer.from(await doc.save());
 }
 
@@ -75,5 +75,26 @@ describe('mergeAnnexes — resilience', () => {
 
     // Base + the one valid annex = 2 pages; the corrupted one contributed nothing but did not abort the merge.
     expect(await countPages(merged)).toBe(2);
+  });
+});
+
+describe('mergeDocumentFragments', () => {
+  it('merges an arbitrary ordered list of PDF fragments before the annexes', async () => {
+    // Distinct page widths make the final page order observable, not just the page count.
+    const fragment1 = await makeOnePagePdf([100, 100]);
+    const fragment2 = await makeOnePagePdf([200, 200]);
+    const annex = await makeOnePagePdf([300, 300]);
+
+    const merged = await mergeDocumentFragments([fragment1, fragment2], [{ buffer: annex, mimeType: 'pdf' }]);
+
+    const doc = await PDFDocument.load(merged);
+    expect(doc.getPageCount()).toBe(3);
+    expect(doc.getPages().map((page) => page.getWidth())).toEqual([100, 200, 300]);
+  });
+
+  it('throws when a fragment itself is unreadable (unlike an annex, a broken fragment must fail the job)', async () => {
+    const valid = await makeOnePagePdf();
+
+    await expect(mergeDocumentFragments([valid, Buffer.from('not a real pdf')], [])).rejects.toThrow();
   });
 });
