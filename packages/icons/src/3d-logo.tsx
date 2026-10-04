@@ -12,7 +12,7 @@ const SIZES = {
   xl: 240,
 };
 
-export function SolarixProLogo({ size = 'md', className }: SolarixProLogoProps) {
+export function SolarixProLogo({ size = 'md', className }: SolarixProLogoProps): React.JSX.Element {
   const px = SIZES[size];
 
   return (

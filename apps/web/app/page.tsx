@@ -8,7 +8,7 @@ import { LandingFooter } from '../components/landing/footer';
 export default function HomePage(): React.JSX.Element {
   const [heroVisible, setHeroVisible] = useState(true);
 
-  const handleHeroDismiss = () => {
+  const handleHeroDismiss = (): void => {
     setHeroVisible(false);
   };
 

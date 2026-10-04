@@ -6,7 +6,7 @@ export function Icon({
   color = 'inherit',
   className,
   ...props
-}: IconProps) {
+}: IconProps): React.JSX.Element {
   const iconSize = ICON_SIZES[size];
   const iconColor = ICON_COLORS[color];
 

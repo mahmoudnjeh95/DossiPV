@@ -1,8 +1,11 @@
 import React from 'react';
 import { IconProps, ICON_SIZES, ICON_COLORS } from '../types';
 
-function wrapIcon(name: string, path: string | string[]) {
-  return function IconComponent({ size, color, ...svgProps }: IconProps) {
+function wrapIcon(
+  name: string,
+  path: string | string[],
+): React.ComponentType<IconProps> {
+  return function IconComponent({ size, color, ...svgProps }: IconProps): React.JSX.Element {
     const px = ICON_SIZES[size ?? 'md'];
     const stroke = ICON_COLORS[color ?? 'inherit'];
     const paths = Array.isArray(path) ? path : [path];

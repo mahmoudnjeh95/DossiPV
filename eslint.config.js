@@ -14,7 +14,10 @@ export default [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['packages/icons/tests/Icon.test.tsx'],
+          defaultProject: 'packages/icons/tsconfig.json',
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

@@ -10,7 +10,7 @@ import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
 import { ChecksPanel } from '../../../../components/checks-panel';
 import { GenerateButton } from './generate-button';
-import { Projects, Check, Warning, Error as ErrorIcon, Loading } from '@dossipv/icons';
+import { Projects } from '@dossipv/icons';
 
 const DERIVED_LABELS: { key: string; label: string; unit: string; decimals: number }[] = [
   { key: 'P_DC_W', label: 'Puissance DC', unit: 'W', decimals: 0 },

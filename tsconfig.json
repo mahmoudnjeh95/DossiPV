@@ -9,6 +9,7 @@
     { "path": "packages/pvgis-client" },
     { "path": "packages/docx-template" },
     { "path": "packages/file-storage" },
+    { "path": "packages/icons" },
     { "path": "apps/web" }
   ]
 }
