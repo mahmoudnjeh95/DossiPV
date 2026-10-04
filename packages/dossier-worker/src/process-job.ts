@@ -8,7 +8,7 @@ import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
-import { mergeAnnexes, mergeDocumentFragments, type AnnexFile } from './merge-annexes';
+import { mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
 import { withRetry } from './retry';
 import { renderCoverPage } from './render-cover-page';
@@ -141,7 +141,8 @@ export async function processJob(jobId: string): Promise<void> {
   }
 
   // Fragment assembly. Final page order: cover → TOC → body → drawings (pages 35-36) → map pages
-  // (37-38). The TOC is rendered last because it needs the other fragments' real page counts.
+  // (37-38) → annexes. The TOC is rendered last because it needs the other fragments' real page
+  // counts.
   // Each fragment's page count is read inside the step that produced it, so an unreadable
   // fragment fails at the step responsible for it rather than at the TOC.
   let bodyPdfBuffer: Buffer;
@@ -261,17 +262,25 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'toc', error);
   }
 
+  let annexFiles: AnnexFile[];
+  try {
+    annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId, snapshot);
+  } catch (error) {
+    return fail(jobId, 'annexes', error);
+  }
+
+  // Master spec §5 step 8: dossier.pdf is the full document WITH the annexes merged in;
+  // annexes.pdf is the annexes alone (a valid 0-page PDF when the project has none).
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await mergeDocumentFragments([coverPageBuffer, tocBuffer, bodyPdfBuffer, drawingsBuffer, sitePlanBuffer], []);
+    pdfBuffer = await mergeDocumentFragments([coverPageBuffer, tocBuffer, bodyPdfBuffer, drawingsBuffer, sitePlanBuffer], annexFiles);
   } catch (error) {
     return fail(jobId, 'assembly', error);
   }
 
   let annexesPdfBuffer: Buffer;
   try {
-    const annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId, snapshot);
-    annexesPdfBuffer = await mergeAnnexes(pdfBuffer, annexFiles);
+    annexesPdfBuffer = await mergeDocumentFragments([], annexFiles);
   } catch (error) {
     return fail(jobId, 'annexes', error);
   }

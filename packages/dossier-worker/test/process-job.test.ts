@@ -157,7 +157,7 @@ describe('processJob — success path', () => {
     expect(mocks.generateDossierDocument).toHaveBeenCalled();
     expect(mocks.fillDossierTemplate).toHaveBeenCalled();
     expect(mocks.convertDocxToPdf).toHaveBeenCalled();
-    expect(mocks.mergeAnnexes).toHaveBeenCalled();
+    expect(mocks.mergeDocumentFragments).toHaveBeenCalled();
     expect(mocks.fileCreate).toHaveBeenCalledTimes(3); // docx, pdf, annexesPdf
 
     const finalUpdateCall = mocks.dossierJobUpdate.mock.calls.find(
@@ -241,7 +241,10 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
 
     await processJob('job-1');
 
-    expect(mocks.mergeAnnexes).toHaveBeenCalledWith(expect.any(Buffer), []);
+    // dossier.pdf is cover+TOC+body+drawings+sitePlan with annexes merged in (master spec §5
+    // step 8); annexes.pdf is annexes-only. With zero annex files, both calls pass [].
+    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], unknown[]][];
+    expect(mergeCalls.some(([, annexes]) => Array.isArray(annexes) && annexes.length === 0)).toBe(true);
     const finalUpdateCall = mocks.dossierJobUpdate.mock.calls.find(
       (call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED',
     );
@@ -303,12 +306,15 @@ describe('processJob — full fragment assembly (Premium tier)', () => {
 });
 
 describe('processJob — fragment assembly details', () => {
-  it('merges cover → TOC → body → drawings → map pages in that order, saves that as dossier.pdf, and feeds it to the annexes merge', async () => {
+  it('merges cover → TOC → body → drawings → map pages (with annexes) into dossier.pdf, and a separate annexes-only PDF', async () => {
     await processJob('job-1');
 
+    // Master spec §5 step 8: dossier.pdf carries the annexes merged in; annexes.pdf is
+    // annexes-only (no cover/body/drawings/map-page fragments).
     expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([COVER_PDF, TOC_PDF, bodyPdf, drawingsPdf, SITE_PLAN_PDF], []);
+    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([], []);
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
-    expect(mocks.mergeAnnexes).toHaveBeenCalledWith(ASSEMBLED_PDF, []);
+    expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'annexes.pdf', 'application/pdf');
     expect(findSucceededUpdate()).toBeDefined();
   });
 
