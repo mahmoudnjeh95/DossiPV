@@ -12,3 +12,4 @@ build/
 .claude/worktrees/
 .playwright-mcp/
 .file-storage/
+change_pwd.mjs
