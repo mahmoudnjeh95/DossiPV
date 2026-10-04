@@ -61,7 +61,7 @@ describe('parseJobSnapshot', () => {
     expect(parsed!.dossierDate).toBe('2026-11-25T00:00:00.000Z');
     expect(parsed!.site?.technicalRoomPointLat).toBe(36.801);
     expect(parsed!.arrayConfig?.module.brand).toBe('LONGi');
-    expect(parsed!.protections?.dcSwitch.brand).toBe('ZJ BENY');
+    expect(parsed!.protections?.dcSwitch?.brand).toBe('ZJ BENY');
     expect(parsed!.structure?.frameCount).toBe(5);
     expect(parsed!.earthing?.rodCount).toBe(3);
   });
