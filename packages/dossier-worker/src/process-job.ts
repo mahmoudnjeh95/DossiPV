@@ -8,7 +8,7 @@ import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { mergeAnnexes, type AnnexFile } from './merge-annexes';
-import { parseJobSnapshot } from './job-snapshot';
+import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
 import { withRetry } from './retry';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
@@ -44,26 +44,43 @@ async function fail(jobId: string, failedStep: string, internalError: unknown): 
   });
 }
 
-async function collectAnnexFiles(projectId: string, companyId: string): Promise<AnnexFile[]> {
+async function collectAnnexFiles(projectId: string, companyId: string, snapshot: WorkerJobSnapshot): Promise<AnnexFile[]> {
   const [company, project] = await Promise.all([
     db.company.findUnique({ where: { id: companyId } }),
     db.project.findUnique({ where: { id: projectId }, include: { annexes: { include: { extraFiles: true } } } }),
   ]);
 
-  const fileIds = [
+  const equipmentFileIds: (string | null | undefined)[] = [];
+  if (snapshot.arrayConfig) {
+    equipmentFileIds.push(snapshot.arrayConfig.module.datasheetFileId, snapshot.arrayConfig.module.homologationFileId);
+    for (const inv of snapshot.arrayConfig.inverters) {
+      equipmentFileIds.push(inv.inverter.datasheetFileId, inv.inverter.homologationFileId);
+    }
+  }
+  if (snapshot.protections) {
+    for (const device of [snapshot.protections.dcSwitch, snapshot.protections.dcSpd, snapshot.protections.dcFuse, snapshot.protections.acBreaker, snapshot.protections.acSpd, snapshot.protections.acIsolator]) {
+      if (device) equipmentFileIds.push(device.datasheetFileId, device.homologationFileId);
+    }
+  }
+  if (snapshot.earthing?.earthCable) {
+    equipmentFileIds.push(snapshot.earthing.earthCable.datasheetFileId, snapshot.earthing.earthCable.homologationFileId);
+  }
+
+  const fileIds = new Set([
     company?.anmeCertificateFileId,
     project?.annexes?.cinFileId,
     project?.annexes?.commercialRegisterFileId,
     project?.annexes?.stegContractFileId,
     project?.annexes?.lastPaidBillFileId,
     ...(project?.annexes?.extraFiles.map((f) => f.fileId) ?? []),
-  ].filter((id): id is string => typeof id === 'string');
+    ...equipmentFileIds,
+  ].filter((id): id is string => typeof id === 'string'));
 
-  if (fileIds.length === 0) {
+  if (fileIds.size === 0) {
     return [];
   }
 
-  const files = await db.file.findMany({ where: { id: { in: fileIds } } });
+  const files = await db.file.findMany({ where: { id: { in: [...fileIds] } } });
   const { getFilePath } = await import('@dossipv/file-storage');
   const annexFiles: AnnexFile[] = [];
   for (const file of files) {
@@ -119,7 +136,7 @@ export async function processJob(jobId: string): Promise<void> {
 
   let annexesPdfBuffer: Buffer;
   try {
-    const annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId);
+    const annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId, snapshot);
     annexesPdfBuffer = await mergeAnnexes(pdfBuffer, annexFiles);
   } catch (error) {
     return fail(jobId, 'annexes', error);

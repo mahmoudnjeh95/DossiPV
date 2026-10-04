@@ -192,3 +192,32 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
     expect(finalUpdateCall).toBeDefined();
   });
 });
+
+describe('processJob — equipment datasheet collection', () => {
+  it('includes equipment datasheet/homologation files from the snapshot, de-duplicated by file id', async () => {
+    const snapshotWithEquipment = {
+      ...validSnapshot,
+      arrayConfig: {
+        module: { brand: 'LONGi', model: 'X', datasheetFileId: 'file-module-datasheet' },
+        inverters: [
+          { inverter: { brand: 'Sofar', model: 'Y', datasheetFileId: 'file-inverter-datasheet' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] },
+          { inverter: { brand: 'Sofar', model: 'Y', datasheetFileId: 'file-inverter-datasheet' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] },
+        ],
+      },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshotWithEquipment });
+    mocks.fileFindMany.mockResolvedValue([
+      { id: 'file-module-datasheet', mimeType: 'pdf', storageKey: 'module-datasheet.pdf' },
+      { id: 'file-inverter-datasheet', mimeType: 'pdf', storageKey: 'inverter-datasheet.pdf' },
+    ]);
+
+    await processJob('job-1');
+
+    // Exactly 2 distinct datasheets fetched (not 3, even though the inverter is referenced twice).
+    const findManyCall = mocks.fileFindMany.mock.calls[0]![0] as { where: { id: { in: string[] } } };
+    const uniqueIds = new Set(findManyCall.where.id.in);
+    expect(uniqueIds.has('file-module-datasheet')).toBe(true);
+    expect(uniqueIds.has('file-inverter-datasheet')).toBe(true);
+    expect(findManyCall.where.id.in.filter((id) => id === 'file-inverter-datasheet')).toHaveLength(1);
+  });
+});
