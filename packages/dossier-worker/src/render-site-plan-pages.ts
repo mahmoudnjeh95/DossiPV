@@ -82,11 +82,14 @@ const MARKER_STYLES = {
 type MarkerKey = keyof typeof MARKER_STYLES;
 
 async function embedImageSafely(doc: PDFDocument, buffer: Buffer): Promise<PDFImage | null> {
+  // pdf-lib reads `imageData.buffer` ignoring byteOffset, so a small pooled Node Buffer would be
+  // parsed from the start of the shared 8 KB pool. Hand it a standalone copy.
+  const bytes = Uint8Array.from(buffer);
   try {
-    return await doc.embedJpg(buffer);
+    return await doc.embedJpg(bytes);
   } catch {
     try {
-      return await doc.embedPng(buffer);
+      return await doc.embedPng(bytes);
     } catch {
       return null;
     }

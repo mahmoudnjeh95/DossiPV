@@ -31,11 +31,13 @@ export function formatFrenchDate(isoDate: string): string {
  */
 export async function embedLogo(doc: PDFDocument, buffer: Buffer | null): Promise<PDFImage | null> {
   if (!buffer) return null;
+  // Standalone copy: pdf-lib ignores a pooled Buffer's byteOffset (see embedImageSafely).
+  const bytes = Uint8Array.from(buffer);
   try {
-    return await doc.embedPng(buffer);
+    return await doc.embedPng(bytes);
   } catch {
     try {
-      return await doc.embedJpg(buffer);
+      return await doc.embedJpg(bytes);
     } catch {
       return null;
     }
