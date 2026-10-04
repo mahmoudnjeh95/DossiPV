@@ -20,6 +20,8 @@ function fixtureSnapshot(): DossierJobSnapshotV1 {
     projectId: project.id,
     companyId: project.companyId,
     tier: project.tier,
+    dossierNumber: project.dossierNumber ?? null,
+    dossierDate: (project.dossierDate ?? FIXTURE_NOW).toISOString(),
     capturedAt: FIXTURE_NOW.toISOString(),
     client: project.client,
     site: project.site,

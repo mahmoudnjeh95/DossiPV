@@ -34,6 +34,8 @@ export interface DossierJobSnapshotV1 {
   projectId: string;
   companyId: string;
   tier: 'STANDARD' | 'PREMIUM';
+  dossierNumber: string | null;
+  dossierDate: string;
   capturedAt: string;
   client: ProjectForSnapshot['client'];
   site: ProjectForSnapshot['site'];
@@ -106,11 +108,17 @@ export async function generateDossierAction(
     return { error: 'Des contrôles bloquants ont échoué : corrigez-les avant de générer.' };
   }
 
+  // Resolved once, used both for the snapshot and the Project row update below, so the dossier's
+  // cover-page date always matches the date the engine's own checks (C20/C22) actually ran against.
+  const dossierDate = project.dossierDate ?? now;
+
   const snapshot: DossierJobSnapshotV1 = {
     version: 1,
     projectId: project.id,
     companyId: project.companyId,
     tier: project.tier,
+    dossierNumber: project.dossierNumber,
+    dossierDate: dossierDate.toISOString(),
     capturedAt: now.toISOString(),
     client: project.client,
     site: project.site,
@@ -134,7 +142,7 @@ export async function generateDossierAction(
     }),
     db.project.update({
       where: { id: project.id },
-      data: { dossierDate: project.dossierDate ?? now },
+      data: { dossierDate },
     }),
   ]);
 
