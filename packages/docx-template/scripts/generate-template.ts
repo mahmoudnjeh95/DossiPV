@@ -15,6 +15,13 @@ function cell(text: string): TableCell {
   return new TableCell({ children: [new Paragraph(text)] });
 }
 
+function specTable(rows: [string, string][]): Table {
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: rows.map(([label, tag]) => new TableRow({ children: [cell(label), cell(tag)] })),
+  });
+}
+
 const doc = new Document({
   sections: [
     {
@@ -23,22 +30,45 @@ const doc = new Document({
         new Paragraph('{companyAddress} — {companyPhone} — {companyEmail}'),
         new Paragraph({ text: 'Dossier technique BT', heading: HeadingLevel.HEADING_1 }),
 
-        new Paragraph({ text: 'Client', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'I. Préambule', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Nom : {clientFullName}'),
         new Paragraph('Adresse : {clientAddress}'),
         new Paragraph('Référence STEG : {clientStegReference}'),
 
-        new Paragraph({ text: 'Introduction', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'II. Présentation du projet', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{introduction}'),
 
-        new Paragraph({ text: 'Description de la solution', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'III. Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{solution}'),
+        new Paragraph({ text: "III.1 Caractéristiques du module", heading: HeadingLevel.HEADING_2 }),
         new Paragraph('Module : {moduleBrandModel}'),
+        specTable([
+          ['Puissance crête (Wc)', '{moduleSpecPmaxW}'],
+          ['Tension Vmp (V)', '{moduleSpecVmpV}'],
+          ['Courant Imp (A)', '{moduleSpecImpA}'],
+          ['Tension Voc (V)', '{moduleSpecVocV}'],
+          ['Courant Isc (A)', '{moduleSpecIscA}'],
+        ]),
+        new Paragraph({ text: "III.2 Caractéristiques de l'onduleur", heading: HeadingLevel.HEADING_2 }),
         new Paragraph('Onduleur : {inverterBrandModel}'),
-        new Paragraph('Puissance DC : {pDcW}'),
+        specTable([
+          ['Puissance AC (W)', '{inverterSpecPacW}'],
+          ['Tension DC max (V)', '{inverterSpecVdcMaxV}'],
+          ['Plage MPPT min (V)', '{inverterSpecMpptMinV}'],
+          ['Plage MPPT max (V)', '{inverterSpecMpptMaxV}'],
+        ]),
+        new Paragraph({ text: 'III.3 Dimensionnement du champ PV', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph('Puissance totale : {pDcW}'),
         new Paragraph('Nombre de modules : {moduleCount}'),
+        specTable([
+          ['Ns min', '{stringSizingNsMin}'],
+          ['Ns max', '{stringSizingNsMax}'],
+          ['Ns optimal max', '{stringSizingNsOptMax}'],
+          ['Np max', '{stringSizingNpMax}'],
+          ['Np optimal', '{stringSizingNpOpt}'],
+        ]),
 
-        new Paragraph({ text: 'Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'III.4 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
         new Paragraph('{#inverters}'),
         new Paragraph('{inverterLabel}'),
         new Table({
@@ -50,7 +80,7 @@ const doc = new Document({
         }),
         new Paragraph('{/inverters}'),
 
-        new Paragraph({ text: 'Câblage', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'IV. Câblage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{cabling}'),
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
@@ -66,24 +96,36 @@ const doc = new Document({
             }),
           ],
         }),
+        new Paragraph({ text: 'IV.1 Chute de tension', heading: HeadingLevel.HEADING_2 }),
+        specTable([
+          ['Chute de tension DC (V)', '{voltageDropDuDcV}'],
+          ['Chute de tension DC (%)', '{voltageDropDuDcPct}'],
+          ['Chute de tension AC (V)', '{voltageDropDuAcV}'],
+          ['Chute de tension AC (%)', '{voltageDropDuAcPct}'],
+        ]),
 
-        new Paragraph({ text: 'Mise à la terre', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'V. Mise à la terre', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{earthing}'),
 
-        new Paragraph({ text: 'Structure', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'VI. Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),
+        specTable([
+          ['Poids total (N)', '{stabilityWeightN}'],
+          ['Stabilité — membre gauche', '{stabilityLhs}'],
+          ['Stabilité — membre droit', '{stabilityRhs}'],
+        ]),
 
         new Paragraph('{#dcFuseRequired}'),
-        new Paragraph({ text: 'Protection DC — fusible', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'VII. Protection DC — fusible', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Un fusible DC est requis pour cette configuration.'),
         new Paragraph('{/dcFuseRequired}'),
 
         new Paragraph('{#acIsolatorRequired}'),
-        new Paragraph({ text: 'Protection AC — sectionneur', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'VIII. Protection AC — sectionneur', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Un sectionneur AC est requis (plusieurs onduleurs).'),
         new Paragraph('{/acIsolatorRequired}'),
 
-        new Paragraph({ text: 'Conclusion', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: 'IX. Conclusion', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{conclusion}'),
       ],
     },

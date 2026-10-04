@@ -128,4 +128,41 @@ describe('fillDossierTemplate', () => {
     expect(withIsolator).toContain('sectionneur AC est requis');
     expect(withoutIsolator).not.toContain('sectionneur AC est requis');
   });
+
+  it('fills the module and inverter spec tables and the calculation-result tables', () => {
+    // Flat field names (moduleSpecPmaxW, not nested moduleSpecs.pmaxW) — this installed
+    // docxtemplater version does not resolve dotted-path tags; see Task 3's note.
+    const data: DossierTemplateData = {
+      ...baseData, // this file's existing complete fixture object — extend it, don't rebuild it
+      moduleSpecPmaxW: '620',
+      moduleSpecVmpV: '46,5',
+      moduleSpecImpA: '13,33',
+      moduleSpecVocV: '55,9',
+      moduleSpecIscA: '13,92',
+      inverterSpecPacW: '3000',
+      inverterSpecVdcMaxV: '550',
+      inverterSpecMpptMinV: '90',
+      inverterSpecMpptMaxV: '550',
+      stringSizingNsMin: '3',
+      stringSizingNsMax: '9',
+      stringSizingNsOptMax: '8',
+      stringSizingNpMax: '2',
+      stringSizingNpOpt: '1',
+      voltageDropDuDcV: '2,1',
+      voltageDropDuDcPct: '1,11',
+      voltageDropDuAcV: '3,4',
+      voltageDropDuAcPct: '1,47',
+      stabilityWeightN: '2450',
+      stabilityLhs: '1200',
+      stabilityRhs: '900',
+    };
+
+    const filledBuffer = fillDossierTemplate(templateBuffer, data);
+
+    const zip = new PizZip(filledBuffer);
+    const documentXml = zip.file('word/document.xml')!.asText();
+    expect(documentXml).toContain('620');
+    expect(documentXml).toContain('46,5');
+    expect(documentXml).toContain('1,11');
+  });
 });
