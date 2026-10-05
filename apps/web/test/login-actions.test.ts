@@ -10,7 +10,10 @@ const { mockSet, mockCookies, mockRedirect, mockLogin } = vi.hoisted(() => {
   };
 });
 
-vi.mock('next/headers', () => ({ cookies: mockCookies }));
+vi.mock('next/headers', () => ({
+  cookies: mockCookies,
+  headers: (): Promise<{ get: () => string }> => Promise.resolve({ get: () => 'http' }),
+}));
 vi.mock('next/navigation', () => ({ redirect: mockRedirect }));
 vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');

@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { loginSuperAdmin, InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
+import { shouldUseSecureCookie } from '../../../lib/cookie-secure';
 
 const ADMIN_SESSION_COOKIE_NAME = 'dossipv_admin_session';
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
@@ -39,7 +40,7 @@ export async function loginAdminAction(
   const cookieStore = await cookies();
   cookieStore.set(ADMIN_SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: await shouldUseSecureCookie(),
     sameSite: 'lax',
     path: '/',
     maxAge: SESSION_MAX_AGE_SECONDS,
