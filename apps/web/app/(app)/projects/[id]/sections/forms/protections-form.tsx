@@ -51,27 +51,6 @@ export function ProtectionsForm({
             allowEmpty
             hint="Obligatoire dès qu'il y a plus d'un onduleur (contrôle C15)."
           />
-          <label>
-            Calibre du disjoncteur général (A)
-            <input type="number" name="mainBreakerRatedCurrentA" step="any" min={0} defaultValue={protections?.mainBreakerRatedCurrentA ?? ''} />
-          </label>
-          <label>
-            Sensibilité différentielle (mA)
-            <input type="number" name="mainBreakerSensitivityMA" step={1} min={0} defaultValue={protections?.mainBreakerSensitivityMA ?? ''} />
-          </label>
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>Coordination des parafoudres</legend>
-        <div className="form-grid">
-          <label>
-            Distance parafoudre – équipement (m)
-            <input type="number" name="spdToEquipmentDistanceM" step="any" min={0} defaultValue={protections?.spdToEquipmentDistanceM ?? 1} required />
-          </label>
-          <label>
-            Tenue aux chocs des équipements (kV)
-            <input type="number" name="equipmentImpulseWithstandKV" step="any" min={0} defaultValue={protections?.equipmentImpulseWithstandKV ?? 4} required />
-          </label>
         </div>
       </fieldset>
     </SectionForm>

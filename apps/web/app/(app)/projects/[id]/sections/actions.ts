@@ -9,10 +9,6 @@ import { FormReader } from '../../../../../lib/form-reader';
 import {
   CIVILITY_OPTIONS,
   CLIENT_KIND_OPTIONS,
-  GRID_TYPE_OPTIONS,
-  MOUNTING_TYPE_OPTIONS,
-  SHADING_OPTIONS,
-  EQUIPMENT_LOCATION_OPTIONS,
   STRUCTURE_MATERIAL_OPTIONS,
   SIMULATION_SOURCE_OPTIONS,
   PHASE_CONNECTION_OPTIONS,
@@ -97,21 +93,15 @@ export async function saveSiteAction(
   }
 
   const reader = new FormReader(formData);
+  // The form asks only for what the engine and simulation use. Grid type and mounting type take
+  // defaults on create; the other site columns (roof, shading, generator, ...) are left untouched.
   const data = {
     gpsLat: reader.number('gpsLat', 'Latitude', { min: -90, max: 90 }),
     gpsLon: reader.number('gpsLon', 'Longitude', { min: -180, max: 180 }),
-    gridType: reader.oneOf('gridType', 'Type de réseau', values(GRID_TYPE_OPTIONS)),
     phases: reader.integer('phases', 'Phases', { min: 1, max: 3 }),
-    mountingType: reader.oneOf('mountingType', 'Type de pose', values(MOUNTING_TYPE_OPTIONS)),
-    roofMaterial: reader.optionalText('roofMaterial', 'Matériau de toiture', 100),
-    buildingHeightM: reader.optionalNumber('buildingHeightM', 'Hauteur du bâtiment', { min: 0, max: 500 }),
     tiltDeg: reader.number('tiltDeg', 'Inclinaison', { min: 0, max: 90 }),
     azimuthDeg: reader.optionalNumber('azimuthDeg', 'Azimut', { min: -180, max: 360 }),
-    shading: reader.optionalOneOf('shading', 'Ombrage', values(SHADING_OPTIONS)),
-    shadingNotes: reader.optionalText('shadingNotes', 'Notes ombrage', 500),
     lightningRod: reader.boolean('lightningRod'),
-    generator: reader.boolean('generator'),
-    equipmentLocation: reader.optionalOneOf('equipmentLocation', 'Emplacement des équipements', values(EQUIPMENT_LOCATION_OPTIONS)),
   };
   if (data.phases !== 1 && data.phases !== 3) {
     reader.errors.push('Phases : choisir monophasé ou triphasé.');
@@ -122,7 +112,11 @@ export async function saveSiteAction(
 
   // Pins (meter, technical room, earth pit) are owned by the map editor and are deliberately
   // left untouched on update.
-  await db.projectSite.upsert({ where: { projectId }, create: { projectId, ...data }, update: data });
+  await db.projectSite.upsert({
+    where: { projectId },
+    create: { projectId, gridType: 'BT', mountingType: 'FLAT_ROOF_BALLAST', ...data },
+    update: data,
+  });
   return done(projectId, 'site');
 }
 
@@ -246,12 +240,8 @@ export async function saveProtectionsAction(
   const acBreakerId = reader.text('acBreakerId', 'Disjoncteur AC', 100);
   const acSpdId = reader.text('acSpdId', 'Parafoudre AC', 100);
   const acIsolatorId = reader.optionalText('acIsolatorId', 'Interrupteur-sectionneur AC', 100);
-  const data = {
-    mainBreakerRatedCurrentA: reader.optionalNumber('mainBreakerRatedCurrentA', 'Calibre disjoncteur général', { min: 0 }),
-    mainBreakerSensitivityMA: reader.optionalInteger('mainBreakerSensitivityMA', 'Sensibilité différentielle', { min: 0 }),
-    spdToEquipmentDistanceM: reader.number('spdToEquipmentDistanceM', 'Distance parafoudre–équipement', { min: 0, max: 1000 }),
-    equipmentImpulseWithstandKV: reader.number('equipmentImpulseWithstandKV', 'Tenue aux chocs', { min: 0, max: 100 }),
-  };
+  // Only the equipment picks are asked. SPD distance / impulse withstand use the schema defaults
+  // (1 m, 4 kV) and the main-breaker figures are unused, so none of them are touched here.
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
   }
@@ -269,7 +259,7 @@ export async function saveProtectionsAction(
     return { error: 'Un équipement sélectionné est introuvable dans votre bibliothèque.' };
   }
 
-  const full = { dcSpdId, dcSwitchId, dcFuseId, acBreakerId, acSpdId, acIsolatorId, ...data };
+  const full = { dcSpdId, dcSwitchId, dcFuseId, acBreakerId, acSpdId, acIsolatorId };
   await db.projectProtections.upsert({ where: { projectId }, create: { projectId, ...full }, update: full });
   return done(projectId, 'protections');
 }

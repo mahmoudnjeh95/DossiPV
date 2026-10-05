@@ -251,9 +251,7 @@ describe('saveSiteAction', () => {
       form({
         gpsLat: '95',
         gpsLon: '10',
-        gridType: 'BT',
         phases: '2',
-        mountingType: 'GROUND',
         tiltDeg: '30',
       }),
     );
@@ -263,7 +261,7 @@ describe('saveSiteAction', () => {
     expect(mocks.siteUpsert).not.toHaveBeenCalled();
   });
 
-  it('stores checkboxes as booleans and leaves the map pins alone', async () => {
+  it('stores the lightning-rod checkbox as a boolean and leaves the map pins and unused columns alone', async () => {
     mocks.siteUpsert.mockResolvedValue({});
 
     await saveSiteAction(
@@ -272,22 +270,21 @@ describe('saveSiteAction', () => {
       form({
         gpsLat: '36.5',
         gpsLon: '10.5',
-        gridType: 'BT',
         phases: '3',
-        mountingType: 'GROUND',
         tiltDeg: '25',
         lightningRod: 'on',
       }),
     );
 
-    const call = mocks.siteUpsert.mock.calls[0]?.[0] as { update: Record<string, unknown> };
-    expect(call.update).toMatchObject({
-      phases: 3,
-      lightningRod: true,
-      generator: false,
-      tiltDeg: 25,
-    });
+    const call = mocks.siteUpsert.mock.calls[0]?.[0] as {
+      create: Record<string, unknown>;
+      update: Record<string, unknown>;
+    };
+    expect(call.update).toMatchObject({ phases: 3, lightningRod: true, tiltDeg: 25 });
     expect(call.update).not.toHaveProperty('meterPointLat');
+    expect(call.update).not.toHaveProperty('gridType');
+    expect(call.update).not.toHaveProperty('generator');
+    expect(call.create).toMatchObject({ gridType: 'BT', mountingType: 'FLAT_ROOF_BALLAST' });
   });
 });
 
