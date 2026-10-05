@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => {
     clientUpsert: vi.fn(),
     siteUpsert: vi.fn(),
     structureUpsert: vi.fn(),
+    earthingUpsert: vi.fn(),
+    cableFindFirst: vi.fn(),
     moduleFindFirst: vi.fn(),
     inverterFindMany: vi.fn(),
     transaction: vi.fn(),
@@ -40,7 +42,8 @@ vi.mock('@dossipv/db', async () => {
       projectStructure: { upsert: mocks.structureUpsert },
       pvModule: { findFirst: mocks.moduleFindFirst },
       inverter: { findMany: mocks.inverterFindMany },
-      cable: { findMany: mocks.cableFindMany },
+      cable: { findMany: mocks.cableFindMany, findFirst: mocks.cableFindFirst },
+      projectEarthing: { upsert: mocks.earthingUpsert },
       accessory: { findFirst: mocks.accessoryFindFirst },
       $transaction: mocks.transaction,
     },
@@ -53,6 +56,7 @@ import {
   saveArrayAction,
   saveCablingAction,
   saveStructureAction,
+  saveEarthingAction,
   type ArrayPayload,
   type CablingPayload,
 } from '../app/(app)/projects/[id]/sections/actions';
@@ -115,6 +119,31 @@ describe('saveStructureAction', () => {
     const result = await saveStructureAction('project-1', undefined, form({ material: 'ALUMINIUM' }));
     expect(result).toMatchObject({ error: expect.stringContaining('Vitesse de vent') });
     expect(mocks.structureUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveEarthingAction', () => {
+  it('saves from only cable, rod count and target resistance, defaulting the rest', async () => {
+    mocks.cableFindFirst.mockResolvedValue({ id: 'cable-1' });
+    await saveEarthingAction(
+      'project-1',
+      undefined,
+      form({ earthCableId: 'cable-1', rodCount: '2', targetResistanceOhm: '30' }),
+    );
+
+    expect(mocks.earthingUpsert).toHaveBeenCalledTimes(1);
+    expect(mocks.earthingUpsert.mock.calls[0]![0].create).toMatchObject({
+      earthCableId: 'cable-1',
+      distributionBlockId: null,
+      mainEarthSectionMm2: 16,
+      frameEarthSectionMm2: 16,
+      earthToPitSectionMm2: 25,
+      rodCount: 2,
+      rodLengthM: 1.5,
+      rodSpacingCm: null,
+      pitSizeCm: null,
+      targetResistanceOhm: 30,
+    });
   });
 });
 

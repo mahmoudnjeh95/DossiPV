@@ -468,15 +468,18 @@ export async function saveEarthingAction(
 
   const reader = new FormReader(formData);
   const earthCableId = reader.text('earthCableId', 'Câble de terre', 100);
-  const distributionBlockId = reader.optionalText('distributionBlockId', 'Répartiteur de terre', 100);
+  // Installers enter only the earth cable and rod count; the rest are standard values (none feed
+  // the engine). The target resistance comes from the form's hidden field (company default) or a
+  // visible input when the company has no default.
+  const distributionBlockId = null;
   const data = {
-    mainEarthSectionMm2: reader.number('mainEarthSectionMm2', 'Section conducteur principal', { min: 0 }),
-    frameEarthSectionMm2: reader.number('frameEarthSectionMm2', 'Section liaison des châssis', { min: 0 }),
-    earthToPitSectionMm2: reader.number('earthToPitSectionMm2', 'Section vers la prise de terre', { min: 0 }),
+    mainEarthSectionMm2: 16,
+    frameEarthSectionMm2: 16,
+    earthToPitSectionMm2: 25,
     rodCount: reader.integer('rodCount', 'Nombre de piquets', { min: 1, max: 100 }),
-    rodLengthM: reader.number('rodLengthM', 'Longueur des piquets', { min: 0, max: 20 }),
-    rodSpacingCm: reader.optionalNumber('rodSpacingCm', 'Espacement des piquets', { min: 0 }),
-    pitSizeCm: reader.optionalText('pitSizeCm', 'Dimensions du regard', 50),
+    rodLengthM: 1.5,
+    rodSpacingCm: null,
+    pitSizeCm: null,
     targetResistanceOhm: reader.number('targetResistanceOhm', 'Résistance cible', { min: 0, max: 1000 }),
   };
   if (reader.hasErrors) {
