@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => {
     clientFindUnique: vi.fn(),
     clientUpsert: vi.fn(),
     siteUpsert: vi.fn(),
+    structureUpsert: vi.fn(),
     moduleFindFirst: vi.fn(),
     inverterFindMany: vi.fn(),
     transaction: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@dossipv/db', async () => {
       dossierJob: { count: mocks.jobCount },
       projectClient: { findUnique: mocks.clientFindUnique, upsert: mocks.clientUpsert },
       projectSite: { upsert: mocks.siteUpsert },
+      projectStructure: { upsert: mocks.structureUpsert },
       pvModule: { findFirst: mocks.moduleFindFirst },
       inverter: { findMany: mocks.inverterFindMany },
       cable: { findMany: mocks.cableFindMany },
@@ -50,6 +52,7 @@ import {
   saveSiteAction,
   saveArrayAction,
   saveCablingAction,
+  saveStructureAction,
   type ArrayPayload,
   type CablingPayload,
 } from '../app/(app)/projects/[id]/sections/actions';
@@ -81,6 +84,38 @@ beforeEach(() => {
   mocks.mockValidateSession.mockResolvedValue(user);
   mocks.projectFindFirst.mockResolvedValue({ id: 'project-1' });
   mocks.jobCount.mockResolvedValue(0);
+});
+
+describe('saveStructureAction', () => {
+  it('saves a structure with only material and wind speed, clearing every optional field', async () => {
+    const result = await saveStructureAction(
+      'project-1',
+      undefined,
+      form({ material: 'ALUMINIUM', windSpeedKmh: '120' }),
+    );
+
+    expect(mocks.mockRedirect).toHaveBeenCalled();
+    expect(result).toBeUndefined();
+    expect(mocks.structureUpsert).toHaveBeenCalledTimes(1);
+    const { create } = mocks.structureUpsert.mock.calls[0]![0];
+    expect(create).toMatchObject({
+      projectId: 'project-1',
+      material: 'ALUMINIUM',
+      windSpeedKmh: 120,
+      frameCount: null,
+      structureWeightN: null,
+      heightHM: null,
+      depthDM: null,
+      liftCoeffNPerM2: null,
+      dragCoeffNPerM2: null,
+    });
+  });
+
+  it('still rejects a missing wind speed', async () => {
+    const result = await saveStructureAction('project-1', undefined, form({ material: 'ALUMINIUM' }));
+    expect(result).toMatchObject({ error: expect.stringContaining('Vitesse de vent') });
+    expect(mocks.structureUpsert).not.toHaveBeenCalled();
+  });
 });
 
 describe('tenant isolation', () => {

@@ -37,6 +37,9 @@ export interface DossierTemplateData {
   voltageDropDuDcPct: string;
   voltageDropDuAcV: string;
   voltageDropDuAcPct: string;
+  // The stability table is only rendered when stabilityComputed is true (the project supplied
+  // the wind-stability inputs); otherwise the three strings below are empty and unused.
+  stabilityComputed: boolean;
   stabilityWeightN: string;
   stabilityLhs: string;
   stabilityRhs: string;

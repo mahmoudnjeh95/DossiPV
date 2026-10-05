@@ -168,7 +168,11 @@ export function summarizeSnapshot(snapshot: DossierJobSnapshotV1): SnapshotSumma
       detail: `${equipmentLabel(run.cable)} · ${run.sectionMm2} mm² · ${run.lengthM} m · pose ${run.installMethod}`,
     })),
     structure: snapshot.structure
-      ? `${snapshot.projectMeta.structureMaterial}, ${snapshot.structure.frameCount} châssis, vent ${snapshot.structure.windSpeedKmh} km/h`
+      ? [
+          snapshot.projectMeta.structureMaterial,
+          ...(snapshot.structure.frameCount !== null ? [`${snapshot.structure.frameCount} châssis`] : []),
+          `vent ${snapshot.structure.windSpeedKmh} km/h`,
+        ].join(', ')
       : null,
     earthing: snapshot.earthing
       ? `${snapshot.earthing.rodCount} piquet(s) de ${snapshot.earthing.rodLengthM} m, cible ${snapshot.earthing.targetResistanceOhm} Ω, câble ${equipmentLabel(snapshot.earthing.earthCable)}`

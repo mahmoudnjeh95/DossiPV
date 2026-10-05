@@ -82,12 +82,15 @@ export interface RunEngineInput {
   lambdaOhmPerM: number;
   maxVoltageDropPct: number;
   structure: {
-    frameCount: number;
+    // frameCount/structureWeightN/heightHM/depthDM are the wind-stability inputs: the stability
+    // derivations and check C18 only run when all four are present (Tunisian dossiers need only
+    // material + wind speed).
+    frameCount?: number;
     ballastPerFrame: number;
     ballastMassKg: number;
-    structureWeightN: number;
-    heightHM: number;
-    depthDM: number;
+    structureWeightN?: number;
+    heightHM?: number;
+    depthDM?: number;
     windSpeedKmh: number;
     tiltDeg: number;
     liftCoeffNPerM2?: number;
@@ -267,36 +270,42 @@ export function runEngine(input: RunEngineInput): EngineResult {
   );
   const acDropPct = duAcPct(acDrop, input.site.phases);
 
-  // Built with spread rather than literal keys so that, under exactOptionalPropertyTypes,
-  // an absent liftCoeffNPerM2/dragCoeffNPerM2 on the input is genuinely absent on this object
-  // (triggering resolveStabilityCoefficients' default-lookup path) rather than present-but-undefined.
-  const stabilityCoeffs = resolveStabilityCoefficients({
-    windSpeedKmh: input.structure.windSpeedKmh,
-    tiltDeg: input.structure.tiltDeg,
-    ...(input.structure.liftCoeffNPerM2 !== undefined
-      ? { liftCoeffNPerM2: input.structure.liftCoeffNPerM2 }
-      : {}),
-    ...(input.structure.dragCoeffNPerM2 !== undefined
-      ? { dragCoeffNPerM2: input.structure.dragCoeffNPerM2 }
-      : {}),
-  });
-
   const moduleAreaM2 = (moduleCount * module.lengthMm * module.widthMm) / 1e6;
-  const weightN = totalWeightN({
-    frameCount: input.structure.frameCount,
-    ballastPerFrame: input.structure.ballastPerFrame,
-    ballastMassKg: input.structure.ballastMassKg,
-    moduleCount,
-    moduleWeightKg: module.weightKg,
-    structureWeightN: input.structure.structureWeightN,
-  });
-  const lhs = computeStabilityLhs(
-    weightN,
-    stabilityCoeffs.liftCoeffNPerM2,
-    moduleAreaM2,
-    input.structure.depthDM,
-  );
-  const rhs = computeStabilityRhs(stabilityCoeffs.dragCoeffNPerM2, moduleAreaM2, input.structure.heightHM);
+  const { frameCount, structureWeightN, heightHM, depthDM } = input.structure;
+  let stability: { weightN: number; lhs: number; rhs: number } | null = null;
+  if (
+    frameCount !== undefined &&
+    structureWeightN !== undefined &&
+    heightHM !== undefined &&
+    depthDM !== undefined
+  ) {
+    // Built with spread rather than literal keys so that, under exactOptionalPropertyTypes,
+    // an absent liftCoeffNPerM2/dragCoeffNPerM2 on the input is genuinely absent on this object
+    // (triggering resolveStabilityCoefficients' default-lookup path) rather than present-but-undefined.
+    const stabilityCoeffs = resolveStabilityCoefficients({
+      windSpeedKmh: input.structure.windSpeedKmh,
+      tiltDeg: input.structure.tiltDeg,
+      ...(input.structure.liftCoeffNPerM2 !== undefined
+        ? { liftCoeffNPerM2: input.structure.liftCoeffNPerM2 }
+        : {}),
+      ...(input.structure.dragCoeffNPerM2 !== undefined
+        ? { dragCoeffNPerM2: input.structure.dragCoeffNPerM2 }
+        : {}),
+    });
+    const weightN = totalWeightN({
+      frameCount,
+      ballastPerFrame: input.structure.ballastPerFrame,
+      ballastMassKg: input.structure.ballastMassKg,
+      moduleCount,
+      moduleWeightKg: module.weightKg,
+      structureWeightN,
+    });
+    stability = {
+      weightN,
+      lhs: computeStabilityLhs(weightN, stabilityCoeffs.liftCoeffNPerM2, moduleAreaM2, depthDM),
+      rhs: computeStabilityRhs(stabilityCoeffs.dragCoeffNPerM2, moduleAreaM2, heightHM),
+    };
+  }
 
   const sumInverterIacMaxA = array.reduce((sum, entry) => sum + entry.inverter.iacMaxA, 0);
 
@@ -336,8 +345,7 @@ export function runEngine(input: RunEngineInput): EngineResult {
     duDcPctSum: dcDropPct,
     duAcPctSum: acDropPct,
     maxVoltageDropPct: input.maxVoltageDropPct,
-    stabilityLhs: lhs,
-    stabilityRhs: rhs,
+    ...(stability ? { stabilityLhs: stability.lhs, stabilityRhs: stability.rhs } : {}),
     sitePhases: input.site.phases,
     inverterPhases: inverter.phases,
     equipmentHomologationExpiries: [],
@@ -423,9 +431,9 @@ export function runEngine(input: RunEngineInput): EngineResult {
       DU_DC_PCT: dcDropPct,
       DU_AC_V: acDrop,
       DU_AC_PCT: acDropPct,
-      F_WEIGHT_N: weightN,
-      STABILITY_LHS: lhs,
-      STABILITY_RHS: rhs,
+      ...(stability
+        ? { F_WEIGHT_N: stability.weightN, STABILITY_LHS: stability.lhs, STABILITY_RHS: stability.rhs }
+        : {}),
     },
     checks,
     hasBlockingFailure,

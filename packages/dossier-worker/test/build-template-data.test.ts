@@ -136,6 +136,22 @@ describe('buildTemplateData', () => {
     expect(result.stabilityWeightN).toEqual(expect.any(String));
     expect(result.stabilityLhs).toEqual(expect.any(String));
     expect(result.stabilityRhs).toEqual(expect.any(String));
+    expect(result.stabilityComputed).toBe(true);
+  });
+
+  it('marks the stability table as not computed, with empty strings, when the engine produced no stability values', () => {
+    const result = buildTemplateData({
+      workerResult,
+      engineInput,
+      projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    });
+
+    expect(result.stabilityComputed).toBe(false);
+    expect(result.stabilityWeightN).toBe('');
+    expect(result.stabilityLhs).toBe('');
+    expect(result.stabilityRhs).toBe('');
   });
 
   it('falls back to empty strings for a null client rather than throwing', () => {

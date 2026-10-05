@@ -86,7 +86,9 @@ export function computeSectionStatuses(project: ProjectForEngine): SectionStatus
       label: 'Structure',
       href: `${base}/sections/structure`,
       complete: project.structure !== null,
-      summary: project.structure ? `${project.structure.frameCount} châssis` : null,
+      summary: project.structure
+        ? `${project.structure.material} · ${project.structure.windSpeedKmh} km/h`
+        : null,
     },
     {
       key: 'earthing',

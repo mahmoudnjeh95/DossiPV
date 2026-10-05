@@ -192,7 +192,6 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           projectId={project.id}
           structure={project.structure}
           defaults={{ windSpeedKmh: project.company.defaultDesignWindSpeedKmh }}
-          siteTiltDeg={project.site?.tiltDeg ?? null}
         />
       );
       break;

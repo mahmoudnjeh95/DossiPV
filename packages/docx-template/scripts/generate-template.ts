@@ -110,11 +110,13 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberStructure} Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),
+        new Paragraph('{#stabilityComputed}'),
         specTable([
           ['Poids total (N)', '{stabilityWeightN}'],
           ['Stabilité — membre gauche', '{stabilityLhs}'],
           ['Stabilité — membre droit', '{stabilityRhs}'],
         ]),
+        new Paragraph('{/stabilityComputed}'),
 
         new Paragraph('{#dcFuseRequired}'),
         new Paragraph({ text: '{sectionNumberFusible} Protection DC — fusible', heading: HeadingLevel.HEADING_1 }),

@@ -684,15 +684,15 @@ model ProjectStructure {
   project              Project @relation(fields: [projectId], references: [id])
   material             String
   frameDescription     String?
-  frameCount           Int
-  railsDescription     String?
+  frameCount           Int?
+  railsDescription    String?
   fixingDescription    String?
   ballastPerFrame      Int?
   ballastMassKg        Float?
   ballastType          String?
-  structureWeightN     Float
-  heightHM             Float
-  depthDM              Float
+  structureWeightN     Float?
+  heightHM             Float?
+  depthDM              Float?
   windSpeedKmh         Float   @default(120)
   liftCoeffNPerM2      Float?
   dragCoeffNPerM2      Float?

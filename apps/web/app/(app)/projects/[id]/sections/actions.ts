@@ -424,26 +424,26 @@ export async function saveStructureAction(
   }
 
   const reader = new FormReader(formData);
+  // Tunisian dossiers need only the material and the design wind speed. The other structure
+  // columns stay optional in the schema; they are cleared on save so a project saved from this
+  // form never carries stale wind-stability inputs (the engine then skips the stability check).
   const data = {
     material: reader.oneOf('material', 'Matériau', values(STRUCTURE_MATERIAL_OPTIONS)),
-    frameDescription: reader.optionalText('frameDescription', 'Description des châssis', 500),
-    frameCount: reader.integer('frameCount', 'Nombre de châssis', { min: 1, max: 10000 }),
-    railsDescription: reader.optionalText('railsDescription', 'Description des rails', 500),
-    fixingDescription: reader.optionalText('fixingDescription', 'Description des fixations', 500),
-    ballastPerFrame: reader.optionalInteger('ballastPerFrame', 'Dalles par châssis', { min: 0, max: 1000 }),
-    ballastMassKg: reader.optionalNumber('ballastMassKg', 'Masse d’une dalle', { min: 0, max: 10000 }),
-    ballastType: reader.optionalText('ballastType', 'Type de lest', 100),
-    structureWeightN: reader.number('structureWeightN', 'Poids de la structure', { min: 0 }),
-    heightHM: reader.number('heightHM', 'Hauteur H', { min: 0, max: 100 }),
-    depthDM: reader.number('depthDM', 'Profondeur D', { min: 0, max: 100 }),
     windSpeedKmh: reader.number('windSpeedKmh', 'Vitesse de vent', { min: 0, max: 400 }),
-    liftCoeffNPerM2: reader.optionalNumber('liftCoeffNPerM2', 'Coefficient de soulèvement', { min: 0 }),
-    dragCoeffNPerM2: reader.optionalNumber('dragCoeffNPerM2', 'Coefficient de traînée', { min: 0 }),
-    tieDownCables: reader.optionalText('tieDownCables', 'Câbles d’arrimage', 300),
+    frameDescription: null,
+    frameCount: null,
+    railsDescription: null,
+    fixingDescription: null,
+    ballastPerFrame: null,
+    ballastMassKg: null,
+    ballastType: null,
+    structureWeightN: null,
+    heightHM: null,
+    depthDM: null,
+    liftCoeffNPerM2: null,
+    dragCoeffNPerM2: null,
+    tieDownCables: null,
   };
-  if ((data.liftCoeffNPerM2 === null) !== (data.dragCoeffNPerM2 === null)) {
-    reader.errors.push('Coefficients : renseignez le soulèvement et la traînée ensemble, ou aucun des deux.');
-  }
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
   }
