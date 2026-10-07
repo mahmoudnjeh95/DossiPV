@@ -4,7 +4,8 @@
 
 Goal: an installer enters almost nothing and DossiPV proposes the ideal installation from the
 equipment the installer actually has. Three parts, built and planned in this order (each part
-gets its own implementation plan):
+gets its own implementation plan). Build order, per the user on 2026-10-07: Part 2 first (catalog
+import), then Part 1, then Part 3.
 
 1. **Installer library** — each company keeps its own library: equipment picked from the shared
    catalog plus its own private equipment, with an optional purchase price.
@@ -27,7 +28,8 @@ and reviews the drawings" work (separate spec).
   searches **only** that library.
 - Cable lengths are computed from the map pins and editable. Vertical runs use the building
   level: RDC = 3.5 m, R+1 = 7 m, R+2 = 10.5 m, i.e. `(floors + 1) × 3.5 m`.
-- Prices come from the installer (purchase price on each library entry), not from scraping.
+- Prices come from the installer (purchase price on each library entry), not from scraping. Every
+  price starts at 0 and the installer updates it later.
 
 ## 2. Part 1 — Installer library
 
@@ -41,7 +43,7 @@ New table `LibraryItem` (one row = one equipment item in one company's library):
 | `companyId` | FK Company, cascade delete | |
 | `kind` | enum `EquipmentKind` | PV_MODULE, INVERTER, SPD, DC_SWITCH, DC_FUSE, AC_BREAKER, AC_ISOLATOR, CABLE, ACCESSORY |
 | `pvModuleId` … `accessoryId` | 9 nullable FKs, cascade delete | exactly one is set, matching `kind` (SQL `CHECK` in the migration) |
-| `purchasePriceTnd` | Float? | per unit; per metre for cables |
+| `purchasePriceTnd` | Float, default 0 | per unit; per metre for cables; 0 = not yet entered |
 | `createdAt` | timestamp | |
 
 Unique `(companyId, <fk>)` per FK column (Postgres treats NULLs as distinct, so nine
@@ -160,8 +162,9 @@ earthing cable/block, cabling connector/tray). No existing project breaks.
 8. Run the full engine on each complete candidate; keep those with no BLOCK failure.
 9. Rank: CLOSEST — |production − consumption|, then fewer inverters, then |ratio − 1.15|, then
    cost. LOWEST_COST — total cost (modules + inverters + protections + cable × length), then
-   closeness; only offered when every item involved has a price, otherwise the screen lists the
-   unpriced items. MAX_PRODUCTION — production, then cost.
+   closeness. A price of 0 counts as "not entered": LOWEST_COST stays selectable but the screen
+   warns and lists the items still at 0, since they would look free. MAX_PRODUCTION —
+   production, then cost.
 10. Return the top 3 with a short French explanation each. With no valid candidate, return the
     most frequent blocking reasons (e.g. "aucun onduleur triphasé dans votre bibliothèque",
     "puissance souscrite trop faible").
