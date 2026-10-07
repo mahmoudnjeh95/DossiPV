@@ -101,8 +101,8 @@ earthing cable/block, cabling connector/tray). No existing project breaks.
    `data/catalog/datasheets.json` (manually curated where search fails; the URL is the
    evidence).
 3. **Extract** — pdftotext the datasheet, ask `claude-opus-5-5` for structured output matching
-   the `PvModule` / `Inverter` fields, one record per model in the family, each field with the
-   datasheet page it came from. Missing fields stay null; nothing is guessed.
+   the `PvModule` / `Inverter` fields, one record per model in the family, each record with the
+   datasheet pages its values came from. Missing fields stay null; nothing is guessed.
 4. **Validate** — sanity rules reject or flag a record: Vmp < Voc, Imp < Isc,
    |Pmax − Vmp×Imp| ≤ 3 %, coefficient ranges (Voc −0.2…−0.35 %/°C, Isc 0…0.1 %/°C),
    mpptMin < mpptMax ≤ vdcMax, pacW ≤ sacVA, model power matches the official list.
@@ -116,8 +116,8 @@ earthing cable/block, cabling connector/tray). No existing project breaks.
 - New column `catalogStatus` (DRAFT | PUBLISHED, default PUBLISHED so existing items are
   unaffected) on the 9 equipment tables. Installers only see PUBLISHED shared items.
 - Super-admin page "Catalogue à valider": each draft next to its datasheet PDF, flagged fields
-  highlighted, "Publier" / "Corriger" / "Rejeter". Bulk publish per family once one model has
-  been checked.
+  highlighted, "Publier" / "Rejeter" (corrections go through the existing equipment edit pages).
+  Bulk publish of every draft without remarks; curated cables and protections are published per type.
 - Re-running the import refreshes homologation dates. Items no longer on a list are marked
   expired (never deleted — projects reference them). Engine check C20 (expired homologation)
   is currently fed an empty list; it gets wired to the real expiry dates.
