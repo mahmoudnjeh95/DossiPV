@@ -48,6 +48,25 @@ services:
     networks:
       - dossipv_default
 
+  # Dossier generation worker: the web app only queues jobs (status PENDING); this process claims
+  # and runs them. Same image as `app`; shares the file volume so the web app can serve its output.
+  worker:
+    image: dossipv-web:${IMAGE_TAG:-latest}
+    container_name: dossipv-worker-1
+    restart: unless-stopped
+    command: ['node', 'node_modules/tsx/dist/cli.mjs', 'packages/dossier-worker/src/start.ts']
+    environment:
+      DATABASE_URL: postgresql://dossipv:${POSTGRES_PASSWORD}@postgres:5432/dossipv
+      FILE_STORAGE_ROOT: /app/apps/web/.file-storage
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    volumes:
+      - dossipv_files:/app/apps/web/.file-storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dossipv_default
+
 networks:
   dossipv_default:
     name: dossipv_default

@@ -94,12 +94,12 @@ describe('generatePage37Layout', () => {
     expect(error).toBeInstanceOf(Page37LayoutParseError);
   });
 
-  it('calls Claude with model claude-sonnet-5-5', async () => {
+  it('calls Claude with model claude-opus-5-5', async () => {
     const { client, parseMock } = fakeClient(validLayout);
 
     await generatePage37Layout(baseInput, client);
 
-    expect(parseMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'claude-sonnet-5-5' }));
+    expect(parseMock).toHaveBeenCalledWith(expect.objectContaining({ model: 'claude-opus-5-5' }));
   });
 
   it('declares the image media_type as image/jpeg — the stitched Esri image is JPEG', async () => {

@@ -136,13 +136,13 @@ export function validatePage37Layout(layout: Page37Layout, imageWidthPx: number,
 
 /**
  * Sends the site's satellite image plus the installer-placed points (in image pixels) to
- * claude-sonnet-5-5 and asks it to reason about where the panels should sit on the roof and how
+ * claude-opus-5-5 and asks it to reason about where the panels should sit on the roof and how
  * the wiring should route. Claude's Messages API has no image-generation output — it returns
  * pixel coordinates, which render-site-plan-pages.ts draws onto the same image deterministically.
  */
 export async function generatePage37Layout(input: Page37LayoutInput, client: Anthropic): Promise<Page37Layout> {
   const response = await client.messages.parse({
-    model: 'claude-sonnet-5-5',
+    model: 'claude-opus-5-5',
     max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [

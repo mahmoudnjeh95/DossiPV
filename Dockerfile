@@ -57,6 +57,12 @@ ENV HOSTNAME=0.0.0.0
 
 RUN addgroup -S dossipv && adduser -S dossipv -G dossipv
 
+# LibreOffice (headless) converts the generated .docx to PDF in the dossier worker
+# (packages/dossier-worker/src/convert-to-pdf.ts shells out to `soffice`); fonts keep the
+# French text rendering with proper metrics. HOME must be writable for soffice's profile.
+RUN apk add --no-cache libreoffice-writer font-liberation ttf-dejavu
+ENV HOME=/tmp
+
 COPY --from=builder /app ./
 RUN mkdir -p /app/apps/web/.file-storage && chown -R dossipv:dossipv /app/apps/web/.file-storage
 
