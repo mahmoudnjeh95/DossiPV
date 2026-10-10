@@ -12,6 +12,9 @@ const mocks = vi.hoisted(() => {
     clientFindUnique: vi.fn(),
     clientUpsert: vi.fn(),
     siteUpsert: vi.fn(),
+    structureUpsert: vi.fn(),
+    earthingUpsert: vi.fn(),
+    cableFindFirst: vi.fn(),
     moduleFindFirst: vi.fn(),
     inverterFindMany: vi.fn(),
     transaction: vi.fn(),
@@ -36,9 +39,11 @@ vi.mock('@dossipv/db', async () => {
       dossierJob: { count: mocks.jobCount },
       projectClient: { findUnique: mocks.clientFindUnique, upsert: mocks.clientUpsert },
       projectSite: { upsert: mocks.siteUpsert },
+      projectStructure: { upsert: mocks.structureUpsert },
       pvModule: { findFirst: mocks.moduleFindFirst },
       inverter: { findMany: mocks.inverterFindMany },
-      cable: { findMany: mocks.cableFindMany },
+      cable: { findMany: mocks.cableFindMany, findFirst: mocks.cableFindFirst },
+      projectEarthing: { upsert: mocks.earthingUpsert },
       accessory: { findFirst: mocks.accessoryFindFirst },
       $transaction: mocks.transaction,
     },
@@ -50,6 +55,8 @@ import {
   saveSiteAction,
   saveArrayAction,
   saveCablingAction,
+  saveStructureAction,
+  saveEarthingAction,
   type ArrayPayload,
   type CablingPayload,
 } from '../app/(app)/projects/[id]/sections/actions';
@@ -81,6 +88,63 @@ beforeEach(() => {
   mocks.mockValidateSession.mockResolvedValue(user);
   mocks.projectFindFirst.mockResolvedValue({ id: 'project-1' });
   mocks.jobCount.mockResolvedValue(0);
+});
+
+describe('saveStructureAction', () => {
+  it('saves a structure with only material and wind speed, clearing every optional field', async () => {
+    const result = await saveStructureAction(
+      'project-1',
+      undefined,
+      form({ material: 'ALUMINIUM', windSpeedKmh: '120' }),
+    );
+
+    expect(mocks.mockRedirect).toHaveBeenCalled();
+    expect(result).toBeUndefined();
+    expect(mocks.structureUpsert).toHaveBeenCalledTimes(1);
+    const { create } = mocks.structureUpsert.mock.calls[0]?.[0] as { create: unknown };
+    expect(create).toMatchObject({
+      projectId: 'project-1',
+      material: 'ALUMINIUM',
+      windSpeedKmh: 120,
+      frameCount: null,
+      structureWeightN: null,
+      heightHM: null,
+      depthDM: null,
+      liftCoeffNPerM2: null,
+      dragCoeffNPerM2: null,
+    });
+  });
+
+  it('still rejects a missing wind speed', async () => {
+    const result = await saveStructureAction('project-1', undefined, form({ material: 'ALUMINIUM' }));
+    expect(result).toMatchObject({ error: expect.stringContaining('Vitesse de vent') as string });
+    expect(mocks.structureUpsert).not.toHaveBeenCalled();
+  });
+});
+
+describe('saveEarthingAction', () => {
+  it('saves from only cable, rod count and target resistance, defaulting the rest', async () => {
+    mocks.cableFindFirst.mockResolvedValue({ id: 'cable-1' });
+    await saveEarthingAction(
+      'project-1',
+      undefined,
+      form({ earthCableId: 'cable-1', rodCount: '2', targetResistanceOhm: '30' }),
+    );
+
+    expect(mocks.earthingUpsert).toHaveBeenCalledTimes(1);
+    expect((mocks.earthingUpsert.mock.calls[0]?.[0] as { create: unknown }).create).toMatchObject({
+      earthCableId: 'cable-1',
+      distributionBlockId: null,
+      mainEarthSectionMm2: 16,
+      frameEarthSectionMm2: 16,
+      earthToPitSectionMm2: 25,
+      rodCount: 2,
+      rodLengthM: 1.5,
+      rodSpacingCm: null,
+      pitSizeCm: null,
+      targetResistanceOhm: 30,
+    });
+  });
 });
 
 describe('tenant isolation', () => {
@@ -187,9 +251,7 @@ describe('saveSiteAction', () => {
       form({
         gpsLat: '95',
         gpsLon: '10',
-        gridType: 'BT',
         phases: '2',
-        mountingType: 'GROUND',
         tiltDeg: '30',
       }),
     );
@@ -199,7 +261,7 @@ describe('saveSiteAction', () => {
     expect(mocks.siteUpsert).not.toHaveBeenCalled();
   });
 
-  it('stores checkboxes as booleans and leaves the map pins alone', async () => {
+  it('stores the lightning-rod checkbox as a boolean and leaves the map pins and unused columns alone', async () => {
     mocks.siteUpsert.mockResolvedValue({});
 
     await saveSiteAction(
@@ -208,22 +270,21 @@ describe('saveSiteAction', () => {
       form({
         gpsLat: '36.5',
         gpsLon: '10.5',
-        gridType: 'BT',
         phases: '3',
-        mountingType: 'GROUND',
         tiltDeg: '25',
         lightningRod: 'on',
       }),
     );
 
-    const call = mocks.siteUpsert.mock.calls[0]?.[0] as { update: Record<string, unknown> };
-    expect(call.update).toMatchObject({
-      phases: 3,
-      lightningRod: true,
-      generator: false,
-      tiltDeg: 25,
-    });
+    const call = mocks.siteUpsert.mock.calls[0]?.[0] as {
+      create: Record<string, unknown>;
+      update: Record<string, unknown>;
+    };
+    expect(call.update).toMatchObject({ phases: 3, lightningRod: true, tiltDeg: 25 });
     expect(call.update).not.toHaveProperty('meterPointLat');
+    expect(call.update).not.toHaveProperty('gridType');
+    expect(call.update).not.toHaveProperty('generator');
+    expect(call.create).toMatchObject({ gridType: 'BT', mountingType: 'FLAT_ROOF_BALLAST' });
   });
 });
 

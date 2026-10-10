@@ -336,8 +336,9 @@ export interface ChecksContext {
   duDcPctSum: number;
   duAcPctSum: number;
   maxVoltageDropPct: number;
-  stabilityLhs: number;
-  stabilityRhs: number;
+  /** Absent when the project has no stability inputs; C18 is then skipped. */
+  stabilityLhs?: number;
+  stabilityRhs?: number;
   sitePhases: 1 | 3;
   inverterPhases: 1 | 3;
   equipmentHomologationExpiries: Array<string | null>;
@@ -347,7 +348,7 @@ export interface ChecksContext {
   moduleVocV: number;
 }
 
-/** Runs all 22 checks in C01..C22 order against a fully-derived context. */
+/** Runs all 22 checks in C01..C22 order against a fully-derived context (C18 only with stability inputs). */
 export function runAllChecks(context: ChecksContext): CheckResult[] {
   return [
     checkC01(context.ns, context.nsMax),
@@ -384,7 +385,9 @@ export function runAllChecks(context: ChecksContext): CheckResult[] {
     ),
     checkC16(context.dcRunIzCorrected, context.iscFieldDesign),
     checkC17(context.duDcPctSum, context.duAcPctSum, context.maxVoltageDropPct),
-    checkC18(context.stabilityLhs, context.stabilityRhs),
+    ...(context.stabilityLhs !== undefined && context.stabilityRhs !== undefined
+      ? [checkC18(context.stabilityLhs, context.stabilityRhs)]
+      : []),
     checkC19(context.sitePhases, context.inverterPhases),
     checkC20(context.equipmentHomologationExpiries, context.dossierDate),
     checkC21(context.inverterStegApproved),

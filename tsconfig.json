@@ -1,6 +1,7 @@
 {
   "files": [],
   "references": [
+    { "path": "packages/catalog-import" },
     { "path": "packages/engine" },
     { "path": "packages/document-text" },
     { "path": "packages/dossier-worker" },

@@ -56,6 +56,7 @@ const baseData: DossierTemplateData = {
   voltageDropDuDcPct: '0,74',
   voltageDropDuAcV: '1,1',
   voltageDropDuAcPct: '0,48',
+  stabilityComputed: true,
   stabilityWeightN: '1200',
   stabilityLhs: '1500',
   stabilityRhs: '1200',
@@ -184,6 +185,23 @@ describe('fillDossierTemplate', () => {
 
     expect(withIsolator).toContain('sectionneur AC est requis');
     expect(withoutIsolator).not.toContain('sectionneur AC est requis');
+  });
+
+  it('renders the stability table only when stabilityComputed is true', () => {
+    const withStability = extractText(fillDossierTemplate(templateBuffer, { ...baseData, stabilityComputed: true }));
+    const withoutStability = extractText(
+      fillDossierTemplate(templateBuffer, {
+        ...baseData,
+        stabilityComputed: false,
+        stabilityWeightN: '',
+        stabilityLhs: '',
+        stabilityRhs: '',
+      }),
+    );
+
+    expect(withStability).toContain('Poids total (N)');
+    expect(withoutStability).not.toContain('Poids total (N)');
+    expect(withoutStability).not.toContain('Stabilité — membre gauche');
   });
 
   it('fills the module and inverter spec tables and the calculation-result tables', () => {

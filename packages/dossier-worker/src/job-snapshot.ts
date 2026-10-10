@@ -38,7 +38,7 @@ export interface SnapshotProtections {
 
 export interface SnapshotStructure {
   material: string;
-  frameCount: number;
+  frameCount: number | null;
   [key: string]: unknown;
 }
 

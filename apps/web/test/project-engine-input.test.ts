@@ -40,6 +40,34 @@ describe('buildEngineInput', () => {
     expect(engine.checks).toHaveLength(22);
   });
 
+  it('accepts a structure with only material + wind speed and runs the engine without the stability check', () => {
+    const project = buildFullProject();
+    project.structure = {
+      ...project.structure!,
+      frameCount: null,
+      structureWeightN: null,
+      heightHM: null,
+      depthDM: null,
+      ballastPerFrame: null,
+      ballastMassKg: null,
+      liftCoeffNPerM2: null,
+      dragCoeffNPerM2: null,
+      windSpeedKmh: 90,
+    };
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.input.structure.windSpeedKmh).toBe(90);
+    expect(result.input.structure).not.toHaveProperty('frameCount');
+    expect(result.input.structure).not.toHaveProperty('depthDM');
+
+    const engine = runEngine(result.input);
+    expect(engine.derived.STABILITY_LHS).toBeUndefined();
+    expect(engine.checks.some((c) => c.id === 'C18')).toBe(false);
+  });
+
   it('lists every missing section at once instead of failing on the first', () => {
     const result = buildEngineInput(
       buildFullProject({ site: null, structure: null, cableRuns: [] }),

@@ -315,6 +315,15 @@ describe('runAllChecks', () => {
     ]);
   });
 
+  it('omits C18 when the stability inputs are absent', () => {
+    const { stabilityLhs, stabilityRhs, ...context } = buildPassingContext();
+    void stabilityLhs;
+    void stabilityRhs;
+    const results = runAllChecks(context);
+    expect(results).toHaveLength(21);
+    expect(results.some((r) => r.id === 'C18')).toBe(false);
+  });
+
   it('a fully valid context passes every check', () => {
     const context: ChecksContext = buildPassingContext();
     const results = runAllChecks(context);

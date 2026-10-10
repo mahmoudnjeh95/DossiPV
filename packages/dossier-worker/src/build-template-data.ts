@@ -85,6 +85,12 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
   const { workerResult, engineInput, projectMeta, snapshot, companyInfo } = input;
   const dcFuseRequired = engineInput.dcFuse !== null;
   const acIsolatorRequired = engineInput.acIsolator !== null;
+  const derived = workerResult.engineResult.derived;
+  // The engine only derives these when the project supplied the wind-stability inputs.
+  const stabilityComputed =
+    derived.F_WEIGHT_N !== undefined &&
+    derived.STABILITY_LHS !== undefined &&
+    derived.STABILITY_RHS !== undefined;
 
   return {
     companyName: companyInfo.name,
@@ -144,8 +150,9 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     voltageDropDuDcPct: fmt(workerResult.engineResult.derived.DU_DC_PCT!, 2),
     voltageDropDuAcV: fmt(workerResult.engineResult.derived.DU_AC_V!),
     voltageDropDuAcPct: fmt(workerResult.engineResult.derived.DU_AC_PCT!, 2),
-    stabilityWeightN: fmt(workerResult.engineResult.derived.F_WEIGHT_N!, 0),
-    stabilityLhs: fmt(workerResult.engineResult.derived.STABILITY_LHS!, 0),
-    stabilityRhs: fmt(workerResult.engineResult.derived.STABILITY_RHS!, 0),
+    stabilityComputed,
+    stabilityWeightN: stabilityComputed ? fmt(derived.F_WEIGHT_N!, 0) : '',
+    stabilityLhs: stabilityComputed ? fmt(derived.STABILITY_LHS!, 0) : '',
+    stabilityRhs: stabilityComputed ? fmt(derived.STABILITY_RHS!, 0) : '',
   };
 }

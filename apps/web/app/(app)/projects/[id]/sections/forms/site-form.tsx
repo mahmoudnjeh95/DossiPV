@@ -2,13 +2,7 @@ import Link from 'next/link';
 import type { ProjectSite } from '@dossipv/db';
 import { SectionForm } from '../../../../../../components/section-form';
 import { SelectField } from '../../../../../../components/select-field';
-import {
-  GRID_TYPE_OPTIONS,
-  PHASES_OPTIONS,
-  MOUNTING_TYPE_OPTIONS,
-  SHADING_OPTIONS,
-  EQUIPMENT_LOCATION_OPTIONS,
-} from '../../../../../../lib/labels';
+import { PHASES_OPTIONS } from '../../../../../../lib/labels';
 import { saveSiteAction } from '../actions';
 
 export function SiteForm({ projectId, site }: { projectId: string; site: ProjectSite | null }): React.JSX.Element {
@@ -36,54 +30,22 @@ export function SiteForm({ projectId, site }: { projectId: string; site: Project
         </p>
       </fieldset>
       <fieldset>
-        <legend>Raccordement</legend>
+        <legend>Installation</legend>
         <div className="form-grid">
-          <SelectField name="gridType" label="Type de réseau" options={GRID_TYPE_OPTIONS} defaultValue={site?.gridType ?? 'BT'} />
           <SelectField name="phases" label="Phases" options={PHASES_OPTIONS} defaultValue={site?.phases ?? 1} />
-          <label className="inline">
-            <input type="checkbox" name="lightningRod" defaultChecked={site?.lightningRod ?? false} />
-            Bâtiment équipé d&apos;un paratonnerre
-          </label>
-          <label className="inline">
-            <input type="checkbox" name="generator" defaultChecked={site?.generator ?? false} />
-            Groupe électrogène présent
-          </label>
-        </div>
-      </fieldset>
-      <fieldset>
-        <legend>Implantation</legend>
-        <div className="form-grid">
-          <SelectField name="mountingType" label="Type de pose" options={MOUNTING_TYPE_OPTIONS} defaultValue={site?.mountingType ?? 'FLAT_ROOF_BALLAST'} />
-          <label>
-            Matériau de toiture
-            <input type="text" name="roofMaterial" defaultValue={site?.roofMaterial ?? ''} maxLength={100} />
-          </label>
-          <label>
-            Hauteur du bâtiment (m)
-            <input type="number" name="buildingHeightM" step="any" min={0} defaultValue={site?.buildingHeightM ?? ''} />
-          </label>
           <label>
             Inclinaison (°)
             <input type="number" name="tiltDeg" step="any" min={0} max={90} defaultValue={site?.tiltDeg ?? 30} required />
-            <span className="hint">Les constantes de lestage du modèle supposent 30°.</span>
           </label>
           <label>
             Azimut (°)
             <input type="number" name="azimuthDeg" step="any" min={-180} max={360} defaultValue={site?.azimuthDeg ?? 0} />
             <span className="hint">0 = plein sud.</span>
           </label>
-          <SelectField name="shading" label="Ombrage" options={SHADING_OPTIONS} defaultValue={site?.shading} allowEmpty />
-          <label>
-            Notes sur l&apos;ombrage
-            <input type="text" name="shadingNotes" defaultValue={site?.shadingNotes ?? ''} maxLength={500} />
+          <label className="inline">
+            <input type="checkbox" name="lightningRod" defaultChecked={site?.lightningRod ?? false} />
+            Bâtiment équipé d&apos;un paratonnerre
           </label>
-          <SelectField
-            name="equipmentLocation"
-            label="Emplacement des équipements"
-            options={EQUIPMENT_LOCATION_OPTIONS}
-            defaultValue={site?.equipmentLocation}
-            allowEmpty
-          />
         </div>
       </fieldset>
     </SectionForm>

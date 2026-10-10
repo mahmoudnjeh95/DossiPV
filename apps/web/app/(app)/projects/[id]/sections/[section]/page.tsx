@@ -192,23 +192,17 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           projectId={project.id}
           structure={project.structure}
           defaults={{ windSpeedKmh: project.company.defaultDesignWindSpeedKmh }}
-          siteTiltDeg={project.site?.tiltDeg ?? null}
         />
       );
       break;
     case 'earthing': {
-      const [cables, blocks] = await Promise.all([
-        db.cable.findMany({ where: { ...scope, usage: 'EARTH' }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.accessory.findMany({ where: { ...scope, kind: 'DISTRIBUTION_BLOCK' }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-      ]);
+      const cables = await db.cable.findMany({ where: { ...scope, usage: 'EARTH' }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] });
       body = (
         <EarthingForm
           projectId={project.id}
           earthing={project.earthing}
           defaults={{ targetResistanceOhm: project.company.defaultEarthResistanceTargetOhm }}
-          earthCables={cables.map((c) => ({ id: c.id, label: `${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, isPrivate: c.ownerCompanyId !== null }))}
-          distributionBlocks={blocks.map((b) => ({ id: b.id, label: `${b.brand} ${b.model}`, isPrivate: b.ownerCompanyId !== null }))}
-        />
+          earthCables={cables.map((c) => ({ id: c.id, label: `${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, isPrivate: c.ownerCompanyId !== null }))}        />
       );
       break;
     }

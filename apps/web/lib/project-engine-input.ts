@@ -283,12 +283,14 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     lambdaOhmPerM: cablingConfig.lambdaOhmPerM,
     maxVoltageDropPct: cablingConfig.maxVoltageDropPct,
     structure: {
-      frameCount: structure.frameCount,
+      // Stability inputs are optional (Tunisian dossiers need only material + wind speed); absent
+      // keys make the engine skip the stability check.
+      ...(structure.frameCount !== null ? { frameCount: structure.frameCount } : {}),
       ballastPerFrame: structure.ballastPerFrame ?? 0,
       ballastMassKg: structure.ballastMassKg ?? 0,
-      structureWeightN: structure.structureWeightN,
-      heightHM: structure.heightHM,
-      depthDM: structure.depthDM,
+      ...(structure.structureWeightN !== null ? { structureWeightN: structure.structureWeightN } : {}),
+      ...(structure.heightHM !== null ? { heightHM: structure.heightHM } : {}),
+      ...(structure.depthDM !== null ? { depthDM: structure.depthDM } : {}),
       windSpeedKmh: structure.windSpeedKmh,
       tiltDeg: site.tiltDeg,
       ...(structure.liftCoeffNPerM2 !== null ? { liftCoeffNPerM2: structure.liftCoeffNPerM2 } : {}),

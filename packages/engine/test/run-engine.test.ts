@@ -36,6 +36,33 @@ describe('runEngine — reference dossier (Habib Khedhira, corrected)', () => {
     expect(result.checks).toHaveLength(22);
   });
 
+  describe('without stability inputs (material + wind speed only)', () => {
+    const { frameCount, structureWeightN, heightHM, depthDM, ...windOnly } = habibKhedhiraFixture.structure;
+    void frameCount;
+    void structureWeightN;
+    void heightHM;
+    void depthDM;
+
+    it('skips the stability derivations and the C18 check', () => {
+      const result = runEngine({ ...habibKhedhiraFixture, structure: windOnly });
+      expect(result.derived.F_WEIGHT_N).toBeUndefined();
+      expect(result.derived.STABILITY_LHS).toBeUndefined();
+      expect(result.derived.STABILITY_RHS).toBeUndefined();
+      expect(result.checks.some((c) => c.id === 'C18')).toBe(false);
+      expect(result.checks).toHaveLength(21);
+      expect(result.hasBlockingFailure).toBe(false);
+    });
+
+    it('does not require lift/drag coefficients for a non-default wind speed', () => {
+      const { liftCoeffNPerM2, dragCoeffNPerM2, ...noCoeffs } = windOnly;
+      void liftCoeffNPerM2;
+      void dragCoeffNPerM2;
+      expect(() =>
+        runEngine({ ...habibKhedhiraFixture, structure: { ...noCoeffs, windSpeedKmh: 90 } }),
+      ).not.toThrow();
+    });
+  });
+
   it('flags C09 as failing when the DC switch is under-rated (regression guard for the 20A/25A dossier mismatch)', () => {
     const underRated = {
       ...habibKhedhiraFixture,

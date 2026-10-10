@@ -132,6 +132,12 @@ describe('summarizeSnapshot', () => {
     expect(summary.earthing).toContain('3 piquet(s)');
   });
 
+  it('omits the frame count from the structure summary when it was not entered', () => {
+    const snapshot = fixtureSnapshot();
+    snapshot.structure = { ...snapshot.structure!, frameCount: null };
+    expect(summarizeSnapshot(snapshot).structure).toBe('ALUMINIUM, vent 120 km/h');
+  });
+
   it('falls back to projectMeta for the inverter label when the by-value rows are absent', () => {
     const snapshot = fixtureSnapshot();
     snapshot.arrayConfig = null;
