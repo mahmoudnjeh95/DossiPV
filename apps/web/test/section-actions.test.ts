@@ -101,7 +101,7 @@ describe('saveStructureAction', () => {
     expect(mocks.mockRedirect).toHaveBeenCalled();
     expect(result).toBeUndefined();
     expect(mocks.structureUpsert).toHaveBeenCalledTimes(1);
-    const { create } = mocks.structureUpsert.mock.calls[0]![0];
+    const { create } = mocks.structureUpsert.mock.calls[0]?.[0] as { create: unknown };
     expect(create).toMatchObject({
       projectId: 'project-1',
       material: 'ALUMINIUM',
@@ -117,7 +117,7 @@ describe('saveStructureAction', () => {
 
   it('still rejects a missing wind speed', async () => {
     const result = await saveStructureAction('project-1', undefined, form({ material: 'ALUMINIUM' }));
-    expect(result).toMatchObject({ error: expect.stringContaining('Vitesse de vent') });
+    expect(result).toMatchObject({ error: expect.stringContaining('Vitesse de vent') as string });
     expect(mocks.structureUpsert).not.toHaveBeenCalled();
   });
 });
@@ -132,7 +132,7 @@ describe('saveEarthingAction', () => {
     );
 
     expect(mocks.earthingUpsert).toHaveBeenCalledTimes(1);
-    expect(mocks.earthingUpsert.mock.calls[0]![0].create).toMatchObject({
+    expect((mocks.earthingUpsert.mock.calls[0]?.[0] as { create: unknown }).create).toMatchObject({
       earthCableId: 'cable-1',
       distributionBlockId: null,
       mainEarthSectionMm2: 16,
