@@ -617,5 +617,94 @@
     "models": [
       "TSM-620NE19R"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/TOPBiHiKu7%20CS7N-690-720TB-AG.pdf",
+    "models": [
+      "CS7N-705TB-AG",
+      "CS7N-710TB-AG",
+      "CS7N-715TB-AG"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/Canadian-TOPBIHIKu7-675-705-AG.pdf",
+    "models": [
+      "CS7N-700TB-AG"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/HiKu7%20CS7N-645-675MS.pdf",
+    "models": [
+      "CS7N-670MS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/HiKu7%20CS7L-585-615MS.pdf",
+    "models": [
+      "CS7L-605MS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://www.solartraders.com/uploads/production/data_sheet/file/37532/data_sheet_cs6w_tophiku6_en_22-11-2024.pdf",
+    "models": [
+      "CS6W-585T",
+      "CS6W-590T"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/TOPBiHiKu6%20CS6W-565-595TB-AG.pdf",
+    "models": [
+      "CS6W-580TB-AG",
+      "CS6W-585TB-AG"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/HiKu6%20CS6W-MS.pdf",
+    "models": [
+      "CS6W-545MS",
+      "CS6W-550MS",
+      "CS6W-555MS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/TOPBiHiKu6%20Anti-Dust%20CS6.2-66TB-600-630.pdf",
+    "models": [
+      "CS6.2-66TB-615",
+      "CS6.2-66TB-625"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/TOPHiKu6%20CS6.1-72TD%20595-620.pdf",
+    "models": [
+      "CS6.1-72TD-605"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Canadian Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Canadian/TOPHiKu6%20CS6.2-48TD-430-455.pdf",
+    "models": [
+      "CS6.2-48TD-445",
+      "CS6.2-48TD-450",
+      "CS6.2-48TD-455"
+    ]
   }
 ]
