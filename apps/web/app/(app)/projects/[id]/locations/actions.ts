@@ -126,7 +126,8 @@ export async function saveLocationsAndGenerateAction(
       try {
         result = runEngine(built.input);
       } catch (error) {
-        return { error: error instanceof Error ? error.message : 'Erreur de calcul.' };
+        console.error('Locations: engine run failed', error);
+        return { error: 'Erreur de calcul : vérifiez les sections du projet.' };
       }
       if (circuitFits(result, circuit, built.input.maxVoltageDropPct)) break;
 

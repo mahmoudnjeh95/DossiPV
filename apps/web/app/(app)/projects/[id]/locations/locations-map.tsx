@@ -92,8 +92,8 @@ export function LocationsMap({ projectId, center, initial, initialFloors }: Loca
           ))}
         </select>
       </label>
-      <MapContainer center={[center.lat, center.lon]} zoom={19} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} style={{ height: '500px', width: '100%' }}>
-        <TileLayer url={ACTIVE_MAP_PROVIDER.tileUrlTemplate} attribution={ACTIVE_MAP_PROVIDER.attribution} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} />
+      <MapContainer center={[center.lat, center.lon]} zoom={18} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} style={{ height: '500px', width: '100%' }}>
+        <TileLayer url={ACTIVE_MAP_PROVIDER.tileUrlTemplate} attribution={ACTIVE_MAP_PROVIDER.attribution} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} maxNativeZoom={ACTIVE_MAP_PROVIDER.maxNativeZoom} />
         <ClickHandler
           onClick={(point) => {
             if (!active) return;

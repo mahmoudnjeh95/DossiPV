@@ -172,4 +172,17 @@ describe('saveLocationsAndGenerateAction', () => {
     expect(m.mockSiteUpdate).toHaveBeenCalled();
     expect(m.mockGenerate).not.toHaveBeenCalled();
   });
+
+  it('hides the raw engine error behind a fixed message', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    m.mockRunEngine.mockImplementation(() => {
+      throw new Error('boom');
+    });
+
+    const result = await saveLocationsAndGenerateAction('p1', payload);
+
+    expect(result).toEqual({ error: 'Erreur de calcul : vérifiez les sections du projet.' });
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });
