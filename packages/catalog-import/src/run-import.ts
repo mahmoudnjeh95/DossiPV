@@ -5,6 +5,7 @@ import { db } from '@dossipv/db';
 import { saveFile } from '@dossipv/file-storage';
 import type { CatalogInverterEntry, CatalogPvModuleEntry } from './build-catalog';
 import { planImport } from './plan-import';
+import { planCuratedImport, type CuratedPlan } from './plan-curated';
 import { DATA_DIR } from './sources';
 import { cachedDatasheet } from './datasheet-cache';
 
@@ -41,25 +42,31 @@ async function importCurated(dryRun: boolean, count: (key: string) => void): Pro
   const cables = JSON.parse(await readFile(join(DATA_DIR, 'cables.json'), 'utf8')) as CuratedCable[];
   const protections = JSON.parse(await readFile(join(DATA_DIR, 'protections.json'), 'utf8')) as CuratedProtection[];
   const draft = { ownerCompanyId: null, catalogStatus: 'DRAFT' as const };
+  const countCurated = (label: string, plan: CuratedPlan, what: string): void => {
+    if (plan === 'create-alongside') console.log(`conflit : ${what} existe sans source — l'entrée curée est créée à côté`);
+    count(plan === 'skip' ? `${label} déjà présents` : plan === 'create' ? `${label} create` : `${label} create-alongside`);
+  };
 
   for (const { source, sections, ...cable } of cables) {
-    const exists = await db.cable.findFirst({ where: { ownerCompanyId: null, brand: cable.brand, model: cable.model } });
-    count(exists ? 'câbles déjà présents' : 'câbles create');
-    if (exists || dryRun) continue;
+    const plan = planCuratedImport(await db.cable.findMany({ where: { ownerCompanyId: null, brand: cable.brand, model: cable.model }, select: { datasheetSourceUrl: true } }));
+    countCurated('câbles', plan, `câble ${cable.brand} ${cable.model}`);
+    if (plan === 'skip' || dryRun) continue;
     await db.cable.create({ data: { ...cable, ...draft, datasheetSourceUrl: source, importNotes: source, sections: { create: sections } } });
   }
 
   for (const { kind, source, ...item } of protections) {
     const where = { ownerCompanyId: null, brand: item.brand, model: item.model };
     const data = { ...item, ...draft, datasheetSourceUrl: source, importNotes: source };
-    const exists =
-      kind === 'SPD' ? await db.spd.findFirst({ where })
-      : kind === 'DC_SWITCH' ? await db.dcSwitch.findFirst({ where })
-      : kind === 'DC_FUSE' ? await db.dcFuse.findFirst({ where })
-      : kind === 'AC_BREAKER' ? await db.acBreaker.findFirst({ where })
-      : await db.acIsolator.findFirst({ where });
-    count(exists ? `${kind} déjà présents` : `${kind} create`);
-    if (exists || dryRun) continue;
+    const select = { datasheetSourceUrl: true };
+    const rows =
+      kind === 'SPD' ? await db.spd.findMany({ where, select })
+      : kind === 'DC_SWITCH' ? await db.dcSwitch.findMany({ where, select })
+      : kind === 'DC_FUSE' ? await db.dcFuse.findMany({ where, select })
+      : kind === 'AC_BREAKER' ? await db.acBreaker.findMany({ where, select })
+      : await db.acIsolator.findMany({ where, select });
+    const plan = planCuratedImport(rows);
+    countCurated(kind, plan, `${kind} ${item.brand} ${item.model}`);
+    if (plan === 'skip' || dryRun) continue;
     if (kind === 'SPD') await db.spd.create({ data: data as never });
     else if (kind === 'DC_SWITCH') await db.dcSwitch.create({ data: data as never });
     else if (kind === 'DC_FUSE') await db.dcFuse.create({ data: data as never });
