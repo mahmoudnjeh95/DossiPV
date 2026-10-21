@@ -105,8 +105,20 @@ model Company {
   accessories  Accessory[]
   projects     Project[]
   libraryItems LibraryItem[]
+  billImportAttempts BillImportAttempt[]
 
   @@map("company")
+}
+
+/// One row per paid bill-reading call (successful or not): the daily bill-import cap counts these.
+model BillImportAttempt {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("bill_import_attempt")
 }
 
 model CompanyUser {

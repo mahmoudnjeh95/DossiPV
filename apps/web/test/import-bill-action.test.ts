@@ -12,7 +12,6 @@ const m = vi.hoisted(() => {
     mockValidateSession: vi.fn(),
     mockSubscriptionFindUnique: vi.fn(),
     mockProjectFindFirst: vi.fn(),
-    mockBillImportCount: vi.fn(),
     mockTransaction: vi.fn(),
     tx: {
       file: { create: vi.fn() },
@@ -21,6 +20,7 @@ const m = vi.hoisted(() => {
       projectSite: { create: vi.fn() },
       projectAnnexes: { create: vi.fn() },
       projectBillImport: { create: vi.fn() },
+      billImportAttempt: { count: vi.fn(), create: vi.fn() },
     },
     mockReadStegBill: vi.fn(),
     mockSaveFile: vi.fn(),
@@ -45,7 +45,6 @@ vi.mock('@dossipv/db', async () => {
       ...actual.db,
       subscription: { findUnique: m.mockSubscriptionFindUnique },
       project: { findFirst: m.mockProjectFindFirst },
-      projectBillImport: { count: m.mockBillImportCount },
       $transaction: m.mockTransaction,
     },
   };
@@ -62,6 +61,7 @@ vi.mock('@anthropic-ai/sdk', () => ({ default: class FakeAnthropic {} }));
 vi.mock('sharp', () => ({ default: m.mockSharp }));
 
 import { BillReadingError } from '@dossipv/bill-reader';
+import { Prisma } from '@dossipv/db';
 import { importStegBillAction } from '../app/(app)/projects/import-bill-actions';
 
 const user = { id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER' as const };
@@ -99,7 +99,8 @@ beforeEach(() => {
   m.mockGet.mockReturnValue({ value: 'valid-token' });
   m.mockValidateSession.mockResolvedValue(user);
   m.mockSubscriptionFindUnique.mockResolvedValue(activeSubscription);
-  m.mockBillImportCount.mockResolvedValue(0);
+  m.tx.billImportAttempt.count.mockResolvedValue(0);
+  m.tx.billImportAttempt.create.mockResolvedValue({ id: 'attempt-1' });
   m.mockProjectFindFirst.mockResolvedValue(null);
   m.mockReadStegBill.mockResolvedValue({ ...testBill, governorate: 'Gafsa' });
   m.mockSaveFile.mockResolvedValue({ storageKey: 'equipment/abc-facture.jpg' });
@@ -252,7 +253,8 @@ describe('importStegBillAction', () => {
   });
 
   it('deletes the saved file if the database write fails', async () => {
-    m.mockTransaction.mockRejectedValue(new Error('db down'));
+    // The first transaction reserves the attempt; the second (the project write) fails.
+    m.mockTransaction.mockImplementationOnce((fn: (tx: typeof m.tx) => Promise<unknown>) => fn(m.tx)).mockRejectedValueOnce(new Error('db down'));
 
     expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Enregistrement impossible, réessayez.' });
     expect(m.mockDeleteFile).toHaveBeenCalledWith('equipment/abc-facture.jpg');
@@ -278,23 +280,51 @@ describe('importStegBillAction — subscription and daily limit (before the paid
     expect(m.mockReadStegBill).not.toHaveBeenCalled();
   });
 
-  it('refuses the 31st bill import of the day and counts the company imports since local midnight', async () => {
-    m.mockBillImportCount.mockResolvedValue(30);
+  it('refuses the 31st bill-reading attempt of the day before calling Claude, counting attempts since local midnight in a serializable transaction', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValue(30);
 
     expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Limite de 30 factures importées par jour atteinte.' });
     expect(m.mockReadStegBill).not.toHaveBeenCalled();
+    expect(m.tx.billImportAttempt.create).not.toHaveBeenCalled();
     const now = new Date();
-    expect(m.mockBillImportCount).toHaveBeenCalledWith({
-      where: { project: { companyId: 'company-1' }, createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) } },
+    expect(m.tx.billImportAttempt.count).toHaveBeenCalledWith({
+      where: { companyId: 'company-1', createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) } },
     });
+    expect(m.mockTransaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
   });
 
-  it('accepts the 30th bill import of the day', async () => {
-    m.mockBillImportCount.mockResolvedValue(29);
+  it('accepts the 30th attempt of the day and reserves it before the paid Claude call', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValue(29);
 
     await redirectTarget(importStegBillAction(undefined, billForm()));
 
+    expect(m.tx.billImportAttempt.create).toHaveBeenCalledWith({ data: { companyId: 'company-1' } });
+    expect(m.tx.billImportAttempt.create.mock.invocationCallOrder[0]!).toBeLessThan(m.mockReadStegBill.mock.invocationCallOrder[0]!);
+  });
+
+  it('keeps the attempt counted when the bill cannot be read', async () => {
+    m.mockReadStegBill.mockRejectedValue(new BillReadingError());
+
+    await importStegBillAction(undefined, billForm());
+
+    expect(m.tx.billImportAttempt.create).toHaveBeenCalledTimes(1);
     expect(m.mockReadStegBill).toHaveBeenCalled();
+  });
+
+  it('does not reserve an attempt for a missing or invalid file', async () => {
+    await importStegBillAction(undefined, new FormData());
+    await importStegBillAction(undefined, billForm(Buffer.from('not a jpeg'), 'image/jpeg'));
+
+    expect(m.tx.billImportAttempt.create).not.toHaveBeenCalled();
+  });
+
+  it('asks to retry when concurrent requests collide on the reservation (P2034)', async () => {
+    m.mockTransaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError('Transaction failed due to a write conflict', { code: 'P2034', clientVersion: 'test' }),
+    );
+
+    expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Trop de demandes simultanées, réessayez.' });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
   });
 });
 

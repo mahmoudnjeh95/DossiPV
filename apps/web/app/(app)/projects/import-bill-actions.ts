@@ -3,7 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
 import { redirect } from 'next/navigation';
-import { db, type Prisma } from '@dossipv/db';
+import { db, Prisma } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import {
   BILL_READER_MODEL,
@@ -39,6 +39,33 @@ const DAILY_BILL_IMPORT_LIMIT = 30;
  */
 const THREE_PHASE_OR_MV_TARIFF = /\btri|\bMT\b|moyenne tension/i;
 
+/**
+ * Reserves one of the company's daily bill readings. Every paid Claude call is counted, whether the
+ * reading then succeeds or not; the serializable transaction stops concurrent requests from both
+ * passing the check.
+ */
+async function reserveBillReading(companyId: string, now: Date): Promise<ImportBillState | null> {
+  const since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  try {
+    return await db.$transaction(
+      async (tx) => {
+        const attemptsToday = await tx.billImportAttempt.count({ where: { companyId, createdAt: { gte: since } } });
+        if (attemptsToday >= DAILY_BILL_IMPORT_LIMIT) {
+          return { error: `Limite de ${DAILY_BILL_IMPORT_LIMIT} factures importées par jour atteinte.` };
+        }
+        await tx.billImportAttempt.create({ data: { companyId } });
+        return null;
+      },
+      { isolationLevel: 'Serializable' },
+    );
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      return { error: 'Trop de demandes simultanées, réessayez.' };
+    }
+    throw error;
+  }
+}
+
 /** Same bounds as the corrections form: a value read outside them is dropped, not stored. */
 function inBounds<T extends string | number>(
   value: T | null,
@@ -59,22 +86,12 @@ export async function importStegBillAction(
   const user = await requireAuthenticatedCompanyUser();
   const now = new Date();
 
-  // Both checks run before the paid Claude call.
   const subscription = summarizeSubscription(
     await db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
     now,
   );
   if (!subscription || !subscription.canGenerate) {
     return { error: "Votre abonnement n'est pas actif : import de facture impossible." };
-  }
-  const importsToday = await db.projectBillImport.count({
-    where: {
-      project: { companyId: user.companyId },
-      createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
-    },
-  });
-  if (importsToday >= DAILY_BILL_IMPORT_LIMIT) {
-    return { error: `Limite de ${DAILY_BILL_IMPORT_LIMIT} factures importées par jour atteinte.` };
   }
 
   const field = formData.get('bill');
@@ -102,6 +119,11 @@ export async function importStegBillAction(
     storedContentType = 'image/jpeg';
   }
   const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
+
+  const refused = await reserveBillReading(user.companyId, now);
+  if (refused) {
+    return refused;
+  }
 
   let reading: StegBillReading;
   try {
