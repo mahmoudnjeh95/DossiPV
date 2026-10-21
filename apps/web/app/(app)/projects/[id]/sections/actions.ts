@@ -6,6 +6,7 @@ import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storag
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { FormReader } from '../../../../../lib/form-reader';
+import { structureDataFor, EARTHING_FIXED_VALUES } from '../../../../../lib/section-defaults';
 import {
   CIVILITY_OPTIONS,
   CLIENT_KIND_OPTIONS,
@@ -434,23 +435,10 @@ export async function saveStructureAction(
   // Tunisian dossiers need only the material and the design wind speed. The other structure
   // columns stay optional in the schema; they are cleared on save so a project saved from this
   // form never carries stale wind-stability inputs (the engine then skips the stability check).
-  const data = {
-    material: reader.oneOf('material', 'Matériau', values(STRUCTURE_MATERIAL_OPTIONS)),
-    windSpeedKmh: reader.number('windSpeedKmh', 'Vitesse de vent', { min: 0, max: 400 }),
-    frameDescription: null,
-    frameCount: null,
-    railsDescription: null,
-    fixingDescription: null,
-    ballastPerFrame: null,
-    ballastMassKg: null,
-    ballastType: null,
-    structureWeightN: null,
-    heightHM: null,
-    depthDM: null,
-    liftCoeffNPerM2: null,
-    dragCoeffNPerM2: null,
-    tieDownCables: null,
-  };
+  const data = structureDataFor(
+    reader.oneOf('material', 'Matériau', values(STRUCTURE_MATERIAL_OPTIONS)),
+    reader.number('windSpeedKmh', 'Vitesse de vent', { min: 0, max: 400 }),
+  );
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
   }
@@ -480,13 +468,8 @@ export async function saveEarthingAction(
   // visible input when the company has no default.
   const distributionBlockId = null;
   const data = {
-    mainEarthSectionMm2: 16,
-    frameEarthSectionMm2: 16,
-    earthToPitSectionMm2: 25,
+    ...EARTHING_FIXED_VALUES,
     rodCount: reader.integer('rodCount', 'Nombre de piquets', { min: 1, max: 100 }),
-    rodLengthM: 1.5,
-    rodSpacingCm: null,
-    pitSizeCm: null,
     targetResistanceOhm: reader.number('targetResistanceOhm', 'Résistance cible', { min: 0, max: 1000 }),
   };
   if (reader.hasErrors) {

@@ -35,6 +35,7 @@ export const PROJECT_ENGINE_INCLUDE = {
   simulation: true,
   annexes: { include: { extraFiles: true } },
   jobs: { orderBy: { startedAt: 'desc' } },
+  billImport: true,
 } satisfies Prisma.ProjectInclude;
 
 export type ProjectForEngine = Prisma.ProjectGetPayload<{ include: typeof PROJECT_ENGINE_INCLUDE }>;
@@ -57,7 +58,8 @@ function isPhases(value: number): value is 1 | 3 {
   return value === 1 || value === 3;
 }
 
-function toIsoDate(date: Date): string {
+/** `YYYY-MM-DD` (UTC), the date format every engine input uses. */
+export function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
@@ -317,6 +319,8 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     dossierDate: toIsoDate(project.dossierDate ?? now),
     companyAccreditationValidTo: toIsoDate(project.company.anmeValidTo),
     equipmentHomologationExpiries: collectHomologationExpiries(project),
+    // C23 (inverter AC power within the subscribed power) runs whenever the client's power is known.
+    ...(project.client?.subscribedPowerKVA != null ? { subscribedPowerKVA: project.client.subscribedPowerKVA } : {}),
   };
 
   const firstInverter = arrayConfig.inverters[0]!.inverter;

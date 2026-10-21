@@ -356,6 +356,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
     simulation: null,
     annexes: null,
     jobs: [],
+    billImport: null,
   };
   return { ...project, ...overrides };
 }

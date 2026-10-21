@@ -116,6 +116,23 @@ describe('buildEngineInput', () => {
     expect(result.input.equipmentHomologationExpiries).toContain('2025-01-31');
     expect(runEngine(result.input).checks.find((c) => c.id === 'C20')?.pass).toBe(false);
   });
+
+  it("passes the client's subscribed power so C23 runs at dossier time", () => {
+    const project = buildFullProject();
+    project.client!.subscribedPowerKVA = 2;
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.subscribedPowerKVA).toBe(2);
+    expect(runEngine(result.input).checks.find((c) => c.id === 'C23')?.pass).toBe(false);
+  });
+
+  it('leaves the subscribed power out when the client has none', () => {
+    const result = buildEngineInput(buildFullProject(), FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input).not.toHaveProperty('subscribedPowerKVA');
+  });
 });
 
 describe('computeSectionStatuses', () => {
