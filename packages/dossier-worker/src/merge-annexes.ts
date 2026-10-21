@@ -2,7 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 
 export interface AnnexFile {
   buffer: Buffer;
-  mimeType: 'pdf' | 'png' | 'jpeg';
+  mimeType: 'pdf' | 'png' | 'jpeg' | 'webp';
 }
 
 async function appendAnnex(merged: PDFDocument, annex: AnnexFile): Promise<void> {
@@ -12,6 +12,9 @@ async function appendAnnex(merged: PDFDocument, annex: AnnexFile): Promise<void>
     for (const page of pages) {
       merged.addPage(page);
     }
+  } else if (annex.mimeType === 'webp') {
+    // pdf-lib cannot embed WebP; throwing lets mergeDocumentFragments skip it like any unreadable annex.
+    throw new Error('WebP annexes cannot be embedded in a PDF');
   } else {
     // Standalone copy: pdf-lib ignores a pooled Buffer's byteOffset (see embedImageSafely).
     const bytes = Uint8Array.from(annex.buffer);

@@ -9,6 +9,9 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
+    "@types/node": "^26.6.4"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0"
   }
 }

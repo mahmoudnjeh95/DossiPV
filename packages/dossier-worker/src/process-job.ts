@@ -123,7 +123,7 @@ async function collectAnnexFiles(projectId: string, companyId: string, snapshot:
   const annexFiles: AnnexFile[] = [];
   for (const file of files) {
     const buffer = await readFile(getFilePath(file.storageKey));
-    annexFiles.push({ buffer, mimeType: file.mimeType as 'pdf' | 'png' | 'jpeg' });
+    annexFiles.push({ buffer, mimeType: file.mimeType as AnnexFile['mimeType'] });
   }
   return annexFiles;
 }
