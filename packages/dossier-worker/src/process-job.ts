@@ -104,15 +104,15 @@ async function collectAnnexFiles(projectId: string, companyId: string, snapshot:
     }
   }
 
-  const fileIds = new Set([
+  const projectFileIds = new Set([
     company?.anmeCertificateFileId,
     project?.annexes?.cinFileId,
     project?.annexes?.commercialRegisterFileId,
     project?.annexes?.stegContractFileId,
     project?.annexes?.lastPaidBillFileId,
     ...(project?.annexes?.extraFiles.map((f) => f.fileId) ?? []),
-    ...equipmentFileIds,
   ].filter((id): id is string => typeof id === 'string'));
+  const fileIds = new Set([...projectFileIds, ...equipmentFileIds.filter((id): id is string => typeof id === 'string')]);
 
   if (fileIds.size === 0) {
     return [];
@@ -122,7 +122,19 @@ async function collectAnnexFiles(projectId: string, companyId: string, snapshot:
   const { getFilePath } = await import('@dossipv/file-storage');
   const annexFiles: AnnexFile[] = [];
   for (const file of files) {
-    const buffer = await readFile(getFilePath(file.storageKey));
+    let buffer: Buffer;
+    try {
+      buffer = await readFile(getFilePath(file.storageKey));
+    } catch (error) {
+      // A catalog datasheet whose bytes are missing from this server's storage (e.g. a catalog
+      // imported elsewhere and not yet copied over) must not sink the whole dossier: it is left
+      // out with an operator warning. A missing project annex (CIN, bill, contract…) still fails.
+      if (!projectFileIds.has(file.id) && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.warn(`collectAnnexFiles: equipment file ${file.id} (${file.storageKey}) is missing on disk; skipped.`);
+        continue;
+      }
+      throw error;
+    }
     annexFiles.push({ buffer, mimeType: file.mimeType as AnnexFile['mimeType'] });
   }
   return annexFiles;

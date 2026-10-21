@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   renderTableOfContents: vi.fn(),
   saveFile: vi.fn(),
   readFile: vi.fn(),
+  getFilePath: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -58,7 +59,7 @@ vi.mock('../src/fetch-satellite-image', async () => ({
 }));
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
 vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents }));
-vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: vi.fn(() => '/fake/path') }));
+vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: mocks.getFilePath }));
 vi.mock('fs/promises', async () => {
   const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
   return { ...actual, readFile: mocks.readFile };
@@ -168,6 +169,7 @@ beforeEach(async () => {
   mocks.saveFile.mockResolvedValue({ storageKey: 'dossier/fake.bin' });
   mocks.fileCreate.mockResolvedValue({ id: 'file-x' });
   mocks.readFile.mockResolvedValue(Buffer.from('template bytes'));
+  mocks.getFilePath.mockReturnValue('/fake/path');
 });
 
 describe('processJob — success path', () => {
@@ -328,6 +330,61 @@ describe('processJob — equipment datasheet collection', () => {
     expect(findManyCall.where.id.in).toContain('file-tray-datasheet');
     expect(findManyCall.where.id.in).toContain('file-db-datasheet');
     expect(findManyCall.where.id.in.filter((id) => id === 'file-cable-datasheet')).toHaveLength(1);
+  });
+});
+
+describe('processJob — missing annex bytes on disk', () => {
+  function enoent(): Error {
+    return Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' });
+  }
+
+  beforeEach(() => {
+    mocks.getFilePath.mockImplementation((storageKey: string) => `/storage/${storageKey}`);
+    mocks.projectFindUnique.mockResolvedValue({ annexes: { lastPaidBillFileId: 'file-bill', extraFiles: [] } });
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: {
+        ...validSnapshot,
+        arrayConfig: {
+          module: { brand: 'LONGi', model: 'X', datasheetFileId: 'file-module-datasheet' },
+          inverters: [{ inverter: { brand: 'Sofar', model: 'Y', datasheetFileId: null }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+        },
+      },
+    });
+    mocks.fileFindMany.mockResolvedValue([
+      { id: 'file-bill', mimeType: 'application/pdf', storageKey: 'bill.pdf' },
+      { id: 'file-module-datasheet', mimeType: 'application/pdf', storageKey: 'module-datasheet.pdf' },
+    ]);
+  });
+
+  it('skips an equipment datasheet whose bytes are missing on disk, with a warning, and still succeeds', async () => {
+    const billBytes = Buffer.from('bill bytes');
+    mocks.readFile.mockImplementation((path: string) => {
+      if (path === '/storage/module-datasheet.pdf') return Promise.reject(enoent());
+      if (path === '/storage/bill.pdf') return Promise.resolve(billBytes);
+      return Promise.resolve(Buffer.from('template bytes'));
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(findSucceededUpdate()).toBeDefined();
+    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { buffer: Buffer }[]][];
+    expect(mergeCalls[0]![1].map((a) => a.buffer)).toEqual([billBytes]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('file-module-datasheet'));
+    warn.mockRestore();
+  });
+
+  it('still fails the job at "annexes" when a project annex (the bill) is missing on disk', async () => {
+    mocks.readFile.mockImplementation((path: string) => (path === '/storage/bill.pdf' ? Promise.reject(enoent()) : Promise.resolve(Buffer.from('template bytes'))));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'FAILED');
+    expect((failCall![0] as { data: { failedStep: string } }).data.failedStep).toBe('annexes');
+    error.mockRestore();
   });
 });
 
