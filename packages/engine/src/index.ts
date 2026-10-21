@@ -13,3 +13,4 @@ export * from './run-engine';
 export * from './sizing-types';
 export * from './build-candidate';
 export * from './sizing';
+export * from './run-lengths';

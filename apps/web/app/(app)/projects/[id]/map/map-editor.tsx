@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { computePanelLayout } from '@dossipv/engine';
 import { saveMapDataAction } from './actions';
 import { ACTIVE_MAP_PROVIDER } from './esri-provider';
+import { pointIcon } from '../../../../../components/map/point-markers';
 import { Map as MapIcon, Polygon as PolygonIcon, MarkerTech, MarkerMeter, MarkerEarth, Check } from '@dossipv/icons';
 
 // Leaflet's default marker icon paths are relative to its own CSS file and don't survive
@@ -189,6 +190,7 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         <ClickHandler onClick={handleMapClick} />
         <Marker
           position={[gps.lat, gps.lon]}
+          icon={pointIcon('field')}
           draggable
           eventHandlers={{ dragend: (event: LeafletEvent) => setGps(getLatLngFromDragEvent(event)) }}
         />
@@ -196,6 +198,7 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         {technicalRoom && (
           <Marker
             position={[technicalRoom.lat, technicalRoom.lon]}
+            icon={pointIcon('technicalRoom')}
             draggable
             eventHandlers={{ dragend: (event: LeafletEvent) => setTechnicalRoom(getLatLngFromDragEvent(event)) }}
           />
@@ -203,6 +206,7 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         {meter && (
           <Marker
             position={[meter.lat, meter.lon]}
+            icon={pointIcon('meter')}
             draggable
             eventHandlers={{ dragend: (event: LeafletEvent) => setMeter(getLatLngFromDragEvent(event)) }}
           />
@@ -210,6 +214,7 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         {earthPit && (
           <Marker
             position={[earthPit.lat, earthPit.lon]}
+            icon={pointIcon('earthPit')}
             draggable
             eventHandlers={{ dragend: (event: LeafletEvent) => setEarthPit(getLatLngFromDragEvent(event)) }}
           />

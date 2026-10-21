@@ -119,6 +119,13 @@ export default async function ProjectOverviewPage({
         <span className="muted">Révision {project.revision}</span>
       </div>
 
+      {(project.flowStep === 'PROPOSALS' || project.flowStep === 'LOCATIONS') && (
+        <div className="banner banner-ok">
+          <Link className="button" href={`/projects/${project.id}/${project.flowStep === 'PROPOSALS' ? 'proposals' : 'locations'}`}>
+            {project.flowStep === 'PROPOSALS' ? "Continuer : choisir l'installation" : 'Continuer : placer les points'}
+          </Link>
+        </div>
+      )}
       {saved && <div className="banner banner-ok">Section enregistrée.</div>}
       <SubscriptionBanner subscription={subscription} />
 
