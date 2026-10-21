@@ -30,6 +30,16 @@ async function uploadDatasheet(url: string, model: string): Promise<string> {
   return file.id;
 }
 
+/** A datasheet that cannot be downloaded or saved never stops the run: the item is imported without it, with a note. */
+async function datasheetOrNote(url: string, model: string): Promise<{ datasheetFileId: string | null; notes: string[] }> {
+  try {
+    return { datasheetFileId: await uploadDatasheet(url, model), notes: [] };
+  } catch (error) {
+    console.warn(`Fiche technique non téléchargée pour ${model} : ${(error as Error).message}`);
+    return { datasheetFileId: null, notes: [`Fiche technique non téléchargée : ${url}`] };
+  }
+}
+
 interface CuratedCable { brand: string; model: string; usage: 'DC_SOLAR' | 'AC' | 'EARTH'; conductor: string; insulation: string; standard: string; source: string; sections: { sectionMm2: number; izA: number; izReferenceMethod: string }[] }
 type CuratedProtection =
   | { kind: 'SPD'; brand: string; model: string; side: 'DC' | 'AC'; type: number; poles: number; ucV: number; upKV: number; inKA: number; imaxKA: number; iscpvKA: number | null; source: string }
@@ -93,8 +103,9 @@ export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> 
     }
     const homologation = { homologationReference: entry.homologationReference, homologationValidTo: new Date(entry.homologationValidTo), datasheetSourceUrl: entry.datasheetSourceUrl };
     if (action.kind === 'create') {
+      const { datasheetFileId, notes } = await datasheetOrNote(entry.datasheetSourceUrl, entry.model);
       await db.pvModule.create({
-        data: { brand: entry.brand, model: entry.model, ...(values as object), ...homologation, catalogStatus: 'DRAFT', importNotes: notesOf(entry), datasheetFileId: await uploadDatasheet(entry.datasheetSourceUrl, entry.model) } as never,
+        data: { brand: entry.brand, model: entry.model, ...(values as object), ...homologation, catalogStatus: 'DRAFT', importNotes: notesOf(entry, notes), datasheetFileId } as never,
       });
     } else if (action.kind === 'update-draft') {
       await db.pvModule.update({ where: { id: existing!.id }, data: { ...(values as object), ...homologation, importNotes: notesOf(entry) } as never });
@@ -119,8 +130,9 @@ export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> 
     const steg = { stegApproved: true, homologationValidTo: new Date(entry.homologationValidTo), datasheetSourceUrl: entry.datasheetSourceUrl };
     const dataValues = { ...values, integratedDcSwitch: values.integratedDcSwitch ?? false };
     if (action.kind === 'create') {
+      const { datasheetFileId, notes } = await datasheetOrNote(entry.datasheetSourceUrl, entry.model);
       await db.inverter.create({
-        data: { brand: entry.brand, model: entry.model, ...(dataValues as object), ...steg, catalogStatus: 'DRAFT', importNotes: notesOf(entry), datasheetFileId: await uploadDatasheet(entry.datasheetSourceUrl, entry.model) } as never,
+        data: { brand: entry.brand, model: entry.model, ...(dataValues as object), ...steg, catalogStatus: 'DRAFT', importNotes: notesOf(entry, notes), datasheetFileId } as never,
       });
     } else if (action.kind === 'update-draft') {
       await db.inverter.update({ where: { id: existing!.id }, data: { ...(dataValues as object), ...steg, importNotes: notesOf(entry) } as never });
