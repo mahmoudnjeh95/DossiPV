@@ -11,12 +11,18 @@ const DEFAULT_AC_LENGTH_M = 10;
 
 export type ProjectProposalsResult =
   | { ok: true; result: ProposeResult; context: SizingContext; yieldWarning: string | null }
-  | { ok: false; missing: string[]; missingLibraryKinds: string[] };
+  | { ok: false; missing: string[]; missingLibraryKinds: string[]; blockedReasons: string[] };
+
+const NOT_SINGLE_PHASE = 'Le site doit être monophasé (abonné BT monophasé) pour les propositions automatiques.';
+const LIGHTNING_ROD =
+  'Un paratonnerre est déclaré sur le site : des parafoudres de type 1 sont requis, les propositions automatiques ne le gèrent pas encore.';
 
 /**
  * Sizes up to three single-phase installations for a project from the company's library.
- * Nothing is sized while the client's need or the site is unknown (`missing`, French labels)
- * or while the library lacks a kind of equipment (`missingLibraryKinds`).
+ * Nothing is sized while the client's need or the site is unknown (`missing`, French labels),
+ * while the library lacks a kind of equipment (`missingLibraryKinds`), or while the site is one the
+ * sizing does not model (`blockedReasons`: the candidates are validated as a single-phase site
+ * without a lightning rod, so any other site could fail C12/C19 once the proposal is applied).
  */
 export async function computeProjectProposals(project: ProjectForEngine, now: Date): Promise<ProjectProposalsResult> {
   const { site, company } = project;
@@ -26,11 +32,20 @@ export async function computeProjectProposals(project: ProjectForEngine, now: Da
   if (annualConsumptionKWh === null) missing.push('Consommation annuelle (kWh/an)');
   if (subscribedPowerKVA === null) missing.push('Puissance souscrite (kVA)');
   if (!site) missing.push('Site (position GPS)');
+  const blockedReasons: string[] = [];
+  if (site && site.phases !== 1) blockedReasons.push(NOT_SINGLE_PHASE);
+  if (site?.lightningRod) blockedReasons.push(LIGHTNING_ROD);
 
   const catalog = await loadSizingCatalog(project.companyId);
   const lacking = missingLibraryKinds(catalog);
-  if (annualConsumptionKWh === null || subscribedPowerKVA === null || !site || lacking.length > 0) {
-    return { ok: false, missing, missingLibraryKinds: lacking };
+  if (
+    annualConsumptionKWh === null ||
+    subscribedPowerKVA === null ||
+    !site ||
+    lacking.length > 0 ||
+    blockedReasons.length > 0
+  ) {
+    return { ok: false, missing, missingLibraryKinds: lacking, blockedReasons };
   }
 
   const specificYield = await getSpecificYield(site.gpsLat, site.gpsLon, site.tiltDeg, site.azimuthDeg ?? 0);

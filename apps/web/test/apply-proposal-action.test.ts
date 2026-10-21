@@ -152,12 +152,31 @@ describe('computeProjectProposals', () => {
     expect(computed.result.proposals.length).toBeGreaterThan(0);
   });
 
+  it('does not size a three-phase site or one with a lightning rod', async () => {
+    const project = billProject();
+    const computed = await computeProjectProposals(
+      { ...project, site: { ...project.site!, phases: 3, lightningRod: true } },
+      NOW,
+    );
+
+    expect(computed).toEqual({
+      ok: false,
+      missing: [],
+      missingLibraryKinds: [],
+      blockedReasons: [
+        'Le site doit être monophasé (abonné BT monophasé) pour les propositions automatiques.',
+        'Un paratonnerre est déclaré sur le site : des parafoudres de type 1 sont requis, les propositions automatiques ne le gèrent pas encore.',
+      ],
+    });
+    expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
+  });
+
   it('does not size when the library lacks a kind of equipment', async () => {
     m.mockLoadSizingCatalog.mockResolvedValue({ ...sizingCatalog, acBreakers: [] });
 
     const computed = await computeProjectProposals(billProject(), NOW);
 
-    expect(computed).toEqual({ ok: false, missing: [], missingLibraryKinds: ['Disjoncteurs AC'] });
+    expect(computed).toEqual({ ok: false, missing: [], missingLibraryKinds: ['Disjoncteurs AC'], blockedReasons: [] });
     expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
   });
 });
@@ -190,6 +209,14 @@ describe('applyProposalAction', () => {
 
     expect(m.mockTransaction).toHaveBeenCalledTimes(1);
     expect(m.tx.projectArrayConfig.delete).toHaveBeenCalledWith({ where: { id: 'old-array' } });
+    // Foreign keys: MPPTs, then their inverters, then the config, then the new config.
+    const order = [
+      m.tx.projectArrayMppt.deleteMany,
+      m.tx.projectArrayInverter.deleteMany,
+      m.tx.projectArrayConfig.delete,
+      m.tx.projectArrayConfig.create,
+    ].map((fn) => fn.mock.invocationCallOrder[0]!);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(firstCallData(m.tx.projectArrayConfig.create)).toEqual({
       projectId: 'p1',
       moduleId: candidate.module.id,
@@ -244,6 +271,7 @@ describe('applyProposalAction', () => {
       expect.objectContaining({
         update: {
           earthCableId: candidate.earthCableId,
+          distributionBlockId: null,
           mainEarthSectionMm2: 16,
           frameEarthSectionMm2: 16,
           earthToPitSectionMm2: 25,
@@ -255,10 +283,18 @@ describe('applyProposalAction', () => {
         },
       }),
     );
+    const simulation = {
+      source: 'PVGIS_LIVE',
+      pvsystReportFileId: null,
+      annualProductionKWh: null,
+      specificYieldKWhPerKWp: null,
+      performanceRatioPct: null,
+      systemLossesPct: null,
+    };
     expect(m.tx.projectSimulation.upsert).toHaveBeenCalledWith({
       where: { projectId: 'p1' },
-      create: { projectId: 'p1', source: 'PVGIS_LIVE' },
-      update: { source: 'PVGIS_LIVE' },
+      create: { projectId: 'p1', ...simulation },
+      update: simulation,
     });
     expect(m.tx.project.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { flowStep: 'LOCATIONS' } });
   });
@@ -279,6 +315,36 @@ describe('applyProposalAction', () => {
     expect(m.tx.projectEarthing.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ update: expect.objectContaining({ targetResistanceOhm: 10 }) as unknown }),
     );
+  });
+
+  it.each([
+    [
+      'a three-phase site',
+      { phases: 3 },
+      'Le site doit être monophasé (abonné BT monophasé) pour les propositions automatiques.',
+    ],
+    [
+      'a site with a lightning rod',
+      { lightningRod: true },
+      'Un paratonnerre est déclaré sur le site : des parafoudres de type 1 sont requis, les propositions automatiques ne le gèrent pas encore.',
+    ],
+  ])('refuses %s without sizing or writing', async (_name, siteOverride, reason) => {
+    const key = await firstProposalKey();
+    m.mockGetSpecificYield.mockClear();
+    m.mockProjectFindFirst.mockImplementation((args: { select?: unknown }) => {
+      const project = billProject();
+      return Promise.resolve(
+        args.select
+          ? { id: 'p1', companyId: 'company-1', tier: 'STANDARD', status: 'DRAFT' }
+          : { ...project, site: { ...project.site!, ...siteOverride } },
+      );
+    });
+
+    const result = await applyProposalAction('p1', key);
+
+    expect(result).toEqual({ error: reason });
+    expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
+    expect(m.mockTransaction).not.toHaveBeenCalled();
   });
 
   it("returns Projet introuvable for another company's project", async () => {

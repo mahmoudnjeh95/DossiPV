@@ -33,6 +33,7 @@ export async function applyProposalAction(projectId: string, proposalKey: string
   if (!project) return { error: NOT_FOUND };
 
   const computed = await computeProjectProposals(project, new Date());
+  if (!computed.ok && computed.blockedReasons.length > 0) return { error: computed.blockedReasons.join(' ') };
   const proposal = computed.ok ? computed.result.proposals.find((p) => p.key === proposalKey) : undefined;
   if (!computed.ok || !proposal) return { error: PROPOSALS_CHANGED };
   const { context } = computed;
@@ -54,11 +55,20 @@ export async function applyProposalAction(projectId: string, proposalKey: string
   const structure = structureDataFor('ALUMINIUM', context.windSpeedKmh);
   const earthing = {
     earthCableId: candidate.earthCableId,
+    distributionBlockId: null,
     ...EARTHING_FIXED_VALUES,
     rodCount: 1,
     targetResistanceOhm: project.company.defaultEarthResistanceTargetOhm ?? DEFAULT_EARTH_RESISTANCE_TARGET_OHM,
   };
-  const simulation = { source: 'PVGIS_LIVE' };
+  // The figures and any PVsyst report described the replaced installation: PVGIS recomputes them.
+  const simulation = {
+    source: 'PVGIS_LIVE',
+    pvsystReportFileId: null,
+    annualProductionKWh: null,
+    specificYieldKWhPerKWp: null,
+    performanceRatioPct: null,
+    systemLossesPct: null,
+  };
 
   await db.$transaction(async (tx) => {
     const existingArray = await tx.projectArrayConfig.findUnique({ where: { projectId }, select: { id: true } });
