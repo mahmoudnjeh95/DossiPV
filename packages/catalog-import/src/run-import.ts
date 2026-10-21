@@ -29,6 +29,45 @@ async function uploadDatasheet(url: string, model: string): Promise<string> {
   return file.id;
 }
 
+interface CuratedCable { brand: string; model: string; usage: 'DC_SOLAR' | 'AC' | 'EARTH'; conductor: string; insulation: string; standard: string; source: string; sections: { sectionMm2: number; izA: number; izReferenceMethod: string }[] }
+type CuratedProtection =
+  | { kind: 'SPD'; brand: string; model: string; side: 'DC' | 'AC'; type: number; poles: number; ucV: number; upKV: number; inKA: number; imaxKA: number; iscpvKA: number | null; source: string }
+  | { kind: 'DC_SWITCH'; brand: string; model: string; ratedVoltageV: number; ratedCurrentA: number; poles: number; source: string }
+  | { kind: 'DC_FUSE'; brand: string; model: string; ratedVoltageV: number; ratedCurrentA: number; source: string }
+  | { kind: 'AC_BREAKER'; brand: string; model: string; ratedCurrentA: number; curve: string | null; breakingCapacityKA: number | null; source: string }
+  | { kind: 'AC_ISOLATOR'; brand: string; model: string; ratedCurrentA: number; source: string };
+
+async function importCurated(dryRun: boolean, count: (key: string) => void): Promise<void> {
+  const cables = JSON.parse(await readFile(join(DATA_DIR, 'cables.json'), 'utf8')) as CuratedCable[];
+  const protections = JSON.parse(await readFile(join(DATA_DIR, 'protections.json'), 'utf8')) as CuratedProtection[];
+  const draft = { ownerCompanyId: null, catalogStatus: 'DRAFT' as const };
+
+  for (const { source, sections, ...cable } of cables) {
+    const exists = await db.cable.findFirst({ where: { ownerCompanyId: null, brand: cable.brand, model: cable.model } });
+    count(exists ? 'câbles déjà présents' : 'câbles create');
+    if (exists || dryRun) continue;
+    await db.cable.create({ data: { ...cable, ...draft, datasheetSourceUrl: source, importNotes: source, sections: { create: sections } } });
+  }
+
+  for (const { kind, source, ...item } of protections) {
+    const where = { ownerCompanyId: null, brand: item.brand, model: item.model };
+    const data = { ...item, ...draft, datasheetSourceUrl: source, importNotes: source };
+    const exists =
+      kind === 'SPD' ? await db.spd.findFirst({ where })
+      : kind === 'DC_SWITCH' ? await db.dcSwitch.findFirst({ where })
+      : kind === 'DC_FUSE' ? await db.dcFuse.findFirst({ where })
+      : kind === 'AC_BREAKER' ? await db.acBreaker.findFirst({ where })
+      : await db.acIsolator.findFirst({ where });
+    count(exists ? `${kind} déjà présents` : `${kind} create`);
+    if (exists || dryRun) continue;
+    if (kind === 'SPD') await db.spd.create({ data: data as never });
+    else if (kind === 'DC_SWITCH') await db.dcSwitch.create({ data: data as never });
+    else if (kind === 'DC_FUSE') await db.dcFuse.create({ data: data as never });
+    else if (kind === 'AC_BREAKER') await db.acBreaker.create({ data: data as never });
+    else await db.acIsolator.create({ data: data as never });
+  }
+}
+
 export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> {
   const modules = JSON.parse(await readFile(join(DATA_DIR, 'pv-modules.json'), 'utf8')) as CatalogPvModuleEntry[];
   const inverters = JSON.parse(await readFile(join(DATA_DIR, 'inverters.json'), 'utf8')) as CatalogInverterEntry[];
@@ -83,6 +122,8 @@ export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> 
       });
     }
   }
+
+  await importCurated(dryRun, count);
 
   console.log(`${dryRun ? '[simulation] ' : ''}${JSON.stringify(counts)}`);
   await db.$disconnect();

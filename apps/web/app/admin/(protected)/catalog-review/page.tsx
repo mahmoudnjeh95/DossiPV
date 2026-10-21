@@ -1,6 +1,6 @@
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { publishCatalogItemAction, publishCleanDraftsAction } from './actions';
+import { publishCatalogItemAction, publishCleanDraftsAction, publishCuratedDraftsAction } from './actions';
 import { RejectButton } from './reject-button';
 import { describeInverter, describePvModule } from './describe-item';
 
@@ -11,9 +11,16 @@ function Notes({ notes }: { notes: string | null }): React.JSX.Element | null {
 export default async function CatalogReviewPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
   const draftWhere = { ownerCompanyId: null, catalogStatus: 'DRAFT' as const };
-  const [modules, inverters] = await Promise.all([
+  const orderBy = [{ brand: 'asc' as const }, { model: 'asc' as const }];
+  const [modules, inverters, cables, spds, dcSwitches, dcFuses, acBreakers, acIsolators] = await Promise.all([
     db.pvModule.findMany({ where: draftWhere, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
     db.inverter.findMany({ where: draftWhere, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+    db.cable.findMany({ where: draftWhere, orderBy }),
+    db.spd.findMany({ where: draftWhere, orderBy }),
+    db.dcSwitch.findMany({ where: draftWhere, orderBy }),
+    db.dcFuse.findMany({ where: draftWhere, orderBy }),
+    db.acBreaker.findMany({ where: draftWhere, orderBy }),
+    db.acIsolator.findMany({ where: draftWhere, orderBy }),
   ]);
 
   return (
@@ -59,6 +66,32 @@ export default async function CatalogReviewPage(): Promise<React.JSX.Element> {
           </article>
         ))}
       </section>
+
+      {([
+        ['CABLE', 'Câbles', cables],
+        ['SPD', 'Parafoudres', spds],
+        ['DC_SWITCH', 'Interrupteurs-sectionneurs DC', dcSwitches],
+        ['DC_FUSE', 'Fusibles DC', dcFuses],
+        ['AC_BREAKER', 'Disjoncteurs AC', acBreakers],
+        ['AC_ISOLATOR', 'Sectionneurs AC', acIsolators],
+      ] as const).map(([kind, label, items]) => (
+        <section key={kind} className="card">
+          <h2>{label} ({items.length})</h2>
+          <ul>
+            {items.map((item) => (
+              <li key={item.id}>
+                {item.brand} {item.model}{' '}
+                {item.datasheetSourceUrl && <a href={item.datasheetSourceUrl} target="_blank" rel="noreferrer">source</a>}
+              </li>
+            ))}
+          </ul>
+          {items.length > 0 && (
+            <form action={publishCuratedDraftsAction.bind(null, kind)}>
+              <button type="submit">Tout publier</button>
+            </form>
+          )}
+        </section>
+      ))}
     </main>
   );
 }

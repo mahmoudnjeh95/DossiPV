@@ -1,0 +1,90 @@
+[
+  {
+    "brand": "Generic",
+    "model": "H1Z2Z2-K",
+    "usage": "DC_SOLAR",
+    "conductor": "Cu",
+    "insulation": "PR",
+    "standard": "EN 50618",
+    "source": "https://www.electrical-installation.org/enwiki/Recommended_simplified_approach_for_cable_sizing",
+    "sections": [
+      {
+        "sectionMm2": 4,
+        "izA": 45,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 6,
+        "izA": 58,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 10,
+        "izA": 80,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 16,
+        "izA": 107,
+        "izReferenceMethod": "C"
+      }
+    ]
+  },
+  {
+    "brand": "Generic",
+    "model": "U1000 R2V",
+    "usage": "AC",
+    "conductor": "Cu",
+    "insulation": "PR",
+    "standard": "NF C 32-321",
+    "source": "https://www.electrical-installation.org/enwiki/Recommended_simplified_approach_for_cable_sizing",
+    "sections": [
+      {
+        "sectionMm2": 2.5,
+        "izA": 33,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 4,
+        "izA": 45,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 6,
+        "izA": 58,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 10,
+        "izA": 80,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 16,
+        "izA": 107,
+        "izReferenceMethod": "C"
+      }
+    ]
+  },
+  {
+    "brand": "Generic",
+    "model": "H07V-R",
+    "usage": "EARTH",
+    "conductor": "Cu",
+    "insulation": "PVC",
+    "standard": "EN 50525-2-31",
+    "source": "https://www.electrical-installation.org/enwiki/Recommended_simplified_approach_for_cable_sizing",
+    "sections": [
+      {
+        "sectionMm2": 16,
+        "izA": 0,
+        "izReferenceMethod": "C"
+      },
+      {
+        "sectionMm2": 25,
+        "izA": 0,
+        "izReferenceMethod": "C"
+      }
+    ]
+  }
+]

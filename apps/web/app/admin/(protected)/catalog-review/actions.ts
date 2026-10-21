@@ -24,6 +24,20 @@ export async function publishCleanDraftsAction(kind: ReviewKind): Promise<void> 
   revalidatePath(PATH);
 }
 
+export type CuratedKind = 'CABLE' | 'SPD' | 'DC_SWITCH' | 'DC_FUSE' | 'AC_BREAKER' | 'AC_ISOLATOR';
+
+export async function publishCuratedDraftsAction(kind: CuratedKind): Promise<void> {
+  if (!(await requireAuthenticatedSuperAdmin())) return;
+  const args = { where: { ownerCompanyId: null, catalogStatus: 'DRAFT' as const }, data: { catalogStatus: 'PUBLISHED' as const } };
+  if (kind === 'CABLE') await db.cable.updateMany(args);
+  else if (kind === 'SPD') await db.spd.updateMany(args);
+  else if (kind === 'DC_SWITCH') await db.dcSwitch.updateMany(args);
+  else if (kind === 'DC_FUSE') await db.dcFuse.updateMany(args);
+  else if (kind === 'AC_BREAKER') await db.acBreaker.updateMany(args);
+  else await db.acIsolator.updateMany(args);
+  revalidatePath(PATH);
+}
+
 export async function rejectCatalogItemAction(
   kind: ReviewKind,
   id: string,

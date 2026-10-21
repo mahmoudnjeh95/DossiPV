@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
     inverterUpdate: vi.fn(),
     inverterUpdateMany: vi.fn(),
     inverterDelete: vi.fn(),
+    cableUpdateMany: vi.fn(),
   };
 });
 
@@ -32,12 +33,13 @@ vi.mock('@dossipv/db', async () => {
       ...actual.db,
       pvModule: { update: mocks.pvModuleUpdate, updateMany: mocks.pvModuleUpdateMany, delete: mocks.pvModuleDelete },
       inverter: { update: mocks.inverterUpdate, updateMany: mocks.inverterUpdateMany, delete: mocks.inverterDelete },
+      cable: { updateMany: mocks.cableUpdateMany },
     },
   };
 });
 
 import { Prisma } from '@dossipv/db';
-import { publishCatalogItemAction, rejectCatalogItemAction, publishCleanDraftsAction } from '../app/admin/(protected)/catalog-review/actions';
+import { publishCatalogItemAction, rejectCatalogItemAction, publishCleanDraftsAction, publishCuratedDraftsAction } from '../app/admin/(protected)/catalog-review/actions';
 import { describeInverter } from '../app/admin/(protected)/catalog-review/describe-item';
 
 beforeEach(() => {
@@ -50,6 +52,14 @@ describe('catalog review actions', () => {
   it('publishes one draft', async () => {
     await publishCatalogItemAction('PV_MODULE', 'm1');
     expect(mocks.pvModuleUpdate).toHaveBeenCalledWith({ where: { id: 'm1', catalogStatus: 'DRAFT' }, data: { catalogStatus: 'PUBLISHED', importNotes: null } });
+  });
+
+  it('publishes every curated cable draft at once', async () => {
+    await publishCuratedDraftsAction('CABLE');
+    expect(mocks.cableUpdateMany).toHaveBeenCalledWith({
+      where: { ownerCompanyId: null, catalogStatus: 'DRAFT' },
+      data: { catalogStatus: 'PUBLISHED' },
+    });
   });
 
   it('publishes in bulk only the drafts without notes', async () => {

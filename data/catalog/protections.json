@@ -1,0 +1,204 @@
+[
+  {
+    "kind": "SPD",
+    "brand": "ABB",
+    "model": "OVR PV T2 40-600 P QS",
+    "side": "DC",
+    "type": 2,
+    "poles": 2,
+    "ucV": 600,
+    "upKV": 2.8,
+    "inKA": 20,
+    "imaxKA": 40,
+    "iscpvKA": 10,
+    "source": "https://www.materielelectrique.com/content/fichiers_produits/ABB/2CTB804153R2800.pdf"
+  },
+  {
+    "kind": "SPD",
+    "brand": "ABB",
+    "model": "OVR PV T2 40-1000 P",
+    "side": "DC",
+    "type": 2,
+    "poles": 2,
+    "ucV": 1000,
+    "upKV": 4,
+    "inKA": 20,
+    "imaxKA": 40,
+    "iscpvKA": 10,
+    "source": "https://library.e.abb.com/public/28a8cca9581e4705935631c602dd1351/OVR%20%20PV%20T2%2040%20-1000%20P%209AKK107992A4590_US%20Rev.A%20Jan.2022.pdf"
+  },
+  {
+    "kind": "SPD",
+    "brand": "Schneider Electric",
+    "model": "A9L40281W",
+    "side": "DC",
+    "type": 2,
+    "poles": 2,
+    "ucV": 1000,
+    "upKV": 3.9,
+    "inKA": 15,
+    "imaxKA": 40,
+    "iscpvKA": 0.2,
+    "source": "https://docs.rs-online.com/89c3/A700000015875563.pdf"
+  },
+  {
+    "kind": "SPD",
+    "brand": "Hager",
+    "model": "SPB215D",
+    "side": "AC",
+    "type": 2,
+    "poles": 2,
+    "ucV": 275,
+    "upKV": 1.6,
+    "inKA": 5,
+    "imaxKA": 15,
+    "iscpvKA": null,
+    "source": "https://assets.hager.com/step-content/P/PDS_397595553001EN/Document/std.lang.all/SPB215D_3001_en-GB.pdf"
+  },
+  {
+    "kind": "SPD",
+    "brand": "Schneider Electric",
+    "model": "A9L40501W",
+    "side": "AC",
+    "type": 2,
+    "poles": 2,
+    "ucV": 350,
+    "upKV": 1.6,
+    "inKA": 15,
+    "imaxKA": 40,
+    "iscpvKA": null,
+    "source": "https://docs.rs-online.com/fec1/A700000015875685.pdf"
+  },
+  {
+    "kind": "SPD",
+    "brand": "Schneider Electric",
+    "model": "A9L40601W",
+    "side": "AC",
+    "type": 2,
+    "poles": 4,
+    "ucV": 350,
+    "upKV": 1.4,
+    "inKA": 15,
+    "imaxKA": 40,
+    "iscpvKA": null,
+    "source": "https://docs.rs-online.com/68e0/A700000015875743.pdf"
+  },
+  {
+    "kind": "DC_SWITCH",
+    "brand": "Hager",
+    "model": "SB216PV",
+    "ratedVoltageV": 600,
+    "ratedCurrentA": 16,
+    "poles": 2,
+    "source": "https://assets.hager.com/step-content/P/PDS_160690482701IT/Document/std.lang.all/SB216PV_2701_it-IT.pdf"
+  },
+  {
+    "kind": "DC_SWITCH",
+    "brand": "Hager",
+    "model": "SB432PV",
+    "ratedVoltageV": 1000,
+    "ratedCurrentA": 32,
+    "poles": 4,
+    "source": "https://assets.hager.com/step-content/P/PDS_160850756901EN/Document/std.lang.all/SB432PV_6901_en-GB.pdf"
+  },
+  {
+    "kind": "DC_FUSE",
+    "brand": "Hager",
+    "model": "LF310PV",
+    "ratedVoltageV": 1000,
+    "ratedCurrentA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_223983852001EN/Document/std.lang.all/LF310PV_2001_en-GB.pdf"
+  },
+  {
+    "kind": "DC_FUSE",
+    "brand": "Hager",
+    "model": "LF312PV",
+    "ratedVoltageV": 1000,
+    "ratedCurrentA": 12,
+    "source": "https://assets.hager.com/step-content/P/PDS_223982102001EN/Document/std.lang.all/LF312PV_2001_en-GB.pdf"
+  },
+  {
+    "kind": "DC_FUSE",
+    "brand": "Hager",
+    "model": "LF315PV",
+    "ratedVoltageV": 1000,
+    "ratedCurrentA": 15,
+    "source": "https://assets.hager.com/step-content/P/PDS_397608672001EN/Document/std.lang.all/LF315PV_2001_en-GB.pdf"
+  },
+  {
+    "kind": "DC_FUSE",
+    "brand": "Hager",
+    "model": "LF320PV",
+    "ratedVoltageV": 1000,
+    "ratedCurrentA": 20,
+    "source": "https://assets.hager.com/step-content/P/PDS_223976422001EN/Document/std.lang.all/LF320PV_2001_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN210A",
+    "ratedCurrentA": 10,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452697705101EN/Document/std.lang.all/NCN210A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN216A",
+    "ratedCurrentA": 16,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452693775101EN/Document/std.lang.all/NCN216A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN220A",
+    "ratedCurrentA": 20,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452696545101EN/Document/std.lang.all/NCN220A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN225A",
+    "ratedCurrentA": 25,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452699325101EN/Document/std.lang.all/NCN225A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN232A",
+    "ratedCurrentA": 32,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452695535101EN/Document/std.lang.all/NCN232A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "NCN240A",
+    "ratedCurrentA": 40,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "source": "https://assets.hager.com/step-content/P/PDS_452700485101EN/Document/std.lang.all/NCN240A_5101_en-GB.pdf"
+  },
+  {
+    "kind": "AC_ISOLATOR",
+    "brand": "Hager",
+    "model": "SBN240",
+    "ratedCurrentA": 40,
+    "source": "https://assets.hager.com/step-content/P/PDS_774769220000EN/Document/std.lang.all/SBN240_0000_en-GB.pdf"
+  },
+  {
+    "kind": "AC_ISOLATOR",
+    "brand": "Hager",
+    "model": "SBN263",
+    "ratedCurrentA": 63,
+    "source": "https://assets.hager.com/step-content/P/PDS_159615576901EN/Document/std.lang.all/SBN263_6901_en-GB.pdf"
+  }
+]
