@@ -1637,7 +1637,7 @@
     "tempCoeffPmaxPct": -0.35,
     "tempCoeffVmpPct": null,
     "irmA": 20,
-    "maxSystemVoltageV": 1500,
+    "maxSystemVoltageV": 1000,
     "bifacial": false,
     "bifacialGainPct": null,
     "lengthMm": 2112,
@@ -1652,7 +1652,9 @@
     "homologationValidTo": "2027-09-16",
     "datasheetSourceUrl": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JASolar_JAM72S20_445-470MR.pdf",
     "errors": [],
-    "warnings": []
+    "warnings": [
+      "Fiche : tension système 1000V/1500V — valeur prudente 1000 V retenue"
+    ]
   },
   {
     "model": "JAM72S20-460/MR/1000V",
@@ -1695,7 +1697,7 @@
     "tempCoeffPmaxPct": -0.35,
     "tempCoeffVmpPct": null,
     "irmA": 20,
-    "maxSystemVoltageV": 1500,
+    "maxSystemVoltageV": 1000,
     "bifacial": false,
     "bifacialGainPct": null,
     "lengthMm": 2112,
@@ -1710,7 +1712,9 @@
     "homologationValidTo": "2027-11-12",
     "datasheetSourceUrl": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JASolar_JAM72S20_445-470MR.pdf",
     "errors": [],
-    "warnings": []
+    "warnings": [
+      "Fiche : tension système 1000V/1500V — valeur prudente 1000 V retenue"
+    ]
   },
   {
     "model": "JAM72S20-465/MR/1000V",
