@@ -11,6 +11,7 @@ const EQUIPMENT_CATEGORIES = [
   { href: '/admin/equipment/ac-isolators', label: 'Sectionneurs AC' },
   { href: '/admin/equipment/spds', label: 'Parafoudres (SPD)' },
   { href: '/admin/equipment/accessories', label: 'Accessoires' },
+  { href: '/admin/catalog-review', label: 'Catalogue à valider (import)' },
 ];
 
 export default async function EquipmentIndexPage(): Promise<React.JSX.Element> {
