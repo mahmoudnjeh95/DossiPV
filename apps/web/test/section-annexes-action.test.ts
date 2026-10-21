@@ -6,7 +6,7 @@ const {
   mockExtraFileDeleteMany, mockExtraFileCreateMany,
   mockFileCreate, mockFileFindUnique, mockFileDelete,
   mockSaveFile, mockDeleteFile, mockValidateUploadedFile,
-  mockTransaction,
+  mockTransaction, mockBillImportCount,
 } = vi.hoisted(() => {
   const mockGet = vi.fn();
   return {
@@ -26,6 +26,7 @@ const {
     mockDeleteFile: vi.fn(),
     mockValidateUploadedFile: vi.fn(),
     mockTransaction: vi.fn(),
+    mockBillImportCount: vi.fn(),
   };
 });
 
@@ -45,6 +46,7 @@ vi.mock('@dossipv/db', async () => {
       projectAnnexes: { findUnique: mockAnnexesFindUnique, upsert: mockAnnexesUpsert },
       projectAnnexExtraFile: { deleteMany: mockExtraFileDeleteMany, createMany: mockExtraFileCreateMany },
       file: { create: mockFileCreate, findUnique: mockFileFindUnique, delete: mockFileDelete },
+      projectBillImport: { count: mockBillImportCount },
       $transaction: mockTransaction,
     },
   };
@@ -75,6 +77,8 @@ beforeEach(() => {
   mockDeleteFile.mockClear();
   mockValidateUploadedFile.mockReset();
   mockTransaction.mockReset();
+  mockBillImportCount.mockReset();
+  mockBillImportCount.mockResolvedValue(0);
   mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
     return fn({
       projectAnnexes: { upsert: mockAnnexesUpsert },
@@ -170,6 +174,43 @@ describe('saveAnnexesAction', () => {
     if (deleteFileCallOrder !== undefined) {
       expect(saveFileCallOrder).toBeLessThan(deleteFileCallOrder);
     }
+  });
+
+  it('deletes the replaced last-paid-bill File row and bytes when nothing else references it', async () => {
+    mockAnnexesFindUnique.mockResolvedValue({ id: 'annexes-1', lastPaidBillFileId: 'old-bill-file' });
+    mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
+    mockSaveFile.mockResolvedValue({ storageKey: 'annexes/new-bill.pdf' });
+    mockFileCreate.mockResolvedValue({ id: 'file-bill-2' });
+    mockFileFindUnique.mockResolvedValue({ id: 'old-bill-file', storageKey: 'annexes/old-bill.pdf' });
+    mockAnnexesUpsert.mockResolvedValue({ id: 'annexes-1' });
+    const formData = buildFormData();
+    formData.set('lastPaidBill', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], 'new-bill.pdf', { type: 'application/pdf' }));
+
+    await saveAnnexesAction('project-1', undefined, formData);
+
+    expect(mockDeleteFile).toHaveBeenCalledWith('annexes/old-bill.pdf');
+    expect(mockFileDelete).toHaveBeenCalledWith({ where: { id: 'old-bill-file' } });
+  });
+
+  it('keeps the replaced bill File row and bytes when the project bill import still references it (only relinks the annex)', async () => {
+    mockAnnexesFindUnique.mockResolvedValue({ id: 'annexes-1', lastPaidBillFileId: 'imported-bill-file' });
+    mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
+    mockSaveFile.mockResolvedValue({ storageKey: 'annexes/new-bill.pdf' });
+    mockFileCreate.mockResolvedValue({ id: 'file-bill-2' });
+    mockFileFindUnique.mockResolvedValue({ id: 'imported-bill-file', storageKey: 'equipment/imported-bill.webp' });
+    mockAnnexesUpsert.mockResolvedValue({ id: 'annexes-1' });
+    mockBillImportCount.mockResolvedValue(1);
+    const formData = buildFormData();
+    formData.set('lastPaidBill', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], 'new-bill.pdf', { type: 'application/pdf' }));
+
+    const result = await saveAnnexesAction('project-1', undefined, formData);
+
+    const upsertCallArg = mockAnnexesUpsert.mock.calls[0]?.[0] as { update: { lastPaidBillFileId?: string } };
+    expect(upsertCallArg.update.lastPaidBillFileId).toBe('file-bill-2');
+    expect(mockBillImportCount).toHaveBeenCalledWith({ where: { fileId: 'imported-bill-file' } });
+    expect(mockDeleteFile).not.toHaveBeenCalled();
+    expect(mockFileDelete).not.toHaveBeenCalled();
+    expect(result?.error).toBeUndefined();
   });
 
   it('replaces all extra files (delete then recreate) inside the transaction', async () => {

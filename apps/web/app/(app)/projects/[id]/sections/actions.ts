@@ -675,7 +675,10 @@ export async function saveAnnexesAction(
     const oldId = existing?.[ANNEX_FILE_ID_KEYS[field]];
     if (newId && oldId) {
       const oldFile = await db.file.findUnique({ where: { id: oldId } });
-      if (oldFile) {
+      // A bill-imported project's ProjectBillImport row points at the bill it was read from
+      // (ON DELETE RESTRICT): that File and its bytes stay; only the annex is relinked above.
+      const keptByBillImport = oldFile ? (await db.projectBillImport.count({ where: { fileId: oldFile.id } })) > 0 : false;
+      if (oldFile && !keptByBillImport) {
         await deleteFile(oldFile.storageKey);
         await db.file.delete({ where: { id: oldFile.id } });
       }
