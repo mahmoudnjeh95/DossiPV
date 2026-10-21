@@ -1,0 +1,4193 @@
+{
+  "sourceUrl": "https://www.steg.com.tn/system/files/pdf/Liste_des_onduleurs_acceptes_par_la_STEG.pdf",
+  "fetchedAt": "2026-10-21T09:01:37.450Z",
+  "listings": [
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS1000TL-1",
+      "acPowerW": 1000,
+      "acceptedUntil": "2028-08-21"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS1500TL-1",
+      "acPowerW": 1500,
+      "acceptedUntil": "2028-08-21"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS2000TL-1",
+      "acPowerW": 2000,
+      "acceptedUntil": "2028-08-21"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS2500TL-1",
+      "acPowerW": 2500,
+      "acceptedUntil": "2028-08-21"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS3000TL-1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-08-21"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS3000TL",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-05-14"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS3600TL",
+      "acPowerW": 3600,
+      "acceptedUntil": "2029-05-14"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS4000TL",
+      "acPowerW": 4000,
+      "acceptedUntil": "2029-05-14"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS5000TL",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-05-14"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "HNS6000TL",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-05-14"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT003KTL",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT004KTL",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT005KTL",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT006KTL",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT008KTL",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT010KTL",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT012KTL",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT013KTL",
+      "acPowerW": 13000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT015KTL",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT017KTL",
+      "acPowerW": 17000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT020KTL",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT025KTL",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AFORE",
+      "brand": "AFORE",
+      "model": "BNT030KTL",
+      "acPowerW": 30000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU3K1P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU4K1P",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU5K1P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU6K1P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU6K3P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU8K3P",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU10K3P",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU12K3P",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU15K3P",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU17K3P",
+      "acPowerW": 17000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU20K3P",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU23K3P",
+      "acPowerW": 23000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU25K3P",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "AUSTA",
+      "brand": "AUSTA",
+      "model": "AU28K3P",
+      "acPowerW": 28000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-15K-T4001A-E",
+      "acPowerW": 15000,
+      "acceptedUntil": "2028-11-29"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-17K-T4001A-E",
+      "acPowerW": 17000,
+      "acceptedUntil": "2028-11-29"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-20K-T4001A-E",
+      "acPowerW": 20000,
+      "acceptedUntil": "2028-11-29"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-23K-T4001A-E",
+      "acPowerW": 23000,
+      "acceptedUntil": "2028-11-29"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-25K-T4001A-E",
+      "acPowerW": 25000,
+      "acceptedUntil": "2028-11-29"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-40K-T4001A-E",
+      "acPowerW": 40000,
+      "acceptedUntil": "2028-11-22"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-50K-T4001A-E",
+      "acPowerW": 50000,
+      "acceptedUntil": "2028-11-22"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-60K-T4001A-E",
+      "acPowerW": 60000,
+      "acceptedUntil": "2028-11-22"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-100K-T4001A-E",
+      "acPowerW": 100000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-100K-T4001B-E",
+      "acPowerW": 100000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-110K-T4001A-E",
+      "acPowerW": 110000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-110K-T4001B-E",
+      "acPowerW": 110000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-120K-T4001A-E",
+      "acPowerW": 120000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "Canadian Solar",
+      "brand": "Canadian Solar",
+      "model": "CSI-120K-T4001B-E",
+      "acPowerW": 120000,
+      "acceptedUntil": "2028-09-18"
+    },
+    {
+      "manufacturer": "COALA GREEN",
+      "brand": "COALA GREEN",
+      "model": "CG-3.6K",
+      "acPowerW": 3600,
+      "acceptedUntil": "2030-10-11"
+    },
+    {
+      "manufacturer": "COALA GREEN",
+      "brand": "COALA GREEN",
+      "model": "CG-4K",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-10-11"
+    },
+    {
+      "manufacturer": "COALA GREEN",
+      "brand": "COALA GREEN",
+      "model": "CG-4.6K",
+      "acPowerW": 4600,
+      "acceptedUntil": "2030-10-11"
+    },
+    {
+      "manufacturer": "COALA GREEN",
+      "brand": "COALA GREEN",
+      "model": "CG-5K",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-10-11"
+    },
+    {
+      "manufacturer": "COALA GREEN",
+      "brand": "COALA GREEN",
+      "model": "CG-6K",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-10-11"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-2K-G04P1-EU-AM1",
+      "acPowerW": 2000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-2.2K-G04P1-EU-AM1",
+      "acPowerW": 2200,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-2.5K-G04P1-EU-AM1",
+      "acPowerW": 2500,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-3K-G04P1-EU-AM1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-3.3K-G04P1-EU-AM1",
+      "acPowerW": 3300,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-3.6K-G04P1-EU-AM1",
+      "acPowerW": 3600,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-4K-G04P1-EU-AM1",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-4.6K-G05P1-EU-AM2",
+      "acPowerW": 4600,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-5.2K-G05P1-EU-AM2",
+      "acPowerW": 5200,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-6K-G05P1-EU-AM2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-6K-G06P3-EU-AM2-P1",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-8K-G06P3-EU-AM2-P1",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-10K-G06P3-EU-AM2-P1",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-5K-G06P3-EU-BM2-P1",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-6K-G06P3-EU-BM2-P1",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-8K-G06P3-EU-BM2-P1",
+      "acPowerW": 8000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-10K-G06P3-EU-BM2-P1",
+      "acPowerW": 10000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-12K-G06P3-EU-BM2-P1",
+      "acPowerW": 12000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-15K-G06P3-EU-BM2-P1",
+      "acPowerW": 15000,
+      "acceptedUntil": "2029-08-22"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-30K-G04",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-08-09"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-35K-G04",
+      "acPowerW": 35000,
+      "acceptedUntil": "2027-08-09"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-90K-G03",
+      "acPowerW": 90000,
+      "acceptedUntil": "2027-09-02"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-100K-G03",
+      "acPowerW": 100000,
+      "acceptedUntil": "2027-09-02"
+    },
+    {
+      "manufacturer": "DEYE",
+      "brand": "DEYE",
+      "model": "SUN-110K-G03",
+      "acPowerW": 110000,
+      "acceptedUntil": "2027-09-02"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-1KW-SP",
+      "acPowerW": 1000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-2KW-SP",
+      "acPowerW": 2000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-3KW-SP",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-3KW",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-4KW",
+      "acPowerW": 4000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-5KW",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-6KW",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-8KW",
+      "acPowerW": 8000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-10KW",
+      "acPowerW": 10000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-12KW",
+      "acPowerW": 12000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-15KW",
+      "acPowerW": 15000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-20KW",
+      "acPowerW": 20000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-25KW",
+      "acPowerW": 25000,
+      "acceptedUntil": "2029-04-28"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-50KW",
+      "acPowerW": 50000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-60KW",
+      "acPowerW": 60000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-70KW",
+      "acPowerW": 70000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Crown Micro FZCO",
+      "brand": "Crown Micro",
+      "model": "VMGI-80KW",
+      "acPowerW": 80000,
+      "acceptedUntil": "2026-12-08"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES3K-M1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES3.6K-M1",
+      "acPowerW": 3600,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES4K-M1",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES4.6K-M1",
+      "acPowerW": 4600,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES5K-M1",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "Each Energy",
+      "brand": "Each Energy",
+      "model": "EES6K-M1",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S700-G2",
+      "acPowerW": 700,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S1000-G2",
+      "acPowerW": 1000,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S1500-G2",
+      "acPowerW": 1500,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S2000-G2",
+      "acPowerW": 2000,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S2500-G2",
+      "acPowerW": 2500,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S3000-G2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S3300-G2",
+      "acPowerW": 3300,
+      "acceptedUntil": "2027-11-17"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S700-G3",
+      "acPowerW": 700,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S1000-G3",
+      "acPowerW": 1000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S1500-G3",
+      "acPowerW": 1500,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S2000-G3",
+      "acPowerW": 2000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S2500-G3",
+      "acPowerW": 2500,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S3000-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "S3300-G3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F3000",
+      "acPowerW": 3000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F3600",
+      "acPowerW": 3300,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F4600",
+      "acPowerW": 4600,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F5000",
+      "acPowerW": 5000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F5300",
+      "acPowerW": 5300,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F6000",
+      "acPowerW": 6000,
+      "acceptedUntil": "2031-06-09"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F3000-G2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F3600-G2",
+      "acPowerW": 3600,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F4600-G2",
+      "acPowerW": 4600,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F5000-G2",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F5300-G2",
+      "acPowerW": 5300,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "F6000-G2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-04-07"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T3-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T4-G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T5-G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T6-G3",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T8-G3",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T10-G3",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T12-G3",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T15-G3",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T17-G3",
+      "acPowerW": 17000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T20-G3",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T23-G3",
+      "acPowerW": 23000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "T25-G3",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-11-25"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V30",
+      "acPowerW": 30000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V33",
+      "acPowerW": 33000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V36",
+      "acPowerW": 36000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V40",
+      "acPowerW": 40000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V50",
+      "acPowerW": 50000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V60",
+      "acPowerW": 60000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "V75",
+      "acPowerW": 75000,
+      "acceptedUntil": "2031-04-16"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R75",
+      "acPowerW": 75000,
+      "acceptedUntil": "2027-11-24"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R100",
+      "acPowerW": 100000,
+      "acceptedUntil": "2027-11-24"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R110F",
+      "acPowerW": 110000,
+      "acceptedUntil": "2027-11-24"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R75-G2",
+      "acPowerW": 75000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R80-G2",
+      "acPowerW": 80000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R100-G2",
+      "acPowerW": 100000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R110-G2",
+      "acPowerW": 110000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R125-G2",
+      "acPowerW": 125000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "FOXESS",
+      "brand": "FOXESS",
+      "model": "R136-G2",
+      "acPowerW": 136000,
+      "acceptedUntil": "2029-03-27"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW700-XS-30",
+      "acPowerW": 700,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW1000-XS-30",
+      "acPowerW": 1000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW1500-XS-30",
+      "acPowerW": 1500,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW2000-XS-30",
+      "acPowerW": 2000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW2500-XS-30",
+      "acPowerW": 2500,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW3000-XS-30",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW3300-XS-30",
+      "acPowerW": 3300,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW4200-DNS-30",
+      "acPowerW": 4200,
+      "acceptedUntil": "2027-03-07"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW5000-DNS-30",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-03-07"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW6000-DNS-30",
+      "acPowerW": 6000,
+      "acceptedUntil": "2028-07-11"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW8000-SDT-30",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW10K-SDT-30",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW12K-SDT-30",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW20K-SDT-30",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW25K-SDT-C30",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW30K-SDT-C30",
+      "acPowerW": 30000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW3K-DNS-G40",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-03-12"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW3.6K-DNS-G40",
+      "acPowerW": 3600,
+      "acceptedUntil": "2030-03-12"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW4.2K-DNS-G40",
+      "acPowerW": 4200,
+      "acceptedUntil": "2030-03-12"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW5K-DNS-G40",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-03-12"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW6K-DNS-G40",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-03-12"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW15K-SDT-30",
+      "acPowerW": 15000,
+      "acceptedUntil": "2028-09-28"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW17K-SDT-30",
+      "acPowerW": 17000,
+      "acceptedUntil": "2028-09-28"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW25K-SDT-30",
+      "acPowerW": 25000,
+      "acceptedUntil": "2029-11-14"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW30K-SDT-30",
+      "acPowerW": 25000,
+      "acceptedUntil": "2029-11-14"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW50K-SDT-C30",
+      "acPowerW": 50000,
+      "acceptedUntil": "2030-04-17"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW50KS-MT",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-03-22"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW60KS-MT",
+      "acPowerW": 60000,
+      "acceptedUntil": "2027-03-22"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW80K-SMT",
+      "acPowerW": 80000,
+      "acceptedUntil": "2030-04-03"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW100K-GT",
+      "acPowerW": 100000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW110K-GT",
+      "acPowerW": 110000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GOODWE",
+      "brand": "GOODWE",
+      "model": "GW125K-GT",
+      "acPowerW": 125000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIC 1500TL-X2",
+      "acPowerW": 1500,
+      "acceptedUntil": "2028-04-04"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIC 2000TL-X2",
+      "acPowerW": 2000,
+      "acceptedUntil": "2028-04-04"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIC 2500TL-X2",
+      "acPowerW": 2500,
+      "acceptedUntil": "2028-04-04"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIC 3000TL-X2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-04-04"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIC 3300TL-X2",
+      "acPowerW": 3300,
+      "acceptedUntil": "2028-04-04"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 2500TL-X2",
+      "acPowerW": 2500,
+      "acceptedUntil": "2028-07-24"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 3000TL-X2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-07-24"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 3600 TL-X2",
+      "acPowerW": 3600,
+      "acceptedUntil": "2028-07-24"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 4200TL-X2",
+      "acPowerW": 4200,
+      "acceptedUntil": "2028-07-24"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 4600TL-X2",
+      "acPowerW": 4600,
+      "acceptedUntil": "2028-07-24"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 5000TL-X2",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-05-17"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MIN 6000TL-X2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-05-17"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MID 17KTL3-X2",
+      "acPowerW": 17000,
+      "acceptedUntil": "2028-03-06"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MID 20KTL3-X2",
+      "acPowerW": 20000,
+      "acceptedUntil": "2028-03-06"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MID 25KTL3-X2",
+      "acPowerW": 25000,
+      "acceptedUntil": "2028-03-06"
+    },
+    {
+      "manufacturer": "GROWATT",
+      "brand": "GROWATT",
+      "model": "MID 30KTL3-X2",
+      "acPowerW": 30000,
+      "acceptedUntil": "2028-03-06"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "KOPP",
+      "model": "KOPP Kuara 5.0-2-S",
+      "acPowerW": 5000,
+      "acceptedUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "KOPP",
+      "model": "KOPP Kuara 8.0-2-T",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-05-27"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "KOPP",
+      "model": "KOPP Kuara 10.0-2-T",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-05-27"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "KOPP",
+      "model": "KOPP Kuara 15.0-2-T",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-05-27"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-12KTL-M5",
+      "acPowerW": 12000,
+      "acceptedUntil": "2028-05-11"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-15KTL-M5",
+      "acPowerW": 15000,
+      "acceptedUntil": "2028-05-11"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-17KTL-M5",
+      "acPowerW": 17000,
+      "acceptedUntil": "2028-05-11"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-20KTL-M5",
+      "acPowerW": 20000,
+      "acceptedUntil": "2028-05-11"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-25KTL-M5",
+      "acPowerW": 25000,
+      "acceptedUntil": "2028-05-11"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-30K-MC0",
+      "acPowerW": 30000,
+      "acceptedUntil": "2030-07-29"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-40KL-MC0",
+      "acPowerW": 40000,
+      "acceptedUntil": "2030-07-29"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-50K-MC0",
+      "acPowerW": 50000,
+      "acceptedUntil": "2030-07-29"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-50KTL-M3",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-08-29"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-100KTL-M2",
+      "acPowerW": 100000,
+      "acceptedUntil": "2027-11-04"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-115KTL-M2",
+      "acPowerW": 115000,
+      "acceptedUntil": "2027-11-04"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN2000-150K-MG0",
+      "acPowerW": 150000,
+      "acceptedUntil": "2029-05-13"
+    },
+    {
+      "manufacturer": "HUAWEI",
+      "brand": "HUAWEI",
+      "model": "SUN5000-150K-MG0",
+      "acPowerW": 150000,
+      "acceptedUntil": "2029-05-13"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSSP3K-G01",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSSP4K-G01",
+      "acPowerW": 4000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSSP5K-G01",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSSP6K-G01",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 8KTL",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 10KTL",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 12KTL",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 15KTL",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 17KTL",
+      "acPowerW": 17000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 20KTL",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 22KTL",
+      "acPowerW": 22000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 25KTL",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 30KTL",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HopeSun 33KTL",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV36K-G01",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV40K-G01",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV50K-G01",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV60K-G01",
+      "acPowerW": 60000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV70K-G01",
+      "acPowerW": 70000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV75K-G01",
+      "acPowerW": 75000,
+      "acceptedUntil": "2027-12-31"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV100K-G01",
+      "acPowerW": 100000,
+      "acceptedUntil": "2028-09-26"
+    },
+    {
+      "manufacturer": "HOPEWIND",
+      "brand": "HOPEWIND",
+      "model": "HSNV110K-G01",
+      "acPowerW": 110000,
+      "acceptedUntil": "2028-11-10"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPK-2000",
+      "acPowerW": 2000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPK-2500",
+      "acPowerW": 2500,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPK-3000",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-3000P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-3680",
+      "acPowerW": 3680,
+      "acceptedUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-3680P",
+      "acPowerW": 3680,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-4000",
+      "acPowerW": 4000,
+      "acceptedUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-4000P",
+      "acPowerW": 4000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-4600P",
+      "acPowerW": 4600,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-5000",
+      "acPowerW": 5000,
+      "acceptedUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-5000P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-6000",
+      "acPowerW": 6000,
+      "acceptedUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPS-6000P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-07-29"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-3000P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-4000P",
+      "acPowerW": 4000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-5000P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-6000P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-8000P",
+      "acPowerW": 8000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-10000P",
+      "acPowerW": 10000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-12000P",
+      "acPowerW": 12000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "HYPONTECH",
+      "brand": "HYPONTECH",
+      "model": "HPT-15000P",
+      "acPowerW": 15000,
+      "acceptedUntil": "2029-01-22"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P5K",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P6K",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P8K",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P10K",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P12K",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P15K",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P17K",
+      "acPowerW": 17000,
+      "acceptedUntil": "2030-08-01"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GR3P20K",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-08-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC25K",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-09-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC30K",
+      "acPowerW": 30000,
+      "acceptedUntil": "2026-09-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC33K",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-04-15"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC36K",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-04-15"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC40K",
+      "acPowerW": 40000,
+      "acceptedUntil": "2026-09-18"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC50K",
+      "acPowerW": 50000,
+      "acceptedUntil": "2026-10-26"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S5-GC60K",
+      "acPowerW": 60000,
+      "acceptedUntil": "2026-10-26"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "Solis-80K-5G-PRO",
+      "acPowerW": 80000,
+      "acceptedUntil": "2028-01-05"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "Solis-100K-5G-PRO",
+      "acPowerW": 100000,
+      "acceptedUntil": "2028-01-05"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "Solis-110K-5G-PRO",
+      "acPowerW": 110000,
+      "acceptedUntil": "2028-01-05"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P2K-M",
+      "acPowerW": 2000,
+      "acceptedUntil": "2027-04-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P2.5K-M",
+      "acPowerW": 2500,
+      "acceptedUntil": "2027-04-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P3K-M",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-04-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P3.6K-M",
+      "acPowerW": 3600,
+      "acceptedUntil": "2027-04-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P2.5K-S",
+      "acPowerW": 2500,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P3K-S",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P3.6K-S",
+      "acPowerW": 3600,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P4K-S",
+      "acPowerW": 4000,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P4.6K-S",
+      "acPowerW": 4600,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P5K-S",
+      "acPowerW": 5000,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GR1P6K-S",
+      "acPowerW": 6000,
+      "acceptedUntil": "2028-04-06"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GC100K",
+      "acPowerW": 100000,
+      "acceptedUntil": "2029-05-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GC110K",
+      "acPowerW": 110000,
+      "acceptedUntil": "2029-05-11"
+    },
+    {
+      "manufacturer": "Ningbo Ginlong Technologies SOLIS",
+      "brand": "SOLIS",
+      "model": "S6-GC125K",
+      "acPowerW": 125000,
+      "acceptedUntil": "2029-05-11"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-1K1",
+      "acPowerW": 1100,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-1K6",
+      "acPowerW": 1600,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-2K2",
+      "acPowerW": 2200,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-2K5",
+      "acPowerW": 2500,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-2K7",
+      "acPowerW": 2700,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-3K",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-3K3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-3.68K",
+      "acPowerW": 3680,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-4K",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-5K",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-5K-A",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R1-6K",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-4K-DT",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-5K-DT",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-6K-DT",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-8K-DT",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-10K-DT",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-12K-DT",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-15K-DT",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-15K",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-17K",
+      "acPowerW": 17000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-20K",
+      "acPowerW": 20000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-25K",
+      "acPowerW": 25000,
+      "acceptedUntil": "2026-12-31"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-30K-G5",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-02-28"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-33K-G5",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-02-28"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-36K-G5",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-02-28"
+    },
+    {
+      "manufacturer": "RENAC",
+      "brand": "RENAC",
+      "model": "R3-40K-G5",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-G 3000S-M1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-01-24"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-G 3000S-G2-M1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-11-30"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-G 3000D-M1",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-01-24"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-G 4000D-M1",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-01-24"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-G 5000D-M1",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-01-24"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-5KT-M1",
+      "acPowerW": 5000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-6KT-M1",
+      "acPowerW": 6000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-8KT-M1",
+      "acPowerW": 8000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-10KT-M1",
+      "acPowerW": 10000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-12KT-M1",
+      "acPowerW": 12000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-15KT-M1",
+      "acPowerW": 15000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-20KT-M1",
+      "acPowerW": 20000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "BluE-25KT-M1",
+      "acPowerW": 25000,
+      "acceptedUntil": "2028-12-31"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "G50KT",
+      "acPowerW": 50000,
+      "acceptedUntil": "2028-03-09"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "G60KT",
+      "acPowerW": 60000,
+      "acceptedUntil": "2028-03-09"
+    },
+    {
+      "manufacturer": "SHENZHEN KSTAR NEW ENERGY",
+      "brand": "KSTAR",
+      "model": "G80KT",
+      "acPowerW": 80000,
+      "acceptedUntil": "2028-03-09"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 2KTL-S1/G3",
+      "acPowerW": 2000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 3KTL-S1/G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 3K6TL-S1/G3",
+      "acPowerW": 3600,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 4KTL-S1/G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 3K6TL-D1/G3",
+      "acPowerW": 3600,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 4KTL-D1/G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 4K6TL-D1/G3",
+      "acPowerW": 4600,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 5KTL-D1/G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 5KTL-S1/G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-03-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 5K5TL-S1/G3",
+      "acPowerW": 5500,
+      "acceptedUntil": "2030-03-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 6KTL-S1/G3",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-03-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE 6KTL-D1/G3",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-02-28"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE2KTL-S1/G2P",
+      "acPowerW": 2000,
+      "acceptedUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE3KTL-S1/G2P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE4KTL-D1/G2P",
+      "acPowerW": 4000,
+      "acceptedUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE5KTL-D1/G2P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE6KTL-D1/G2P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE6KTL-D3/G2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE8KTL-D3/G2",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE10KTL-D3/G2",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE10KTL-D3/G2P",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE12KTL-D3/G2",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE15KTL-D3/G2",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE15KTL-D3/G2P",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE20KTL-D3/G2",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE25KTL-D3/G2",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SHENZHEN SENERGY TECHNOLOGY",
+      "brand": "SENERGY",
+      "model": "SE30KTL-D3/G2",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-08-11"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN3.0PT",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN4.0PT",
+      "acPowerW": 4000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN5.0PT",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN6.0PT",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN8.0PT",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN10PT",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN12PT",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN12PT-X",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-12-02"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN15PT",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-12-02"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN17PT",
+      "acPowerW": 17000,
+      "acceptedUntil": "2027-12-02"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN50PT",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN60PT",
+      "acPowerW": 60000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN20PT",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-12-02"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN25PT",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-12-02"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN25PT-X",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN30PT",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN36PT",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN40PT",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN100PT",
+      "acPowerW": 100000,
+      "acceptedUntil": "2029-01-10"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN110PT",
+      "acPowerW": 110000,
+      "acceptedUntil": "2029-01-10"
+    },
+    {
+      "manufacturer": "SINENG",
+      "brand": "SINENG",
+      "model": "SN125PT",
+      "acPowerW": 125000,
+      "acceptedUntil": "2029-01-10"
+    },
+    {
+      "manufacturer": "SMA SOLAR",
+      "brand": "SMA",
+      "model": "STP 12-50",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "SMA SOLAR",
+      "brand": "SMA",
+      "model": "STP 15-50",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "SMA SOLAR",
+      "brand": "SMA",
+      "model": "STP 20-50",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "SMA SOLAR",
+      "brand": "SMA",
+      "model": "STP 25-50",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1100TL-G3",
+      "acPowerW": 1100,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1600TL-G3",
+      "acPowerW": 1600,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2200TL-G3",
+      "acPowerW": 2200,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2700TL-G3",
+      "acPowerW": 2700,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3000TL-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3300TL-G3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1.1KTL2-G3",
+      "acPowerW": 1100,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1.1KTL3-G3",
+      "acPowerW": 1100,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1.6KTL2-G3",
+      "acPowerW": 1600,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 1.6KTL3-G3",
+      "acPowerW": 1600,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2.2KTL2-G3",
+      "acPowerW": 2200,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2.2KTL3-G3",
+      "acPowerW": 2200,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2.7KTL2-G3",
+      "acPowerW": 2700,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 2.7KTL3-G3",
+      "acPowerW": 2700,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3KTL2-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3KTL3-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3.3KTL2-G3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3.3KTL3-G3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 4KTL2-G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2028-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 4KTL3-G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 5KTL3-G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-06-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3KTLM-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-01-15"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3.6KTLM-G3",
+      "acPowerW": 3680,
+      "acceptedUntil": "2030-01-15"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 4KTLM-G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-01-15"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 4.6KTLM-G3",
+      "acPowerW": 4600,
+      "acceptedUntil": "2030-01-15"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 5KTLM-G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2031-01-27"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 5KTLM-G3-A",
+      "acPowerW": 5000,
+      "acceptedUntil": "2031-01-27"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 6KTLM-G3",
+      "acPowerW": 6000,
+      "acceptedUntil": "2031-01-27"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 3.3KTLX-G3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 4.4KTLX-G3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 5.5KTLX-G3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 6.6KTLX-G3",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 8.8KTLX-G3",
+      "acPowerW": 8000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 10KTLX-G3-A",
+      "acPowerW": 10000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 11KTLX-G3",
+      "acPowerW": 10000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 12KTLX-G3",
+      "acPowerW": 12000,
+      "acceptedUntil": "2030-12-25"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 15KTLX-G3",
+      "acPowerW": 15000,
+      "acceptedUntil": "2028-12-14"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 17KTLX-G3",
+      "acPowerW": 17000,
+      "acceptedUntil": "2028-12-14"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 20KTLX-G3",
+      "acPowerW": 20000,
+      "acceptedUntil": "2028-12-14"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 22KTLX-G3",
+      "acPowerW": 22000,
+      "acceptedUntil": "2028-12-14"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 24KTLX-G3",
+      "acPowerW": 24000,
+      "acceptedUntil": "2028-12-14"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 25KTLX-G3",
+      "acPowerW": 25000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 30KTLX-G3",
+      "acPowerW": 30000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 33KTLX-G3",
+      "acPowerW": 33000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 36KTLX-G3",
+      "acPowerW": 36000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 40KTLX-G3",
+      "acPowerW": 40000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 45KTLX-G3",
+      "acPowerW": 45000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 50KTLX-G3",
+      "acPowerW": 50000,
+      "acceptedUntil": "2029-09-12"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 60KTLX-G3",
+      "acPowerW": 60000,
+      "acceptedUntil": "2028-05-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 80KTLX-G3",
+      "acPowerW": 80000,
+      "acceptedUntil": "2028-05-19"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 100KTLX-G4",
+      "acPowerW": 100000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 110KTLX-G4",
+      "acPowerW": 100000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SOFAR SOLAR",
+      "brand": "SOFAR",
+      "model": "SOFAR 125KTLX-G4",
+      "acPowerW": 110000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-0.6K-G4",
+      "acPowerW": 600,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-0.7K-G4",
+      "acPowerW": 700,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-1.1K-G4",
+      "acPowerW": 1100,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-1.5K-G4",
+      "acPowerW": 1500,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-2.0K-G4",
+      "acPowerW": 2000,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-2.5K-G4",
+      "acPowerW": 2500,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-3.0K-G4",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-3.3K-G4",
+      "acPowerW": 3300,
+      "acceptedUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-5K-G4-P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-11-14"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-MINI-6K-G4-P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-11-14"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-2.5K-G4",
+      "acPowerW": 2500,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-3K-G4",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-3.3K-G4",
+      "acPowerW": 3300,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-3.6K-G4",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-4.2K-G4",
+      "acPowerW": 4200,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-5K-G4",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X1-BOOST-6K-G4",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-3K-G2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-4K-G2",
+      "acPowerW": 4000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-5K-G2",
+      "acPowerW": 5000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-6K-G2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-8K-G2",
+      "acPowerW": 8000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-10K-G2",
+      "acPowerW": 10000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-12K-G2",
+      "acPowerW": 12000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MIC-15K-G2",
+      "acPowerW": 15000,
+      "acceptedUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-8K-G2",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-10K-G2",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-12K-G2",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-15K-G2",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-17K-G2",
+      "acPowerW": 17000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-20K-G2",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-25K-G2",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-PRO-30K-G2",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MGA-40K-G2",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-04-08"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MGA-50K-G2",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-04-08"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-MGA-60K-G2",
+      "acPowerW": 60000,
+      "acceptedUntil": "2027-04-08"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-FTH-80K",
+      "acPowerW": 80000,
+      "acceptedUntil": "2027-01-12"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-FTH-100K",
+      "acPowerW": 100000,
+      "acceptedUntil": "2027-01-12"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-FTH-110K",
+      "acPowerW": 110000,
+      "acceptedUntil": "2027-01-12"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-FTH-120K",
+      "acPowerW": 120000,
+      "acceptedUntil": "2027-01-12"
+    },
+    {
+      "manufacturer": "SOLAX POWER",
+      "brand": "SOLAX",
+      "model": "X3-FTH-125K",
+      "acPowerW": 125000,
+      "acceptedUntil": "2027-01-12"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW1000-S-G2",
+      "acPowerW": 1000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW1500-S-G2",
+      "acPowerW": 1500,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW2000-S-G2",
+      "acPowerW": 2000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW2500-S-G2",
+      "acPowerW": 2500,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW3000-S-G2",
+      "acPowerW": 3000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW3680-S-G2",
+      "acPowerW": 3680,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW4000-S-G2",
+      "acPowerW": 4000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW5000-S-G2",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW6000-S-G2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-11-09"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW3K-LT-G2 Pro",
+      "acPowerW": 3000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW4K-LT-G2 Pro",
+      "acPowerW": 4000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW5K-LT-G2 Pro",
+      "acPowerW": 5000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW6K-LT-G2 Pro",
+      "acPowerW": 6000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW8K-LT-G2 Pro",
+      "acPowerW": 8000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW10K-LT-G2 Pro",
+      "acPowerW": 10000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW12K-LT-G2 Pro",
+      "acPowerW": 12000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW15K-LT-G2 Pro",
+      "acPowerW": 15000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW17K-LT-G2 Pro",
+      "acPowerW": 17000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW20K-LT-G2 Pro",
+      "acPowerW": 20000,
+      "acceptedUntil": "2029-04-10"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW25K-LT-G3",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW27K-LT-G3",
+      "acPowerW": 27000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW30K-LT-G3",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW33K-LT-G3",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW36K-LT-G3",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW40K-LT-G3",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW45K-LT-G3",
+      "acPowerW": 45000,
+      "acceptedUntil": "2028-04-12"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW50K-LT-G3",
+      "acPowerW": 50000,
+      "acceptedUntil": "2028-04-12"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW60K-LT-G3",
+      "acPowerW": 60000,
+      "acceptedUntil": "2028-04-12"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW75K-LT",
+      "acPowerW": 75000,
+      "acceptedUntil": "2027-12-13"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW80K-LT",
+      "acPowerW": 80000,
+      "acceptedUntil": "2027-12-13"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW100K-LT",
+      "acPowerW": 100000,
+      "acceptedUntil": "2027-12-13"
+    },
+    {
+      "manufacturer": "SOLPLANET",
+      "brand": "SOLPLANET",
+      "model": "ASW110K-LT",
+      "acPowerW": 110000,
+      "acceptedUntil": "2027-12-13"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG2.0RS-S",
+      "acPowerW": 2000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG2.5RS-S",
+      "acPowerW": 2500,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG3.0RS-S",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG3.0RS",
+      "acPowerW": 3000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG3.6RS",
+      "acPowerW": 3680,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG4.0RS",
+      "acPowerW": 4000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG5.0RS",
+      "acPowerW": 5000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG6.0RS",
+      "acPowerW": 6000,
+      "acceptedUntil": "2028-07-07"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG5.0RT",
+      "acPowerW": 5000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG6.0RT",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG8.0RT",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG10RT",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG12RT",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG15RT",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG17RT",
+      "acPowerW": 17000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG20RT",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG6.0RT-P2",
+      "acPowerW": 6000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG7.0RT-P2",
+      "acPowerW": 7000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG8.0RT-P2",
+      "acPowerW": 8000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG10RT-P2",
+      "acPowerW": 10000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG12RT-P2",
+      "acPowerW": 12000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG15RT-P2",
+      "acPowerW": 15000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG17RT-P2",
+      "acPowerW": 17000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG20RT-P2",
+      "acPowerW": 20000,
+      "acceptedUntil": "2027-05-17"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG25CX-P2",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG30CX-P2",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG33CX-P2",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG36CX-P2",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG40CX-P2",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG50CX-P2",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-01-10"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG125CX-P2",
+      "acPowerW": 125000,
+      "acceptedUntil": "2028-03-31"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG125CX-P3",
+      "acPowerW": 125000,
+      "acceptedUntil": "2030-06-23"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "SG150CX",
+      "acPowerW": 150000,
+      "acceptedUntil": "2029-09-06"
+    },
+    {
+      "manufacturer": "SUNGROW",
+      "brand": "SUNGROW",
+      "model": "STS-1KTL-S-P",
+      "acPowerW": 1000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-1.5KTL-S-P",
+      "acPowerW": 1500,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-2KTL-S-P",
+      "acPowerW": 2000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-2.5KTL-S-P",
+      "acPowerW": 2500,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-3KTL-S-P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-3KTL-P",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-3.6KTL-P",
+      "acPowerW": 3600,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-4.2KTL-P",
+      "acPowerW": 4200,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-4.6KTL-P",
+      "acPowerW": 4600,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-5KTL-P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-6KTL-P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-12-30"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-3KTL-SE",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-3.6KTL-SE",
+      "acPowerW": 3680,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-4KTL-SE",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-4.6KTL-SE",
+      "acPowerW": 4600,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-5KTL-SE",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STS-6KTL-SE",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-10-23"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-4KTL-P",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-5KTL-P",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-6KTL-P",
+      "acPowerW": 6000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-8KTL-P",
+      "acPowerW": 8000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-10KTL-P",
+      "acPowerW": 10000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-12KTL-P",
+      "acPowerW": 12000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-15KTL-P",
+      "acPowerW": 15000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-17KTL-P",
+      "acPowerW": 17000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-20KTL-P",
+      "acPowerW": 20000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-25KTL-P",
+      "acPowerW": 25000,
+      "acceptedUntil": "2030-06-27"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-50KTL-P",
+      "acPowerW": 50000,
+      "acceptedUntil": "2030-12-09"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-60KTL-P",
+      "acPowerW": 60000,
+      "acceptedUntil": "2030-12-09"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-80KTL(1)",
+      "acPowerW": 80000,
+      "acceptedUntil": "2030-12-09"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-100KTL(1)",
+      "acPowerW": 100000,
+      "acceptedUntil": "2030-12-09"
+    },
+    {
+      "manufacturer": "SUNWAYS",
+      "brand": "SUNWAYS",
+      "model": "STT-110KTL (1)",
+      "acPowerW": 110000,
+      "acceptedUntil": "2030-12-09"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 1100TL2-V3",
+      "acPowerW": 1100,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 1600TL2-V3",
+      "acPowerW": 1600,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 2200TL2-V3",
+      "acPowerW": 2200,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 2700TL2-V3",
+      "acPowerW": 2700,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 3000TL2-V3",
+      "acPowerW": 3000,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 3300TL2-V3",
+      "acPowerW": 3300,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 4000TL2-V3",
+      "acPowerW": 4000,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "1PH 5000TL2-V3",
+      "acPowerW": 5000,
+      "acceptedUntil": "2030-08-22"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 25KTL-V3",
+      "acPowerW": 25000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 30KTL-V3",
+      "acPowerW": 30000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 33KTL-V3",
+      "acPowerW": 33000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 36KTL-V3",
+      "acPowerW": 36000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 40KTL-V3",
+      "acPowerW": 40000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 45KTL-V3",
+      "acPowerW": 45000,
+      "acceptedUntil": "2027-08-03"
+    },
+    {
+      "manufacturer": "ZCS AZZURRO",
+      "brand": "ZCS Azzurro",
+      "model": "3PH 50KTL-V3",
+      "acPowerW": 50000,
+      "acceptedUntil": "2027-08-03"
+    }
+  ],
+  "unparsedLines": []
+}

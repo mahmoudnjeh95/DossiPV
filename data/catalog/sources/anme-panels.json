@@ -1,0 +1,3736 @@
+{
+  "sourceUrl": "https://www.anme.tn/sites/default/files/2026-07/liste-des-panneaux-acceptes-par-anme-en-date-de-24072026-1.pdf",
+  "fetchedAt": "2026-10-21T09:01:37.450Z",
+  "listings": [
+    {
+      "manufacturer": "AEG SOLAR ENERGY S.R.L.",
+      "brand": "AEG SOLAR ENERGY S.R.L.",
+      "country": "Roumanie",
+      "model": "ALPS72D30-590/TP",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 129618 0001 Rev. 04",
+      "validUntil": "2028-05-21"
+    },
+    {
+      "manufacturer": "ALPHANIS.S.A.",
+      "brand": "Alphanis",
+      "country": "Tunisie",
+      "model": "Alpha-N-535 E P",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 125870 0003 Rev. 00",
+      "validUntil": "2028-05-04"
+    },
+    {
+      "manufacturer": "ALPHANIS.S.A.",
+      "brand": "Alphanis",
+      "country": "Tunisie",
+      "model": "Alpha-B-500",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 125870 0002 Rev. 00",
+      "validUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE450MC-144",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50536079 0002",
+      "validUntil": "2027-03-20"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE505MD-132",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50536079 0001",
+      "validUntil": "2027-08-15"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE550MD-144",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50536079 0001",
+      "validUntil": "2027-03-20"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE580CMD-144BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2028-04-10"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE650ME-132BD",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50552776 0001",
+      "validUntil": "2027-07-31"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE660ME-132",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50536079 0010",
+      "validUntil": "2027-03-20"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE725CME-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50552776",
+      "validUntil": "2027-01-28"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE630CMER-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2028-01-26"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE510CMER-108BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2027-09-17"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE585CMD-144BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2028-01-29"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE705CME-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50552776",
+      "validUntil": "2027-01-28"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE715CME-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50552776",
+      "validUntil": "2027-01-28"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE590CMD-144BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2028-01-26"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE570CMD-144",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50536079",
+      "validUntil": "2027-02-05"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE700CMER-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2028-02-11"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE720CME-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50552776",
+      "validUntil": "2027-01-28"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE650ICME-132BDS",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 080308 0011 Rev. 00",
+      "validUntil": "2027-12-08"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE620CMER-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50671350 0001",
+      "validUntil": "2027-10-27"
+    },
+    {
+      "manufacturer": "ALTERNATIVE ENERGY (AE) SOLAR CO.,LTD",
+      "brand": "AE Solar",
+      "country": "Chine",
+      "model": "AE710CME-132BDS",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50552776",
+      "validUntil": "2027-01-28"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-210-B132DS720",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0001 REV.15",
+      "validUntil": "2026-10-30"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HSN-210-B132DS685",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 09",
+      "validUntil": "2028-03-07"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-210-B132DS725",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0001 REV.15",
+      "validUntil": "2026-10-30"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-182-B144DS570",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev.03",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-210R-B132DS600",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev.03",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-B120DSN390",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0001 Rev.18",
+      "validUntil": "2028-03-19"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-B144DS450",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0001 Rev.18",
+      "validUntil": "2028-03-19"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HSN-210-B132DS700",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 07",
+      "validUntil": "2027-09-06"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-182-B144DS590",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 07",
+      "validUntil": "2027-04-28"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HSN-210-B132DS720",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 09",
+      "validUntil": "2028-04-30"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HS-210-B132DS700",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 08",
+      "validUntil": "2027-09-12"
+    },
+    {
+      "manufacturer": "Anhui Huasun Energy Co.,Ltd",
+      "brand": "Huasun",
+      "country": "Chine",
+      "model": "HSN-210R-B132DS600",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 110450 0032 Rev. 08",
+      "validUntil": "2027-10-17"
+    },
+    {
+      "manufacturer": "BLUESUN SOLAR ENERGY TECH.CO.,LTD",
+      "brand": "BLUESUN SOLAR ENERGY TECH.CO.,LTD",
+      "country": "Chine",
+      "model": "BSM720G12-66HNH",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-220",
+      "validUntil": "2027-06-16"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-710TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2028-04-21"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.1-72TD-605",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-05-07"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS3K-305P",
+      "certificationBody": "VDE",
+      "certificateReference": "40045991",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS3W-455MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40045991",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.1-60TB-500",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2026-10-02"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-545MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2027-01-14"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-550MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2027-01-14"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-555MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2027-01-14"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-575T",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-580T",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-585T",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2028-02-06"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-590T",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2028-02-06"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7L-605MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40045991",
+      "validUntil": "2028-05-13"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-650MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40045991",
+      "validUntil": "2026-08-23"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-660MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40045991",
+      "validUntil": "2026-08-23"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-670MS",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2027-11-25"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-715TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2028-02-13"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-580TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-09-25"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.2-48TD-445",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-11-07"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.2-48TD-450",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-11-26"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-705TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2028-04-21"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS7N-700TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-12-05"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.2-66TB-615",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2028-04-21"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6W-585TB-AG",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-12-05"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.2-48TD-455",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2027-11-07"
+    },
+    {
+      "manufacturer": "Canadian Solar Inc.",
+      "brand": "Canadian Solar",
+      "country": "Chine",
+      "model": "CS6.2-66TB-625",
+      "certificationBody": "VDE",
+      "certificateReference": "40057571",
+      "validUntil": "2028-03-24"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66N(DG)/F-BH-700",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50625618",
+      "validUntil": "2027-03-24"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66N(DG)/F-BH-715",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50625618 0005",
+      "validUntil": "2028-02-27"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66RN(DG)/F-BH - 620",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50625618 0004",
+      "validUntil": "2027-06-27"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66RN(DG)/F-BH-625",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50625618 0005",
+      "validUntil": "2027-06-20"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM72N(DG)/F-BH-585",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 5054222",
+      "validUntil": "2026-10-31"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66RN(DG)/F-BH-600Wc",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50542224",
+      "validUntil": "2027-03-10"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM60N(DG)/F-HC-475",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50542224",
+      "validUntil": "2026-09-18"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66RN(DG)/F-BH-610",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50542224",
+      "validUntil": "2026-09-12"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66RN(DG)/F-BH-615",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50542224",
+      "validUntil": "2026-09-12"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM72N(DG)/F-HC-585",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50542224",
+      "validUntil": "2026-09-12"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM78N(DG)/F-BH-630",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50542224",
+      "validUntil": "2026-09-12"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM72N(DG)/F-BH-595",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50625618 0001",
+      "validUntil": "2028-02-27"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66N(DG)/F-BH-710",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50625618 0005",
+      "validUntil": "2028-02-19"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM72N(DG)/F-BH-570",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50625618",
+      "validUntil": "2027-03-24"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM66N(DG)/F-BH-635",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50625618 0010",
+      "validUntil": "2028-05-07"
+    },
+    {
+      "manufacturer": "Chint New Energy Technology Co.,Ltd.",
+      "brand": "Astronergy",
+      "country": "Chine",
+      "model": "CHSM72N(DG)/F-BH - 590",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV50625618 0001",
+      "validUntil": "2027-09-29"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M10M-108-HC-415W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M10M-120-HC-450W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M6M-144-HC-450W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-G1P-60-275W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M10M-132-HC-505W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M6M-108-HC-340W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21296100001 Rev.00",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "COALA SOLAR POWER SARL",
+      "brand": "COALA SOLAR POWER SARL",
+      "country": "Tunisie",
+      "model": "CSP-M10N144N-HC-585",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50708964 0001",
+      "validUntil": "2027-08-17"
+    },
+    {
+      "manufacturer": "CSI SOLAR CO.,LTD.",
+      "brand": "CSI SOLAR CO.,LTD.",
+      "country": "Chine",
+      "model": "CS6R-440T",
+      "certificationBody": "VDE",
+      "certificateReference": "40057572",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "DAH Solar Co.,Ltd.",
+      "brand": "DAH Solar",
+      "country": "Chine",
+      "model": "DHN-72X16/DG-585W",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-165R1M1",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "ECO GREEN ENERGY TECH LIMITED",
+      "brand": "ECO GREEN ENERGY TECH LIMITED",
+      "country": "Chine",
+      "model": "EGE-500W-132M(M10)",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099237 0010 Rev. 07",
+      "validUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "ECO GREEN ENERGY TECH LIMITED",
+      "brand": "ECO GREEN ENERGY TECH LIMITED",
+      "country": "Chine",
+      "model": "EGE-615W-156N(GM10)",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099237 0020 Rev.01",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "ECO GREEN ENERGY TECH LIMITED",
+      "brand": "ECO GREEN ENERGY TECH LIMITED",
+      "country": "Chine",
+      "model": "EGE-500W-108N(GM10R)",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z20992370020Rev.02",
+      "validUntil": "2027-08-12"
+    },
+    {
+      "manufacturer": "ECO GREEN ENERGY TECH LIMITED",
+      "brand": "ECO GREEN ENERGY TECH LIMITED",
+      "country": "Chine",
+      "model": "EGE-500W-108N(M10R)",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z20992370021 REV.01",
+      "validUntil": "2027-08-29"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU 590 MV Silk Nova Duetto",
+      "certificationBody": "VDE",
+      "certificateReference": "40055949",
+      "validUntil": "2027-07-29"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU460M Silk Nova",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-131731 REV.5",
+      "validUntil": "2028-05-15"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU400M SILK PLUS",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-119720 REV.5",
+      "validUntil": "2026-09-25"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU450M Silk Pro",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-119720 REV.5",
+      "validUntil": "2028-05-20"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU500M Silk Premium",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-119720 REV.5",
+      "validUntil": "2028-05-20"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU550M Silk Plus",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-119720 REV.5",
+      "validUntil": "2028-05-20"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU625M Silk Nova Duetto",
+      "certificationBody": "VDE",
+      "certificateReference": "40059372",
+      "validUntil": "2027-08-23"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU575MV Silk Nova Duetto",
+      "certificationBody": "VDE",
+      "certificateReference": "40059372",
+      "validUntil": "2027-09-30"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU370M Silk Nova Red",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-131731 REV.3",
+      "validUntil": "2027-01-29"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU590MV Silk Nova",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-131731 REV.4",
+      "validUntil": "2027-08-23"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU570MV Silk Nova",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-131731 REV.3",
+      "validUntil": "2026-12-20"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU380M Silk Nova Orange",
+      "certificationBody": "DEKRA",
+      "certificateReference": "31-131731 REV.3",
+      "validUntil": "2027-01-29"
+    },
+    {
+      "manufacturer": "FuturaSun srl",
+      "brand": "FuturaSun srl",
+      "country": "Chine",
+      "model": "FU570MV Silk Nova Duetto",
+      "certificationBody": "VDE",
+      "certificateReference": "40059372",
+      "validUntil": "2027-09-03"
+    },
+    {
+      "manufacturer": "GCL System Integration Technology Co., Ltd.",
+      "brand": "GCL System Integration Technology Co., Ltd.",
+      "country": "Chine",
+      "model": "GCL-NT12R/66GDF620",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50603078 0003",
+      "validUntil": "2028-03-16"
+    },
+    {
+      "manufacturer": "GCL System Integration Technology Co., Ltd.",
+      "brand": "GCL System Integration Technology Co., Ltd.",
+      "country": "Chine",
+      "model": "GCL-M12/66GDF660",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 093675 0040 Rev .10",
+      "validUntil": "2027-09-15"
+    },
+    {
+      "manufacturer": "Gokin Solar Co., Ltd.",
+      "brand": "Gokin Solar Co., Ltd.",
+      "country": "Chine",
+      "model": "GK-2-66HTBD-715M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 122205 0018 Rev . 04",
+      "validUntil": "2028-02-13"
+    },
+    {
+      "manufacturer": "Gokin Solar Co., Ltd.",
+      "brand": "Gokin Solar Co., Ltd.",
+      "country": "Chine",
+      "model": "GK-3-72HGBD-635M",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50665885 0002",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT515W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT595W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT505W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT500W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT600W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 06",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT510W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-66HT620W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-03-03"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT590W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 06",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT520W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN21RN-54HT525W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 05",
+      "validUntil": "2028-02-14"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT580W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 06",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT575W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 06",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "HANERSUN Energy Co.,Ltd",
+      "brand": "HANERSUN Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HN18N-72HT585W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 119897 0003 Rev. 06",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "Heinrich Kopp GmbH",
+      "country": "Chine",
+      "model": "Kopp-J2.DB4-HZ-440Wp-sw",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 011102 0507 Rev. 01",
+      "validUntil": "2026-12-09"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "Heinrich Kopp GmbH",
+      "country": "Chine",
+      "model": "KOPP-J1.DB3.HZ-545Wp",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 011102 0507 Rev. 02",
+      "validUntil": "2027-11-12"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "Heinrich Kopp GmbH",
+      "country": "Chine",
+      "model": "KOPP-J1.DB3.HZ-405Wp",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 011102 0507 Rev. 02",
+      "validUntil": "2027-11-12"
+    },
+    {
+      "manufacturer": "Heinrich Kopp GmbH",
+      "brand": "Heinrich Kopp GmbH",
+      "country": "Chine",
+      "model": "Kopp-UH108-430/N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478023406749-102M1",
+      "validUntil": "2027-03-18"
+    },
+    {
+      "manufacturer": "Hengdian Group DMEGC Maghnetics Co.,Ltd",
+      "brand": "Hengdian Group DMEGC Maghnetics Co.,Ltd",
+      "country": "Chine",
+      "model": "DM445M10RT-B54HBW",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50582887",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "Hengdian Group DMEGC Maghnetics Co.,Ltd",
+      "brand": "Hengdian Group DMEGC Maghnetics Co.,Ltd",
+      "country": "Chine",
+      "model": "DM450M10RT-B54HBW",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50582887",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "brand": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "country": "Chine",
+      "model": "DM580M10T-B72HSW",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50603275 0001",
+      "validUntil": "2027-12-05"
+    },
+    {
+      "manufacturer": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "brand": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "country": "Chine",
+      "model": "DM635G12RT-B66HSW",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50603275 0005",
+      "validUntil": "2027-12-05"
+    },
+    {
+      "manufacturer": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "brand": "Hengdian Group DMEGC Magnetics Co., Ltd.",
+      "country": "Chine",
+      "model": "DM500M10RT-B60HSW",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50603275 0008",
+      "validUntil": "2027-11-26"
+    },
+    {
+      "manufacturer": "Hestia Solar Energy Co.,Ltd",
+      "brand": "Hestia Solar Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HTS-144M10H550",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118926 0001 Rev.01",
+      "validUntil": "2027-09-02"
+    },
+    {
+      "manufacturer": "Hestia Solar Energy Co.,Ltd",
+      "brand": "Hestia Solar Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "HTS-132M10H-500",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118926 0001 Rev.01",
+      "validUntil": "2027-09-01"
+    },
+    {
+      "manufacturer": "HISEM NEW ENERGY CO., LTD.",
+      "brand": "HISEM NEW ENERGY CO., LTD.",
+      "country": "Chine",
+      "model": "HS-M10N-72/2HP 600W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 075999 0008 Rev. 01",
+      "validUntil": "2028-06-12"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM410-80",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM415-108",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM465-120",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM505-132",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-11"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM510-132",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM555-108",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-06"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM615-120",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-11"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM675-132",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-11-11"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM565-110",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-07-17"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM510-100",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-09-22"
+    },
+    {
+      "manufacturer": "IFRI-SOL",
+      "brand": "IFRI-SOL",
+      "country": "Tunisie",
+      "model": "IF-HTM460-90",
+      "certificationBody": "UL Solutions",
+      "certificateReference": "US-43020-UL",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "JA Solar Technology Co., Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D46-720/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 114228 0003 Rev. 30",
+      "validUntil": "2028-04-30"
+    },
+    {
+      "manufacturer": "JA Solar Technology Co., Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D40-585/MB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 114228 0003 Rev. 30",
+      "validUntil": "2028-02-19"
+    },
+    {
+      "manufacturer": "Jiangsu Eco Green Energy Co.,Ltd",
+      "brand": "Jiangsu Eco Green Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "EGE-450W-144M(M6)",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099237 0010 Rev.06",
+      "validUntil": "2026-08-16"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM715N-66HL5-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 22",
+      "validUntil": "2028-03-10"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM635N-78HL4-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 15",
+      "validUntil": "2027-07-10"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM615N-66HL4M-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 11",
+      "validUntil": "2027-03-21"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM425N-54HL4R-V",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50580971",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM615N-66HL4M-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0003 Rev.14",
+      "validUntil": "2026-12-25"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM430N-54HL4R-V",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50580971",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM445N-54HL4R-V",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50580971",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM450N-54HL4R-V",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50580971",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM 645N-66QL6-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 25",
+      "validUntil": "2028-06-29"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM620N-66HL4M-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "No. Z2 118443 0003 Rev. 13",
+      "validUntil": "2026-12-11"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM560M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 08",
+      "validUntil": "2027-03-26"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM620N-66HL4M-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21184430037 REV.13",
+      "validUntil": "2027-06-13"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM425N-54HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 09",
+      "validUntil": "2028-05-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM465M-7RL3-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2118443 0003 Rev. 18",
+      "validUntil": "2027-11-13"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM480N-60HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev.08",
+      "validUntil": "2027-06-04"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM720N-66HL5-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 25",
+      "validUntil": "2028-05-05"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM535M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0003 Rev. 17",
+      "validUntil": "2027-07-29"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM540M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0003 Rev. 17",
+      "validUntil": "2027-07-29"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM545M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 09",
+      "validUntil": "2027-12-03"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM550M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev.08",
+      "validUntil": "2027-06-04"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM555M-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 09",
+      "validUntil": "2028-05-23"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM560N-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 08",
+      "validUntil": "2027-07-29"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM575N-72HL4-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0001 Rev16",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM575N-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 09",
+      "validUntil": "2027-12-03"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM580N-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 09",
+      "validUntil": "2027-09-13"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM585N-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev.09",
+      "validUntil": "2028-06-26"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM595N-72HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 REV05",
+      "validUntil": "2026-10-07"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM610N-66HL4M-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0001 Rev.16",
+      "validUntil": "2026-09-11"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM585N-72HL4-BDV",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0037 Rev. 15",
+      "validUntil": "2027-07-02"
+    },
+    {
+      "manufacturer": "JinKo Solar CO.,Ltd",
+      "brand": "Jinko",
+      "country": "Chine",
+      "model": "JKM485N-60HL4-V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118443 0038 Rev. 08",
+      "validUntil": "2027-04-14"
+    },
+    {
+      "manufacturer": "Jonsol GmbH",
+      "brand": "Jonsol GmbH",
+      "country": "Chine",
+      "model": "JSGM120-500 182N",
+      "certificationBody": "VDE",
+      "certificateReference": "40058618",
+      "validUntil": "2027-06-24"
+    },
+    {
+      "manufacturer": "Jonsol GmbH",
+      "brand": "Jonsol GmbH",
+      "country": "Croatie",
+      "model": "JSM144-550 182",
+      "certificationBody": "VDE",
+      "certificateReference": "40054970",
+      "validUntil": "2028-03-29"
+    },
+    {
+      "manufacturer": "LEDVANCE GmbH",
+      "brand": "LEDVANCE GmbH",
+      "country": "Chine",
+      "model": "M550P72LM-SF/BF-F7",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 23 406749-387",
+      "validUntil": "2026-11-07"
+    },
+    {
+      "manufacturer": "LEDVANCE GmbH",
+      "brand": "LEDVANCE GmbH",
+      "country": "Chine",
+      "model": "M470N60LB-SF/BF-F7",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 23 406749-323R1A1M1",
+      "validUntil": "2026-09-30"
+    },
+    {
+      "manufacturer": "LEDVANCE GmbH",
+      "brand": "LEDVANCE GmbH",
+      "country": "Chine",
+      "model": "M580N72LB-SF/BF-F7",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 23 406749-323R1A1M1",
+      "validUntil": "2026-09-30"
+    },
+    {
+      "manufacturer": "LEDVANCE GmbH",
+      "brand": "LEDVANCE GmbH",
+      "country": "Chine",
+      "model": "M690N66UB-SF",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-469",
+      "validUntil": "2028-02-21"
+    },
+    {
+      "manufacturer": "LEDVANCE GmbH",
+      "brand": "LEDVANCE GmbH",
+      "country": "Chine",
+      "model": "M590N72LB-BF",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-469",
+      "validUntil": "2028-02-21"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVD-645M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 Rev. 10",
+      "validUntil": "2027-07-30"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR8-66HVD-650M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 REV 14",
+      "validUntil": "2028-04-28"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-54HTH-440M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV.03",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HGD-585M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 Rev. 06",
+      "validUntil": "2027-03-29"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HGD-610M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 Rev.10",
+      "validUntil": "2027-08-26"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR8-66HGD-610M",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50602768 0004",
+      "validUntil": "2028-05-01"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVD-650M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 REV. 09",
+      "validUntil": "2027-06-17"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HGD-615M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 REV. 10",
+      "validUntil": "2027-09-22"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR4-72HBD-435M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 Rev. 15",
+      "validUntil": "2028-06-17"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR4-72HBD-440M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev.34",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR4-72HPB-425M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0062 Rev.14",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-54HTH-425M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV 08",
+      "validUntil": "2028-04-10"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HPH-550M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev.32",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HPH-555M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV 08",
+      "validUntil": "2028-04-10"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVH-650M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 Rev. 06",
+      "validUntil": "2027-10-02"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HTH-575M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV 08",
+      "validUntil": "2028-04-09"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HTH-585M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV 08",
+      "validUntil": "2028-04-10"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HTH-630M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev. 35",
+      "validUntil": "2027-06-17"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HTH-605M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev.32",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVH-645M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 REV. 34",
+      "validUntil": "2027-02-07"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVH-635M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev. 34",
+      "validUntil": "2027-03-25"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR8-66HVDF-650M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 REV. 12",
+      "validUntil": "2028-02-04"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HTH-610M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 REV 35",
+      "validUntil": "2027-04-17"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-54HTH-435M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV.03",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HVH-640M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0045 Rev. 34",
+      "validUntil": "2027-03-25"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR7-72HGD-620M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0109 Rev. 06",
+      "validUntil": "2027-03-25"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-72HTHF-575M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "No. Z2 099333 0045 Rev. 34",
+      "validUntil": "2026-11-29"
+    },
+    {
+      "manufacturer": "LONGi Green Energy Technology Co.,Ltd",
+      "brand": "LONGi",
+      "country": "Chine",
+      "model": "LR5-54HTH-430M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 099333 0111 REV.03",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "Luxor Solar GmbH",
+      "brand": "Luxor Solar GmbH",
+      "country": "Allemagne",
+      "model": "LX-500M/182R-108+ GG",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50696509 0002",
+      "validUntil": "2028-06-08"
+    },
+    {
+      "manufacturer": "Luxor Solar GmbH",
+      "brand": "Luxor Solar GmbH",
+      "country": "Allemagne",
+      "model": "LX-545M/182-144+",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 074927 0043 Rev. 00",
+      "validUntil": "2027-10-16"
+    },
+    {
+      "manufacturer": "Luxor Solar GmbH",
+      "brand": "Luxor Solar GmbH",
+      "country": "Allemagne",
+      "model": "LX-550M/182-144+",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 074927 0043 Rev. 00",
+      "validUntil": "2027-10-16"
+    },
+    {
+      "manufacturer": "Luxor Solar GmbH",
+      "brand": "Luxor Solar GmbH",
+      "country": "Allemagne",
+      "model": "LX-620M/182R-132+ GG",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50696509 0002",
+      "validUntil": "2028-06-08"
+    },
+    {
+      "manufacturer": "Luxor Solar GmbH",
+      "brand": "Luxor Solar GmbH",
+      "country": "Allemagne",
+      "model": "LX-570M/182-144+ GG",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50696509 0002",
+      "validUntil": "2028-06-09"
+    },
+    {
+      "manufacturer": "Munchen Energieprodukte GmbH",
+      "brand": "Munchen Energieprodukte GmbH",
+      "country": "Chine",
+      "model": "MSMD550M10-72",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 084752 0034 Rev. 03",
+      "validUntil": "2027-04-10"
+    },
+    {
+      "manufacturer": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "brand": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "country": "Chine",
+      "model": "MS560M-HA",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104598 0017 REV.01",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "brand": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "country": "Chine",
+      "model": "MS545M-HA",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104598 0017 REV.01",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "brand": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "country": "Chine",
+      "model": "MS540M-HA",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104598 0017 REV.01",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "brand": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "country": "Chine",
+      "model": "MS555M-HA",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104598 0017 REV.01",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "brand": "Mysolar Manufacturing (Shanghai)Co.,Ltd",
+      "country": "Chine",
+      "model": "MS550M-HA",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104598 0017 REV.01",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "NINBO NESOL ENERGY CO., LTD",
+      "brand": "NINBO NESOL ENERGY CO., LTD",
+      "country": "Chine",
+      "model": "NE440M10-60H",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 115721 0001 Rev. 00",
+      "validUntil": "2026-12-20"
+    },
+    {
+      "manufacturer": "Ningbi Lefeng New Energy Co., Ltd",
+      "brand": "Ningbi Lefeng New Energy Co., Ltd",
+      "country": "Chine",
+      "model": "LF610M10N-66H/BF",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 109212 0005 Rev. 04",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "Ningbo Lefeng New Energy Co,. Ltd",
+      "brand": "Ningbo Lefeng New Energy Co,. Ltd",
+      "country": "Chine",
+      "model": "LF700M12N-66H/BF",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 109212 0005 Rev. 04",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "Ningbo Lefeng New Energy Co., Ltd",
+      "brand": "Ningbo Lefeng New Energy Co., Ltd",
+      "country": "Chine",
+      "model": "LF620M10N-66H/BF",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 109212 0005 Rev. 04",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "NINGBO NESOL ENERGY CO., LTD",
+      "brand": "NINGBO NESOL ENERGY CO., LTD",
+      "country": "Chine",
+      "model": "NE500M10-66H",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 115721 0001 Rev. 00",
+      "validUntil": "2026-12-20"
+    },
+    {
+      "manufacturer": "NINGBO NESOL ENERGY CO., LTD",
+      "brand": "NINGBO NESOL ENERGY CO., LTD",
+      "country": "Chine",
+      "model": "NE400M10-54H",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 115721 0001 Rev. 00",
+      "validUntil": "2026-12-20"
+    },
+    {
+      "manufacturer": "Ningbo Osda Solar Co., Ltd.",
+      "brand": "Ningbo Osda Solar Co., Ltd.",
+      "country": "Chine",
+      "model": "ODA600-36V-MHD",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50672643 0001",
+      "validUntil": "2027-09-16"
+    },
+    {
+      "manufacturer": "Ningbo Ulica Solar Co.,Ltd.",
+      "brand": "Ningbo Ulica Solar Co.,Ltd.",
+      "country": "Chine",
+      "model": "UL-620M-132DDGN",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 083334 0068 Rev. 04",
+      "validUntil": "2028-06-17"
+    },
+    {
+      "manufacturer": "Ningbo Ulica Solar Co.,Ltd.",
+      "brand": "Ningbo Ulica Solar Co.,Ltd.",
+      "country": "Chine",
+      "model": "UL-585M-144ADGN",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 083334 0068 Rev. 02",
+      "validUntil": "2027-10-01"
+    },
+    {
+      "manufacturer": "Ningbo Ulica Solar Science technology Co.,Ltd.",
+      "brand": "Ningbo Ulica Solar Science technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "UL-620M-144CHVN",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 083334 0054 Rev. 06",
+      "validUntil": "2026-11-22"
+    },
+    {
+      "manufacturer": "Ningbo Zhongyi New Energy Co., Ltd.",
+      "brand": "Ningbo Zhongyi New Energy Co., Ltd.",
+      "country": "Chine",
+      "model": "ZY630G12RNHB-132",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118317 0011 Rev. 03",
+      "validUntil": "2027-12-24"
+    },
+    {
+      "manufacturer": "Ningbo Zhongyi New Energy Co., Ltd.",
+      "brand": "Ningbo Zhongyi New Energy Co., Ltd.",
+      "country": "Chine",
+      "model": "ZY580M10NHB-144",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118317 0011 Rev. 03",
+      "validUntil": "2027-12-24"
+    },
+    {
+      "manufacturer": "Ocean Solar Co.,Ltd",
+      "brand": "Ocean Solar Co.,Ltd",
+      "country": "Chine",
+      "model": "AOX-132G12RHC625W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 121551 0001 Rev. 01",
+      "validUntil": "2028-06-02"
+    },
+    {
+      "manufacturer": "Ocean Solar Co.,Ltd",
+      "brand": "Ocean Solar Co.,Ltd",
+      "country": "Chine",
+      "model": "AOX-72M10HC580W",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 1215510001 Rev.01",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "Ocean Solar Co.,Ltd",
+      "brand": "Ocean Solar Co.,Ltd",
+      "country": "Chine",
+      "model": "AOX-78M10HC600W",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 22 406749 - 030",
+      "validUntil": "2027-01-25"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H595MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0046 Rev. 00",
+      "validUntil": "2027-02-25"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H610MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0042 Rev.01",
+      "validUntil": "2028-02-27"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR12H715MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0046 Rev. 00",
+      "validUntil": "2027-03-04"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H500MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0059 Rev. 00",
+      "validUntil": "2027-10-21"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H605MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0059 Rev. 01",
+      "validUntil": "2028-04-20"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H560M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0027 Rev.05",
+      "validUntil": "2027-03-05"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Italie",
+      "model": "SG290P",
+      "certificationBody": "KIWA",
+      "certificateReference": "7766 Rev.0",
+      "validUntil": "2027-01-04"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR12H635MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0059 Rev. 00",
+      "validUntil": "2027-10-21"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10E640MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0042 Rev.01",
+      "validUntil": "2028-02-27"
+    },
+    {
+      "manufacturer": "Peimar S.r.l.",
+      "brand": "Peimar S.r.l.",
+      "country": "Chine",
+      "model": "OR10H450MNDB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 089455 0046 Rev. 00",
+      "validUntil": "2027-02-25"
+    },
+    {
+      "manufacturer": "Philadelphia Solar Ltd.Co",
+      "brand": "Philadelphia Solar Ltd.Co",
+      "country": "Jordanie",
+      "model": "PS-M108 (HCBF)-400W",
+      "certificationBody": "SolarPTL",
+      "certificateReference": "US-SPTL-40022",
+      "validUntil": "2028-02-26"
+    },
+    {
+      "manufacturer": "Philadelphia Solar Ltd.Co",
+      "brand": "Philadelphia Solar Ltd.Co",
+      "country": "Jordanie",
+      "model": "PS-MNB144 (HCBF)-600W",
+      "certificationBody": "INTERTEK",
+      "certificateReference": "PCS-25-0003",
+      "validUntil": "2027-06-18"
+    },
+    {
+      "manufacturer": "Philadelphia Solar Ltd.Co",
+      "brand": "Philadelphia Solar Ltd.Co",
+      "country": "Jordanie",
+      "model": "PS-M132 (HC) - 500W",
+      "certificationBody": "SolarPTL",
+      "certificateReference": "TU 722240021 02",
+      "validUntil": "2027-01-31"
+    },
+    {
+      "manufacturer": "Philadelphia Solar Ltd.Co",
+      "brand": "Philadelphia Solar Ltd.Co",
+      "country": "Jordanie",
+      "model": "PS-MNB144 (HCBF)-595W",
+      "certificationBody": "INTERTEK",
+      "certificateReference": "PCS-25-0003",
+      "validUntil": "2027-06-18"
+    },
+    {
+      "manufacturer": "Philadelphia Solar Ltd.Co",
+      "brand": "Philadelphia Solar Ltd.Co",
+      "country": "Jordanie",
+      "model": "PS-MNB108(HCBF)-430W",
+      "certificationBody": "INTERTEK",
+      "certificateReference": "SG ITS-42340",
+      "validUntil": "2028-03-31"
+    },
+    {
+      "manufacturer": "Phono Solar Technology Co., Ltd.",
+      "brand": "Phono Solar Technology Co., Ltd.",
+      "country": "Chine",
+      "model": "PS705M13GFH-22/WNH",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50672565 0001",
+      "validUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "QN-SOLAR PV LIMITED",
+      "brand": "QN-SOLAR PV LIMITED",
+      "country": "Chine",
+      "model": "QNN182-HG585-72",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 120422 0001 Rev.02",
+      "validUntil": "2026-08-23"
+    },
+    {
+      "manufacturer": "QN-SOLAR PV LIMITED",
+      "brand": "QN-SOLAR PV LIMITED",
+      "country": "Chine",
+      "model": "QNM210-HG660-66",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 120422 0001 REV.02",
+      "validUntil": "2026-10-22"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-615HT-02",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007 REV.01",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-710HT-01",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0001 Rev. 00",
+      "validUntil": "2027-05-16"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-620HT-02",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0006 Rev. 00",
+      "validUntil": "2027-07-09"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-585HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0006 Rev. 00",
+      "validUntil": "2027-09-05"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-545HT",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0001 REV.06",
+      "validUntil": "2026-09-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-550HT",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0001 REV.06",
+      "validUntil": "2026-09-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-555HT",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0001 REV.06",
+      "validUntil": "2026-09-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-580HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007Rev.00",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-570HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007 REV.00",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-560HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007 REV.00",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-550HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007 REV.01",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-585HT-0",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 104991 0007 REV.0",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-700HT-01",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0006 Rev. 00",
+      "validUntil": "2027-06-19"
+    },
+    {
+      "manufacturer": "Q-SUN Anhui Co.,Ltd",
+      "brand": "Q-SUN Anhui Co.,Ltd",
+      "country": "Chine",
+      "model": "QN-720HT-01",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0001 Rev. 00",
+      "validUntil": "2027-08-14"
+    },
+    {
+      "manufacturer": "QSUN SOLAR (Jiangsu) Co., Ltd.",
+      "brand": "QSUN SOLAR (Jiangsu) Co., Ltd.",
+      "country": "Chine",
+      "model": "QN-590HT-06",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118795 0006 Rev. 00",
+      "validUntil": "2027-11-25"
+    },
+    {
+      "manufacturer": "RECOM & CO LTD",
+      "brand": "RECOM & CO LTD",
+      "country": "Chine",
+      "model": "RCM-575-7DBNF",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 1208700016 Rev.00",
+      "validUntil": "2028-03-25"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM132-8-730BHDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0194 Rev.14",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM144-9-590BNDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0194 Rev. 14",
+      "validUntil": "2027-06-23"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM144-9-575BNDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0194 Rev. 11",
+      "validUntil": "2027-01-06"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM144-9-585BNDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0194 Rev. 14",
+      "validUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM132-8-670BHDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0132 Rev. 32",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM144-9-550BNDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0132 Rev. 32",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Risen Energy Co.,Ltd",
+      "brand": "Risen",
+      "country": "Chine",
+      "model": "RSM144-9-560BNDG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 082429 0132 Rev. 32",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Sany Silicon Energy Co.,Ltd",
+      "brand": "Sany Silicon Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SYMN144TBD595",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50631004 0003",
+      "validUntil": "2027-10-06"
+    },
+    {
+      "manufacturer": "Sany Silicon Energy Co.,Ltd",
+      "brand": "Sany Silicon Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SYMN132R05TBD720",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50631004 0007",
+      "validUntil": "2027-10-06"
+    },
+    {
+      "manufacturer": "Sany Silicon Energy Co.,Ltd",
+      "brand": "Sany Silicon Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SYMN108TBDB440",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50631004 0002",
+      "validUntil": "2027-12-09"
+    },
+    {
+      "manufacturer": "Sany Silicon Energy Co.,Ltd",
+      "brand": "Sany Silicon Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SYMN156TBD645",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50631004 0003",
+      "validUntil": "2027-10-07"
+    },
+    {
+      "manufacturer": "Sany Silicon Energy Co.,Ltd",
+      "brand": "Sany Silicon Energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SYMN132R04TBD635",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50631004 0006",
+      "validUntil": "2027-11-29"
+    },
+    {
+      "manufacturer": "Shanghai Aerospace Automobile Electromechanical Co., Ltd.",
+      "brand": "Shanghai Aerospace Automobile Electromechanical Co., Ltd.",
+      "country": "Chine",
+      "model": "HT72-18X(ND)-F-580",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 086674 0016 Rev. 06",
+      "validUntil": "2027-07-08"
+    },
+    {
+      "manufacturer": "Shanghai Aerospace Automobile Electromechanical Co., Ltd.",
+      "brand": "Shanghai Aerospace Automobile Electromechanical Co., Ltd.",
+      "country": "Chine",
+      "model": "HT66-18X(ND)-F-510",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 086674 0016 Rev. 06",
+      "validUntil": "2027-07-08"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D46-715/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 95",
+      "validUntil": "2027-11-27"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-620/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 88",
+      "validUntil": "2027-04-12"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D30-560/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.85",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D40-600/MB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.95",
+      "validUntil": "2027-11-03"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM60S20-375/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 87",
+      "validUntil": "2027-03-13"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-600/LB/1500",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev.81",
+      "validUntil": "2026-08-23"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-610/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev.80",
+      "validUntil": "2026-07-26"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66S30-500/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.92",
+      "validUntil": "2027-08-27"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D30-545/MB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.85",
+      "validUntil": "2026-11-06"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D40-600/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 114228 0003 Rev. 30",
+      "validUntil": "2028-03-24"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-630/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 87",
+      "validUntil": "2027-03-14"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S20-460/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 93",
+      "validUntil": "2027-09-16"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S20-465/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.95",
+      "validUntil": "2027-11-12"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S30-540/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0358 Rev. 01",
+      "validUntil": "2028-04-28"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S30-550/MR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0358 Rev. 01",
+      "validUntil": "2028-04-29"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S30-560/LR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.92",
+      "validUntil": "2027-09-15"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S30-565/LR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.92",
+      "validUntil": "2027-09-15"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S30-570/LR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 REV.93",
+      "validUntil": "2027-09-23"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D46-700/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 88",
+      "validUntil": "2027-04-12"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-625/LB/1500V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 86",
+      "validUntil": "2027-01-08"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S20-460/MR/1000V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 87",
+      "validUntil": "2027-03-11"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D42-625/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 88",
+      "validUntil": "2027-04-12"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM54D40-440/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 88",
+      "validUntil": "2027-04-12"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM60D42-540/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 114228 0003 Rev. 29",
+      "validUntil": "2028-01-23"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72S20-465/MR/1000V",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 85",
+      "validUntil": "2026-11-29"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-625/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 87",
+      "validUntil": "2027-03-14"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D42-635/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0358 Rev. 01",
+      "validUntil": "2028-01-23"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D46-710/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 93",
+      "validUntil": "2027-10-17"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM66D45-615/LB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0295 Rev. 87",
+      "validUntil": "2027-03-14"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM78D40-645/MB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0358 REV.01",
+      "validUntil": "2028-04-29"
+    },
+    {
+      "manufacturer": "Shanghai JA Solar Technology Co.,Ltd.",
+      "brand": "JA Solar",
+      "country": "Chine",
+      "model": "JAM72D40-595/MB",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 072092 0358 REV.01",
+      "validUntil": "2028-05-04"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SS9-66HD -700N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-04-14"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SSA-66HD-625N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-08-06"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SS8-72HD -590N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-02-03"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SSA-66HD-630N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-08-04"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SS9-66HD -685N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-04-14"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SS8-72HD -600N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2028-02-11"
+    },
+    {
+      "manufacturer": "Solarspace Technology Co.,Ltd.",
+      "brand": "Solarspace Technology Co.,Ltd.",
+      "country": "Chine",
+      "model": "SSA-54HD -500N",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-141R4A2M5",
+      "validUntil": "2027-02-27"
+    },
+    {
+      "manufacturer": "Sun Evo Solar Co, Ltd",
+      "brand": "Sun Evo Solar Co, Ltd",
+      "country": "Chine",
+      "model": "SE6-66HBD-755M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 123720 0002 Rev. 01",
+      "validUntil": "2028-03-11"
+    },
+    {
+      "manufacturer": "Sunpal Power Co.,Ltd.",
+      "brand": "Sunpal Power Co.,Ltd.",
+      "country": "Chine",
+      "model": "SP555M-72H",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 23 406749-032",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-66M 620NHLProDR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 130131 0002 Rev. 00",
+      "validUntil": "2027-07-30"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-66M 585NHLProD",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-144R1M1",
+      "validUntil": "2026-11-13"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-54M440NHLProD",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-144",
+      "validUntil": "2026-09-17"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-72M580NHLProD",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-144",
+      "validUntil": "2026-09-17"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-72M 590NHLProD",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 130131 0002 Rev. 00",
+      "validUntil": "2027-07-18"
+    },
+    {
+      "manufacturer": "Sunrise energy Co.,Ltd",
+      "brand": "Sunrise energy Co.,Ltd",
+      "country": "Chine",
+      "model": "SR-60M 565NHLProDR",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 130131 0002 Rev. 00",
+      "validUntil": "2027-03-21"
+    },
+    {
+      "manufacturer": "TCL Zhoughuan Energy Technology",
+      "brand": "TCL Zhoughuan Energy Technology",
+      "country": "Chine",
+      "model": "HSM-ND66-GR625",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50718871 0001",
+      "validUntil": "2028-05-04"
+    },
+    {
+      "manufacturer": "TCL Zhoughuan Energy Technology",
+      "brand": "TCL Zhoughuan Energy Technology",
+      "country": "Chine",
+      "model": "HSM-ND54-DR500",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50718871 0001",
+      "validUntil": "2028-06-02"
+    },
+    {
+      "manufacturer": "TCL Zhoughuan Energy Technology",
+      "brand": "TCL Zhoughuan Energy Technology",
+      "country": "Chine",
+      "model": "HSM-ND66-GR615",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50718871 0001",
+      "validUntil": "2028-06-04"
+    },
+    {
+      "manufacturer": "TCL Zhoughuan Energy Technology",
+      "brand": "TCL Zhoughuan Energy Technology",
+      "country": "Chine",
+      "model": "HSM-ND66-GR 620W",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50718871 0001",
+      "validUntil": "2028-03-24"
+    },
+    {
+      "manufacturer": "TCL Zhoughuan Energy Technology",
+      "brand": "TCL Zhoughuan Energy Technology",
+      "country": "Chine",
+      "model": "HSM-ND72-GF590W",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50718871 0001",
+      "validUntil": "2028-04-13"
+    },
+    {
+      "manufacturer": "TOMMATECH GMBH",
+      "brand": "TOMMATECH GMBH",
+      "country": "Turquie",
+      "model": "TT590-144TNB10",
+      "certificationBody": "SGS",
+      "certificateReference": "SHES2310019178PV02",
+      "validUntil": "2027-10-05"
+    },
+    {
+      "manufacturer": "TOMMATECH GMBH",
+      "brand": "TOMMATECH GMBH",
+      "country": "Turquie",
+      "model": "TT600-144TNB10",
+      "certificationBody": "SGS",
+      "certificateReference": "SHES2310019178PV02",
+      "validUntil": "2027-10-05"
+    },
+    {
+      "manufacturer": "TOMMATECH GMBH",
+      "brand": "TOMMATECH GMBH",
+      "country": "Turquie",
+      "model": "TT405-108M10",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 23 406749-149",
+      "validUntil": "2026-11-04"
+    },
+    {
+      "manufacturer": "TommaTech UG",
+      "brand": "TommaTech UG",
+      "country": "Turquie",
+      "model": "TT455-144PM-HC",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 101645 0010 Rev.01",
+      "validUntil": "2026-10-27"
+    },
+    {
+      "manufacturer": "TommaTech UG",
+      "brand": "TommaTech UG",
+      "country": "Turquie",
+      "model": "TT585-144TNB10",
+      "certificationBody": "VDE",
+      "certificateReference": "40056671",
+      "validUntil": "2026-08-22"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNF-66HD725",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R14M34",
+      "validUntil": "2028-05-18"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HD620",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R2M2",
+      "validUntil": "2027-05-12"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNF-66HD715",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R2M2",
+      "validUntil": "2027-07-02"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HD625",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749 - 028R14M34",
+      "validUntil": "2028-05-04"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HD635",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R14M34",
+      "validUntil": "2028-05-15"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNF-66HD720",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R9M23",
+      "validUntil": "2028-02-12"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMND-72HS595",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-027R5M5",
+      "validUntil": "2028-02-12"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMND-78HD625",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-028R2M2",
+      "validUntil": "2026-09-30"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNF-66HD710",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-028R2M2",
+      "validUntil": "2026-10-07"
+    },
+    {
+      "manufacturer": "Tongwei Co.,Ltd",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HD615",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 24 406749-028R2M2",
+      "validUntil": "2026-10-07"
+    },
+    {
+      "manufacturer": "TONGWEI SOLAR CO.,LTD",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HS610",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 19 406749-401R30A8M70",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "TONGWEI SOLAR CO.,LTD",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMND-72HD585",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R6M15",
+      "validUntil": "2027-09-08"
+    },
+    {
+      "manufacturer": "TONGWEI SOLAR CO.,LTD",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMND-72HD590",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478024406749-028R11M25",
+      "validUntil": "2028-01-26"
+    },
+    {
+      "manufacturer": "TONGWEI SOLAR CO.,LTD",
+      "brand": "Tongwei",
+      "country": "Chine",
+      "model": "TWMNH-66HS605",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "44 780 19 406749-401R30A8M70",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-725NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 06",
+      "validUntil": "2027-12-08"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-605NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 66",
+      "validUntil": "2027-10-24"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-505NEG18R.28",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 61",
+      "validUntil": "2027-04-28"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-595NEG18C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 62",
+      "validUntil": "2027-05-06"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-610NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 70",
+      "validUntil": "2028-01-26"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-620NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev.60",
+      "validUntil": "2027-04-10"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-500NEG18R.28",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 62",
+      "validUntil": "2027-06-02"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-720NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 06",
+      "validUntil": "2027-12-08"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-730NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 06",
+      "validUntil": "2027-12-08"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-625 NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 06",
+      "validUntil": "2027-12-04"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-710NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 70",
+      "validUntil": "2028-01-26"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-460NEG9R.28",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 71",
+      "validUntil": "2028-04-09"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-615 NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 05",
+      "validUntil": "2027-08-05"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-630NEG19RC.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0169 Rev. 08",
+      "validUntil": "2028-03-02"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-715NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0167 Rev. 06",
+      "validUntil": "2027-12-08"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-545DE18",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0146 Rev. 13",
+      "validUntil": "2027-06-02"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-590NEG18C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 62",
+      "validUntil": "2030-01-12"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-620NE19R",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50610280 0002",
+      "validUntil": "2027-06-14"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-445NEG9R.28",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0169 Rev.08",
+      "validUntil": "2028-03-23"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-450NEG9R.28",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 73",
+      "validUntil": "2028-06-01"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-510DE18M(II)",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50565114",
+      "validUntil": "2026-08-01"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-585NEG18C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 61",
+      "validUntil": "2027-04-28"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-605NE19R",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50565114",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-615NE 19R",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 5056114",
+      "validUntil": "2026-10-08"
+    },
+    {
+      "manufacturer": "Trina Solar Co.,Ltd",
+      "brand": "Trina",
+      "country": "Chine",
+      "model": "TSM-700NEG21C.20",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 070321 0097 Rev. 66",
+      "validUntil": "2027-10-24"
+    },
+    {
+      "manufacturer": "Upsolar Group Co.,Ltd",
+      "brand": "Upsolar Group Co.,Ltd",
+      "country": "Chine",
+      "model": "UP-B655MH-T(66G12)",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50554895",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Upsolar Group Co.,Ltd",
+      "brand": "Upsolar Group Co.,Ltd",
+      "country": "Chine",
+      "model": "UP-B665MH-T (66G12)",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50554895",
+      "validUntil": "2026-09-30"
+    },
+    {
+      "manufacturer": "VETASUN Co., LIMITED",
+      "brand": "VETASUN Co., LIMITED",
+      "country": "Chine",
+      "model": "QN-600HF",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z21236820001REV.00",
+      "validUntil": "2027-01-08"
+    },
+    {
+      "manufacturer": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "brand": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "country": "Chine",
+      "model": "SKT260M10",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 116477 0004 REV.01",
+      "validUntil": "2026-11-06"
+    },
+    {
+      "manufacturer": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "brand": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "country": "Chine",
+      "model": "SKT280M10",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 116477 0004 REV.01",
+      "validUntil": "2026-11-06"
+    },
+    {
+      "manufacturer": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "brand": "Wuxi Sunkert New Energy Technology Co.Ltd",
+      "country": "Chine",
+      "model": "SKT140M10",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 116477 0004 REV.01",
+      "validUntil": "2026-10-29"
+    },
+    {
+      "manufacturer": "Wuxi Suntech Power Co.,Ltd",
+      "brand": "Suntech",
+      "country": "Chine",
+      "model": "STP405S-C54/Umhb",
+      "certificationBody": "VDE",
+      "certificateReference": "40058268",
+      "validUntil": "2028-03-16"
+    },
+    {
+      "manufacturer": "Wuxi Suntech Power Co.,Ltd",
+      "brand": "Suntech",
+      "country": "Chine",
+      "model": "STP555-C72/Vmh",
+      "certificationBody": "VDE",
+      "certificateReference": "40058268",
+      "validUntil": "2026-09-09"
+    },
+    {
+      "manufacturer": "Wuxi Suntech Power Co.,Ltd",
+      "brand": "Suntech",
+      "country": "Chine",
+      "model": "STP580S-C72/Nsh+",
+      "certificationBody": "VDE",
+      "certificateReference": "40048830",
+      "validUntil": "2028-02-16"
+    },
+    {
+      "manufacturer": "Wuxi Suntech Power Co.,Ltd",
+      "brand": "Suntech",
+      "country": "Chine",
+      "model": "STP605S-H66-Nsh+",
+      "certificationBody": "VDE",
+      "certificateReference": "40048830",
+      "validUntil": "2026-10-07"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-G650-MCH72Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0001",
+      "validUntil": "2027-09-24"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A660-GRH66Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0005",
+      "validUntil": "2028-02-11"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-G645-MCH72Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0002",
+      "validUntil": "2027-05-12"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A590-MAH72Mw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614580 0002",
+      "validUntil": "2027-09-09"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A655-GRH66Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0005",
+      "validUntil": "2028-02-21"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A610-MAH72Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0002",
+      "validUntil": "2026-12-24"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A450-MAH54Mb",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614580 0002",
+      "validUntil": "2026-12-24"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-G650-MCH72Mw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614580 0001",
+      "validUntil": "2027-09-24"
+    },
+    {
+      "manufacturer": "Zhejiang Aiko Solar Technology Co., Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A770-GRH78Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0008",
+      "validUntil": "2028-02-18"
+    },
+    {
+      "manufacturer": "Zhejiang aiko solar technology co.Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-A600-MAH72Dw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614584 0002",
+      "validUntil": "2026-10-23"
+    },
+    {
+      "manufacturer": "Zhejiang aiko solar technology co.Ltd",
+      "brand": "Aiko",
+      "country": "Chine",
+      "model": "AIKO-G645-MCH72Mw",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50614580 0001",
+      "validUntil": "2026-10-08"
+    },
+    {
+      "manufacturer": "Zhejiang G&P Sun Energy Technology Co.,Ltd",
+      "brand": "Zhejiang G&P Sun Energy Technology Co.,Ltd",
+      "country": "Chine",
+      "model": "GPM12RTG-580(120)",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50647173 0002",
+      "validUntil": "2027-11-12"
+    },
+    {
+      "manufacturer": "Zhejiang G&P Sun Energy Technology Co.,Ltd",
+      "brand": "Zhejiang G&P Sun Energy Technology Co.,Ltd",
+      "country": "Chine",
+      "model": "GPM12RTG-635(132)",
+      "certificationBody": "TÜV Rheinland",
+      "certificateReference": "PV 50647173 0002",
+      "validUntil": "2027-11-12"
+    },
+    {
+      "manufacturer": "Zhejiang Sunpro Power Technology co., ltd",
+      "brand": "Zhejiang Sunpro Power Technology co., ltd",
+      "country": "Chine",
+      "model": "SPDG585-N144M10",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118771 0021 Rev. 03",
+      "validUntil": "2027-12-23"
+    },
+    {
+      "manufacturer": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "brand": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "country": "Chine",
+      "model": "HSG320-60M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118771 0005 Rev. 01",
+      "validUntil": "2026-11-26"
+    },
+    {
+      "manufacturer": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "brand": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "country": "Chine",
+      "model": "HSG410-144MG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118771 0005 Rev. 01",
+      "validUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "brand": "Zhejiang Sunpro Power Technology co.,Ltd",
+      "country": "Chine",
+      "model": "HSG405-144MG",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 118771 0005 Rev. 01",
+      "validUntil": "2027-01-07"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM7-SHLD144-540/M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0091 Rev.10",
+      "validUntil": "2028-04-07"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM7-UHLDD144-580/N",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0076 Rev.10",
+      "validUntil": "2028-04-14"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM8-TPLD132-660/N",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0076 Rev.09",
+      "validUntil": "2026-07-24"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXP6-H144-335/P",
+      "certificationBody": "TÜV NORD",
+      "certificateReference": "4478019406749-430R1A3M9",
+      "validUntil": "2026-10-07"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM7-SH144-545/M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0093 Rev.03",
+      "validUntil": "2028-04-03"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM7-GHLDD144-565/N",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0091 Rev. 07",
+      "validUntil": "2027-07-01"
+    },
+    {
+      "manufacturer": "ZNShine PV-tech Co.Ltd.",
+      "brand": "ZNShine",
+      "country": "Chine",
+      "model": "ZXM7-EH132-500/M",
+      "certificationBody": "TÜV SÜD",
+      "certificateReference": "Z2 073899 0072 Rev.09",
+      "validUntil": "2026-08-01"
+    }
+  ],
+  "unparsedLines": [
+    "FuturaSun srl                                Chine           FU 700 MV Silk® Nova Premium Max DuettVoD-EChine   40059372                  29/07/2027",
+    "FuturaSun srl                                Chine           FU720MV Silk Nova Premium Max Duetto -VCDhEine     40059372                  23/08/2027"
+  ]
+}
