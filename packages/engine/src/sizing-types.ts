@@ -32,3 +32,18 @@ export interface Candidate {
 }
 
 export type BuildCandidateResult = { ok: true; candidate: Candidate } | { ok: false; reason: string };
+
+/** The objective a proposal wins: closest to the need, fewest modules, or most production. */
+export type ProposalKind = 'RECOMMENDED' | 'ECONOMIC' | 'MAX_PRODUCTION';
+
+/** One installation shown to the client, with the figures that justify it. */
+export interface Proposal {
+  key: string;                 // `${module.id}|${inverter.id}|${modulesPerString}x${stringCount}`
+  kinds: ProposalKind[];       // one candidate may win several objectives
+  candidate: Candidate;
+  moduleCount: number; dcPowerKWp: number; acPowerKW: number;
+  annualProductionKWh: number; coveragePct: number; roofAreaM2: number;
+  yearlySavingTND: number | null; explanation: string;
+}
+
+export interface ProposeResult { proposals: Proposal[]; noSolutionReasons: string[]; stats: { engineRuns: number } }
