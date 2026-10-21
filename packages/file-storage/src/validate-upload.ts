@@ -18,13 +18,23 @@ const MAGIC_BYTES: Record<string, { mimeType: UploadMimeType; runs: Array<[numbe
 
 export type ValidateUploadResult = { valid: true; mimeType: UploadMimeType } | { valid: false; error: string };
 
-export function validateUploadedFile(buffer: Buffer, claimedMimeType: string, sizeBytes: number): ValidateUploadResult {
+export interface ValidateUploadOptions {
+  /** WebP cannot be embedded by pdf-lib: only callers that convert it (the bill import) opt in. */
+  allowWebp?: boolean;
+}
+
+export function validateUploadedFile(
+  buffer: Buffer,
+  claimedMimeType: string,
+  sizeBytes: number,
+  { allowWebp = false }: ValidateUploadOptions = {},
+): ValidateUploadResult {
   if (sizeBytes > MAX_UPLOAD_SIZE_BYTES) {
     return { valid: false, error: 'Le fichier dépasse la taille maximale autorisée (10 Mo).' };
   }
 
   const expected = MAGIC_BYTES[claimedMimeType];
-  if (!expected) {
+  if (!expected || (expected.mimeType === 'webp' && !allowWebp)) {
     return { valid: false, error: 'Type de fichier non autorisé.' };
   }
 

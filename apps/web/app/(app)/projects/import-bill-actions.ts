@@ -43,7 +43,7 @@ export async function importStegBillAction(
     return { error: 'Aucun fichier reçu.' };
   }
   const buffer = Buffer.from(await field.arrayBuffer());
-  const validation = validateUploadedFile(buffer, field.type, field.size);
+  const validation = validateUploadedFile(buffer, field.type, field.size, { allowWebp: true });
   if (!validation.valid) {
     return { error: validation.error };
   }

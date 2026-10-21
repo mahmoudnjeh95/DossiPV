@@ -9,12 +9,16 @@ const WEBP_MAGIC = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x24, 0, 0, 
 const WAVE_MAGIC = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x24, 0, 0, 0]), Buffer.from('WAVEfmt ')]);
 
 describe('validateUploadedFile', () => {
-  it('accepts a real WebP (RIFF....WEBP)', () => {
-    expect(validateUploadedFile(WEBP_MAGIC, 'image/webp', WEBP_MAGIC.length)).toEqual({ valid: true, mimeType: 'webp' });
+  it('refuses WebP by default (only the bill import opts in)', () => {
+    expect(validateUploadedFile(WEBP_MAGIC, 'image/webp', WEBP_MAGIC.length)).toEqual({ valid: false, error: 'Type de fichier non autorisé.' });
   });
 
-  it('rejects a RIFF container that is not WebP (WAVE) claimed as image/webp', () => {
-    expect(validateUploadedFile(WAVE_MAGIC, 'image/webp', WAVE_MAGIC.length).valid).toBe(false);
+  it('accepts a real WebP (RIFF....WEBP) when allowWebp is set', () => {
+    expect(validateUploadedFile(WEBP_MAGIC, 'image/webp', WEBP_MAGIC.length, { allowWebp: true })).toEqual({ valid: true, mimeType: 'webp' });
+  });
+
+  it('rejects a RIFF container that is not WebP (WAVE) claimed as image/webp, even with allowWebp', () => {
+    expect(validateUploadedFile(WAVE_MAGIC, 'image/webp', WAVE_MAGIC.length, { allowWebp: true }).valid).toBe(false);
   });
 
   it('accepts a real PDF (correct magic bytes, correct claimed type, under the size limit)', () => {

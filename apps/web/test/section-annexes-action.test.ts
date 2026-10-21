@@ -213,6 +213,20 @@ describe('saveAnnexesAction', () => {
     expect(result?.error).toBeUndefined();
   });
 
+  it('refuses a WebP annex (WebP is accepted only by the bill import)', async () => {
+    const actual = await vi.importActual<typeof import('@dossipv/file-storage')>('@dossipv/file-storage');
+    mockValidateUploadedFile.mockImplementation(actual.validateUploadedFile);
+    mockAnnexesFindUnique.mockResolvedValue(null);
+    const webp = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0, 0, 0, 0]), Buffer.from('WEBP')]);
+    const formData = buildFormData();
+    formData.append('extraFiles', new File([new Uint8Array(webp)], 'photo.webp', { type: 'image/webp' }));
+
+    const result = await saveAnnexesAction('project-1', undefined, formData);
+
+    expect(result).toEqual({ error: 'Type de fichier non autorisé.' });
+    expect(mockSaveFile).not.toHaveBeenCalled();
+  });
+
   it('replaces all extra files (delete then recreate) inside the transaction', async () => {
     mockAnnexesFindUnique.mockResolvedValue({ id: 'annexes-1' });
     mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
