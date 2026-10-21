@@ -44,6 +44,7 @@ model File {
   annexStegContractFor      ProjectAnnexes[] @relation("AnnexStegContract")
   annexLastPaidBillFor      ProjectAnnexes[] @relation("AnnexLastPaidBill")
   projectAnnexExtraFiles    ProjectAnnexExtraFile[] @relation("ProjectAnnexExtraFile")
+  projectBillImportFor    ProjectBillImport[] @relation("ProjectBillImportFile")
   dossierJobDocxFor       DossierJob[] @relation("DossierJobDocx")
   dossierJobPdfFor        DossierJob[] @relation("DossierJobPdf")
   dossierJobAnnexesPdfFor DossierJob[] @relation("DossierJobAnnexesPdf")
@@ -548,8 +549,32 @@ model Project {
   offGrid         ProjectOffGrid?
   annexes         ProjectAnnexes?
   jobs            DossierJob[]
+  flowStep        ProjectFlowStep?
+  billImport      ProjectBillImport?
 
   @@map("project")
+}
+
+enum ProjectFlowStep {
+  PROPOSALS
+  LOCATIONS
+  READY
+}
+
+model ProjectBillImport {
+  id                     String   @id @default(uuid())
+  projectId              String   @unique
+  project                Project  @relation(fields: [projectId], references: [id])
+  fileId                 String
+  file                   File     @relation("ProjectBillImportFile", fields: [fileId], references: [id])
+  reading                Json
+  warnings               Json
+  annualConsumptionKWh   Float?
+  averagePriceTNDPerKWh  Float?
+  modelId                String
+  createdAt              DateTime @default(now())
+
+  @@map("project_bill_import")
 }
 
 enum ProjectStatus {
@@ -591,6 +616,7 @@ model ProjectSite {
   mountingType             String
   roofMaterial             String?
   buildingHeightM          Float?
+  floors                   Int?
   tiltDeg                  Float
   azimuthDeg               Float?
   shading                  String?
@@ -768,6 +794,19 @@ model ProjectSimulation {
   systemLossesPct        Float?
 
   @@map("project_simulation")
+}
+
+model PvgisYieldCache {
+  id                     String   @id @default(uuid())
+  latRounded             Float
+  lonRounded             Float
+  tiltDeg                Float
+  azimuthDeg             Float
+  specificYieldKWhPerKWp Float
+  fetchedAt              DateTime @default(now())
+
+  @@unique([latRounded, lonRounded, tiltDeg, azimuthDeg])
+  @@map("pvgis_yield_cache")
 }
 
 model PvgisWeatherCache {

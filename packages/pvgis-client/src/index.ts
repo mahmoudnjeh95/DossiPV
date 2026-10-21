@@ -53,4 +53,5 @@ export async function fetchPvgisHourlyData(
   }));
 }
 
+export { fetchPvgisSpecificYield } from './specific-yield';
 export * from './types';
