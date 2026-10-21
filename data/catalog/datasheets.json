@@ -442,5 +442,103 @@
     "models": [
       "JKM465M-7RL3-V"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/Hi-MO%20X10%20Scientist%20LR7-72HVD%20640-665M.pdf",
+    "models": [
+      "LR7-72HVD-645M",
+      "LR7-72HVD-650M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR8-66HVD%20640-665M.pdf",
+    "models": [
+      "LR8-66HVD-650M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/Hi-MO%20X10%20LR7-72HVH%20630-650M.pdf",
+    "models": [
+      "LR7-72HVH-635M",
+      "LR7-72HVH-640M",
+      "LR7-72HVH-645M",
+      "LR7-72HVH-650M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR7-72HGD%20595-625M.pdf",
+    "models": [
+      "LR7-72HGD-610M",
+      "LR7-72HGD-615M",
+      "LR7-72HGD-620M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR8-66HGD%20595-625M.pdf",
+    "models": [
+      "LR8-66HGD-610M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR7-72HTH%20605-615M.pdf",
+    "models": [
+      "LR7-72HTH-610M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR7-72HTH%20620-630M.pdf",
+    "models": [
+      "LR7-72HTH-630M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/LR5-54HTH%20420-440%20M.pdf",
+    "models": [
+      "LR5-54HTH-425M",
+      "LR5-54HTH-430M",
+      "LR5-54HTH-435M",
+      "LR5-54HTH-440M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/Hi-MO%206%20Explorer%20LR5-72HTH%20565-585M%20..pdf",
+    "models": [
+      "LR5-72HTH-575M",
+      "LR5-72HTH-585M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/Hi-MO%207%20LR5-72HGD%20560-590M.pdf",
+    "models": [
+      "LR5-72HGD-585M"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "LONGi",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Longi/Hi-MO%205m%20LR5-72HPH%20540-560M.pdf",
+    "models": [
+      "LR5-72HPH-555M"
+    ]
   }
 ]
