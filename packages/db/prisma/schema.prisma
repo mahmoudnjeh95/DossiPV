@@ -51,6 +51,11 @@ model File {
   @@map("file")
 }
 
+enum CatalogStatus {
+  DRAFT
+  PUBLISHED
+}
+
 enum ProjectTier {
   STANDARD
   PREMIUM
@@ -220,6 +225,9 @@ model PvModule {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("PvModuleHomologation", fields: [homologationFileId], references: [id])
 
   pmaxW                 Float
@@ -258,6 +266,9 @@ model Inverter {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("InverterHomologation", fields: [homologationFileId], references: [id])
 
   phases                Int
@@ -295,6 +306,9 @@ model Spd {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("SpdHomologation", fields: [homologationFileId], references: [id])
 
   side                  SpdSide
@@ -330,6 +344,9 @@ model DcSwitch {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("DcSwitchHomologation", fields: [homologationFileId], references: [id])
 
   ratedVoltageV         Float
@@ -354,6 +371,9 @@ model DcFuse {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("DcFuseHomologation", fields: [homologationFileId], references: [id])
 
   ratedVoltageV         Float
@@ -377,6 +397,9 @@ model AcBreaker {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("AcBreakerHomologation", fields: [homologationFileId], references: [id])
 
   ratedCurrentA         Float
@@ -401,6 +424,9 @@ model AcIsolator {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("AcIsolatorHomologation", fields: [homologationFileId], references: [id])
 
   ratedCurrentA         Float
@@ -423,6 +449,9 @@ model Cable {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("CableHomologation", fields: [homologationFileId], references: [id])
 
   usage                 CableUsage
@@ -467,6 +496,9 @@ model Accessory {
   homologationReference String?
   homologationValidTo   DateTime?
   homologationFileId    String?
+  catalogStatus         CatalogStatus @default(PUBLISHED)
+  datasheetSourceUrl    String?
+  importNotes           String?
   homologationDocument  File?    @relation("AccessoryHomologation", fields: [homologationFileId], references: [id])
 
   kind                  AccessoryKind

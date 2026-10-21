@@ -310,7 +310,7 @@ describe('saveArrayAction', () => {
       error: 'Module introuvable dans votre bibliothèque.',
     });
     expect(mocks.moduleFindFirst).toHaveBeenCalledWith({
-      where: { id: 'module-1', OR: [{ ownerCompanyId: null }, { ownerCompanyId: 'company-1' }] },
+      where: { id: 'module-1', OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: 'company-1' }] },
       select: { id: true },
     });
   });

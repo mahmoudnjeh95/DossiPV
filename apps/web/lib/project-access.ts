@@ -25,9 +25,11 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
-/** Shared equipment catalog (ownerCompanyId null) plus the caller's own private items. */
-export function catalogScope(companyId: string): { OR: { ownerCompanyId: string | null }[] } {
-  return { OR: [{ ownerCompanyId: null }, { ownerCompanyId: companyId }] };
+export function catalogScope(companyId: string): {
+  OR: [{ ownerCompanyId: null; catalogStatus: 'PUBLISHED' }, { ownerCompanyId: string }];
+} {
+  // Shared items are visible once a super-admin has published them; private items always.
+  return { OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: companyId }] };
 }
 
 /**

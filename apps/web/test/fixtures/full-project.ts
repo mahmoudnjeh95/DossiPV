@@ -15,6 +15,9 @@ const equipmentBase = {
   homologationReference: null,
   homologationValidTo: null,
   homologationFileId: null,
+  catalogStatus: 'PUBLISHED' as const,
+  datasheetSourceUrl: null,
+  importNotes: null,
   createdAt: NOW,
 };
 
