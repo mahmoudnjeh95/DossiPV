@@ -1,4 +1,5 @@
 import type { PvModuleInput } from './types';
+import type { FuseCheckInput } from './checks';
 import { vocAtTmin } from './module-electrical';
 
 /** x-rules.derived NC_MAX_NO_FUSE: floor(1 + M.irmA / M.iscA) */
@@ -22,6 +23,29 @@ export function stringVocTmin(module: PvModuleInput, ns: number, tMinC: number):
 /** x-rules.derived STRING_VMP_STC: Ns * M.vmpV */
 export function stringVmpStc(module: PvModuleInput, ns: number): number {
   return ns * module.vmpV;
+}
+
+/**
+ * Everything check C08 needs for one MPPT carrying `np` strings of `ns` modules: whether a string
+ * fuse is required, the fuse fitted (null when none), and the fuse's allowed ratings
+ * (1.1 * 1.25 * M.iscA <= In <= M.irmA, voltage >= STRING_VOC_TMIN).
+ */
+export function dcFuseCheckInput(
+  module: PvModuleInput,
+  ns: number,
+  np: number,
+  tMinC: number,
+  dcFuse: { ratedCurrentA: number; ratedVoltageV: number } | null,
+): FuseCheckInput {
+  return {
+    fuseRequired: dcFuseRequired(module, np),
+    fuseSet: dcFuse !== null,
+    fuseRatedCurrentA: dcFuse?.ratedCurrentA ?? null,
+    fuseRatedVoltageV: dcFuse?.ratedVoltageV ?? null,
+    lowerBoundA: 1.1 * 1.25 * module.iscA,
+    upperBoundA: module.irmA,
+    stringVocTmin: stringVocTmin(module, ns, tMinC),
+  };
 }
 
 /** x-rules.derived ISC_FIELD_DESIGN: 1.25 * M.iscA * Np * (1 + bifacialGainPct/100) */

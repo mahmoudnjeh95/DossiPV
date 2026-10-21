@@ -15,7 +15,7 @@ import {
   totalModuleCount,
   powerRatio as computePowerRatio,
 } from './string-sizing';
-import { ncMaxNoFuse, dcFuseRequired, stringVocTmin, iscFieldDesign } from './protections';
+import { ncMaxNoFuse, dcFuseCheckInput, stringVocTmin, iscFieldDesign } from './protections';
 import {
   izCorrected,
   duDcV,
@@ -47,7 +47,6 @@ import {
   checkC21,
   checkC23,
   type ChecksContext,
-  type FuseCheckInput,
 } from './checks';
 import type { InverterInput, MpptConfig, CheckResult } from './types';
 
@@ -136,19 +135,7 @@ function evaluatePerMpptBlockChecks(
 
   const stringVoc = stringVocTmin(module, ns, tMinC);
   const fieldDesignCurrent = iscFieldDesign(module, np);
-
-  const fuseRequired = dcFuseRequired(module, np);
-  const fuseLowerBound = 1.1 * 1.25 * module.iscA;
-  const fuseUpperBound = module.irmA;
-  const fuse: FuseCheckInput = {
-    fuseRequired,
-    fuseSet: dcFuse !== null,
-    fuseRatedCurrentA: dcFuse?.ratedCurrentA ?? null,
-    fuseRatedVoltageV: dcFuse?.ratedVoltageV ?? null,
-    lowerBoundA: fuseLowerBound,
-    upperBoundA: fuseUpperBound,
-    stringVocTmin: stringVoc,
-  };
+  const fuse = dcFuseCheckInput(module, ns, np, tMinC, dcFuse);
 
   return [
     checkC01(ns, nsMaxVal),
@@ -228,19 +215,7 @@ export function runEngine(input: RunEngineInput): EngineResult {
   const stringVoc = stringVocTmin(module, ns, tMinC);
   const stringVmp = ns * module.vmpV;
   const fieldDesignCurrent = iscFieldDesign(module, np);
-
-  const fuseRequired = dcFuseRequired(module, np);
-  const fuseLowerBound = 1.1 * 1.25 * module.iscA;
-  const fuseUpperBound = module.irmA;
-  const fuse: FuseCheckInput = {
-    fuseRequired,
-    fuseSet: input.dcFuse !== null,
-    fuseRatedCurrentA: input.dcFuse?.ratedCurrentA ?? null,
-    fuseRatedVoltageV: input.dcFuse?.ratedVoltageV ?? null,
-    lowerBoundA: fuseLowerBound,
-    upperBoundA: fuseUpperBound,
-    stringVocTmin: stringVoc,
-  };
+  const fuse = dcFuseCheckInput(module, ns, np, tMinC, input.dcFuse);
 
   const dcRunIz = izCorrected(
     input.dcRun.izBaseA,

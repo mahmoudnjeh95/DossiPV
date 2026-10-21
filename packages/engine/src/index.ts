@@ -10,3 +10,5 @@ export * from './panel-layout';
 export * from './pvgis-simulation';
 export * from './checks';
 export * from './run-engine';
+export * from './sizing-types';
+export * from './build-candidate';

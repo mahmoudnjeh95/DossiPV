@@ -5,6 +5,7 @@ import {
   stringVocTmin,
   stringVmpStc,
   iscFieldDesign,
+  dcFuseCheckInput,
 } from '../src/protections';
 import type { PvModuleInput } from '../src/types';
 
@@ -69,5 +70,25 @@ describe('iscFieldDesign', () => {
     const bifacialModule: PvModuleInput = { ...module, bifacial: true, bifacialGainPct: 10 };
     // 34.8 * 1.10 = 38.28
     expect(iscFieldDesign(bifacialModule, 2)).toBeCloseTo(38.28, 5);
+  });
+});
+
+describe('dcFuseCheckInput', () => {
+  it('gives C08 the fuse, its rating window [1.1 x 1.25 x iscA, irmA] and the string Voc at Tmin', () => {
+    expect(dcFuseCheckInput(module, 5, 3, -10, { ratedCurrentA: 20, ratedVoltageV: 1000 })).toEqual({
+      fuseRequired: true,
+      fuseSet: true,
+      fuseRatedCurrentA: 20,
+      fuseRatedVoltageV: 1000,
+      // 1.1 * 1.25 * 13.92 = 19.14
+      lowerBoundA: expect.closeTo(19.14, 5) as number,
+      upperBoundA: 25,
+      stringVocTmin: expect.closeTo(303.95625, 5) as number,
+    });
+  });
+
+  it('reports no fuse set when none is fitted', () => {
+    const input = dcFuseCheckInput(module, 5, 1, -10, null);
+    expect(input).toMatchObject({ fuseRequired: false, fuseSet: false, fuseRatedCurrentA: null, fuseRatedVoltageV: null });
   });
 });
