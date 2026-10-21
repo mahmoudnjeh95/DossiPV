@@ -24,6 +24,29 @@ const REQUIRED_POINTS = [
   { key: 'meter', label: 'Compteur STEG' },
 ] as const;
 
+const PAYLOAD_KEYS = ['field', 'technicalRoom', 'meter', 'earthPit', 'floors'] as const;
+
+function isPointOrNull(value: unknown): value is GpsPoint | null {
+  if (value === null) return true;
+  if (typeof value !== 'object') return false;
+  const { lat, lon } = value as Record<string, unknown>;
+  return typeof lat === 'number' && typeof lon === 'number';
+}
+
+/** A Server Action's arguments come from the client as-is: check the shape before reading it. */
+function isLocationsPayload(value: unknown): value is LocationsPayload {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  if (!PAYLOAD_KEYS.every((key) => key in record)) return false;
+  return (
+    isPointOrNull(record['field']) &&
+    isPointOrNull(record['technicalRoom']) &&
+    isPointOrNull(record['meter']) &&
+    isPointOrNull(record['earthPit']) &&
+    typeof record['floors'] === 'number'
+  );
+}
+
 function isValidPoint(point: GpsPoint): boolean {
   return (
     Number.isFinite(point.lat) &&
@@ -83,6 +106,7 @@ export async function saveLocationsAndGenerateAction(
     throw error;
   }
 
+  if (!isLocationsPayload(payload)) return { error: 'Données des emplacements invalides.' };
   const invalid = validate(payload);
   if (invalid) return { error: invalid };
   const { field, technicalRoom, meter, earthPit, floors } = payload;

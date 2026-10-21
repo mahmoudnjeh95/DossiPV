@@ -99,6 +99,20 @@ describe('saveLocationsAndGenerateAction', () => {
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['null', null],
+    ['a string', 'field=1'],
+    ['an object without the meter key', { field: payload.field, technicalRoom: payload.technicalRoom, earthPit: null, floors: 1 }],
+    ['a point with a string latitude', { ...payload, field: { lat: '34.4', lon: 10.1 } }],
+    ['a point that is not an object', { ...payload, earthPit: 'here' }],
+    ['a non-numeric floor count', { ...payload, floors: '1' }],
+  ])('refuses %s as the payload before touching the database', async (_label, invalidPayload) => {
+    const result = await saveLocationsAndGenerateAction('p1', invalidPayload as never);
+
+    expect(result).toEqual({ error: 'Données des emplacements invalides.' });
+    expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
   it('asks for the meter point', async () => {
     const result = await saveLocationsAndGenerateAction('p1', { ...payload, meter: null });
 
