@@ -25,6 +25,8 @@ const m = vi.hoisted(() => {
     mockSaveFile: vi.fn(),
     mockDeleteFile: vi.fn(),
     mockSharpToBuffer: vi.fn(),
+    mockSharp: vi.fn(),
+    mockRotate: vi.fn(),
   };
 });
 
@@ -55,11 +57,7 @@ vi.mock('@dossipv/bill-reader', async () => {
   return { ...actual, readStegBill: m.mockReadStegBill };
 });
 vi.mock('@anthropic-ai/sdk', () => ({ default: class FakeAnthropic {} }));
-vi.mock('sharp', () => ({
-  default: (): { jpeg: () => { toBuffer: typeof m.mockSharpToBuffer } } => ({
-    jpeg: () => ({ toBuffer: m.mockSharpToBuffer }),
-  }),
-}));
+vi.mock('sharp', () => ({ default: m.mockSharp }));
 
 import { BillReadingError } from '@dossipv/bill-reader';
 import { importStegBillAction } from '../app/(app)/projects/import-bill-actions';
@@ -97,6 +95,10 @@ beforeEach(() => {
   m.mockReadStegBill.mockResolvedValue({ ...testBill, governorate: 'Gafsa' });
   m.mockSaveFile.mockResolvedValue({ storageKey: 'equipment/abc-facture.jpg' });
   m.mockDeleteFile.mockResolvedValue(undefined);
+  const chain = { rotate: m.mockRotate, jpeg: vi.fn(), toBuffer: m.mockSharpToBuffer };
+  m.mockSharp.mockReturnValue(chain);
+  m.mockRotate.mockReturnValue(chain);
+  chain.jpeg.mockReturnValue(chain);
   m.mockSharpToBuffer.mockResolvedValue(Buffer.from([0xff, 0xd8, 0xff, 9]));
   m.tx.file.create.mockResolvedValue({ id: 'file-1' });
   m.tx.project.create.mockResolvedValue({ id: 'project-1' });
@@ -221,6 +223,23 @@ describe('importStegBillAction', () => {
     expect(m.tx.file.create).toHaveBeenCalledWith({
       data: { fileName: 'facture.jpg', mimeType: 'jpeg', storageKey: 'equipment/abc-facture.jpg' },
     });
+  });
+
+  it('rejects an unconvertible WebP before calling Claude or saving anything', async () => {
+    m.mockSharpToBuffer.mockRejectedValue(new Error('Input image exceeds pixel limit'));
+
+    expect(await importStegBillAction(undefined, billForm(WEBP_BYTES, 'image/webp', 'facture.webp'))).toEqual({
+      error: 'Image de facture trop grande ou illisible.',
+    });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+    expect(m.mockSaveFile).not.toHaveBeenCalled();
+  });
+
+  it('limits the pixel count and applies EXIF rotation when converting WebP', async () => {
+    await redirectTarget(importStegBillAction(undefined, billForm(WEBP_BYTES, 'image/webp', 'facture.webp')));
+
+    expect(m.mockSharp).toHaveBeenCalledWith(expect.any(Buffer), { limitInputPixels: 40_000_000 });
+    expect(m.mockRotate).toHaveBeenCalled();
   });
 
   it('deletes the saved file if the database write fails', async () => {

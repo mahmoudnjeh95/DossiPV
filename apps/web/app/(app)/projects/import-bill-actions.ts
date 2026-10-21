@@ -48,6 +48,22 @@ export async function importStegBillAction(
     return { error: validation.error };
   }
 
+  // pdf-lib cannot embed WebP, so the stored annex is a JPEG (Claude still gets the original bytes).
+  // Done before the paid Claude call so an unconvertible image costs nothing.
+  let storedBuffer = buffer;
+  let storedName = field.name;
+  let storedContentType = field.type;
+  if (validation.mimeType === 'webp') {
+    try {
+      storedBuffer = await sharp(buffer, { limitInputPixels: 40_000_000 }).rotate().jpeg({ quality: 90 }).toBuffer();
+    } catch {
+      return { error: 'Image de facture trop grande ou illisible.' };
+    }
+    storedName = `${field.name.replace(/\.[^.]*$/, '') || 'facture'}.jpg`;
+    storedContentType = 'image/jpeg';
+  }
+  const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
+
   let reading: StegBillReading;
   try {
     const input: BillInput = { bytes: buffer, mediaType: field.type as BillMediaType };
@@ -76,17 +92,6 @@ export async function importStegBillAction(
       warnings.push(`Un autre projet existe déjà pour la référence STEG ${reading.stegReference}.`);
     }
   }
-
-  // pdf-lib cannot embed WebP, so the stored annex is a JPEG (Claude already got the original bytes).
-  let storedBuffer = buffer;
-  let storedName = field.name;
-  let storedContentType = field.type;
-  if (validation.mimeType === 'webp') {
-    storedBuffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
-    storedName = `${field.name.replace(/\.[^.]*$/, '') || 'facture'}.jpg`;
-    storedContentType = 'image/jpeg';
-  }
-  const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
 
   const tier = await companyProjectTier(user.companyId);
   const { storageKey } = await saveFile(storedBuffer, storedName, storedContentType);

@@ -20,6 +20,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/auth/package.json packages/auth/package.json
+COPY packages/bill-reader/package.json packages/bill-reader/package.json
 COPY packages/db/package.json packages/db/package.json
 COPY packages/docx-template/package.json packages/docx-template/package.json
 COPY packages/document-text/package.json packages/document-text/package.json
