@@ -8,6 +8,7 @@
     { "path": "packages/db" },
     { "path": "packages/auth" },
     { "path": "packages/pvgis-client" },
+    { "path": "packages/bill-reader" },
     { "path": "packages/docx-template" },
     { "path": "packages/file-storage" },
     { "path": "packages/icons" },
