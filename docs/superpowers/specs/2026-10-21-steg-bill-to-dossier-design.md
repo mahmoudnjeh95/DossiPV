@@ -161,21 +161,23 @@ Pure function in `packages/engine/src/sizing.ts`:
 - Specific yield: from PVGIS `PVcalc` (peak power 1 kWp, 14 % losses, tilt 30°, azimuth 0°) at
   the site GPS, cached like the existing `PvgisWeatherCache`; the caller passes it in so the
   function stays pure. PVGIS failure → 1 600 kWh/kWp with a visible warning.
-- Candidates: module × inverter × count (1–3 identical inverters), N modules from the
-  string-sizing limits (engine `nsMin`, `nsOptMax`, `npOpt`), equal strings preferred.
-  Enumeration capped at 20 000 candidates; modules pre-filtered to 380–720 W.
+- Candidates: module × **one** inverter (Claude's call: single-phase residential sites use one
+  inverter; multi-inverter layouts are a later iteration), N = ns × strings from the
+  string-sizing limits (engine `nsMin`, `nsOptMax`, `npOpt`), strings spread evenly over the
+  MPPTs. Cheap pre-filter before the engine runs: DC/AC ratio in [0.8, 1.3] and coverage in
+  [50 %, 130 %]. Enumeration capped at 20 000 engine runs; modules pre-filtered to 380–720 W.
 - STEG rules (engine checks, run on every complete candidate; any BLOCK failure drops it):
   - existing C01–C22;
   - **new C23 (BLOCK)**: total inverter AC power ≤ subscribed power;
   - C19 strict (single-phase inverter on single-phase site).
 - Auto-selected per candidate: the smallest-rated catalog item per protection type that passes
-  its checks (C08–C15); DC fuse only when required; AC isolator only with more than one inverter;
-  the smallest cable section passing C13/C16/C17 for the lengths.
+  its checks (C08–C15); DC fuse only when required; no AC isolator (one inverter); the smallest
+  cable sections passing C13/C16/C17 for the lengths; an EARTH cable with a 16 mm² section.
 - Three proposals (deduplicated; fewer if they coincide):
   1. **Recommandée** — estimated production closest to the consumption.
   2. **Économique** — fewest modules with coverage ≥ 80 %.
   3. **Production maximale** — highest production with coverage ≤ 120 % and DC/AC ratio ≤ 1.3.
-  Ties: fewer inverters, then ratio closest to 1.15, then lower module count.
+  Ties: DC/AC ratio closest to 1.15, then lower module count, then brand/model alphabetical.
 - Each proposal carries the full section payload (array, protections, cabling, earthing cable),
   the summary for the card (§3), and a one-sentence French explanation.
 - No solution → the most frequent blocking reasons in French (e.g. "aucun onduleur monophasé
