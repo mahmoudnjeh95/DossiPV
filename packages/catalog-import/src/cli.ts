@@ -13,6 +13,7 @@ import { pdfToText } from './pdf-text';
 import { parseStegList } from './parse-steg-list';
 import { parseAnmeList } from './parse-anme-list';
 import { DATA_DIR, SOURCE_LISTS } from './sources';
+import { runImport } from './run-import';
 
 async function writeJson(relativePath: string, value: unknown): Promise<void> {
   const fullPath = join(DATA_DIR, relativePath);
@@ -82,6 +83,7 @@ async function extract(args: string[]): Promise<void> {
 const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   'fetch-lists': fetchLists,
   extract,
+  import: (args) => runImport({ dryRun: !args.includes('--apply') }),
 };
 
 const [command = '', ...args] = process.argv.slice(2);
