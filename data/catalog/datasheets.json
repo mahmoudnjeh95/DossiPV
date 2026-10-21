@@ -333,5 +333,114 @@
       "JAM72S20-460/MR/1000V",
       "JAM72S20-465/MR/1000V"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://jinkosolar.com/uploads/JKM625-650N-78HL4-BDV-F9-EN.pdf",
+    "models": [
+      "JKM635N-78HL4-BDV"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/JKM605-630N-66HL4M-BDV-F3-EN.pdf",
+    "models": [
+      "JKM615N-66HL4M-BDV",
+      "JKM620N-66HL4M-BDV"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/JKM610-635N-66HL4M-(V)-F2-EN.pdf",
+    "models": [
+      "JKM615N-66HL4M-V",
+      "JKM620N-66HL4M-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-Type%2066HL5-BDV%20695-720.pdf",
+    "models": [
+      "JKM715N-66HL5-BDV",
+      "JKM720N-66HL5-BDV"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-type%2054HL4R-(V)%20425-450%20Watt.pdf",
+    "models": [
+      "JKM425N-54HL4R-V",
+      "JKM430N-54HL4R-V",
+      "JKM445N-54HL4R-V",
+      "JKM450N-54HL4R-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-type%2054HL4-(V)%20410-430%20Watt.pdf",
+    "models": [
+      "JKM425N-54HL4-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-type%2060HL4-(V)%20465-485%20Watt.pdf",
+    "models": [
+      "JKM480N-60HL4-V",
+      "JKM485N-60HL4-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-type%2072HL4-(V)%20565-585.pdf",
+    "models": [
+      "JKM575N-72HL4-V",
+      "JKM580N-72HL4-V",
+      "JKM585N-72HL4-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Neo%20N-Type%20JKM570-590N-72HL4-BDV-F8-EN.pdf",
+    "models": [
+      "JKM585N-72HL4-BDV"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Pro%2072HC%20535-555.pdf",
+    "models": [
+      "JKM535M-72HL4-V",
+      "JKM540M-72HL4-V",
+      "JKM545M-72HL4-V",
+      "JKM550M-72HL4-V",
+      "JKM555M-72HL4-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Jinko/Tiger%20Pro%2072HC%20540-560%20Watt.pdf",
+    "models": [
+      "JKM560M-72HL4-V"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Jinko",
+    "url": "https://www.jinkosolar.com/uploads/JKM460-480M-7RL3-(V)-F1-CN.pdf",
+    "models": [
+      "JKM465M-7RL3-V"
+    ]
   }
 ]
