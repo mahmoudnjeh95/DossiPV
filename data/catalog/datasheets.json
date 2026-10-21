@@ -540,5 +540,82 @@
     "models": [
       "LR5-72HPH-555M"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG21C.20%20700-725.pdf",
+    "models": [
+      "TSM-700NEG21C.20",
+      "TSM-710NEG21C.20",
+      "TSM-715NEG21C.20",
+      "TSM-720NEG21C.20",
+      "TSM-725NEG21C.20"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://solarproof.com.au/datasheets/panel_datasheet_DT-M-0042-AUS-EN-J-Datasheet_Vertex_NEG21C.20_715-740-2025_Cweb.pdf",
+    "models": [
+      "TSM-730NEG21C.20"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG19RC.20%20595-625W.pdf",
+    "models": [
+      "TSM-605NEG19RC.20",
+      "TSM-610NEG19RC.20",
+      "TSM-615 NEG19RC.20",
+      "TSM-620NEG19RC.20",
+      "TSM-625 NEG19RC.20"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG19RC.20%20605-630W.pdf",
+    "models": [
+      "TSM-630NEG19RC.20"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG18C.20%20575-600W.pdf",
+    "models": [
+      "TSM-585NEG18C.20",
+      "TSM-590NEG18C.20",
+      "TSM-595NEG18C.20"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG18R.28%20485-510W.pdf",
+    "models": [
+      "TSM-500NEG18R.28",
+      "TSM-505NEG18R.28"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NEG9R.28%20430-460W.pdf",
+    "models": [
+      "TSM-445NEG9R.28",
+      "TSM-450NEG9R.28",
+      "TSM-460NEG9R.28"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "Trina",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/Trina/TSM-NE19R%20595-625.pdf",
+    "models": [
+      "TSM-620NE19R"
+    ]
   }
 ]
