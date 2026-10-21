@@ -24,8 +24,9 @@ const AC_INSTALL_METHOD = '3A';
 const AC_AMBIENT_TEMP_C = 50;
 const GROUPED_CIRCUITS = 1;
 const LAYERS = 1;
-const EQUIPMENT_IMPULSE_WITHSTAND_KV = 4;
-const SPD_TO_EQUIPMENT_DISTANCE_M = 1;
+/** Values every proposal's SPDs are checked against (C11); applying a proposal stores them too. */
+export const EQUIPMENT_IMPULSE_WITHSTAND_KV = 4;
+export const SPD_TO_EQUIPMENT_DISTANCE_M = 1;
 const EARTH_SECTION_MM2 = 16;
 
 const lengthFormat = new Intl.NumberFormat('fr-FR');

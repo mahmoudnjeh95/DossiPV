@@ -233,19 +233,22 @@ describe('applyProposalAction', () => {
         ],
       },
     });
-    expect(m.tx.projectProtections.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { projectId: 'p1' },
-        update: {
-          dcSpdId: candidate.dcSpdId,
-          dcSwitchId: candidate.dcSwitchId,
-          dcFuseId: candidate.dcFuseId,
-          acBreakerId: candidate.acBreakerId,
-          acSpdId: candidate.acSpdId,
-          acIsolatorId: null,
-        },
-      }),
-    );
+    const appliedProtections = {
+      dcSpdId: candidate.dcSpdId,
+      dcSwitchId: candidate.dcSwitchId,
+      dcFuseId: candidate.dcFuseId,
+      acBreakerId: candidate.acBreakerId,
+      acSpdId: candidate.acSpdId,
+      acIsolatorId: null,
+      // The values the proposal was sized with, set explicitly so an earlier manual edit is overwritten.
+      equipmentImpulseWithstandKV: 4,
+      spdToEquipmentDistanceM: 1,
+    };
+    expect(m.tx.projectProtections.upsert).toHaveBeenCalledWith({
+      where: { projectId: 'p1' },
+      create: { projectId: 'p1', ...appliedProtections },
+      update: appliedProtections,
+    });
     expect(m.tx.projectCablingConfig.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ update: { cosPhi: 0.8, lambdaOhmPerM: 0.00008, maxVoltageDropPct: 3 } }),
     );

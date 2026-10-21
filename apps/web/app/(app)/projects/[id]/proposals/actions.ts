@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
+import { EQUIPMENT_IMPULSE_WITHSTAND_KV, SPD_TO_EQUIPMENT_DISTANCE_M } from '@dossipv/engine';
 import { requireOwnedProject, ProjectNotFoundError, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input';
 import { FormReader } from '../../../../../lib/form-reader';
@@ -48,6 +49,9 @@ export async function applyProposalAction(projectId: string, proposalKey: string
     acBreakerId: candidate.acBreakerId,
     acSpdId: candidate.acSpdId,
     acIsolatorId: null,
+    // Set explicitly so a value edited earlier in the protections form cannot outlive the proposal.
+    equipmentImpulseWithstandKV: EQUIPMENT_IMPULSE_WITHSTAND_KV,
+    spdToEquipmentDistanceM: SPD_TO_EQUIPMENT_DISTANCE_M,
   };
   const cablingConfig = {
     cosPhi: context.cosPhi,
