@@ -5,7 +5,7 @@ import { db } from '@dossipv/db';
 import { saveFile } from '@dossipv/file-storage';
 import type { CatalogInverterEntry, CatalogPvModuleEntry } from './build-catalog';
 import { planImport } from './plan-import';
-import { planCuratedImport, type CuratedPlan } from './plan-curated';
+import { pickPlanningRow, planCuratedImport, type CuratedPlan } from './plan-curated';
 import { DATA_DIR } from './sources';
 import { cachedDatasheet } from './datasheet-cache';
 
@@ -83,9 +83,10 @@ export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> 
 
   for (const entry of modules) {
     const values = pick(entry, MODULE_VALUES);
-    const existing = await db.pvModule.findFirst({ where: { ownerCompanyId: null, brand: entry.brand, model: entry.model } });
+    const { row: existing, conflict } = pickPlanningRow(await db.pvModule.findMany({ where: { ownerCompanyId: null, brand: entry.brand, model: entry.model } }));
+    if (conflict) console.log(`conflit : panneau ${entry.brand} ${entry.model} existe sans source — l'entrée importée est créée à côté`);
     const action = planImport(existing ? { id: existing.id, catalogStatus: existing.catalogStatus, values: pick(existing, MODULE_VALUES) } : null, { errors: entry.errors, values }, MODULE_REQUIRED);
-    count(`panneaux ${action.kind}`);
+    count(`panneaux ${conflict && action.kind === 'create' ? 'create-alongside' : action.kind}`);
     if (dryRun || action.kind === 'skip') {
       if (action.kind === 'skip') console.log(`Ignoré ${entry.brand} ${entry.model} : ${action.reason}`);
       continue;
@@ -107,9 +108,10 @@ export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> 
 
   for (const entry of inverters) {
     const values = pick(entry, INVERTER_VALUES);
-    const existing = await db.inverter.findFirst({ where: { ownerCompanyId: null, brand: entry.brand, model: entry.model } });
+    const { row: existing, conflict } = pickPlanningRow(await db.inverter.findMany({ where: { ownerCompanyId: null, brand: entry.brand, model: entry.model } }));
+    if (conflict) console.log(`conflit : onduleur ${entry.brand} ${entry.model} existe sans source — l'entrée importée est créée à côté`);
     const action = planImport(existing ? { id: existing.id, catalogStatus: existing.catalogStatus, values: pick(existing, INVERTER_VALUES) } : null, { errors: entry.errors, values }, INVERTER_REQUIRED);
-    count(`onduleurs ${action.kind}`);
+    count(`onduleurs ${conflict && action.kind === 'create' ? 'create-alongside' : action.kind}`);
     if (dryRun || action.kind === 'skip') {
       if (action.kind === 'skip') console.log(`Ignoré ${entry.brand} ${entry.model} : ${action.reason}`);
       continue;
