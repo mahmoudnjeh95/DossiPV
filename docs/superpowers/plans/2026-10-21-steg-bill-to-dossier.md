@@ -513,7 +513,7 @@ Rules: every equipment `<select>` of the array, protections, cabling and earthin
 
 Not a coding task. With the dev server and worker running against `dossipv_dev` and the imported catalog published there:
 
-1. Import `D:\mahmoud repo\New folder\facture.webp` through the UI (Playwright), pick "Recommandée", place the four points, generate.
+1. The installer agent fills its library from the shared catalogue (first-time setup), imports `D:\mahmoud repo\New folder\facture.webp` through the UI (Playwright), picks a proposal, places the four points, generates.
 2. STEG-reviewer agent reads the generated dossier → verdict + reasons per page.
 3. Installer agent walks the same flow in the browser → simplicity feedback.
 4. Facilitator agent merges code-review, STEG and installer feedback into one prioritised list for the user.
