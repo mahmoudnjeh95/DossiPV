@@ -16,7 +16,7 @@ import {
   type StegBillReading,
 } from '@dossipv/bill-reader';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { companyProjectTier } from '../../../lib/subscription';
+import { summarizeSubscription } from '../../../lib/subscription';
 
 export interface ImportBillState {
   error: string;
@@ -31,12 +31,51 @@ const CIVILITY_FROM_BILL: Record<NonNullable<StegBillReading['civility']>, strin
   societe: 'Société',
 };
 
+const DAILY_BILL_IMPORT_LIMIT = 30;
+
+/**
+ * The single-phase proposals do not apply to these bills; the site is created three-phase.
+ * "tri" is anchored at a word start so "électricité" does not match.
+ */
+const THREE_PHASE_OR_MV_TARIFF = /\btri|\bMT\b|moyenne tension/i;
+
+/** Same bounds as the corrections form: a value read outside them is dropped, not stored. */
+function inBounds<T extends string | number>(
+  value: T | null,
+  label: string,
+  fits: (v: T) => boolean,
+  warnings: string[],
+): T | null {
+  if (value === null || fits(value)) return value;
+  warnings.push(`Valeur lue hors limites ignorée : ${label}.`);
+  return null;
+}
+
 /** Reads a STEG bill with Claude and creates the project (client, site, annex) from it. */
 export async function importStegBillAction(
   _prevState: ImportBillState | undefined,
   formData: FormData,
 ): Promise<ImportBillState | undefined> {
   const user = await requireAuthenticatedCompanyUser();
+  const now = new Date();
+
+  // Both checks run before the paid Claude call.
+  const subscription = summarizeSubscription(
+    await db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
+    now,
+  );
+  if (!subscription || !subscription.canGenerate) {
+    return { error: "Votre abonnement n'est pas actif : import de facture impossible." };
+  }
+  const importsToday = await db.projectBillImport.count({
+    where: {
+      project: { companyId: user.companyId },
+      createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
+    },
+  });
+  if (importsToday >= DAILY_BILL_IMPORT_LIMIT) {
+    return { error: `Limite de ${DAILY_BILL_IMPORT_LIMIT} factures importées par jour atteinte.` };
+  }
 
   const field = formData.get('bill');
   if (!(field instanceof File) || field.size === 0) {
@@ -83,17 +122,32 @@ export async function importStegBillAction(
   }
   const position = governorate ?? { lat: TUNIS.lat, lon: TUNIS.lon };
 
-  if (reading.stegReference) {
+  const threePhaseOrMv = reading.tariffLabel !== null && THREE_PHASE_OR_MV_TARIFF.test(reading.tariffLabel);
+  if (threePhaseOrMv) {
+    warnings.push('Facture triphasée ou moyenne tension détectée : les propositions automatiques ne couvrent que le BT monophasé.');
+  }
+
+  const clientName = inBounds(reading.clientName?.trim() || null, 'Nom du client', (v) => v.length <= 200, warnings);
+  const stegReference = inBounds(reading.stegReference, 'Référence STEG', (v) => v.length <= 100, warnings);
+  const subscribedPowerKVA = inBounds(reading.subscribedPowerKVA, 'Puissance souscrite', (v) => v >= 1 && v <= 100, warnings);
+  const annualConsumptionKWh = inBounds(
+    check.derived.annualConsumptionKWh,
+    'Consommation annuelle',
+    (v) => v >= 1 && v <= 1_000_000,
+    warnings,
+  );
+
+  if (stegReference) {
     const duplicate = await db.project.findFirst({
-      where: { companyId: user.companyId, client: { stegReference: reading.stegReference } },
+      where: { companyId: user.companyId, client: { stegReference } },
       select: { id: true },
     });
     if (duplicate) {
-      warnings.push(`Un autre projet existe déjà pour la référence STEG ${reading.stegReference}.`);
+      warnings.push(`Un autre projet existe déjà pour la référence STEG ${stegReference}.`);
     }
   }
 
-  const tier = await companyProjectTier(user.companyId);
+  const tier = subscription.tier;
   const { storageKey } = await saveFile(storedBuffer, storedName, storedContentType);
 
   let projectId: string;
@@ -106,15 +160,15 @@ export async function importStegBillAction(
       await tx.projectClient.create({
         data: {
           projectId: project.id,
-          fullName: reading.clientName?.trim() || 'Client à compléter',
+          fullName: clientName ?? 'Client à compléter',
           civility: reading.civility ? CIVILITY_FROM_BILL[reading.civility] : null,
           clientKind: 'residential',
           address: reading.address,
           city: reading.city,
           governorate: reading.governorate,
-          stegReference: reading.stegReference,
-          annualConsumptionKWh: check.derived.annualConsumptionKWh,
-          subscribedPowerKVA: reading.subscribedPowerKVA,
+          stegReference,
+          annualConsumptionKWh,
+          subscribedPowerKVA,
         },
       });
       await tx.projectSite.create({
@@ -123,7 +177,7 @@ export async function importStegBillAction(
           gpsLat: position.lat,
           gpsLon: position.lon,
           gridType: 'BT',
-          phases: 1,
+          phases: threePhaseOrMv ? 3 : 1,
           mountingType: 'FLAT_ROOF_BALLAST',
           tiltDeg: 30,
           azimuthDeg: 0,
@@ -136,7 +190,7 @@ export async function importStegBillAction(
           fileId: file.id,
           reading: JSON.parse(JSON.stringify(reading)) as Prisma.InputJsonObject,
           warnings,
-          annualConsumptionKWh: check.derived.annualConsumptionKWh,
+          annualConsumptionKWh,
           averagePriceTNDPerKWh: check.derived.averagePriceTNDPerKWh,
           modelId: BILL_READER_MODEL,
         },

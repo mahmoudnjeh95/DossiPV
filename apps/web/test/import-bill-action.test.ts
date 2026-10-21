@@ -12,6 +12,7 @@ const m = vi.hoisted(() => {
     mockValidateSession: vi.fn(),
     mockSubscriptionFindUnique: vi.fn(),
     mockProjectFindFirst: vi.fn(),
+    mockBillImportCount: vi.fn(),
     mockTransaction: vi.fn(),
     tx: {
       file: { create: vi.fn() },
@@ -44,6 +45,7 @@ vi.mock('@dossipv/db', async () => {
       ...actual.db,
       subscription: { findUnique: m.mockSubscriptionFindUnique },
       project: { findFirst: m.mockProjectFindFirst },
+      projectBillImport: { count: m.mockBillImportCount },
       $transaction: m.mockTransaction,
     },
   };
@@ -63,6 +65,12 @@ import { BillReadingError } from '@dossipv/bill-reader';
 import { importStegBillAction } from '../app/(app)/projects/import-bill-actions';
 
 const user = { id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER' as const };
+
+const activeSubscription = {
+  status: 'ACTIVE',
+  periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  plan: { name: 'Premium', monthlyDossierLimit: 20, tier: 'PREMIUM' },
+};
 
 const JPEG_BYTES = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
 const WEBP_BYTES = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0, 0, 0, 0]), Buffer.from('WEBP'), Buffer.from([1, 2])]);
@@ -90,7 +98,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.mockGet.mockReturnValue({ value: 'valid-token' });
   m.mockValidateSession.mockResolvedValue(user);
-  m.mockSubscriptionFindUnique.mockResolvedValue({ plan: { tier: 'PREMIUM' } });
+  m.mockSubscriptionFindUnique.mockResolvedValue(activeSubscription);
+  m.mockBillImportCount.mockResolvedValue(0);
   m.mockProjectFindFirst.mockResolvedValue(null);
   m.mockReadStegBill.mockResolvedValue({ ...testBill, governorate: 'Gafsa' });
   m.mockSaveFile.mockResolvedValue({ storageKey: 'equipment/abc-facture.jpg' });
@@ -247,5 +256,106 @@ describe('importStegBillAction', () => {
 
     expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Enregistrement impossible, réessayez.' });
     expect(m.mockDeleteFile).toHaveBeenCalledWith('equipment/abc-facture.jpg');
+  });
+});
+
+describe('importStegBillAction — subscription and daily limit (before the paid Claude call)', () => {
+  it('refuses when the company has no subscription', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue(null);
+
+    expect(await importStegBillAction(undefined, billForm())).toEqual({
+      error: "Votre abonnement n'est pas actif : import de facture impossible.",
+    });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+  });
+
+  it('refuses when the subscription is expired', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ ...activeSubscription, periodEnd: new Date(Date.now() - 24 * 60 * 60 * 1000) });
+
+    expect(await importStegBillAction(undefined, billForm())).toEqual({
+      error: "Votre abonnement n'est pas actif : import de facture impossible.",
+    });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+  });
+
+  it('refuses the 31st bill import of the day and counts the company imports since local midnight', async () => {
+    m.mockBillImportCount.mockResolvedValue(30);
+
+    expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Limite de 30 factures importées par jour atteinte.' });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+    const now = new Date();
+    expect(m.mockBillImportCount).toHaveBeenCalledWith({
+      where: { project: { companyId: 'company-1' }, createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) } },
+    });
+  });
+
+  it('accepts the 30th bill import of the day', async () => {
+    m.mockBillImportCount.mockResolvedValue(29);
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(m.mockReadStegBill).toHaveBeenCalled();
+  });
+});
+
+describe('importStegBillAction — three-phase / medium-voltage bills', () => {
+  const THREE_PHASE_WARNING = 'Facture triphasée ou moyenne tension détectée : les propositions automatiques ne couvrent que le BT monophasé.';
+
+  it.each(['BT Triphasé', 'MT', 'Moyenne Tension'])('creates a three-phase site with a warning for the tariff "%s"', async (tariffLabel) => {
+    m.mockReadStegBill.mockResolvedValue({ ...testBill, tariffLabel });
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(createdData(m.tx.projectSite.create)).toMatchObject({ phases: 3 });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toContain(THREE_PHASE_WARNING);
+  });
+
+  it.each(['BT Monophasé', 'Électricité BT résidentiel'])('keeps a single-phase site without that warning for the tariff "%s"', async (tariffLabel) => {
+    m.mockReadStegBill.mockResolvedValue({ ...testBill, tariffLabel });
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(createdData(m.tx.projectSite.create)).toMatchObject({ phases: 1 });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).not.toContain(THREE_PHASE_WARNING);
+  });
+});
+
+describe('importStegBillAction — values outside the corrections-form bounds', () => {
+  it('drops an out-of-range subscribed power with a warning', async () => {
+    m.mockReadStegBill.mockResolvedValue({ ...testBill, subscribedPowerKVA: 250 });
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(createdData(m.tx.projectClient.create)).toMatchObject({ subscribedPowerKVA: null });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toContain('Valeur lue hors limites ignorée : Puissance souscrite.');
+  });
+
+  it('drops an out-of-range annual consumption with a warning', async () => {
+    m.mockReadStegBill.mockResolvedValue({ ...testBill, totalElectricityKWh: 900_000, monthsBilled: 4 });
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(createdData(m.tx.projectClient.create)).toMatchObject({ annualConsumptionKWh: null });
+    expect(createdData(m.tx.projectBillImport.create)).toMatchObject({ annualConsumptionKWh: null });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toContain('Valeur lue hors limites ignorée : Consommation annuelle.');
+  });
+
+  it('drops an over-long client name and STEG reference with warnings', async () => {
+    m.mockReadStegBill.mockResolvedValue({ ...testBill, clientName: 'A'.repeat(201), stegReference: '9'.repeat(101) });
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(createdData(m.tx.projectClient.create)).toMatchObject({ fullName: 'Client à compléter', stegReference: null });
+    expect(m.mockProjectFindFirst).not.toHaveBeenCalled();
+    const warnings = createdData(m.tx.projectBillImport.create)['warnings'];
+    expect(warnings).toContain('Valeur lue hors limites ignorée : Nom du client.');
+    expect(warnings).toContain('Valeur lue hors limites ignorée : Référence STEG.');
+  });
+
+  it('keeps in-range values untouched', async () => {
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    const warnings = createdData(m.tx.projectBillImport.create)['warnings'] as string[];
+    expect(warnings.some((w) => w.startsWith('Valeur lue hors limites'))).toBe(false);
   });
 });
