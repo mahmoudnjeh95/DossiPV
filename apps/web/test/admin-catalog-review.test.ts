@@ -36,6 +36,7 @@ vi.mock('@dossipv/db', async () => {
   };
 });
 
+import { Prisma } from '@dossipv/db';
 import { publishCatalogItemAction, rejectCatalogItemAction, publishCleanDraftsAction } from '../app/admin/(protected)/catalog-review/actions';
 import { describeInverter } from '../app/admin/(protected)/catalog-review/describe-item';
 
@@ -62,6 +63,22 @@ describe('catalog review actions', () => {
   it('deletes a rejected draft', async () => {
     expect(await rejectCatalogItemAction('INVERTER', 'i1')).toBeUndefined();
     expect(mocks.inverterDelete).toHaveBeenCalledWith({ where: { id: 'i1', catalogStatus: 'DRAFT' } });
+  });
+
+  it('revalidates the review page after a rejection', async () => {
+    await rejectCatalogItemAction('PV_MODULE', 'm1');
+    expect(mocks.pvModuleDelete).toHaveBeenCalledWith({ where: { id: 'm1', catalogStatus: 'DRAFT' } });
+    expect(mocks.mockRevalidatePath).toHaveBeenCalledWith('/admin/catalog-review');
+  });
+
+  it('reports a foreign-key violation as in use', async () => {
+    mocks.inverterDelete.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('fk', { code: 'P2003', clientVersion: 'x' }));
+    expect(await rejectCatalogItemAction('INVERTER', 'i1')).toEqual({ error: 'Suppression impossible : cet équipement est déjà utilisé.' });
+  });
+
+  it('rethrows any other deletion failure', async () => {
+    mocks.inverterDelete.mockRejectedValue(new Error('db down'));
+    await expect(rejectCatalogItemAction('INVERTER', 'i1')).rejects.toThrow('db down');
   });
 
   it('refuses every action without a super-admin session', async () => {

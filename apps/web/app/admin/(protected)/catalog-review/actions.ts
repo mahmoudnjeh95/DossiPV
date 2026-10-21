@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { db } from '@dossipv/db';
+import { db, Prisma } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 
 export type ReviewKind = 'PV_MODULE' | 'INVERTER';
@@ -24,13 +24,19 @@ export async function publishCleanDraftsAction(kind: ReviewKind): Promise<void> 
   revalidatePath(PATH);
 }
 
-export async function rejectCatalogItemAction(kind: ReviewKind, id: string): Promise<{ error: string } | undefined> {
+export async function rejectCatalogItemAction(
+  kind: ReviewKind,
+  id: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- required by the useActionState signature
+  _prevState?: { error: string },
+): Promise<{ error: string } | undefined> {
   if (!(await requireAuthenticatedSuperAdmin())) return undefined;
   const args = { where: { id, catalogStatus: 'DRAFT' as const } };
   try {
     if (kind === 'PV_MODULE') await db.pvModule.delete(args);
     else await db.inverter.delete(args);
-  } catch {
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2003') throw error;
     return { error: 'Suppression impossible : cet équipement est déjà utilisé.' };
   }
   revalidatePath(PATH);

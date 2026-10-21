@@ -1,6 +1,7 @@
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { publishCatalogItemAction, publishCleanDraftsAction, rejectCatalogItemAction } from './actions';
+import { publishCatalogItemAction, publishCleanDraftsAction } from './actions';
+import { RejectButton } from './reject-button';
 import { describeInverter, describePvModule } from './describe-item';
 
 function Notes({ notes }: { notes: string | null }): React.JSX.Element | null {
@@ -36,7 +37,7 @@ export default async function CatalogReviewPage(): Promise<React.JSX.Element> {
             {m.datasheetSourceUrl && <a href={m.datasheetSourceUrl} target="_blank" rel="noreferrer">Fiche du fabricant</a>}
             <Notes notes={m.importNotes} />
             <form action={publishCatalogItemAction.bind(null, 'PV_MODULE', m.id)}><button type="submit">Publier</button></form>
-            <form action={async () => { 'use server'; await rejectCatalogItemAction('PV_MODULE', m.id); }}><button type="submit" className="danger">Rejeter</button></form>
+            <RejectButton kind="PV_MODULE" id={m.id} />
           </article>
         ))}
       </section>
@@ -54,7 +55,7 @@ export default async function CatalogReviewPage(): Promise<React.JSX.Element> {
             {i.datasheetSourceUrl && <a href={i.datasheetSourceUrl} target="_blank" rel="noreferrer">Fiche du fabricant</a>}
             <Notes notes={i.importNotes} />
             <form action={publishCatalogItemAction.bind(null, 'INVERTER', i.id)}><button type="submit">Publier</button></form>
-            <form action={async () => { 'use server'; await rejectCatalogItemAction('INVERTER', i.id); }}><button type="submit" className="danger">Rejeter</button></form>
+            <RejectButton kind="INVERTER" id={i.id} />
           </article>
         ))}
       </section>
