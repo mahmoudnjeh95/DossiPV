@@ -191,5 +191,147 @@
       "X1-BOOST-5K-G4",
       "X1-BOOST-6K-G4"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM66D45-605-630%20LB.pdf",
+    "models": [
+      "JAM66D45-615/LB",
+      "JAM66D45-620/LB",
+      "JAM66D45-625/LB",
+      "JAM66D45-630/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM66D46%20695-720:LB.pdf",
+    "models": [
+      "JAM66D46-700/LB",
+      "JAM66D46-710/LB",
+      "JAM66D46-715/LB",
+      "JAM66D46-720/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://www.solartraders.com/uploads/production/data_sheet/file/38938/data_sheet_jam60d42_515_lb_bfr_bif_dg_en_03-05-2025.pdf",
+    "models": [
+      "JAM60D42-540/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM78D40%20625-650:MB.pdf",
+    "models": [
+      "JAM78D40-645/MB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/Deep%20Blue%204.0%20Pro%20JAM72D40%20580-605%20LB.pdf",
+    "models": [
+      "JAM72D40-600/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM72D40-580-605%20MB.pdf",
+    "models": [
+      "JAM72D40-585/MB",
+      "JAM72D40-595/MB",
+      "JAM72D40-600/MB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/Deep%20Blue%203.0%20JAM72D30%20525-550-MB.pdf",
+    "models": [
+      "JAM72D30-545/MB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/Deep%20Blue%203.0%20JAM72D30%20555-580%20LB.pdf",
+    "models": [
+      "JAM72D30-560/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/Deep%20Blue%203.0%20Pro%20JAM72S30%20560-585LR.pdf",
+    "models": [
+      "JAM72S30-560/LR",
+      "JAM72S30-565/LR",
+      "JAM72S30-570/LR"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/Deep%20Blue%203.0%20JAM72S30%20540-565%20MR.pdf",
+    "models": [
+      "JAM72S30-540/MR",
+      "JAM72S30-550/MR"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JASolar_JAM72S20_445-470MR.pdf",
+    "models": [
+      "JAM72S20-460/MR",
+      "JAM72S20-465/MR"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM54D40%20435-460%20LB.pdf",
+    "models": [
+      "JAM54D40-440/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM60S20%20365-390%20MR.pdf",
+    "models": [
+      "JAM60S20-375/MR"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM66S30%20480-505-MR-1500V.pdf",
+    "models": [
+      "JAM66S30-500/MR"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://ik.imagekit.io/sunstore/productsdb/Modules/JASolar/JAM72D42%20625-650:LB.pdf",
+    "models": [
+      "JAM72D42-625/LB",
+      "JAM72D42-635/LB"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "JA Solar",
+    "url": "https://solarproof.com.au/datasheets/panel_datasheet_20230208050406820.pdf",
+    "models": [
+      "JAM72S20-460/MR/1000V",
+      "JAM72S20-465/MR/1000V"
+    ]
   }
 ]
