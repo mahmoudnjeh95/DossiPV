@@ -706,5 +706,99 @@
       "CS6.2-48TD-450",
       "CS6.2-48TD-455"
     ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_MC_144_430_W_450_W_SC_11_5_Ver26_8_1_f883496fbb.pdf",
+    "models": [
+      "AE450MC-144"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_MD_132_485_W_505_W_SC_11_5_Ver26_8_1_d6229cc8b1.pdf",
+    "models": [
+      "AE505MD-132"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_MD_144_530_W_550_W_SC_11_5_Ver26_8_1_9fcb11d207.pdf",
+    "models": [
+      "AE550MD-144"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_CMD_144_565_W_585_W_Ver24_1_1_PT_142efbd125.pdf",
+    "models": [
+      "AE570CMD-144"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_CMD_144_BDS_575_W_595_W_Ver26_8_1_b79ae77a17.pdf",
+    "models": [
+      "AE580CMD-144BDS",
+      "AE585CMD-144BDS",
+      "AE590CMD-144BDS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_ME_132_BD_640_W_660_W_SC_11_5_Ver26_8_1_1c5850e2b1.pdf",
+    "models": [
+      "AE650ME-132BD"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_ME_132_640_W_660_W_SC_11_5_Ver26_8_1_bf59e8ad45.pdf",
+    "models": [
+      "AE660ME-132"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_CME_132_BDS_710_W_730_W_Ver26_8_1_8d9df791af.pdf",
+    "models": [
+      "AE710CME-132BDS",
+      "AE715CME-132BDS",
+      "AE720CME-132BDS",
+      "AE725CME-132BDS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_CMER_132_BDS_610_W_630_W_Ver26_8_1_0c59ec6c51.pdf",
+    "models": [
+      "AE620CMER-132BDS",
+      "AE630CMER-132BDS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_CMER_108_BDS_490_W_510_W_Ver26_8_1_0d069823b4.pdf",
+    "models": [
+      "AE510CMER-108BDS"
+    ]
+  },
+  {
+    "kind": "PV_MODULE",
+    "brand": "AE Solar",
+    "url": "https://api.ae-solar.com/uploads/AE_ICME_132_BDS_640_W_660_W_Ver26_1_1_a6feacabf6.pdf",
+    "models": [
+      "AE650ICME-132BDS"
+    ]
   }
 ]
