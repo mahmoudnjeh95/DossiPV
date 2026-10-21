@@ -1,9 +1,11 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
-import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
+import { requireOwnedProject, ProjectNotFoundError, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input';
+import { FormReader } from '../../../../../lib/form-reader';
 import { computeProjectProposals } from '../../../../../lib/project-proposals';
 import { structureDataFor, EARTHING_FIXED_VALUES } from '../../../../../lib/section-defaults';
 
@@ -141,4 +143,45 @@ export async function applyProposalAction(projectId: string, proposalKey: string
   });
 
   redirect(`/projects/${projectId}/locations`);
+}
+
+/**
+ * The installer fixed what was misread on the bill (or filled what was missing): update the client's
+ * identity and need, then the proposals page recomputes. Name and STEG reference stay as they were
+ * once a dossier was generated (spec §5).
+ */
+export async function saveBillCorrectionsAction(
+  projectId: string,
+  _prev: { error: string } | undefined,
+  formData: FormData,
+): Promise<{ error: string } | undefined> {
+  try {
+    await requireOwnedProject(projectId);
+  } catch (error) {
+    if (error instanceof ProjectNotFoundError) return { error: NOT_FOUND };
+    throw error;
+  }
+
+  const reader = new FormReader(formData);
+  const fullName = reader.text('fullName', 'Nom du client', 200);
+  const stegReference = reader.optionalText('stegReference', 'Référence STEG', 100);
+  const subscribedPowerKVA = reader.number('subscribedPowerKVA', 'Puissance souscrite', { min: 1, max: 100 });
+  const annualConsumptionKWh = reader.number('annualConsumptionKWh', 'Consommation annuelle', { min: 1, max: 1_000_000 });
+  if (reader.hasErrors) return { error: reader.errorMessage() };
+
+  const existing = await db.projectClient.findUnique({ where: { projectId } });
+  if (!existing) return { error: 'Client introuvable.' };
+  const locked = await isClientIdentityLocked(projectId);
+
+  await db.projectClient.update({
+    where: { projectId },
+    data: {
+      fullName: locked ? existing.fullName : fullName,
+      stegReference: locked ? existing.stegReference : stegReference,
+      subscribedPowerKVA,
+      annualConsumptionKWh,
+    },
+  });
+  revalidatePath(`/projects/${projectId}/proposals`);
+  return undefined;
 }
