@@ -6,6 +6,7 @@ const originalFetch = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  vi.restoreAllMocks();
 });
 
 describe('fetchPvgisSpecificYield', () => {
@@ -43,5 +44,34 @@ describe('fetchPvgisSpecificYield', () => {
     });
 
     await expect(fetchPvgisSpecificYield(34.42, 8.78, 30, 0)).rejects.toBeInstanceOf(PvgisFetchError);
+  });
+
+  it('gives PVGIS 10 seconds before aborting the request', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ outputs: { totals: { fixed: { E_y: 1750.3 } } } }),
+    });
+    globalThis.fetch = mockFetch;
+
+    await fetchPvgisSpecificYield(34.42, 8.78, 30, 0);
+
+    expect(timeout).toHaveBeenCalledWith(10_000);
+    expect((mockFetch.mock.calls[0]![1] as RequestInit).signal).toBe(timeout.mock.results[0]!.value);
+  });
+
+  it('rejects when PVGIS does not answer before the timeout', async () => {
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => realTimeout(5));
+    // A fetch that hangs until its signal aborts, like a PVGIS that never answers.
+    globalThis.fetch = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal!.reason as Error));
+        }),
+    ) as typeof fetch;
+
+    await expect(fetchPvgisSpecificYield(34.42, 8.78, 30, 0)).rejects.toMatchObject({ name: 'TimeoutError' });
   });
 });

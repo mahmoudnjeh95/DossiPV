@@ -2,6 +2,8 @@ import { PvgisFetchError } from './types';
 
 const PVGIS_PVCALC_URL = 'https://re.jrc.ec.europa.eu/api/v5_3/PVcalc';
 const SYSTEM_LOSS_PERCENT = 14;
+/** The proposals page waits on this call; a stalled PVGIS must not hang it (callers fall back). */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 interface RawPvcalcResponse {
   outputs?: {
@@ -29,7 +31,7 @@ export async function fetchPvgisSpecificYield(
   url.searchParams.set('aspect', String(azimuthDeg));
   url.searchParams.set('outputformat', 'json');
 
-  const response = await fetch(url.toString());
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
   if (!response.ok) {
     throw new PvgisFetchError(response.status, `PVGIS request failed with status ${response.status}`);
   }

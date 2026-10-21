@@ -51,4 +51,17 @@ describe('getSpecificYield', () => {
     });
     expect(create).not.toHaveBeenCalled();
   });
+
+  it('falls back to 1600 with a warning when the PVGIS request times out', async () => {
+    findUnique.mockResolvedValue(null);
+    fetchPvgisSpecificYield.mockRejectedValue(new DOMException('The operation was aborted due to timeout', 'TimeoutError'));
+
+    const result = await getSpecificYield(34.42, 8.78, 30, 0);
+
+    expect(result).toEqual({
+      value: 1600,
+      warning: 'PVGIS indisponible : rendement par défaut de 1 600 kWh/kWc utilisé.',
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
 });
