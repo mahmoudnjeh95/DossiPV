@@ -5,6 +5,7 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { FormReader } from '../../../lib/form-reader';
 import { CIVILITY_OPTIONS, CLIENT_KIND_OPTIONS } from '../../../lib/labels';
+import { companyProjectTier } from '../../../lib/subscription';
 
 export interface CreateProjectActionState {
   error: string;
@@ -39,11 +40,7 @@ export async function createProjectAction(
     return { error: reader.errorMessage() };
   }
 
-  const subscription = await db.subscription.findUnique({
-    where: { companyId: user.companyId },
-    include: { plan: true },
-  });
-  const tier = subscription?.plan.tier ?? 'STANDARD';
+  const tier = await companyProjectTier(user.companyId);
 
   const project = await db.project.create({
     data: {

@@ -1,3 +1,5 @@
+import { db } from '@dossipv/db';
+
 /**
  * Pure helpers for the installer-facing subscription banner and quota — no I/O, so they can be
  * unit tested directly and reused by the dashboard, the project overview and the generate action.
@@ -81,4 +83,13 @@ export function checkQuota(jobs: QuotaJobLike[], limit: number, projectId: strin
   const used = counted.size;
   const needsNewSlot = !counted.has(projectId);
   return { used, limit, blocked: needsNewSlot && used >= limit };
+}
+
+/**
+ * Spec §1: a project's tier comes from the company's current plan, never from the request.
+ * Companies without a subscription fall back to STANDARD.
+ */
+export async function companyProjectTier(companyId: string): Promise<'STANDARD' | 'PREMIUM'> {
+  const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
+  return subscription?.plan.tier ?? 'STANDARD';
 }

@@ -9,7 +9,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@dossipv/auth": "*",
+    "@dossipv/bill-reader": "*",
     "@dossipv/db": "*",
     "@dossipv/engine": "*",
     "@dossipv/file-storage": "*",
@@ -18,7 +20,8 @@
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",
