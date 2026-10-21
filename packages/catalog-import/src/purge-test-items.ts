@@ -55,6 +55,17 @@ const TABLES: TableSpec[] = [
   },
 ];
 
+/** `host:port/database` of a connection URL, never the credentials. */
+export function describeDatabase(url: string | undefined): string {
+  if (!url) return 'inconnue (DATABASE_URL absente)';
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname}:${parsed.port || '5432'}${parsed.pathname}`;
+  } catch {
+    return 'illisible (DATABASE_URL invalide)';
+  }
+}
+
 interface Delegate {
   findMany(args: unknown): Promise<Record<string, unknown>[]>;
   deleteMany(args: unknown): Promise<unknown>;
@@ -64,6 +75,7 @@ export async function runPurge(
   db: PrismaClient,
   options: { apply: boolean; log: (line: string) => void },
 ): Promise<{ deleted: number; referenced: number }> {
+  options.log(`Base : ${describeDatabase(process.env.DATABASE_URL)}`);
   const delegateOf = (table: EquipmentTable): Delegate => (db as unknown as Record<string, Delegate>)[table]!;
   const libraryCounts = new Map<string, number>();
   const items: SharedItemRow[] = [];
