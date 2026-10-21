@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
-import { catalogScope, isClientIdentityLocked } from '../../../../../lib/project-access';
+import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { FormReader } from '../../../../../lib/form-reader';
 import {
   CIVILITY_OPTIONS,
@@ -172,13 +172,22 @@ export async function saveArrayAction(projectId: string, payload: ArrayPayload):
     }
   }
 
-  const scope = catalogScope(owned.companyId);
-  const module = await db.pvModule.findFirst({ where: { id: payload.moduleId, ...scope }, select: { id: true } });
+  const saved = await db.projectArrayConfig.findUnique({
+    where: { projectId },
+    select: { moduleId: true, inverters: { select: { inverterId: true } } },
+  });
+  const module = await db.pvModule.findFirst({
+    where: { id: payload.moduleId, ...equipmentChoiceScope(owned.companyId, saved ? [saved.moduleId] : []) },
+    select: { id: true },
+  });
   if (!module) {
     return { error: 'Module introuvable dans votre bibliothèque.' };
   }
   const inverterIds = [...new Set(payload.inverters.map((inv) => inv.inverterId))];
-  const inverters = await db.inverter.findMany({ where: { id: { in: inverterIds }, ...scope }, select: { id: true, mpptCount: true } });
+  const inverters = await db.inverter.findMany({
+    where: { id: { in: inverterIds }, ...equipmentChoiceScope(owned.companyId, saved?.inverters.map((i) => i.inverterId) ?? []) },
+    select: { id: true, mpptCount: true },
+  });
   if (inverters.length !== inverterIds.length) {
     return { error: 'Onduleur introuvable dans votre bibliothèque.' };
   }
@@ -246,14 +255,16 @@ export async function saveProtectionsAction(
     return { error: reader.errorMessage() };
   }
 
-  const scope = catalogScope(owned.companyId);
+  const saved = await db.projectProtections.findUnique({ where: { projectId } });
+  const choice = (savedId: string | null | undefined): ReturnType<typeof equipmentChoiceScope> =>
+    equipmentChoiceScope(owned.companyId, savedId ? [savedId] : []);
   const [dcSpd, dcSwitch, dcFuse, acBreaker, acSpd, acIsolator] = await Promise.all([
-    db.spd.findFirst({ where: { id: dcSpdId, side: 'DC', ...scope }, select: { id: true } }),
-    db.dcSwitch.findFirst({ where: { id: dcSwitchId, ...scope }, select: { id: true } }),
-    dcFuseId ? db.dcFuse.findFirst({ where: { id: dcFuseId, ...scope }, select: { id: true } }) : Promise.resolve(null),
-    db.acBreaker.findFirst({ where: { id: acBreakerId, ...scope }, select: { id: true } }),
-    db.spd.findFirst({ where: { id: acSpdId, side: 'AC', ...scope }, select: { id: true } }),
-    acIsolatorId ? db.acIsolator.findFirst({ where: { id: acIsolatorId, ...scope }, select: { id: true } }) : Promise.resolve(null),
+    db.spd.findFirst({ where: { id: dcSpdId, side: 'DC', ...choice(saved?.dcSpdId) }, select: { id: true } }),
+    db.dcSwitch.findFirst({ where: { id: dcSwitchId, ...choice(saved?.dcSwitchId) }, select: { id: true } }),
+    dcFuseId ? db.dcFuse.findFirst({ where: { id: dcFuseId, ...choice(saved?.dcFuseId) }, select: { id: true } }) : Promise.resolve(null),
+    db.acBreaker.findFirst({ where: { id: acBreakerId, ...choice(saved?.acBreakerId) }, select: { id: true } }),
+    db.spd.findFirst({ where: { id: acSpdId, side: 'AC', ...choice(saved?.acSpdId) }, select: { id: true } }),
+    acIsolatorId ? db.acIsolator.findFirst({ where: { id: acIsolatorId, ...choice(saved?.acIsolatorId) }, select: { id: true } }) : Promise.resolve(null),
   ]);
   if (!dcSpd || !dcSwitch || !acBreaker || !acSpd || (dcFuseId && !dcFuse) || (acIsolatorId && !acIsolator)) {
     return { error: 'Un équipement sélectionné est introuvable dans votre bibliothèque.' };
@@ -339,9 +350,15 @@ export async function saveCablingAction(projectId: string, payload: CablingPaylo
     }
   }
 
-  const scope = catalogScope(owned.companyId);
+  const [savedConfig, savedRuns] = await Promise.all([
+    db.projectCablingConfig.findUnique({ where: { projectId }, select: { connectorId: true, cableTrayId: true } }),
+    db.projectCableRun.findMany({ where: { projectId }, select: { cableId: true } }),
+  ]);
   const cableIds = [...new Set(payload.runs.map((r) => r.cableId))];
-  const cables = await db.cable.findMany({ where: { id: { in: cableIds }, ...scope }, include: { sections: true } });
+  const cables = await db.cable.findMany({
+    where: { id: { in: cableIds }, ...equipmentChoiceScope(owned.companyId, savedRuns.map((r) => r.cableId)) },
+    include: { sections: true },
+  });
   if (cables.length !== cableIds.length) {
     return { error: 'Câble introuvable dans votre bibliothèque.' };
   }
@@ -362,8 +379,8 @@ export async function saveCablingAction(projectId: string, payload: CablingPaylo
     return { error: 'Chemin de câbles invalide.' };
   }
   const [connector, cableTray] = await Promise.all([
-    payload.connectorId ? db.accessory.findFirst({ where: { id: payload.connectorId, kind: 'MC4_CONNECTOR', ...scope }, select: { id: true } }) : Promise.resolve(null),
-    payload.cableTrayId ? db.accessory.findFirst({ where: { id: payload.cableTrayId, kind: 'CABLE_TRAY', ...scope }, select: { id: true } }) : Promise.resolve(null),
+    payload.connectorId ? db.accessory.findFirst({ where: { id: payload.connectorId, kind: 'MC4_CONNECTOR', ...equipmentChoiceScope(owned.companyId, savedConfig?.connectorId ? [savedConfig.connectorId] : []) }, select: { id: true } }) : Promise.resolve(null),
+    payload.cableTrayId ? db.accessory.findFirst({ where: { id: payload.cableTrayId, kind: 'CABLE_TRAY', ...equipmentChoiceScope(owned.companyId, savedConfig?.cableTrayId ? [savedConfig.cableTrayId] : []) }, select: { id: true } }) : Promise.resolve(null),
   ]);
   if ((payload.connectorId && !connector) || (payload.cableTrayId && !cableTray)) {
     return { error: 'Accessoire introuvable dans votre bibliothèque.' };
@@ -476,11 +493,11 @@ export async function saveEarthingAction(
     return { error: reader.errorMessage() };
   }
 
-  const scope = catalogScope(owned.companyId);
+  const saved = await db.projectEarthing.findUnique({ where: { projectId }, select: { earthCableId: true, distributionBlockId: true } });
   const [cable, block] = await Promise.all([
-    db.cable.findFirst({ where: { id: earthCableId, usage: 'EARTH', ...scope }, select: { id: true } }),
+    db.cable.findFirst({ where: { id: earthCableId, usage: 'EARTH', ...equipmentChoiceScope(owned.companyId, saved ? [saved.earthCableId] : []) }, select: { id: true } }),
     distributionBlockId
-      ? db.accessory.findFirst({ where: { id: distributionBlockId, kind: 'DISTRIBUTION_BLOCK', ...scope }, select: { id: true } })
+      ? db.accessory.findFirst({ where: { id: distributionBlockId, kind: 'DISTRIBUTION_BLOCK', ...equipmentChoiceScope(owned.companyId, saved?.distributionBlockId ? [saved.distributionBlockId] : []) }, select: { id: true } })
       : Promise.resolve(null),
   ]);
   if (!cable || (distributionBlockId && !block)) {

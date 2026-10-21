@@ -20,6 +20,15 @@ const mocks = vi.hoisted(() => {
     transaction: vi.fn(),
     cableFindMany: vi.fn(),
     accessoryFindFirst: vi.fn(),
+    arrayConfigFindUnique: vi.fn(),
+    protectionsFindUnique: vi.fn(),
+    protectionsUpsert: vi.fn(),
+    cablingConfigFindUnique: vi.fn(),
+    cableRunFindMany: vi.fn(),
+    earthingFindUnique: vi.fn(),
+    spdFindFirst: vi.fn(),
+    dcSwitchFindFirst: vi.fn(),
+    acBreakerFindFirst: vi.fn(),
   };
 });
 
@@ -43,13 +52,21 @@ vi.mock('@dossipv/db', async () => {
       pvModule: { findFirst: mocks.moduleFindFirst },
       inverter: { findMany: mocks.inverterFindMany },
       cable: { findMany: mocks.cableFindMany, findFirst: mocks.cableFindFirst },
-      projectEarthing: { upsert: mocks.earthingUpsert },
+      projectEarthing: { upsert: mocks.earthingUpsert, findUnique: mocks.earthingFindUnique },
+      projectArrayConfig: { findUnique: mocks.arrayConfigFindUnique },
+      projectProtections: { findUnique: mocks.protectionsFindUnique, upsert: mocks.protectionsUpsert },
+      projectCablingConfig: { findUnique: mocks.cablingConfigFindUnique },
+      projectCableRun: { findMany: mocks.cableRunFindMany },
+      spd: { findFirst: mocks.spdFindFirst },
+      dcSwitch: { findFirst: mocks.dcSwitchFindFirst },
+      acBreaker: { findFirst: mocks.acBreakerFindFirst },
       accessory: { findFirst: mocks.accessoryFindFirst },
       $transaction: mocks.transaction,
     },
   };
 });
 
+import { equipmentChoiceScope } from '../lib/project-access';
 import {
   saveClientAction,
   saveSiteAction,
@@ -57,6 +74,7 @@ import {
   saveCablingAction,
   saveStructureAction,
   saveEarthingAction,
+  saveProtectionsAction,
   type ArrayPayload,
   type CablingPayload,
 } from '../app/(app)/projects/[id]/sections/actions';
@@ -88,6 +106,11 @@ beforeEach(() => {
   mocks.mockValidateSession.mockResolvedValue(user);
   mocks.projectFindFirst.mockResolvedValue({ id: 'project-1' });
   mocks.jobCount.mockResolvedValue(0);
+  mocks.arrayConfigFindUnique.mockResolvedValue(null);
+  mocks.protectionsFindUnique.mockResolvedValue(null);
+  mocks.cablingConfigFindUnique.mockResolvedValue(null);
+  mocks.cableRunFindMany.mockResolvedValue([]);
+  mocks.earthingFindUnique.mockResolvedValue(null);
 });
 
 describe('saveStructureAction', () => {
@@ -303,16 +326,44 @@ describe('saveArrayAction', () => {
     ],
   };
 
-  it('refuses equipment outside the shared + private catalog scope', async () => {
+  it('refuses a module outside the installer library', async () => {
     mocks.moduleFindFirst.mockResolvedValue(null);
 
     expect(await saveArrayAction('project-1', payload)).toEqual({
       error: 'Module introuvable dans votre bibliothèque.',
     });
     expect(mocks.moduleFindFirst).toHaveBeenCalledWith({
-      where: { id: 'module-1', OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: 'company-1' }] },
+      where: { id: 'module-1', ...equipmentChoiceScope('company-1', []) },
       select: { id: true },
     });
+  });
+
+  it('rejects an inverter outside the library', async () => {
+    mocks.moduleFindFirst.mockResolvedValue({ id: 'module-1' });
+    mocks.inverterFindMany.mockResolvedValue([]);
+
+    expect(await saveArrayAction('project-1', payload)).toEqual({
+      error: 'Onduleur introuvable dans votre bibliothèque.',
+    });
+    expect(mocks.inverterFindMany).toHaveBeenCalledWith({
+      where: { id: { in: ['inverter-1'] }, ...equipmentChoiceScope('company-1', []) },
+      select: { id: true, mpptCount: true },
+    });
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+
+  it('accepts the inverter already saved in the project even if removed from the library', async () => {
+    mocks.arrayConfigFindUnique.mockResolvedValue({ moduleId: 'module-1', inverters: [{ inverterId: 'inverter-1' }] });
+    mocks.moduleFindFirst.mockResolvedValue({ id: 'module-1' });
+    mocks.inverterFindMany.mockResolvedValue([{ id: 'inverter-1', mpptCount: 2 }]);
+    mocks.transaction.mockResolvedValue(undefined);
+
+    expect(await saveArrayAction('project-1', payload)).toBeUndefined();
+    expect(mocks.inverterFindMany).toHaveBeenCalledWith({
+      where: { id: { in: ['inverter-1'] }, ...equipmentChoiceScope('company-1', ['inverter-1']) },
+      select: { id: true, mpptCount: true },
+    });
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
   });
 
   it('refuses more MPPT rows than the inverter has', async () => {
@@ -417,5 +468,37 @@ describe('saveCablingAction', () => {
       await saveCablingAction('project-1', { ...base, runs: [run('DC', 'c1'), run('AC', 'c2')] }),
     ).toBeUndefined();
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('saveProtectionsAction', () => {
+  const protections = { dcSpdId: 's1', dcSwitchId: 'sw1', acBreakerId: 'b1', acSpdId: 's2' };
+
+  it('refuses a protection outside the library and keeps the project unchanged', async () => {
+    mocks.spdFindFirst.mockResolvedValue({ id: 's' });
+    mocks.dcSwitchFindFirst.mockResolvedValue(null);
+    mocks.acBreakerFindFirst.mockResolvedValue({ id: 'b1' });
+
+    const result = await saveProtectionsAction('project-1', undefined, form(protections));
+    expect(result).toEqual({ error: 'Un équipement sélectionné est introuvable dans votre bibliothèque.' });
+    expect(mocks.dcSwitchFindFirst).toHaveBeenCalledWith({
+      where: { id: 'sw1', ...equipmentChoiceScope('company-1', []) },
+      select: { id: true },
+    });
+    expect(mocks.protectionsUpsert).not.toHaveBeenCalled();
+  });
+
+  it('keeps accepting a protection already saved in the project', async () => {
+    mocks.protectionsFindUnique.mockResolvedValue({ dcSwitchId: 'sw1' });
+    mocks.spdFindFirst.mockResolvedValue({ id: 's' });
+    mocks.dcSwitchFindFirst.mockResolvedValue({ id: 'sw1' });
+    mocks.acBreakerFindFirst.mockResolvedValue({ id: 'b1' });
+
+    await saveProtectionsAction('project-1', undefined, form(protections));
+    expect(mocks.dcSwitchFindFirst).toHaveBeenCalledWith({
+      where: { id: 'sw1', ...equipmentChoiceScope('company-1', ['sw1']) },
+      select: { id: true },
+    });
+    expect(mocks.protectionsUpsert).toHaveBeenCalledTimes(1);
   });
 });

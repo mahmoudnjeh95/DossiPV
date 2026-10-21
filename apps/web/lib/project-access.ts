@@ -42,6 +42,23 @@ export function libraryScope(companyId: string): { libraryItems: { some: { compa
 }
 
 /**
+ * What a project's equipment dropdowns offer and its save actions accept: the company's library
+ * items, plus the items already saved in this project (so removing an item from the library never
+ * breaks an existing project).
+ */
+export function equipmentChoiceScope(
+  companyId: string,
+  currentIds: string[],
+): {
+  OR: [
+    { AND: [ReturnType<typeof libraryScope>, ReturnType<typeof catalogScope>] },
+    { id: { in: string[] } },
+  ];
+} {
+  return { OR: [{ AND: [libraryScope(companyId), catalogScope(companyId)] }, { id: { in: currentIds } }] };
+}
+
+/**
  * Spec §5: client name and STEG reference lock after the first generation so one project slot
  * cannot be reused for a different client. "First generation" = any job that is not FAILED.
  */

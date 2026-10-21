@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../../../../layout';
-import { catalogScope, isClientIdentityLocked } from '../../../../../../lib/project-access';
+import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../../lib/project-access';
 import { ClientForm } from '../forms/client-form';
 import { SiteForm } from '../forms/site-form';
 import { ProtectionsForm } from '../forms/protections-form';
@@ -53,7 +53,13 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const scope = catalogScope(user.companyId);
+  // Each dropdown offers the company library plus what this project already uses.
+  const companyId = user.companyId;
+  const choiceScope = (...ids: (string | null | undefined)[]): ReturnType<typeof equipmentChoiceScope> =>
+    equipmentChoiceScope(companyId, ids.filter((id): id is string => typeof id === 'string'));
+  const inLibrary = { libraryItems: { where: { companyId }, select: { id: true } } } as const;
+  const OUT_OF_LIBRARY = ' (hors bibliothèque)';
+  const tag = (label: string, item: { libraryItems: unknown[] }): string => (item.libraryItems.length > 0 ? label : `${label}${OUT_OF_LIBRARY}`);
   const projectHref = `/projects/${project.id}`;
 
   let body: React.JSX.Element;
@@ -68,8 +74,8 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       break;
     case 'array': {
       const [modules, inverters] = await Promise.all([
-        db.pvModule.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.inverter.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.pvModule.findMany({ where: choiceScope(project.arrayConfig?.moduleId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.inverter.findMany({ where: choiceScope(...(project.arrayConfig?.inverters.map((i) => i.inverterId) ?? [])), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
       ]);
       body = (
         <ArrayForm
@@ -79,7 +85,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           sitePhases={project.site?.phases ?? null}
           modules={modules.map((m) => ({
             id: m.id,
-            label: `${m.brand} ${m.model} — ${m.pmaxW} Wc`,
+            label: tag(`${m.brand} ${m.model} — ${m.pmaxW} Wc`, m),
             isPrivate: m.ownerCompanyId !== null,
             spec: {
               pmaxW: m.pmaxW, vmpV: m.vmpV, impA: m.impA, vocV: m.vocV, iscA: m.iscA,
@@ -90,7 +96,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           }))}
           inverters={inverters.map((i) => ({
             id: i.id,
-            label: `${i.brand} ${i.model} — ${i.pacW / 1000} kW, ${i.phases === 3 ? 'tri' : 'mono'}`,
+            label: tag(`${i.brand} ${i.model} — ${i.pacW / 1000} kW, ${i.phases === 3 ? 'tri' : 'mono'}`, i),
             isPrivate: i.ownerCompanyId !== null,
             spec: {
               phases: i.phases === 3 ? 3 : 1,
@@ -120,23 +126,23 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
     }
     case 'protections': {
       const [spds, dcSwitches, dcFuses, acBreakers, acIsolators] = await Promise.all([
-        db.spd.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.dcSwitch.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.dcFuse.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.acBreaker.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.acIsolator.findMany({ where: scope, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.spd.findMany({ where: choiceScope(project.protections?.dcSpdId, project.protections?.acSpdId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.dcSwitch.findMany({ where: choiceScope(project.protections?.dcSwitchId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.dcFuse.findMany({ where: choiceScope(project.protections?.dcFuseId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.acBreaker.findMany({ where: choiceScope(project.protections?.acBreakerId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.acIsolator.findMany({ where: choiceScope(project.protections?.acIsolatorId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
       ]);
       body = (
         <ProtectionsForm
           projectId={project.id}
           protections={project.protections}
           catalog={{
-            dcSpds: spds.filter((s) => s.side === 'DC').map((s) => ({ id: s.id, label: `${s.brand} ${s.model} — T${s.type}, Uc ${s.ucV} V`, isPrivate: s.ownerCompanyId !== null })),
-            acSpds: spds.filter((s) => s.side === 'AC').map((s) => ({ id: s.id, label: `${s.brand} ${s.model} — T${s.type}, Uc ${s.ucV} V`, isPrivate: s.ownerCompanyId !== null })),
-            dcSwitches: dcSwitches.map((s) => ({ id: s.id, label: `${s.brand} ${s.model} — ${s.ratedVoltageV} V / ${s.ratedCurrentA} A`, isPrivate: s.ownerCompanyId !== null })),
-            dcFuses: dcFuses.map((f) => ({ id: f.id, label: `${f.brand} ${f.model} — ${f.ratedVoltageV} V / ${f.ratedCurrentA} A`, isPrivate: f.ownerCompanyId !== null })),
-            acBreakers: acBreakers.map((b) => ({ id: b.id, label: `${b.brand} ${b.model} — ${b.ratedCurrentA} A${b.curve ? ` courbe ${b.curve}` : ''}`, isPrivate: b.ownerCompanyId !== null })),
-            acIsolators: acIsolators.map((i) => ({ id: i.id, label: `${i.brand} ${i.model} — ${i.ratedCurrentA} A`, isPrivate: i.ownerCompanyId !== null })),
+            dcSpds: spds.filter((s) => s.side === 'DC').map((s) => ({ id: s.id, label: tag(`${s.brand} ${s.model} — T${s.type}, Uc ${s.ucV} V`, s), isPrivate: s.ownerCompanyId !== null })),
+            acSpds: spds.filter((s) => s.side === 'AC').map((s) => ({ id: s.id, label: tag(`${s.brand} ${s.model} — T${s.type}, Uc ${s.ucV} V`, s), isPrivate: s.ownerCompanyId !== null })),
+            dcSwitches: dcSwitches.map((s) => ({ id: s.id, label: tag(`${s.brand} ${s.model} — ${s.ratedVoltageV} V / ${s.ratedCurrentA} A`, s), isPrivate: s.ownerCompanyId !== null })),
+            dcFuses: dcFuses.map((f) => ({ id: f.id, label: tag(`${f.brand} ${f.model} — ${f.ratedVoltageV} V / ${f.ratedCurrentA} A`, f), isPrivate: f.ownerCompanyId !== null })),
+            acBreakers: acBreakers.map((b) => ({ id: b.id, label: tag(`${b.brand} ${b.model} — ${b.ratedCurrentA} A${b.curve ? ` courbe ${b.curve}` : ''}`, b), isPrivate: b.ownerCompanyId !== null })),
+            acIsolators: acIsolators.map((i) => ({ id: i.id, label: tag(`${i.brand} ${i.model} — ${i.ratedCurrentA} A`, i), isPrivate: i.ownerCompanyId !== null })),
           }}
         />
       );
@@ -144,8 +150,8 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
     }
     case 'cabling': {
       const [cables, accessories] = await Promise.all([
-        db.cable.findMany({ where: { ...scope, usage: { in: ['DC_SOLAR', 'AC'] } }, include: { sections: true }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
-        db.accessory.findMany({ where: { ...scope, kind: { in: ['MC4_CONNECTOR', 'CABLE_TRAY'] } }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.cable.findMany({ where: { ...choiceScope(...project.cableRuns.map((r) => r.cableId)), usage: { in: ['DC_SOLAR', 'AC'] } }, include: { sections: true, ...inLibrary }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        db.accessory.findMany({ where: { ...choiceScope(project.cablingConfig?.connectorId, project.cablingConfig?.cableTrayId), kind: { in: ['MC4_CONNECTOR', 'CABLE_TRAY'] } }, include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
       ]);
       body = (
         <CablingForm
@@ -153,13 +159,13 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           defaults={{ cosPhi: project.company.defaultCosPhi, maxVoltageDropPct: project.company.defaultMaxVoltageDropPct }}
           cables={cables.map((c) => ({
             id: c.id,
-            label: `${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`,
+            label: tag(`${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, c),
             isPrivate: c.ownerCompanyId !== null,
             usage: c.usage === 'DC_SOLAR' ? 'DC' : 'AC',
             sections: c.sections.map((s) => s.sectionMm2).sort((a, b) => a - b),
           }))}
-          connectors={accessories.filter((a) => a.kind === 'MC4_CONNECTOR').map((a) => ({ id: a.id, label: `${a.brand} ${a.model}`, isPrivate: a.ownerCompanyId !== null }))}
-          cableTrays={accessories.filter((a) => a.kind === 'CABLE_TRAY').map((a) => ({ id: a.id, label: `${a.brand} ${a.model}`, isPrivate: a.ownerCompanyId !== null }))}
+          connectors={accessories.filter((a) => a.kind === 'MC4_CONNECTOR').map((a) => ({ id: a.id, label: tag(`${a.brand} ${a.model}`, a), isPrivate: a.ownerCompanyId !== null }))}
+          cableTrays={accessories.filter((a) => a.kind === 'CABLE_TRAY').map((a) => ({ id: a.id, label: tag(`${a.brand} ${a.model}`, a), isPrivate: a.ownerCompanyId !== null }))}
           initial={
             project.cablingConfig
               ? {
@@ -196,13 +202,14 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       );
       break;
     case 'earthing': {
-      const cables = await db.cable.findMany({ where: { ...scope, usage: 'EARTH' }, orderBy: [{ brand: 'asc' }, { model: 'asc' }] });
+      const cables = await db.cable.findMany({ where: { ...choiceScope(project.earthing?.earthCableId), usage: 'EARTH' }, include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] });
       body = (
         <EarthingForm
           projectId={project.id}
           earthing={project.earthing}
           defaults={{ targetResistanceOhm: project.company.defaultEarthResistanceTargetOhm }}
-          earthCables={cables.map((c) => ({ id: c.id, label: `${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, isPrivate: c.ownerCompanyId !== null }))}        />
+          earthCables={cables.map((c) => ({ id: c.id, label: tag(`${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, c), isPrivate: c.ownerCompanyId !== null }))}
+        />
       );
       break;
     }
