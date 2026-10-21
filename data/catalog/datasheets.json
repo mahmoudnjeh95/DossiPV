@@ -1,1 +1,195 @@
-[]
+[
+  {
+    "kind": "INVERTER",
+    "brand": "SOFAR",
+    "url": "https://glocal.pb.edu.pl/lt/wp-content/uploads/sites/4/2023/04/E-lab-4a_datasheet-SofarSolar_1.1K3.3KTL-G3_EN.pdf",
+    "models": [
+      "SOFAR 1100TL-G3",
+      "SOFAR 1600TL-G3",
+      "SOFAR 2200TL-G3",
+      "SOFAR 2700TL-G3",
+      "SOFAR 3000TL-G3",
+      "SOFAR 3300TL-G3"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOFAR",
+    "url": "https://www.upwatt.com/mpattachment/file/download/id/841/",
+    "models": [
+      "SOFAR 1.1KTL3-G3",
+      "SOFAR 1.6KTL3-G3",
+      "SOFAR 2.2KTL3-G3",
+      "SOFAR 2.7KTL3-G3",
+      "SOFAR 3KTL3-G3",
+      "SOFAR 3.3KTL3-G3",
+      "SOFAR 4KTL3-G3",
+      "SOFAR 5KTL3-G3"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOFAR",
+    "url": "https://br.sofarsolar.com/upload/file/20250725/1753408788103097897.pdf",
+    "models": [
+      "SOFAR 3.3KTL2-G3",
+      "SOFAR 4KTL2-G3"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOFAR",
+    "url": "https://www2.sofarsolar.com/upload/file/20230116/1673863684078058279.pdf",
+    "models": [
+      "SOFAR 3KTLM-G3",
+      "SOFAR 3.6KTLM-G3",
+      "SOFAR 4KTLM-G3",
+      "SOFAR 4.6KTLM-G3",
+      "SOFAR 5KTLM-G3",
+      "SOFAR 6KTLM-G3"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOLIS",
+    "url": "https://solisinverters.com/uploads/file/Solis_datasheet_S6-GR1P(2,5-6)K-S_BRA_V2,0_202410.pdf",
+    "models": [
+      "S6-GR1P2.5K-S",
+      "S6-GR1P3K-S",
+      "S6-GR1P3.6K-S",
+      "S6-GR1P4K-S",
+      "S6-GR1P4.6K-S",
+      "S6-GR1P5K-S",
+      "S6-GR1P6K-S"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOLIS",
+    "url": "https://solartraders.com/uploads/production/data_sheet/file/11585/datasheet.pdf?locale=en",
+    "models": [
+      "S6-GR1P2K-M",
+      "S6-GR1P2.5K-M",
+      "S6-GR1P3K-M",
+      "S6-GR1P3.6K-M"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "DEYE",
+    "url": "https://deye.com/wp-content/uploads/2025/10/sun-1-4k-g04p1-eu-am1.pdf",
+    "models": [
+      "SUN-2K-G04P1-EU-AM1",
+      "SUN-2.2K-G04P1-EU-AM1",
+      "SUN-2.5K-G04P1-EU-AM1",
+      "SUN-3K-G04P1-EU-AM1",
+      "SUN-3.3K-G04P1-EU-AM1",
+      "SUN-3.6K-G04P1-EU-AM1",
+      "SUN-4K-G04P1-EU-AM1"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "DEYE",
+    "url": "https://deye.com/wp-content/uploads/2026/07/%E3%80%90b%E3%80%91datasheet_sun-3.6-6.2k-g05p1-eu-am2_20260706_en.pdf",
+    "models": [
+      "SUN-4.6K-G05P1-EU-AM2",
+      "SUN-5.2K-G05P1-EU-AM2",
+      "SUN-6K-G05P1-EU-AM2"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "GOODWE",
+    "url": "https://sparkydirect.com.au/assets/brochures/GW2000-XS-30.pdf",
+    "models": [
+      "GW700-XS-30",
+      "GW1000-XS-30",
+      "GW1500-XS-30",
+      "GW2000-XS-30",
+      "GW2500-XS-30",
+      "GW3000-XS-30",
+      "GW3300-XS-30"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "GOODWE",
+    "url": "https://en.goodwe.com/Public/Uploads/uploadfile/files/20250630/GW_DNSG3_Datasheet-EN-IN.pdf",
+    "models": [
+      "GW4200-DNS-30",
+      "GW5000-DNS-30",
+      "GW6000-DNS-30"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "GOODWE",
+    "url": "https://solarproof.com.au/datasheets/inverter_datasheet_GW_DNS-G4_Datasheet-EN.pdf",
+    "models": [
+      "GW3K-DNS-G40",
+      "GW3.6K-DNS-G40",
+      "GW4.2K-DNS-G40",
+      "GW5K-DNS-G40",
+      "GW6K-DNS-G40"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SUNGROW",
+    "url": "https://vietnam.sungrowpower.com/upload/file/20210909/Datasheet_SG2.0_2.5_3.0RS-S.pdf",
+    "models": [
+      "SG2.0RS-S",
+      "SG2.5RS-S",
+      "SG3.0RS-S"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SUNGROW",
+    "url": "https://info-support.sungrowpower.com/application/pdf/2023/07/22/DS_20220714_SG3.0_3.6_4.0RS_Datasheet_V12_EN(GL).pdf",
+    "models": [
+      "SG3.0RS",
+      "SG3.6RS",
+      "SG4.0RS"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SUNGROW",
+    "url": "https://info-support.sungrowpower.com/application/pdf/2023/07/22/DS_20220714_SG5.0_6.0RS_Datasheet_V12_EN(GL).pdf",
+    "models": [
+      "SG5.0RS",
+      "SG6.0RS"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOLAX",
+    "url": "https://www.solaxpower.com/uploads/file/x1-mini-g4-datasheet-en.pdf",
+    "models": [
+      "X1-MINI-0.6K-G4",
+      "X1-MINI-0.7K-G4",
+      "X1-MINI-1.1K-G4",
+      "X1-MINI-1.5K-G4",
+      "X1-MINI-2.0K-G4",
+      "X1-MINI-2.5K-G4",
+      "X1-MINI-3.0K-G4",
+      "X1-MINI-3.3K-G4"
+    ]
+  },
+  {
+    "kind": "INVERTER",
+    "brand": "SOLAX",
+    "url": "https://www.solaxpower.com/uploads/file/x1-boost-g4-datasheet-en.pdf",
+    "models": [
+      "X1-BOOST-2.5K-G4",
+      "X1-BOOST-3K-G4",
+      "X1-BOOST-3.3K-G4",
+      "X1-BOOST-3.6K-G4",
+      "X1-BOOST-4.2K-G4",
+      "X1-BOOST-5K-G4",
+      "X1-BOOST-6K-G4"
+    ]
+  }
+]
