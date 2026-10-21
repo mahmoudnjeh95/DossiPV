@@ -14,6 +14,8 @@ import { parseStegList } from './parse-steg-list';
 import { parseAnmeList } from './parse-anme-list';
 import { DATA_DIR, SOURCE_LISTS } from './sources';
 import { runImport } from './run-import';
+import { db } from '@dossipv/db';
+import { runPurge } from './purge-test-items';
 
 async function writeJson(relativePath: string, value: unknown): Promise<void> {
   const fullPath = join(DATA_DIR, relativePath);
@@ -84,6 +86,9 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   'fetch-lists': fetchLists,
   extract,
   import: (args) => runImport({ dryRun: !args.includes('--apply') }),
+  'purge-test-items': async (args) => {
+    await runPurge(db, { apply: args.includes('--apply'), log: console.log });
+  },
 };
 
 const [command = '', ...args] = process.argv.slice(2);
