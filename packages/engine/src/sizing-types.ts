@@ -46,4 +46,5 @@ export interface Proposal {
   yearlySavingTND: number | null; explanation: string;
 }
 
-export interface ProposeResult { proposals: Proposal[]; noSolutionReasons: string[]; stats: { engineRuns: number } }
+/** `stats.combinations`: string layouts enumerated (capped by MAX_COMBOS); `engineRuns`: buildCandidate calls. */
+export interface ProposeResult { proposals: Proposal[]; noSolutionReasons: string[]; stats: { combinations: number; engineRuns: number } }

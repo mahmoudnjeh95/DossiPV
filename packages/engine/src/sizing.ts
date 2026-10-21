@@ -14,6 +14,8 @@ import { computeRowSpacingM } from './panel-layout';
 
 /** Upper bound on buildCandidate calls (each one runs the full engine) per proposeInstallations call. */
 export const MAX_ENGINE_RUNS = 20_000;
+/** Upper bound on the string layouts enumerated (before any engine run) per proposeInstallations call. */
+export const MAX_COMBOS = 200_000;
 
 const MODULE_MIN_PMAX_W = 380;
 const MODULE_MAX_PMAX_W = 720;
@@ -26,6 +28,10 @@ const MAX_PRODUCTION_MAX_COVERAGE = 1.2;
 /** Tie-break target: the DC/AC ratio installers usually aim for. */
 const PREFERRED_DC_AC_RATIO = 1.15;
 const MAX_NO_SOLUTION_REASONS = 3;
+/** Sanity bounds that keep the enumeration finite whatever the catalog holds. */
+const MAX_MODULES_PER_STRING = 100;
+const MAX_MPPT_COUNT = 16;
+const MAX_INPUTS_PER_MPPT = 16;
 const KIND_ORDER: ProposalKind[] = ['RECOMMENDED', 'ECONOMIC', 'MAX_PRODUCTION'];
 
 const numberFormat = new Intl.NumberFormat('fr-FR');
@@ -45,9 +51,45 @@ function isValidOn(validTo: string | null, date: string): boolean {
   return validTo === null || validTo >= date;
 }
 
+function isPositiveFinite(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}
+
+function isCountUpTo(value: number, max: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= max;
+}
+
+/** Electrical values the enumeration and the engine divide by or loop over: malformed ones are skipped. */
+function hasUsableInverterValues(inverter: CatalogInverter): boolean {
+  return (
+    [
+      inverter.pacW,
+      inverter.vdcMaxV,
+      inverter.mpptMinV,
+      inverter.mpptMaxV,
+      inverter.idcMaxPerMpptA,
+    ].every(isPositiveFinite) &&
+    isCountUpTo(inverter.mpptCount, MAX_MPPT_COUNT) &&
+    isCountUpTo(inverter.inputsPerMppt, MAX_INPUTS_PER_MPPT)
+  );
+}
+
+function hasUsableModuleValues(module: CatalogModule): boolean {
+  return [
+    module.pmaxW,
+    module.vmpV,
+    module.impA,
+    module.vocV,
+    module.iscA,
+    module.lengthMm,
+    module.widthMm,
+  ].every(isPositiveFinite);
+}
+
 function eligibleInverters(catalog: SizingCatalog, context: SizingContext): CatalogInverter[] {
   return catalog.inverters.filter(
     (inverter) =>
+      hasUsableInverterValues(inverter) &&
       inverter.phases === 1 &&
       inverter.stegApproved === true &&
       isValidOn(inverter.homologationValidTo, context.dossierDate) &&
@@ -58,13 +100,18 @@ function eligibleInverters(catalog: SizingCatalog, context: SizingContext): Cata
 function eligibleModules(catalog: SizingCatalog, context: SizingContext): CatalogModule[] {
   return catalog.modules.filter(
     (module) =>
+      hasUsableModuleValues(module) &&
       module.pmaxW >= MODULE_MIN_PMAX_W &&
       module.pmaxW <= MODULE_MAX_PMAX_W &&
       isValidOn(module.homologationValidTo, context.dossierDate),
   );
 }
 
-/** Every string layout whose DC/AC ratio and coverage are plausible, before any engine run. */
+/**
+ * Every string layout whose DC/AC ratio and coverage are plausible, before any engine run, up to
+ * MAX_COMBOS. The loop bounds are clamped so the enumeration stays finite whatever the catalog
+ * holds (a NaN bound simply yields no layout).
+ */
 function cheapCombos(
   modules: CatalogModule[],
   inverters: CatalogInverter[],
@@ -73,15 +120,21 @@ function cheapCombos(
   const combos: Combo[] = [];
   for (const module of modules) {
     for (const inverter of inverters) {
-      const nsLow = nsMin(module, inverter, context.tMaxC);
+      const nsLow = Math.max(1, nsMin(module, inverter, context.tMaxC));
       const nsHigh = Math.min(
         nsOptMax(module, inverter, context.tMinC),
         nsMax(module, inverter, context.tMinC),
+        MAX_MODULES_PER_STRING,
       );
-      const maxStrings =
+      const inputStrings =
         inverter.mpptCount *
         Math.min(inverter.inputsPerMppt, npOpt(module, inverter, context.tMaxC));
       for (let modulesPerString = nsLow; modulesPerString <= nsHigh; modulesPerString++) {
+        // Beyond this many strings the DC/AC ratio exceeds its maximum.
+        const ratioStrings = Math.ceil(
+          (MAX_DC_AC_RATIO * inverter.pacW) / (modulesPerString * module.pmaxW),
+        );
+        const maxStrings = Math.min(inputStrings, ratioStrings);
         for (let stringCount = 1; stringCount <= maxStrings; stringCount++) {
           const dcW = modulesPerString * stringCount * module.pmaxW;
           const ratio = dcW / inverter.pacW;
@@ -90,6 +143,7 @@ function cheapCombos(
           if (ratio < MIN_DC_AC_RATIO || ratio > MAX_DC_AC_RATIO) continue;
           if (coverage < MIN_COVERAGE || coverage > MAX_COVERAGE) continue;
           combos.push({ module, inverter, modulesPerString, stringCount, coverage });
+          if (combos.length >= MAX_COMBOS) return combos;
         }
       }
     }
@@ -127,8 +181,10 @@ function name(item: { brand: string; model: string }): string {
   return `${item.brand} ${item.model}`;
 }
 
+/** |DC/AC − 1.15|, rounded to 1e-9 so ratios symmetric around 1.15 tie despite float noise. */
 function distanceToPreferredRatio(s: Scored): number {
-  return Math.abs((s.dcPowerKWp * 1000) / s.candidate.inverter.pacW - PREFERRED_DC_AC_RATIO);
+  const ratio = (s.dcPowerKWp * 1000) / s.candidate.inverter.pacW;
+  return Math.round(Math.abs(ratio - PREFERRED_DC_AC_RATIO) * 1e9);
 }
 
 /** Ties: DC/AC ratio closest to 1.15, then fewer modules, then brand/model alphabetical. */
@@ -181,8 +237,8 @@ function mostFrequent(tally: Map<string, number>): string[] {
     .map(([reason]) => reason);
 }
 
-function noSolution(reasons: string[], engineRuns = 0): ProposeResult {
-  return { proposals: [], noSolutionReasons: reasons, stats: { engineRuns } };
+function noSolution(reasons: string[], combinations = 0, engineRuns = 0): ProposeResult {
+  return { proposals: [], noSolutionReasons: reasons, stats: { combinations, engineRuns } };
 }
 
 /**
@@ -236,7 +292,7 @@ export function proposeInstallations(
     if (result.ok) candidates.push(score(result.candidate, context));
     else failures.set(result.reason, (failures.get(result.reason) ?? 0) + 1);
   }
-  if (candidates.length === 0) return noSolution(mostFrequent(failures), engineRuns);
+  if (candidates.length === 0) return noSolution(mostFrequent(failures), combos.length, engineRuns);
 
   const consumption = context.annualConsumptionKWh;
   // A division (not `limit × consumption`) so an exact 80 % / 120 % compares equal to the limit.
@@ -273,5 +329,5 @@ export function proposeInstallations(
     proposals.push({ ...winner, kinds: [kind], explanation });
   }
 
-  return { proposals, noSolutionReasons: [], stats: { engineRuns } };
+  return { proposals, noSolutionReasons: [], stats: { combinations: combos.length, engineRuns } };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_ENGINE_RUNS, proposeInstallations } from '../src';
+import { MAX_COMBOS, MAX_ENGINE_RUNS, proposeInstallations } from '../src';
 import type {
   CatalogInverter,
   CatalogModule,
@@ -208,26 +208,124 @@ describe('proposeInstallations', () => {
   });
 
   it('caps engine runs', () => {
-    const baseModule = byId(sizingCatalog.modules, 'module-450w');
-    const baseInverter = byId(sizingCatalog.inverters, 'inverter-10kw');
-    // Synthetic 3-MPPT variants of the 10 kW inverter: 12 plausible layouts per pair, so
-    // 60 x 40 pairs give 28 800 combinations, more than MAX_ENGINE_RUNS.
-    const modules: CatalogModule[] = Array.from({ length: 60 }, (_, i) => ({
-      ...baseModule,
-      id: `module-${i}`,
-      model: `AE450MC-144 #${i}`,
-    }));
-    const inverters: CatalogInverter[] = Array.from({ length: 40 }, (_, i) => ({
-      ...baseInverter,
-      id: `inverter-${i}`,
-      model: `SUN-10K-G02P1-EU-AM2 #${i}`,
-      mpptCount: 3,
-    }));
+    const result = proposeInstallations(syntheticCatalog(60, 40), largeConsumer);
 
-    const result = proposeInstallations({ ...sizingCatalog, modules, inverters }, largeConsumer);
-
+    expect(result.stats.combinations).toBe(28_800);
     expect(result.stats.engineRuns).toBeLessThanOrEqual(MAX_ENGINE_RUNS);
     expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS);
     expect(result.proposals.length).toBeGreaterThan(0);
   }, 30_000);
+
+  it('caps the enumerated combinations', () => {
+    // 200 x 100 pairs x 12 layouts = 240 000 plausible combinations, more than MAX_COMBOS.
+    const result = proposeInstallations(syntheticCatalog(200, 100), largeConsumer);
+
+    expect(result.stats.combinations).toBe(MAX_COMBOS);
+    expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS);
+    expect(result.proposals.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('ignores items with malformed electrical values and still returns', () => {
+    const module450 = byId(sizingCatalog.modules, 'module-450w');
+    const inverter2kW = byId(sizingCatalog.inverters, 'inverter-2kw');
+    const catalog: SizingCatalog = {
+      ...sizingCatalog,
+      modules: [
+        ...sizingCatalog.modules,
+        { ...module450, id: 'module-zero-pmax', pmaxW: 0 },
+        { ...module450, id: 'module-zero-voc', vocV: 0 },
+        { ...module450, id: 'module-nan-vmp', vmpV: Number.NaN },
+        { ...module450, id: 'module-tiny-vmp', vmpV: 1e-9 },
+      ],
+      inverters: [
+        ...sizingCatalog.inverters,
+        { ...inverter2kW, id: 'inverter-infinite-inputs', inputsPerMppt: Number.POSITIVE_INFINITY },
+        { ...inverter2kW, id: 'inverter-huge-mppts', mpptCount: 1e9 },
+        { ...inverter2kW, id: 'inverter-zero-pac', pacW: 0 },
+        { ...inverter2kW, id: 'inverter-infinite-vdc', vdcMaxV: Number.POSITIVE_INFINITY },
+      ],
+    };
+
+    const result = proposeInstallations(catalog, sizingContext);
+
+    // The malformed items add no combination at all: same runs and proposals as the clean fixture.
+    const clean = proposeInstallations(sizingCatalog, sizingContext);
+    expect(result.stats).toEqual(clean.stats);
+    expect(result.proposals.map((p) => p.key)).toEqual(clean.proposals.map((p) => p.key));
+  });
+
+  it('keeps the enumeration finite for extreme but well-formed voltages', () => {
+    // Finite, positive, absurd: nsOptMax and nsMax are in the billions; ns is clamped to 100.
+    const inverter2kW = byId(sizingCatalog.inverters, 'inverter-2kw');
+    const catalog: SizingCatalog = {
+      ...sizingCatalog,
+      inverters: [{ ...inverter2kW, id: 'inverter-huge-voltage', vdcMaxV: 1e12, mpptMaxV: 1e12 }],
+    };
+
+    const result = proposeInstallations(catalog, sizingContext);
+
+    expect(result.stats.combinations).toBeGreaterThan(0);
+    expect(result.stats.combinations).toBeLessThan(100);
+  });
+
+  it('merges every objective won by the only valid installation', () => {
+    // 450 W on the 2 kW inverter: 4 modules (1.8 kWp, 2 880 kWh, 115 %) is the only layout
+    // within the DC/AC and coverage bands for 2 500 kWh (5 modules would cover 144 %).
+    const catalog: SizingCatalog = {
+      ...sizingCatalog,
+      modules: [byId(sizingCatalog.modules, 'module-450w')],
+      inverters: [byId(sizingCatalog.inverters, 'inverter-2kw')],
+    };
+
+    const result = proposeInstallations(catalog, { ...sizingContext, annualConsumptionKWh: 2500 });
+
+    expect(result.stats.engineRuns).toBe(1);
+    expect(result.proposals).toHaveLength(1);
+    const [only] = result.proposals;
+    expect(only?.key).toBe('module-450w|inverter-2kw|4x1');
+    expect(only?.kinds).toEqual(['RECOMMENDED', 'ECONOMIC', 'MAX_PRODUCTION']);
+    expect(only?.explanation).toBe(
+      'Production estimée la plus proche de la consommation (115 %). ' +
+        'Le moins de panneaux pour couvrir au moins 80 % de la consommation. ' +
+        'La plus forte production possible avec 4 kVA souscrits.',
+    );
+  });
+
+  it('treats DC/AC ratios symmetric around 1.15 as a tie despite float noise', () => {
+    // On the 2 kW inverter: 5 x 440 W = 2 200 W (ratio 1.1) and 4 x 600 W = 2 400 W (ratio 1.2)
+    // both miss 3 680 kWh by 160 kWh. In floats |1.1 - 1.15| < |1.2 - 1.15|; once the distances
+    // tie, the next rule (fewer modules) must pick the 4 x 600 W installation.
+    const base = byId(sizingCatalog.modules, 'module-450w');
+    const catalog: SizingCatalog = {
+      ...sizingCatalog,
+      modules: [
+        { ...base, id: 'module-440w', model: 'AE440MC-144', pmaxW: 440 },
+        { ...base, id: 'module-600w', model: 'AE600MC-144', pmaxW: 600 },
+      ],
+      inverters: [byId(sizingCatalog.inverters, 'inverter-2kw')],
+    };
+
+    const result = proposeInstallations(catalog, { ...sizingContext, annualConsumptionKWh: 3680 });
+
+    expect(withKind(result.proposals, 'RECOMMENDED').key).toBe('module-600w|inverter-2kw|4x1');
+  });
 });
+
+/** `moduleCount` copies of the 450 W module and `inverterCount` 3-MPPT copies of the 10 kW
+ * inverter: 12 plausible layouts per pair for the large consumer. */
+function syntheticCatalog(moduleCount: number, inverterCount: number): SizingCatalog {
+  const baseModule = byId(sizingCatalog.modules, 'module-450w');
+  const baseInverter = byId(sizingCatalog.inverters, 'inverter-10kw');
+  const modules: CatalogModule[] = Array.from({ length: moduleCount }, (_, i) => ({
+    ...baseModule,
+    id: `module-${i}`,
+    model: `AE450MC-144 #${i}`,
+  }));
+  const inverters: CatalogInverter[] = Array.from({ length: inverterCount }, (_, i) => ({
+    ...baseInverter,
+    id: `inverter-${i}`,
+    model: `SUN-10K-G02P1-EU-AM2 #${i}`,
+    mpptCount: 3,
+  }));
+  return { ...sizingCatalog, modules, inverters };
+}
