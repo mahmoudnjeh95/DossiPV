@@ -103,6 +103,8 @@ export interface RunEngineInput {
   };
   dossierDate: string;
   companyAccreditationValidTo: string;
+  /** Homologation end dates (ISO) of the project's equipment; null when unknown. Feeds C20. */
+  equipmentHomologationExpiries?: Array<string | null>;
 }
 
 /**
@@ -348,7 +350,7 @@ export function runEngine(input: RunEngineInput): EngineResult {
     ...(stability ? { stabilityLhs: stability.lhs, stabilityRhs: stability.rhs } : {}),
     sitePhases: input.site.phases,
     inverterPhases: inverter.phases,
-    equipmentHomologationExpiries: [],
+    equipmentHomologationExpiries: input.equipmentHomologationExpiries ?? [],
     dossierDate: input.dossierDate,
     inverterStegApproved: inverter.stegApproved,
     companyAccreditationValidTo: input.companyAccreditationValidTo,

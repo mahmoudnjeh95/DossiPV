@@ -61,6 +61,19 @@ function toIsoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+function collectHomologationExpiries(project: ProjectForEngine): Array<string | null> {
+  const protections = project.protections;
+  const items = [
+    project.arrayConfig?.module,
+    ...(project.arrayConfig?.inverters.map((entry) => entry.inverter) ?? []),
+    protections?.dcSpd, protections?.dcSwitch, protections?.dcFuse,
+    protections?.acBreaker, protections?.acSpd, protections?.acIsolator,
+    ...project.cableRuns.map((run) => run.cable),
+    project.earthing?.earthCable,
+  ];
+  return items.flatMap((item) => (item ? [item.homologationValidTo ? toIsoDate(item.homologationValidTo) : null] : []));
+}
+
 function buildCableRun(
   run: ProjectForEngine['cableRuns'][number],
   missing: string[],
@@ -303,6 +316,7 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     },
     dossierDate: toIsoDate(project.dossierDate ?? now),
     companyAccreditationValidTo: toIsoDate(project.company.anmeValidTo),
+    equipmentHomologationExpiries: collectHomologationExpiries(project),
   };
 
   const firstInverter = arrayConfig.inverters[0]!.inverter;

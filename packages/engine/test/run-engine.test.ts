@@ -212,4 +212,11 @@ describe('runEngine — reference dossier (Habib Khedhira, corrected)', () => {
     const c21Results = result.checks.filter((c) => c.id === 'C21');
     expect(c21Results.some((c) => !c.pass)).toBe(true);
   });
+
+  it('flags C20 (WARN) when a piece of equipment has an expired homologation', () => {
+    const result = runEngine({ ...habibKhedhiraFixture, equipmentHomologationExpiries: ['2020-01-01', null] });
+    const c20 = result.checks.find((c) => c.id === 'C20');
+    expect(c20?.pass).toBe(false);
+    expect(result.hasBlockingFailure).toBe(false);
+  });
 });

@@ -106,6 +106,16 @@ describe('buildEngineInput', () => {
     }
     expect(result.missing[0]).toContain('Iscpv');
   });
+
+  it('passes every equipment homologation end date to the engine', () => {
+    const project = buildFullProject();
+    project.arrayConfig!.module.homologationValidTo = new Date('2025-01-31T00:00:00Z');
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.equipmentHomologationExpiries).toContain('2025-01-31');
+    expect(runEngine(result.input).checks.find((c) => c.id === 'C20')?.pass).toBe(false);
+  });
 });
 
 describe('computeSectionStatuses', () => {
