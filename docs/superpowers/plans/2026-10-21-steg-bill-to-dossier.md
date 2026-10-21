@@ -12,6 +12,8 @@
 
 **Runs after:** Tasks 2–11 of `docs/superpowers/plans/2026-10-07-tunisian-catalog-import.md` (this plan uses its `catalogStatus` column, `catalogScope` drafts filter, `RunEngineInput.equipmentHomologationExpiries` and `data/catalog/{cables,protections}.json`).
 
+**Execution order (user decision 2026-10-21 added the installer library):** Tasks 1–7, then 12, 13, 14 (installer library), then 8, 9, 10, 11.
+
 ## Global Constraints
 
 - Single-phase BT only: every proposal uses one inverter with `phases = 1`; sites created by this flow have `phases = 1`.
@@ -362,12 +364,13 @@ Page: heading "Nouveau projet", lead "Importez la photo ou le PDF de la facture 
 **Interfaces:**
 - Consumes: `proposeInstallations`, `SizingCatalog`, `SizingContext`, `Proposal` (Tasks 2–3); `getSpecificYield` (Task 6); `catalogScope`; `PROJECT_ENGINE_INCLUDE`.
 - Produces:
-  - `loadSizingCatalog(companyId: string): Promise<SizingCatalog>` — the 7 equipment tables through `catalogScope(companyId)`, cables with `sections`, dates → `YYYY-MM-DD`, SPD/cable enums passed through.
-  - `computeProjectProposals(project: ProjectForEngine, now: Date): Promise<{ ok: true; result: ProposeResult; context: SizingContext; yieldWarning: string | null } | { ok: false; missing: string[] }>` — missing when `client.annualConsumptionKWh`, `client.subscribedPowerKVA` or `site` is null. Context: company `defaultTMinC/defaultTMaxC/defaultCosPhi/defaultMaxVoltageDropPct/defaultDesignWindSpeedKmh`, `lambdaOhmPerM 0.00008`, lengths = current DC/AC cable-run lengths if the runs exist else 15 / 10, `tiltDeg = site.tiltDeg`, azimuth `site.azimuthDeg ?? 0`, GPS = site GPS, `averagePriceTNDPerKWh = billImport?.averagePriceTNDPerKWh ?? null`, `dossierDate = project.dossierDate ?? now`, `companyAccreditationValidTo = company.anmeValidTo`.
+  - `loadSizingCatalog(companyId: string): Promise<SizingCatalog>` — the 7 equipment tables filtered by `{ AND: [libraryScope(companyId), catalogScope(companyId)] }` (Task 12: only the company's library, and never a shared draft), cables with `sections`, dates → `YYYY-MM-DD`, SPD/cable enums passed through.
+  - `missingLibraryKinds(catalog: SizingCatalog): string[]` — French labels of what the library lacks for a single-phase proposal, in this order: `Modules photovoltaïques`, `Onduleurs monophasés homologués STEG`, `Interrupteurs-sectionneurs DC`, `Parafoudres DC`, `Parafoudres AC`, `Disjoncteurs AC`, `Câbles DC (solaire)`, `Câbles AC`, `Câbles de terre`.
+  - `computeProjectProposals(project: ProjectForEngine, now: Date): Promise<{ ok: true; result: ProposeResult; context: SizingContext; yieldWarning: string | null } | { ok: false; missing: string[]; missingLibraryKinds: string[] }>` — `missing` when `client.annualConsumptionKWh`, `client.subscribedPowerKVA` or `site` is null; `missingLibraryKinds` non-empty → not ok (no sizing run). Context: company `defaultTMinC/defaultTMaxC/defaultCosPhi/defaultMaxVoltageDropPct/defaultDesignWindSpeedKmh`, `lambdaOhmPerM 0.00008`, lengths = current DC/AC cable-run lengths if the runs exist else 15 / 10, `tiltDeg = site.tiltDeg`, azimuth `site.azimuthDeg ?? 0`, GPS = site GPS, `averagePriceTNDPerKWh = billImport?.averagePriceTNDPerKWh ?? null`, `dossierDate = project.dossierDate ?? now`, `companyAccreditationValidTo = company.anmeValidTo`.
   - `applyProposalAction(projectId: string, proposalKey: string): Promise<{ error: string } | undefined>` — guard (`requireOwnedProject`, `ProjectNotFoundError` → `'Projet introuvable.'`); recompute; key not found → `'Les propositions ont changé : rechargez la page.'` with no write; else one transaction: replace `ProjectArrayConfig` (+ inverters/MPPTs; `tMinC/tMaxC` from context), upsert `ProjectProtections` (chosen ids, `acIsolatorId null`), upsert `ProjectCablingConfig` (`cosPhi`, `lambdaOhmPerM`, `maxVoltageDropPct`), replace cable runs with DC `{ label: 'Champ PV → onduleur', installMethod: '13', ambientContext: 'TRAY_SUN' }` and AC `{ label: 'Onduleur → compteur STEG', installMethod: '3A', ambientContext: 'TECHNICAL_ROOM' }` (`groupedCircuits 1`, `layers 1`, chosen cable/section/length), upsert `ProjectStructure` (`material 'ALUMINIUM'`, company wind speed, every optional column null — same shape as `saveStructureAction`), upsert `ProjectEarthing` (`earthCableId`, `16/16/25 mm²`, `rodCount 1`, `rodLengthM 1.5`, `targetResistanceOhm = company.defaultEarthResistanceTargetOhm ?? 25`), upsert `ProjectSimulation` (`source 'PVGIS_LIVE'`), `Project.flowStep 'LOCATIONS'`; redirect `/projects/${projectId}/locations`.
 
 - [ ] **Step 1: Write the failing tests**
-  - `sizing-catalog`: maps one row of each type (homologation date → `'2027-12-31'`, `iscpvKA: null` kept) and queries every table with the `catalogScope` filter.
+  - `sizing-catalog`: maps one row of each type (homologation date → `'2027-12-31'`, `iscpvKA: null` kept) and queries every table with the library ∧ catalog filter; `missingLibraryKinds` of an empty catalog lists all 9 labels in order, of a three-phase-only inverter list includes `Onduleurs monophasés homologués STEG`.
   - `apply-proposal-action` (mock db, `getSpecificYield` → 1 600, a seeded fake catalog that yields at least one proposal): `guards before recomputing`; `refuses an unknown key without writing` (`$transaction` not called, error text above); `writes every section and moves to the locations step` (array config with the proposal's module and MPPTs, two runs with lengths 15 / 10, earthing `rodCount 1`, flowStep `LOCATIONS`, redirect thrown to `/projects/p1/locations`); `returns Projet introuvable for another company's project`.
 - [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Commit** — `feat(web): compute and apply installation proposals`
@@ -390,6 +393,7 @@ Screen (top to bottom):
 2. Box "Lu sur la facture": Référence STEG, Puissance souscrite (kVA), Consommation `${kWh} kWh sur ${n} mois → environ ${annual} kWh/an (estimation)`, Prix moyen `${price} DT/kWh`; warnings (bill import + yield warning) as a list; a `<details>` "Corriger les données lues" containing the corrections form (open by default when a required value is missing; proposals are then hidden).
 3. Up to 3 `ProposalCard`s: badges `Recommandée` / `Économique` / `Production maximale`; `${dcPowerKWp} kWc` large; `${moduleCount} panneaux ${brand} ${model} (${pmaxW} W)`; `Onduleur ${brand} ${model} (${pacW/1000} kW)`; `Production estimée : ${kWh} kWh/an`; `Couverture de la consommation : ${pct} %`; `Surface de toiture : environ ${m2} m²`; `Économie estimée : environ ${dt} DT/an` (only when not null); the explanation; button "Choisir cette installation" → `confirm('Le client a validé cette installation ?')` → `applyProposalAction` (error shown in the card).
 4. No proposal → "Aucune installation possible" + the reasons list + link "Ouvrir le projet" (`/projects/${id}`).
+5. Library incomplete (`missingLibraryKinds` non-empty) → instead of cards: "Votre bibliothèque ne contient pas encore :" + the list + primary link "Compléter ma bibliothèque" (`/library?tab=catalogue`).
 
 - [ ] **Step 1: Write the failing tests**
   - `proposal-card`: renders `3,6 kWc`, `8 panneaux`, `Couverture de la consommation : 98 %`, `Économie estimée : environ 380 DT/an` for a fixture proposal; omits the saving line when `yearlySavingTND` is null; shows two badges when `kinds` has two entries.
@@ -442,6 +446,66 @@ A shared item (`ownerCompanyId = null`) is test equipment when `datasheetSourceU
 - [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Dry run on the dev DB** — `npx tsx packages/catalog-import/src/cli.ts purge-test-items` with the dev `DATABASE_URL`; expected: the seed items (`Generic …`, `LONGi …` seed module, `Sofar …` seed inverter, …) listed. Do **not** run against production.
 - [ ] **Step 6: Commit** — `feat(catalog-import): purge-test-items command (dry run by default)`
+
+---
+
+### Task 12: Installer library — data model, backfill, `libraryScope`
+
+**Files:**
+- Modify: `packages/db/prisma/schema.prisma`; Create: `packages/db/prisma/migrations/20261021130000_installer_library/migration.sql`
+- Modify: `apps/web/lib/project-access.ts` (+ `libraryScope`); Test: `apps/web/test/library-scope.test.ts`
+
+**Interfaces:**
+- Produces (Prisma): `enum EquipmentKind { PV_MODULE INVERTER SPD DC_SWITCH DC_FUSE AC_BREAKER AC_ISOLATOR CABLE ACCESSORY }`; `model LibraryItem { id String @id @default(uuid()); companyId String (→ Company, onDelete: Cascade); kind EquipmentKind; pvModuleId String?; inverterId String?; spdId String?; dcSwitchId String?; dcFuseId String?; acBreakerId String?; acIsolatorId String?; cableId String?; accessoryId String? (each → its model, onDelete: Cascade); purchasePriceTnd Float @default(0); createdAt DateTime @default(now()); @@unique([companyId, <fk>]) for each of the 9 FKs; @@map("library_item") }` with back-relation `libraryItems LibraryItem[]` on `Company` and on each of the 9 equipment models.
+- Produces: `libraryScope(companyId: string): { libraryItems: { some: { companyId: string } } }` (works as a `where` on every equipment model).
+
+Migration SQL (after Prisma's generated DDL): a `CHECK` that exactly one FK is non-null and it is the one matching `kind`; then the backfill — for every company, one `LibraryItem` for (a) every equipment row it owns (`ownerCompanyId = company`) and (b) every shared row referenced by any of its projects: array module, array inverters, protections (dcSpd, dcSwitch, dcFuse, acBreaker, acSpd, acIsolator), cable runs' cable, earthing earth cable + distribution block, cabling connector + cable tray (`INSERT ... SELECT DISTINCT ... ON CONFLICT DO NOTHING`).
+
+- [ ] **Step 1: Write the failing test** — `libraryScope('company-1')` equals `{ libraryItems: { some: { companyId: 'company-1' } } }`.
+- [ ] **Step 2: Run, expect FAIL.**
+- [ ] **Step 3: Schema + migration** — from `packages/db`: `npx prisma migrate dev --name installer_library --create-only`, rename the folder to `20261021130000_installer_library`, append the CHECK + backfill SQL, `npx prisma migrate deploy`, `npx prisma generate`.
+- [ ] **Step 4: Implement `libraryScope`; run, expect PASS**; full `npx vitest run` green.
+- [ ] **Step 5: Verify the backfill on the dev DB** — query: every `ProjectArrayConfig.moduleId` has a `LibraryItem` for its project's company (expected: 0 rows missing); record the per-company library counts in the report.
+- [ ] **Step 6: Commit** — `feat(db): installer library with backfill from existing projects`
+
+---
+
+### Task 13: Library screen — add from the shared catalog, remove, price
+
+**Files:**
+- Modify: `apps/web/app/(app)/library/page.tsx`; Create: `apps/web/app/(app)/library/{actions.ts,library-tabs.tsx,price-form.tsx}`
+- Test: `apps/web/test/library-actions.test.ts`
+
+**Interfaces:**
+- Consumes: `LibraryItem`, `EquipmentKind`, `libraryScope` (Task 12); `catalogScope`.
+- Produces: `addToLibraryAction(kind: EquipmentKind, itemId: string): Promise<{ error: string } | undefined>`; `addAllOfKindAction(kind: 'SPD' | 'DC_SWITCH' | 'DC_FUSE' | 'AC_BREAKER' | 'AC_ISOLATOR' | 'CABLE'): Promise<{ error: string } | undefined>`; `removeFromLibraryAction(libraryItemId: string): Promise<{ error: string } | undefined>`; `updateLibraryPriceAction(libraryItemId: string, prev: { error: string } | undefined, formData: FormData): Promise<{ error: string } | undefined>`.
+
+Rules: every action calls `requireAuthenticatedCompanyUser()` first; an item can be added only if `catalogScope(companyId)` finds it (PUBLISHED shared or the company's own) — else `'Équipement introuvable dans le catalogue.'`; adding twice is a no-op (upsert on the unique key); remove/price only on the caller's own `LibraryItem` (else `'Élément introuvable.'`); price: number ≥ 0 and ≤ 1 000 000 (`'Prix invalide.'`); `addAllOfKindAction` adds every PUBLISHED shared item of that kind not yet in the library; every action calls `revalidatePath('/library')`.
+
+Screen (`/library`, tab from `?tab=`): heading "Ma bibliothèque"; tabs "Mes équipements" (default) and "Catalogue partagé" (`?tab=catalogue`). Mes équipements: one section per type with count, rows `brand model` + key figures (module: `Pmax W`; inverter: `Pac kW · mono/tri · STEG ✓`; SPD: `DC/AC · Uc V · Up kV`; switch/fuse/breaker/isolator: `In A · U V` where present; cable: usage + sections), price field (DT, "Enregistrer") and "Retirer"; an empty library shows "Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé." with a link to the catalogue tab. Catalogue partagé: a search box (`?q=` — brand/model contains, case-insensitive; a number matches module Pmax / inverter Pac in W or kW), one section per type, rows with the same key figures and "Ajouter" or a "Déjà ajouté" badge; "Tout ajouter" on SPD, DC switch, DC fuse, AC breaker, AC isolator and cable sections.
+
+- [ ] **Step 1: Write the failing tests** — `guards before anything`; `adds a published shared item` (upsert called with `{ companyId, kind: 'INVERTER', inverterId }`, revalidatePath('/library')); `refuses a draft or another company's private item` (catalogScope lookup null → error, no upsert); `adds every published shared SPD not yet in the library` (createMany with skipDuplicates or equivalent, only missing ids); `removes only the caller's own item` (deleteMany scoped by companyId; 0 deleted → 'Élément introuvable.'); `rejects a negative price`.
+- [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS.**
+- [ ] **Step 5: Live check** — dev server: add a module, an inverter and "Tout ajouter" protections/cables, then remove one; Playwright screenshot of both tabs.
+- [ ] **Step 6: Commit** — `feat(web): installer library — choose equipment from the shared catalog`
+
+---
+
+### Task 14: Project equipment choices limited to the library
+
+**Files:**
+- Modify: `apps/web/app/(app)/projects/[id]/sections/[section]/page.tsx`, `apps/web/app/(app)/projects/[id]/sections/actions.ts`
+- Test: `apps/web/test/section-actions.test.ts` (update + new cases)
+
+**Interfaces:**
+- Consumes: `libraryScope` (Task 12).
+- Produces: `equipmentChoiceScope(companyId: string, currentIds: string[]): { OR: [ { AND: [libraryScope, catalogScope] }, { id: { in: string[] } } ] }` in `apps/web/lib/project-access.ts` — library items, plus the items already saved in this project.
+
+Rules: every equipment `<select>` of the array, protections, cabling and earthing sections lists `equipmentChoiceScope(companyId, <ids saved in this project for that field>)`; an option whose id is not in the library gets the suffix ` (hors bibliothèque)`. Every section action validates submitted equipment ids with the same scope (an id already saved in the project stays accepted, any other id outside the library → the existing `'Un équipement sélectionné est introuvable dans votre bibliothèque.'`).
+
+- [ ] **Step 1: Write the failing tests** — `rejects an inverter outside the library`; `accepts the inverter already saved in the project even if removed from the library`; existing scope expectations updated to `equipmentChoiceScope`.
+- [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS** (whole apps/web suite).
+- [ ] **Step 5: Commit** — `feat(web): project equipment choices come from the installer library`
 
 ---
 

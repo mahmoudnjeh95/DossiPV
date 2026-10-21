@@ -39,13 +39,20 @@ app produces a dossier that a STEG reviewer would accept, and an installer finds
   point in its own colour**.
 - The shared equipment catalog must hold **real data** (the official ANME/STEG lists + datasheets)
   and **all test equipment must be deleted** from it.
+- **Installer library** (user, 2026-10-21): each installer selects, from the shared catalog, the
+  items it wants to use; only those items are available to that company — in the proposals and in
+  every equipment choice of a project. (This is Part 1 of the 2026-10-07 spec, now built here.)
 - Work is carried out by five agents: (1) implementer, (2) code reviewer, (3) STEG reviewer who
   judges the generated dossier, (4) facilitator who gathers all feedback into improvements,
   (5) installer/user who judges simplicity.
 
 ## 3. Calls made by Claude (user can override)
 
-- Proposals use the **shared catalog** (PUBLISHED items only), not a per-company library.
+- ~~Proposals use the shared catalog~~ — superseded by the user's installer-library decision (§2):
+  proposals use the company's library only.
+- Library scope for this iteration: add/remove shared items and an optional purchase price; a
+  "Tout ajouter" button per protection/cable type (short curated lists) so a new installer is not
+  slowed down; creating private equipment stays a later iteration.
 - Sizing before the GPS points exist uses the **governorate capital's coordinates** (from a
   static table of Tunisia's 24 governorates) — solar yield barely varies inside a governorate.
   Production is recomputed with the exact GPS once the points are placed.
@@ -88,6 +95,20 @@ New CLI command `catalog-import purge-test-items` (dry run by default, `--apply`
   read the dry-run list and said yes**.
 
 ## 5. Piece B — Bill → proposals → map → dossier
+
+### B0. Installer library
+
+Data model, backfill and helper exactly as 2026-10-07 spec §2 (`LibraryItem` with one nullable FK
+per equipment type, unique per company+item, `purchasePriceTnd` default 0; backfill every company's
+private items and every shared item its projects reference; `libraryScope(companyId, kind)`).
+
+- `/library` has two tabs: **Ma bibliothèque** (per type: the company's items, "Retirer", price
+  edit) and **Catalogue partagé** (per type: PUBLISHED shared items, search by brand/model/power,
+  "Ajouter" / "Déjà ajouté", and "Tout ajouter" on the protection and cable types).
+- Project section selects and section actions use `libraryScope` instead of `catalogScope`; an item
+  already saved in a project but no longer in the library stays selectable, labelled
+  "(hors bibliothèque)".
+- Sizing (B4) loads only the library.
 
 ### B1. Flow
 
@@ -155,9 +176,10 @@ Pure function in `packages/engine/src/sizing.ts`:
 
 - Input: `annualConsumptionKWh`, `subscribedPowerKVA`, `specificYieldKWhPerKWp`, site temps
   (`tMinC`/`tMaxC`), default cable lengths (DC 15 m, AC 10 m before the points exist),
-  `averagePriceTNDPerKWh` (optional), and the catalog: PUBLISHED modules with a valid
-  homologation, PUBLISHED **single-phase**, `stegApproved`, non-expired inverters, protections,
-  cables.
+  `averagePriceTNDPerKWh` (optional), and the **company's library** (§5 B0): its modules with a
+  valid homologation, its **single-phase**, `stegApproved`, non-expired inverters, protections,
+  cables. An empty or incomplete library → the proposals screen says which equipment types are
+  missing and links to the library.
 - Specific yield: from PVGIS `PVcalc` (peak power 1 kWp, 14 % losses, tilt 30°, azimuth 0°) at
   the site GPS, cached like the existing `PvgisWeatherCache`; the caller passes it in so the
   function stays pure. PVGIS failure → 1 600 kWh/kWp with a visible warning.
