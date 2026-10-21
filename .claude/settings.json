@@ -9,16 +9,9 @@
       "Bash(ssh dossipv-server docker logs --tail 200 dossipv-postgres-1)",
       "Bash(ssh dossipv-server docker inspect dossipv-app-1)",
       "Bash(ssh dossipv-server docker inspect dossipv-postgres-1)",
-      "Bash(ssh dossipv-server cat /etc/nginx/sites-available/dossipv)"
-    ],
-    "ask": [
-      "Bash(ssh dossipv-server docker exec *)",
-      "Bash(ssh dossipv-server docker restart *)",
-      "Bash(ssh dossipv-server docker start *)",
-      "Bash(ssh dossipv-server docker stop *)",
-      "Bash(ssh dossipv-server *docker compose*)",
-      "Bash(ssh dossipv-server sudo nginx -t*)",
-      "Bash(ssh dossipv-server sudo systemctl reload nginx*)"
+      "Bash(ssh dossipv-server cat /etc/nginx/sites-available/dossipv)",
+      "Bash(git pull *)",
+      "Bash(git push *)"
     ],
     "deny": [
       "Bash(ssh dossipv-server *erpsonalim*)",
@@ -30,6 +23,15 @@
       "Bash(ssh dossipv-server *docker system*)",
       "Bash(ssh dossipv-server *docker volume*)",
       "Bash(ssh dossipv-server *docker compose down*)"
+    ],
+    "ask": [
+      "Bash(ssh dossipv-server docker exec *)",
+      "Bash(ssh dossipv-server docker restart *)",
+      "Bash(ssh dossipv-server docker start *)",
+      "Bash(ssh dossipv-server docker stop *)",
+      "Bash(ssh dossipv-server *docker compose*)",
+      "Bash(ssh dossipv-server sudo nginx -t*)",
+      "Bash(ssh dossipv-server sudo systemctl reload nginx*)"
     ]
   }
 }
