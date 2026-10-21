@@ -104,6 +104,7 @@ model Company {
   cables       Cable[]
   accessories  Accessory[]
   projects     Project[]
+  libraryItems LibraryItem[]
 
   @@map("company")
 }
@@ -253,6 +254,8 @@ model PvModule {
 
   arrayConfigs ProjectArrayConfig[]
 
+  libraryItems LibraryItem[]
+
   @@map("pv_module")
 }
 
@@ -293,6 +296,8 @@ model Inverter {
 
   arrayInverters ProjectArrayInverter[]
 
+  libraryItems LibraryItem[]
+
   @@map("inverter")
 }
 
@@ -326,6 +331,8 @@ model Spd {
   protectionsDc ProjectProtections[] @relation("DcSpd")
   protectionsAc ProjectProtections[] @relation("AcSpd")
 
+  libraryItems LibraryItem[]
+
   @@map("spd")
 }
 
@@ -358,6 +365,8 @@ model DcSwitch {
 
   protections ProjectProtections[]
 
+  libraryItems LibraryItem[]
+
   @@map("dc_switch")
 }
 
@@ -383,6 +392,8 @@ model DcFuse {
   createdAt             DateTime @default(now())
 
   protections ProjectProtections[]
+
+  libraryItems LibraryItem[]
 
   @@map("dc_fuse")
 }
@@ -411,6 +422,8 @@ model AcBreaker {
 
   protections ProjectProtections[]
 
+  libraryItems LibraryItem[]
+
   @@map("ac_breaker")
 }
 
@@ -435,6 +448,8 @@ model AcIsolator {
   createdAt             DateTime @default(now())
 
   protections ProjectProtections[]
+
+  libraryItems LibraryItem[]
 
   @@map("ac_isolator")
 }
@@ -465,6 +480,8 @@ model Cable {
   sections              CableSection[]
   cableRuns             ProjectCableRun[]
   earthingCableFor      ProjectEarthing[]
+
+  libraryItems LibraryItem[]
 
   @@map("cable")
 }
@@ -510,6 +527,8 @@ model Accessory {
   connectorFor         ProjectCablingConfig[] @relation("Connector")
   cableTrayFor         ProjectCablingConfig[] @relation("CableTray")
   distributionBlockFor ProjectEarthing[]      @relation("DistributionBlock")
+
+  libraryItems LibraryItem[]
 
   @@map("accessory")
 }
@@ -936,4 +955,54 @@ model ClaudeUsageLog {
   createdAt     DateTime   @default(now())
 
   @@map("claude_usage_log")
+}
+
+enum EquipmentKind {
+  PV_MODULE
+  INVERTER
+  SPD
+  DC_SWITCH
+  DC_FUSE
+  AC_BREAKER
+  AC_ISOLATOR
+  CABLE
+  ACCESSORY
+}
+
+model LibraryItem {
+  id               String        @id @default(uuid())
+  companyId        String
+  company          Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind             EquipmentKind
+  pvModuleId       String?
+  pvModule         PvModule?     @relation(fields: [pvModuleId], references: [id], onDelete: Cascade)
+  inverterId       String?
+  inverter         Inverter?     @relation(fields: [inverterId], references: [id], onDelete: Cascade)
+  spdId            String?
+  spd              Spd?          @relation(fields: [spdId], references: [id], onDelete: Cascade)
+  dcSwitchId       String?
+  dcSwitch         DcSwitch?     @relation(fields: [dcSwitchId], references: [id], onDelete: Cascade)
+  dcFuseId         String?
+  dcFuse           DcFuse?       @relation(fields: [dcFuseId], references: [id], onDelete: Cascade)
+  acBreakerId      String?
+  acBreaker        AcBreaker?    @relation(fields: [acBreakerId], references: [id], onDelete: Cascade)
+  acIsolatorId     String?
+  acIsolator       AcIsolator?   @relation(fields: [acIsolatorId], references: [id], onDelete: Cascade)
+  cableId          String?
+  cable            Cable?        @relation(fields: [cableId], references: [id], onDelete: Cascade)
+  accessoryId      String?
+  accessory        Accessory?    @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+  purchasePriceTnd Float         @default(0)
+  createdAt        DateTime      @default(now())
+
+  @@unique([companyId, pvModuleId])
+  @@unique([companyId, inverterId])
+  @@unique([companyId, spdId])
+  @@unique([companyId, dcSwitchId])
+  @@unique([companyId, dcFuseId])
+  @@unique([companyId, acBreakerId])
+  @@unique([companyId, acIsolatorId])
+  @@unique([companyId, cableId])
+  @@unique([companyId, accessoryId])
+  @@map("library_item")
 }

@@ -33,6 +33,15 @@ export function catalogScope(companyId: string): {
 }
 
 /**
+ * Equipment the company selected into its installer library. Usable as a `where` on every
+ * equipment model (each has a `libraryItems` back-relation); combine with `catalogScope` only
+ * where visibility rules matter, since a library item is already visible by construction.
+ */
+export function libraryScope(companyId: string): { libraryItems: { some: { companyId: string } } } {
+  return { libraryItems: { some: { companyId } } };
+}
+
+/**
  * Spec §5: client name and STEG reference lock after the first generation so one project slot
  * cannot be reused for a different client. "First generation" = any job that is not FAILED.
  */
