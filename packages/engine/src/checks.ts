@@ -294,6 +294,16 @@ export function checkC22(companyAccreditationValidTo: string, dossierDate: strin
   };
 }
 
+/** STEG rule: total inverter AC power (W) <= subscribed power (kVA x 1000) (BLOCK) */
+export function checkC23(totalInverterPacW: number, subscribedPowerKVA: number): CheckResult {
+  return {
+    id: 'C23',
+    level: 'BLOCK',
+    pass: totalInverterPacW <= subscribedPowerKVA * 1000,
+    message: 'Puissance AC totale des onduleurs supérieure à la puissance souscrite',
+  };
+}
+
 /**
  * Flat set of pre-derived values every check needs. Built by run-engine.ts (Task 11) from the
  * outputs of module-electrical, string-sizing, protections, cabling, and structure, plus a few

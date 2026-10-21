@@ -45,6 +45,7 @@ import {
   checkC16,
   checkC19,
   checkC21,
+  checkC23,
   type ChecksContext,
   type FuseCheckInput,
 } from './checks';
@@ -105,6 +106,8 @@ export interface RunEngineInput {
   companyAccreditationValidTo: string;
   /** Homologation end dates (ISO) of the project's equipment; null when unknown. Feeds C20. */
   equipmentHomologationExpiries?: Array<string | null>;
+  /** Client's subscribed power (kVA); when set, C23 checks the total inverter AC power against it. */
+  subscribedPowerKVA?: number;
 }
 
 /**
@@ -405,7 +408,22 @@ export function runEngine(input: RunEngineInput): EngineResult {
     );
   }
 
-  const checks = [...runAllChecks(checksContext), ...perMpptChecks, ...perInverterChecks];
+  const subscribedPowerChecks: CheckResult[] =
+    input.subscribedPowerKVA !== undefined
+      ? [
+          checkC23(
+            array.reduce((sum, entry) => sum + entry.inverter.pacW, 0),
+            input.subscribedPowerKVA,
+          ),
+        ]
+      : [];
+
+  const checks = [
+    ...runAllChecks(checksContext),
+    ...perMpptChecks,
+    ...perInverterChecks,
+    ...subscribedPowerChecks,
+  ];
   const hasBlockingFailure = checks.some((c) => c.level === 'BLOCK' && !c.pass);
 
   return {
