@@ -99,7 +99,7 @@ export function LocationsMap({ projectId, center, initial, initialFloors, initia
             >
               <ColourDot color={color} />
               {label}
-              {kind === 'earthPit' ? (buildingType === 'HOUSE' ? ' (obligatoire)' : ' (facultatif : sinon terre du bâtiment)') : ''} — {points[kind] ? '✓ placé' : 'à placer'}
+              {kind === 'earthPit' ? (buildingType === null ? '' : buildingType === 'HOUSE' ? ' (obligatoire)' : ' (facultatif : sinon terre du bâtiment)') : ''} — {points[kind] ? '✓ placé' : 'à placer'}
             </button>
           );
         })}

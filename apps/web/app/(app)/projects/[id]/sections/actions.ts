@@ -475,16 +475,21 @@ export async function saveEarthingAction(
   // the engine). The target resistance comes from the form's hidden field (company default) or a
   // visible input when the company has no default.
   const distributionBlockId = null;
+  const saved = await db.projectEarthing.findUnique({
+    where: { projectId },
+    select: { earthCableId: true, distributionBlockId: true, useBuildingEarth: true },
+  });
+  // A project on the building's existing earth has no rod: the form does not ask, the count stays 0.
+  const useBuildingEarth = saved?.useBuildingEarth ?? false;
   const data = {
     ...EARTHING_FIXED_VALUES,
-    rodCount: reader.integer('rodCount', 'Nombre de piquets', { min: 1, max: 100 }),
+    rodCount: useBuildingEarth ? 0 : reader.integer('rodCount', 'Nombre de piquets', { min: 1, max: 100 }),
     targetResistanceOhm: reader.number('targetResistanceOhm', 'Résistance cible', { min: 0, max: 1000 }),
   };
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
   }
 
-  const saved = await db.projectEarthing.findUnique({ where: { projectId }, select: { earthCableId: true, distributionBlockId: true } });
   const [cable, block] = await Promise.all([
     db.cable.findFirst({ where: { id: earthCableId, usage: 'EARTH', ...equipmentChoiceScope(owned.companyId, saved ? [saved.earthCableId] : []) }, select: { id: true } }),
     distributionBlockId

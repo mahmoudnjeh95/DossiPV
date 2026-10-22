@@ -18,6 +18,7 @@ const singleInverterInput: DrawingsInput = {
   dcRun: { sectionMm2: 6, lengthM: 25 },
   acRun: { sectionMm2: 6, lengthM: 15 },
   earthRodCount: 3,
+  earthingMode: 'DEDICATED_ROD',
 };
 
 const threeInverterInput: DrawingsInput = {
@@ -55,6 +56,15 @@ function insideSomeBox(page: PageContent, text: DrawnText): boolean {
 }
 
 describe('renderDrawingPages', () => {
+  it('words the earthing line from earthingMode, not from the rod count', async () => {
+    const textOf = async (input: DrawingsInput): Promise<string> =>
+      (await extractPdfContent(await renderDrawingPages(input))).map((page) => pageText(page)).join(' ');
+    expect(await textOf(singleInverterInput)).toContain('Mise à la terre : 3 piquet(s)');
+    const building = await textOf({ ...singleInverterInput, earthingMode: 'BUILDING_EARTH', earthRodCount: 1 });
+    expect(building).toContain('Mise à la terre : terre existante du bâtiment');
+    expect(building).not.toContain('piquet');
+  });
+
   it('produces a 2-page PDF (single-line + unifilar) for a single-inverter project', async () => {
     const pages = await extractPdfContent(await renderDrawingPages(singleInverterInput));
     expect(pages).toHaveLength(2);

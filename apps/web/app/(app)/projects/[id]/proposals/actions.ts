@@ -67,6 +67,8 @@ export async function applyProposalAction(projectId: string, proposalKey: string
     distributionBlockId: null,
     ...EARTHING_FIXED_VALUES,
     rodCount: 1,
+    // A new proposal starts on a dedicated rod; the locations step decides the building earth again.
+    useBuildingEarth: false,
     targetResistanceOhm: project.company.defaultEarthResistanceTargetOhm ?? DEFAULT_EARTH_RESISTANCE_TARGET_OHM,
   };
   // The figures and any PVsyst report described the replaced installation: PVGIS recomputes them.

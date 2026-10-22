@@ -95,7 +95,7 @@ export function computeSectionStatuses(project: ProjectForEngine): SectionStatus
       label: 'Mise à la terre',
       href: `${base}/sections/earthing`,
       complete: project.earthing !== null,
-      summary: project.earthing ? `${project.earthing.rodCount} piquet(s)` : null,
+      summary: project.earthing ? project.earthing.useBuildingEarth ? 'Terre existante du bâtiment' : `${project.earthing.rodCount} piquet(s)` : null,
     },
     {
       key: 'simulation',

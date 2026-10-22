@@ -180,7 +180,7 @@ export function summarizeSnapshot(snapshot: DossierJobSnapshotV1): SnapshotSumma
         ].join(', ')
       : null,
     earthing: snapshot.earthing
-      ? `${snapshot.earthing.rodCount} piquet(s) de ${snapshot.earthing.rodLengthM} m, cible ${snapshot.earthing.targetResistanceOhm} Ω, câble ${equipmentLabel(snapshot.earthing.earthCable)}`
+      ? `${snapshot.earthing.useBuildingEarth ? 'Terre existante du bâtiment' : `${snapshot.earthing.rodCount} piquet(s) de ${snapshot.earthing.rodLengthM} m`}, cible ${snapshot.earthing.targetResistanceOhm} Ω, câble ${equipmentLabel(snapshot.earthing.earthCable)}`
       : null,
     dossierDate: input.dossierDate,
   };

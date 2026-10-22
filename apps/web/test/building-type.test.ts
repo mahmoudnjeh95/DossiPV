@@ -17,6 +17,12 @@ describe('guessBuildingType', () => {
     expect(guessBuildingType('Rue des Réserves')).toBeNull();
     expect(guessBuildingType('Immobilier Nord')).toBeNull();
   });
+  it('handles Rés. and keeps bloc to the whole word', () => {
+    expect(guessBuildingType('Rés. Les Palmiers')).toBe('APARTMENT_BUILDING');
+    expect(guessBuildingType('Bloc B, rue 5')).toBe('APARTMENT_BUILDING');
+    expect(guessBuildingType('Zone de blocage')).toBeNull();
+  });
+
   it('returns null without an address', () => {
     expect(guessBuildingType(null)).toBeNull();
   });

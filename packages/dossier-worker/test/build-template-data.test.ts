@@ -464,6 +464,16 @@ describe('building and earthing lines', () => {
     ).toBe('Bâtiment : immeuble collectif (appartement), toiture-terrasse au niveau R+4');
   });
 
+  it('copes with a legacy snapshot whose meta lacks the building and earthing fields', () => {
+    const legacy = { ...projectMeta } as Record<string, unknown>;
+    delete legacy.earthingMode;
+    delete legacy.buildingType;
+    delete legacy.floors;
+    const data = buildTemplateData({ ...base, projectMeta: legacy as unknown as ProjectMeta });
+    expect(data.siteBuildingLine).toBe('');
+    expect(data.earthingDetails.find((row) => row.label === 'Prise de terre')?.value).toBe('Piquet dédié (1 × 1,5 m)');
+  });
+
   it('leaves the building line empty when the type is unknown', () => {
     expect(buildTemplateData({ ...base, projectMeta: { ...projectMeta, buildingType: null } }).siteBuildingLine).toBe('');
   });

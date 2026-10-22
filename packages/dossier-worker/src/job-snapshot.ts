@@ -70,6 +70,8 @@ export interface SnapshotStructure {
 
 export interface SnapshotEarthing {
   rodCount: number;
+  /** Absent in snapshots saved before the building-earth option existed (= dedicated rod). */
+  useBuildingEarth?: boolean;
   rodLengthM: number;
   mainEarthSectionMm2: number;
   frameEarthSectionMm2: number;

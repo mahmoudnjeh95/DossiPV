@@ -465,6 +465,7 @@ export async function processJob(jobId: string): Promise<void> {
       dcRun: { sectionMm2: snapshot.engineInput.dcRun.sectionMm2, lengthM: snapshot.engineInput.dcRun.lengthM },
       acRun: { sectionMm2: snapshot.engineInput.acRun.sectionMm2, lengthM: snapshot.engineInput.acRun.lengthM },
       earthRodCount: snapshot.projectMeta.earthRodCount,
+      earthingMode: snapshot.projectMeta.earthingMode === 'BUILDING_EARTH' ? 'BUILDING_EARTH' : 'DEDICATED_ROD',
     });
     await PDFDocument.load(drawingsBuffer); // an unreadable drawing fails here, at its own step
   } catch (error) {

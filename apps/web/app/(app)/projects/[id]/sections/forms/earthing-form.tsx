@@ -19,10 +19,14 @@ export function EarthingForm({
     <SectionForm action={saveEarthingAction.bind(null, projectId)} cancelHref={`/projects/${projectId}`}>
       <div className="form-grid">
         <SelectField name="earthCableId" label="Câble de terre" options={equipmentOptions(earthCables)} defaultValue={earthing?.earthCableId} allowEmpty required />
-        <label>
-          Nombre de piquets
-          <input type="number" name="rodCount" step={1} min={1} defaultValue={earthing?.rodCount ?? 1} required />
-        </label>
+        {earthing?.useBuildingEarth ? (
+          <p className="muted">Mise à la terre : terre existante du bâtiment (aucun piquet dédié). Modifiez ce choix à l'étape Emplacements.</p>
+        ) : (
+          <label>
+            Nombre de piquets
+            <input type="number" name="rodCount" step={1} min={1} defaultValue={earthing?.rodCount ?? 1} required />
+          </label>
+        )}
         {targetResistance === null || targetResistance === undefined ? (
           <label>
             Résistance cible (Ω)

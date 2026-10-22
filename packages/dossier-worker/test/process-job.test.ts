@@ -822,6 +822,7 @@ describe('processJob — fragment assembly details', () => {
         dcRun: { sectionMm2: 6, lengthM: 20 },
         acRun: { sectionMm2: 10, lengthM: 15 },
         earthRodCount: 1,
+        earthingMode: 'DEDICATED_ROD',
       }),
     );
   });

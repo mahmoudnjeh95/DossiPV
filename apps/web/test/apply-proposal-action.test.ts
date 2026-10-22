@@ -280,6 +280,7 @@ describe('applyProposalAction', () => {
           frameEarthSectionMm2: 16,
           earthToPitSectionMm2: 25,
           rodCount: 1,
+          useBuildingEarth: false,
           rodLengthM: 1.5,
           rodSpacingCm: null,
           pitSizeCm: null,

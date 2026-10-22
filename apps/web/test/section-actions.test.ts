@@ -170,6 +170,27 @@ describe('saveEarthingAction', () => {
   });
 });
 
+describe('saveEarthingAction on the building earth', () => {
+  it('needs no rod count and keeps rodCount at 0, so the two never diverge', async () => {
+    mocks.cableFindFirst.mockResolvedValue({ id: 'cable-1' });
+    mocks.earthingFindUnique.mockResolvedValue({ earthCableId: 'cable-1', distributionBlockId: null, useBuildingEarth: true });
+
+    const result = await saveEarthingAction('project-1', undefined, form({ earthCableId: 'cable-1', targetResistanceOhm: '30' }));
+
+    expect(result).toBeUndefined();
+    const call = mocks.earthingUpsert.mock.calls[0]?.[0] as { update: Record<string, unknown> };
+    expect(call.update).toMatchObject({ rodCount: 0 });
+    expect(call.update).not.toHaveProperty('useBuildingEarth');
+  });
+
+  it('still requires a rod count for a dedicated rod', async () => {
+    mocks.earthingFindUnique.mockResolvedValue({ earthCableId: 'cable-1', distributionBlockId: null, useBuildingEarth: false });
+    const result = await saveEarthingAction('project-1', undefined, form({ earthCableId: 'cable-1', targetResistanceOhm: '30' }));
+    expect(result).toHaveProperty('error');
+    expect(mocks.earthingUpsert).not.toHaveBeenCalled();
+  });
+});
+
 describe('tenant isolation', () => {
   it('every section action refuses a project outside the caller company', async () => {
     mocks.projectFindFirst.mockResolvedValue(null);
