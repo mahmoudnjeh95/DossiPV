@@ -12,7 +12,7 @@ const sampleInput: DossierTextInput = {
   phases: 1,
   mountingType: 'FLAT_ROOF_BALLAST',
   structureMaterial: 'Aluminium',
-  earthRodCount: 3,
+  earthingMode: 'DEDICATED_ROD',
   dcFuseRequired: false,
   acIsolatorRequired: false,
   protectionLines: [

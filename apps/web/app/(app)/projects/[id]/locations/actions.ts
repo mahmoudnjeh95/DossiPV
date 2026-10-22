@@ -4,18 +4,20 @@ import { db } from '@dossipv/db';
 import { computeRunLengthsM, groundDistanceM, runEngine, type EngineResult, type GpsPoint } from '@dossipv/engine';
 import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput, type ProjectForEngine } from '../../../../../lib/project-engine-input';
+import type { BuildingTypeValue } from '../../../../../lib/building-type';
 import { generateDossierAction } from '../actions';
 
 const NOT_FOUND = 'Projet introuvable.';
 const MAX_POINT_SPREAD_M = 500;
-const MAX_FLOORS = 3;
+const MAX_FLOORS: Record<BuildingTypeValue, number> = { HOUSE: 3, APARTMENT_BUILDING: 15 };
 
 export interface LocationsPayload {
   field: GpsPoint | null;
   technicalRoom: GpsPoint | null;
   meter: GpsPoint | null;
   earthPit: GpsPoint | null;
-  floors: number;
+  floors: number | null;
+  buildingType: BuildingTypeValue | null;
 }
 
 const REQUIRED_POINTS = [
@@ -24,7 +26,7 @@ const REQUIRED_POINTS = [
   { key: 'meter', label: 'Compteur STEG' },
 ] as const;
 
-const PAYLOAD_KEYS = ['field', 'technicalRoom', 'meter', 'earthPit', 'floors'] as const;
+const PAYLOAD_KEYS = ['field', 'technicalRoom', 'meter', 'earthPit', 'floors', 'buildingType'] as const;
 
 function isPointOrNull(value: unknown): value is GpsPoint | null {
   if (value === null) return true;
@@ -43,7 +45,8 @@ function isLocationsPayload(value: unknown): value is LocationsPayload {
     isPointOrNull(record['technicalRoom']) &&
     isPointOrNull(record['meter']) &&
     isPointOrNull(record['earthPit']) &&
-    typeof record['floors'] === 'number'
+    (record['floors'] === null || typeof record['floors'] === 'number') &&
+    (record['buildingType'] === null || record['buildingType'] === 'HOUSE' || record['buildingType'] === 'APARTMENT_BUILDING')
   );
 }
 
@@ -73,8 +76,13 @@ function validate(payload: LocationsPayload): string | null {
       }
     }
   }
-  if (!Number.isInteger(payload.floors) || payload.floors < 0 || payload.floors > MAX_FLOORS) {
+  if (payload.buildingType === null) return 'Indiquez si le client habite une maison ou un immeuble.';
+  if (payload.floors === null) return "Indiquez l'étage du toit où seront posés les panneaux.";
+  if (!Number.isInteger(payload.floors) || payload.floors < 0 || payload.floors > MAX_FLOORS[payload.buildingType]) {
     return 'Niveau du toit invalide.';
+  }
+  if (payload.buildingType === 'HOUSE' && payload.earthPit === null) {
+    return 'Placez le point « Piquet de terre » : il est obligatoire pour une maison.';
   }
   return null;
 }
@@ -109,8 +117,8 @@ export async function saveLocationsAndGenerateAction(
   if (!isLocationsPayload(payload)) return { error: 'Données des emplacements invalides.' };
   const invalid = validate(payload);
   if (invalid) return { error: invalid };
-  const { field, technicalRoom, meter, earthPit, floors } = payload;
-  if (!field || !technicalRoom || !meter) return { error: 'Points manquants.' };
+  const { field, technicalRoom, meter, earthPit, floors, buildingType } = payload;
+  if (!field || !technicalRoom || !meter || floors === null || buildingType === null) return { error: 'Points manquants.' };
 
   const lengths = computeRunLengthsM({ field, technicalRoom, meter }, floors);
 
@@ -128,8 +136,12 @@ export async function saveLocationsAndGenerateAction(
       earthPitPointLat: earthPit?.lat ?? null,
       earthPitPointLon: earthPit?.lon ?? null,
       floors,
+      buildingType,
     },
   });
+  // A flat with no pit of its own is earthed on the building's existing earth: no dedicated rod.
+  const useBuildingEarth = buildingType === 'APARTMENT_BUILDING' && earthPit === null;
+  await db.projectEarthing.updateMany({ where: { projectId }, data: { useBuildingEarth, rodCount: useBuildingEarth ? 0 : 1 } });
   await db.projectCableRun.updateMany({ where: { projectId, circuitType: 'DC' }, data: { lengthM: lengths.dcLengthM } });
   await db.projectCableRun.updateMany({ where: { projectId, circuitType: 'AC' }, data: { lengthM: lengths.acLengthM } });
 

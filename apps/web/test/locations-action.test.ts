@@ -5,6 +5,7 @@ import { buildFullProject } from './fixtures/full-project';
 const m = vi.hoisted(() => ({
   mockRequireOwnedProject: vi.fn(),
   mockSiteUpdate: vi.fn(),
+  mockEarthingUpdateMany: vi.fn(),
   mockRunUpdateMany: vi.fn(),
   mockProjectFindFirst: vi.fn(),
   mockProjectUpdate: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('@dossipv/db', async () => {
     db: {
       ...actual.db,
       projectSite: { update: m.mockSiteUpdate },
+      projectEarthing: { updateMany: m.mockEarthingUpdateMany },
       projectCableRun: { updateMany: m.mockRunUpdateMany },
       project: { findFirst: m.mockProjectFindFirst, update: m.mockProjectUpdate },
     },
@@ -44,7 +46,7 @@ import { saveLocationsAndGenerateAction } from '../app/(app)/projects/[id]/locat
 const field = { lat: 34.4, lon: 10.1 };
 const technicalRoom = { lat: 34.4, lon: 10.10005 };
 const meter = { lat: 34.4, lon: 10.1001 };
-const payload = { field, technicalRoom, meter, earthPit: null, floors: 1 };
+const payload = { field, technicalRoom, meter, earthPit: null, floors: 1, buildingType: 'APARTMENT_BUILDING' as const };
 
 function engineResult(overrides: { c13?: boolean; acDropPct?: number; dcDropPct?: number } = {}): EngineResult {
   return {
@@ -102,7 +104,9 @@ describe('saveLocationsAndGenerateAction', () => {
   it.each([
     ['null', null],
     ['a string', 'field=1'],
-    ['an object without the meter key', { field: payload.field, technicalRoom: payload.technicalRoom, earthPit: null, floors: 1 }],
+    ['an object without the meter key', { field: payload.field, technicalRoom: payload.technicalRoom, earthPit: null, floors: 1, buildingType: 'HOUSE' }],
+    ['an unknown building type', { ...payload, buildingType: 'VILLA' }],
+    ['a missing building type key', { field, technicalRoom, meter, earthPit: null, floors: 1 }],
     ['a point with a string latitude', { ...payload, field: { lat: '34.4', lon: 10.1 } }],
     ['a point that is not an object', { ...payload, earthPit: 'here' }],
     ['a non-numeric floor count', { ...payload, floors: '1' }],
@@ -111,6 +115,67 @@ describe('saveLocationsAndGenerateAction', () => {
 
     expect(result).toEqual({ error: 'Données des emplacements invalides.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
+  it('asks for the building type', async () => {
+    const result = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: null });
+
+    expect(result).toEqual({ error: 'Indiquez si le client habite une maison ou un immeuble.' });
+    expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
+  it('asks for the roof level', async () => {
+    const result = await saveLocationsAndGenerateAction('p1', { ...payload, floors: null });
+
+    expect(result).toEqual({ error: "Indiquez l'étage du toit où seront posés les panneaux." });
+    expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
+  it('requires the earth pit for a house', async () => {
+    const result = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE' });
+
+    expect(result).toEqual({ error: 'Placez le point « Piquet de terre » : il est obligatoire pour une maison.' });
+    expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses floor 5 for a house but accepts it for a building', async () => {
+    const pit = { lat: 34.4, lon: 10.1002 };
+    const house = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 5 });
+    expect(house).toEqual({ error: 'Niveau du toit invalide.' });
+    expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+
+    const building = await saveLocationsAndGenerateAction('p1', { ...payload, floors: 5 });
+    expect(building).toBeUndefined();
+    expect(m.mockSiteUpdate).toHaveBeenCalled();
+
+    expect(await saveLocationsAndGenerateAction('p1', { ...payload, floors: 16 })).toEqual({ error: 'Niveau du toit invalide.' });
+    expect(await saveLocationsAndGenerateAction('p1', { ...payload, floors: 1.5 })).toEqual({ error: 'Niveau du toit invalide.' });
+  });
+
+  it('uses the building earth for a flat without a pit', async () => {
+    await saveLocationsAndGenerateAction('p1', payload);
+
+    expect(m.mockEarthingUpdateMany).toHaveBeenCalledWith({
+      where: { projectId: 'p1' },
+      data: { useBuildingEarth: true, rodCount: 0 },
+    });
+    expect((m.mockSiteUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data).toMatchObject({
+      buildingType: 'APARTMENT_BUILDING',
+    });
+  });
+
+  it('keeps a dedicated rod when a flat places a pit, and for a house', async () => {
+    const pit = { lat: 34.4, lon: 10.1002 };
+    await saveLocationsAndGenerateAction('p1', { ...payload, earthPit: pit });
+    expect(m.mockEarthingUpdateMany).toHaveBeenLastCalledWith({
+      where: { projectId: 'p1' },
+      data: { useBuildingEarth: false, rodCount: 1 },
+    });
+    await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 0 });
+    expect(m.mockEarthingUpdateMany).toHaveBeenLastCalledWith({
+      where: { projectId: 'p1' },
+      data: { useBuildingEarth: false, rodCount: 1 },
+    });
   });
 
   it('asks for the meter point', async () => {

@@ -6,19 +6,28 @@ import type { DivIcon, LeafletEvent, LeafletMouseEvent, Marker as LeafletMarker 
 import 'leaflet/dist/leaflet.css';
 import { ACTIVE_MAP_PROVIDER } from '../map/esri-provider';
 import { POINT_STYLES, pointIcon, type PointKind } from '../../../../../components/map/point-markers';
+import { computeRunLengthsM } from '@dossipv/engine';
+import type { BuildingTypeValue } from '../../../../../lib/building-type';
 import { saveLocationsAndGenerateAction } from './actions';
 
 type Point = { lat: number; lon: number };
 type Points = Record<PointKind, Point | null>;
 
 const KINDS: PointKind[] = ['field', 'technicalRoom', 'meter', 'earthPit'];
-const FLOOR_LABELS = ['RDC', 'R+1', 'R+2', 'R+3'];
+const HOUSE_MAX_FLOORS = 3;
+const BUILDING_MAX_FLOORS = 15;
+const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+
+function floorLabel(level: number): string {
+  return level === 0 ? 'RDC' : `R+${level}`;
+}
 
 export interface LocationsMapProps {
   projectId: string;
   center: Point;
   initial: Points;
-  initialFloors: number;
+  initialFloors: number | null;
+  initialBuildingType: BuildingTypeValue | null;
 }
 
 function ClickHandler({ onClick }: { onClick: (point: Point) => void }): null {
@@ -37,10 +46,11 @@ function ColourDot({ color }: { color: string }): React.JSX.Element {
   );
 }
 
-export function LocationsMap({ projectId, center, initial, initialFloors }: LocationsMapProps): React.JSX.Element {
+export function LocationsMap({ projectId, center, initial, initialFloors, initialBuildingType }: LocationsMapProps): React.JSX.Element {
   const [points, setPoints] = useState<Points>(initial);
   const [active, setActive] = useState<PointKind | null>(null);
-  const [floors, setFloors] = useState(initialFloors);
+  const [floors, setFloors] = useState<number | null>(initialFloors);
+  const [buildingType, setBuildingType] = useState<BuildingTypeValue | null>(initialBuildingType);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const icons = useMemo(
@@ -49,6 +59,18 @@ export function LocationsMap({ projectId, center, initial, initialFloors }: Loca
   );
 
   const ready = points.field !== null && points.technicalRoom !== null && points.meter !== null;
+  const maxFloors = buildingType === 'APARTMENT_BUILDING' ? BUILDING_MAX_FLOORS : HOUSE_MAX_FLOORS;
+  const floorOptions = Array.from({ length: maxFloors + 1 }, (_, level) => level);
+  const lengths =
+    points.field && points.technicalRoom && points.meter && floors !== null
+      ? computeRunLengthsM({ field: points.field, technicalRoom: points.technicalRoom, meter: points.meter }, floors)
+      : null;
+
+  function chooseBuildingType(next: BuildingTypeValue): void {
+    setBuildingType(next);
+    // The new type may not offer the level that was picked: ask again rather than keep a stale answer.
+    setFloors((current) => (current !== null && current > (next === 'APARTMENT_BUILDING' ? BUILDING_MAX_FLOORS : HOUSE_MAX_FLOORS) ? null : current));
+  }
 
   function place(kind: PointKind, point: Point): void {
     setPoints((prev) => ({ ...prev, [kind]: point }));
@@ -57,7 +79,7 @@ export function LocationsMap({ projectId, center, initial, initialFloors }: Loca
   function submit(): void {
     setError(null);
     startTransition(async () => {
-      const result = await saveLocationsAndGenerateAction(projectId, { ...points, floors });
+      const result = await saveLocationsAndGenerateAction(projectId, { ...points, floors, buildingType });
       if (result?.error) setError(result.error);
     });
   }
@@ -77,21 +99,57 @@ export function LocationsMap({ projectId, center, initial, initialFloors }: Loca
             >
               <ColourDot color={color} />
               {label}
-              {kind === 'earthPit' ? ' (facultatif)' : ''} — {points[kind] ? '✓ placé' : 'à placer'}
+              {kind === 'earthPit' ? (buildingType === 'HOUSE' ? ' (obligatoire)' : ' (facultatif : sinon terre du bâtiment)') : ''} — {points[kind] ? '✓ placé' : 'à placer'}
             </button>
           );
         })}
       </div>
-      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        Niveau du toit
-        <select value={floors} onChange={(event) => setFloors(Number(event.target.value))}>
-          {FLOOR_LABELS.map((label, index) => (
-            <option key={label} value={index}>
+      <fieldset style={{ border: 0, padding: 0, margin: '0 0 12px' }}>
+        <legend>Type de logement du client</legend>
+        <div className="actions">
+          {(
+            [
+              ['HOUSE', 'Maison individuelle'],
+              ['APARTMENT_BUILDING', 'Immeuble (appartement)'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={buildingType === value}
+              onClick={() => chooseBuildingType(value)}
+              style={{ outline: buildingType === value ? '3px solid #f5b800' : undefined, outlineOffset: 2 }}
+            >
+              {buildingType === value ? '✓ ' : ''}
               {label}
-            </option>
+            </button>
           ))}
-        </select>
-      </label>
+        </div>
+      </fieldset>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          Étage du toit où seront posés les panneaux
+          <select
+            value={floors === null ? '' : String(floors)}
+            onChange={(event) => setFloors(event.target.value === '' ? null : Number(event.target.value))}
+          >
+            <option value="">— choisir —</option>
+            {floorOptions.map((level) => (
+              <option key={level} value={level}>
+                {floorLabel(level)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="muted" style={{ margin: '4px 0 0' }}>
+          Sert à calculer la longueur du câble DC (3,5 m par niveau).
+        </p>
+        {lengths && (
+          <p style={{ margin: '4px 0 0' }}>
+            Câble DC estimé : {nf.format(lengths.dcLengthM)} m — câble AC estimé : {nf.format(lengths.acLengthM)} m
+          </p>
+        )}
+      </div>
       <MapContainer center={[center.lat, center.lon]} zoom={18} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} style={{ height: '500px', width: '100%' }}>
         <TileLayer url={ACTIVE_MAP_PROVIDER.tileUrlTemplate} attribution={ACTIVE_MAP_PROVIDER.attribution} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} maxNativeZoom={ACTIVE_MAP_PROVIDER.maxNativeZoom} />
         <ClickHandler

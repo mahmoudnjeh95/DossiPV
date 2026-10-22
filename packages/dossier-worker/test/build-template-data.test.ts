@@ -94,7 +94,7 @@ const projectMeta: ProjectMeta = {
   gridType: 'TT',
   mountingType: 'ROOF',
   structureMaterial: 'ALUMINUM',
-  earthRodCount: 1,
+  earthRodCount: 1, earthingMode: 'DEDICATED_ROD', buildingType: 'HOUSE', floors: 1,
   protections: {
     dcSwitch: 'ZJ BENY BB1H-63',
     dcSpd: 'Generic DC-SPD-1',
@@ -103,6 +103,15 @@ const projectMeta: ProjectMeta = {
     acSpd: 'Generic AC-SPD-1',
   },
   acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
+};
+
+const earthingRow = {
+  rodCount: 1,
+  rodLengthM: 1.5,
+  mainEarthSectionMm2: 16,
+  frameEarthSectionMm2: 6,
+  earthToPitSectionMm2: 16,
+  targetResistanceOhm: 25,
 };
 
 describe('buildTemplateData', () => {
@@ -114,7 +123,7 @@ describe('buildTemplateData', () => {
       snapshot: {
         client: { fullName: 'Ahmed Ben Ali', address: '45 Avenue Habib Bourguiba, Sousse', stegReference: 'STEG-2026-001', cin: '01234567' },
         cableRuns: [{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }],
-        inverterBrandModels: ['Sofar 1-4KTL2-G3'],
+        earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'],
       },
       ...installerInputs, ...sizingInputs,
     });
@@ -174,7 +183,7 @@ describe('buildTemplateData', () => {
         ],
       },
       projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -206,7 +215,7 @@ describe('buildTemplateData', () => {
       workerResult,
       engineInput,
       projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -219,7 +228,7 @@ describe('buildTemplateData', () => {
   it('falls back to empty strings for a null client rather than throwing', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -232,7 +241,7 @@ describe('buildTemplateData', () => {
   it('computes section numbers I-VII, VIII with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -253,7 +262,7 @@ describe('buildTemplateData', () => {
   it('renumbers VIII, IX correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -268,7 +277,7 @@ describe('buildTemplateData', () => {
       workerResult,
       engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
       projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -290,7 +299,7 @@ describe('buildTemplateData', () => {
       workerResult,
       engineInput: mixedEngineInput,
       projectMeta, // projectMeta.inverterBrandModel is 'Sofar 1-4KTL2-G3' — the FIRST inverter only
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3', 'Huawei SUN2000-5KTL'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3', 'Huawei SUN2000-5KTL'] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -304,7 +313,7 @@ describe('buildTemplateData', () => {
   it("falls back to projectMeta.inverterBrandModel when the snapshot's inverterBrandModels array is shorter than the engine's array (defensive, should not throw)", () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: [] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: [] },
       ...installerInputs, ...sizingInputs,
     });
 
@@ -314,7 +323,7 @@ describe('buildTemplateData', () => {
   describe('installer and client identity', () => {
     const base = {
       workerResult, engineInput, projectMeta, ...installerInputs, ...sizingInputs,
-      snapshot: { client: { fullName: 'MR TEST CLIENT', address: null, stegReference: null, cin: '01234567' }, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: { fullName: 'MR TEST CLIENT', address: null, stegReference: null, cin: '01234567' }, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
     };
 
     it('formats the dossier number, date and the installer lines', () => {
@@ -347,7 +356,7 @@ describe('buildTemplateData', () => {
   describe('dimensioning and production section', () => {
     const base = {
       workerResult, engineInput, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs,
     };
 
@@ -415,5 +424,47 @@ describe('buildTemplateData', () => {
         expect(value).not.toContain('.');
       }
     });
+  });
+});
+
+describe('building and earthing lines', () => {
+  const base = {
+    workerResult,
+    engineInput,
+    snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+    ...installerInputs,
+    ...sizingInputs,
+  };
+
+  it('lists the dedicated rod earthing details', () => {
+    const data = buildTemplateData({ ...base, projectMeta });
+    expect(data.earthingDetails).toEqual([
+      { label: 'Schéma de liaison à la terre', value: 'TT' },
+      { label: 'Prise de terre', value: 'Piquet dédié (1 × 1,5 m)' },
+      { label: 'Conducteur principal de protection', value: '16 mm²' },
+      { label: 'Liaison équipotentielle des cadres', value: '6 mm²' },
+      { label: 'Conducteur de terre vers le piquet', value: '16 mm²' },
+      { label: 'Résistance de terre visée', value: '≤ 25 Ω' },
+    ]);
+  });
+
+  it('uses the building earth without a pit conductor row', () => {
+    const data = buildTemplateData({ ...base, projectMeta: { ...projectMeta, earthingMode: 'BUILDING_EARTH', buildingType: 'APARTMENT_BUILDING', floors: 4 } });
+    expect(data.earthingDetails.find((row) => row.label === 'Prise de terre')?.value).toBe('Terre existante du bâtiment');
+    expect(data.earthingDetails.map((row) => row.label)).not.toContain('Conducteur de terre vers le piquet');
+  });
+
+  it('words the building line for a house and a flat', () => {
+    expect(buildTemplateData({ ...base, projectMeta: { ...projectMeta, floors: 0 } }).siteBuildingLine).toBe(
+      'Bâtiment : maison individuelle, toiture au niveau RDC',
+    );
+    expect(buildTemplateData({ ...base, projectMeta }).siteBuildingLine).toBe('Bâtiment : maison individuelle, toiture au niveau R+1');
+    expect(
+      buildTemplateData({ ...base, projectMeta: { ...projectMeta, buildingType: 'APARTMENT_BUILDING', floors: 4 } }).siteBuildingLine,
+    ).toBe('Bâtiment : immeuble collectif (appartement), toiture-terrasse au niveau R+4');
+  });
+
+  it('leaves the building line empty when the type is unknown', () => {
+    expect(buildTemplateData({ ...base, projectMeta: { ...projectMeta, buildingType: null } }).siteBuildingLine).toBe('');
   });
 });

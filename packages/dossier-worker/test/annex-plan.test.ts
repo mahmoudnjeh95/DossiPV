@@ -161,7 +161,7 @@ describe('annexDocumentsFromSnapshot', () => {
           { label: 'DC-2', sectionMm2: 6, lengthM: 15, installMethod: '13', circuitType: 'DC', cable },
           { label: 'AC', sectionMm2: 10, lengthM: 15, installMethod: '13', circuitType: 'AC', cable: { brand: 'Nexans', model: 'U-1000 R2V', usage: 'AC', datasheetFileId: 'ac-sheet' } },
         ],
-        earthing: { rodCount: 1, earthCable: { brand: 'Nexans', model: 'H07V-U', datasheetFileId: 'earth-sheet' }, distributionBlock: { brand: 'Legrand', model: 'DB', datasheetFileId: 'shared-accessory' } },
+        earthing: { rodCount: 1, rodLengthM: 1.5, mainEarthSectionMm2: 16, frameEarthSectionMm2: 6, earthToPitSectionMm2: 16, targetResistanceOhm: 25, earthCable: { brand: 'Nexans', model: 'H07V-U', datasheetFileId: 'earth-sheet' }, distributionBlock: { brand: 'Legrand', model: 'DB', datasheetFileId: 'shared-accessory' } },
         cablingConfig: { connector: { brand: 'Stäubli', model: 'MC4', datasheetFileId: 'mc4' }, cableTray: { brand: 'Legrand', model: 'Tray', datasheetFileId: 'shared-accessory' } },
       }),
       { anmeCertificateFileId: null },

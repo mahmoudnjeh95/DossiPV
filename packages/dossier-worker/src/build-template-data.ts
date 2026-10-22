@@ -6,6 +6,15 @@ import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
 
+export interface EarthingRow {
+  rodCount: number;
+  rodLengthM: number;
+  mainEarthSectionMm2: number;
+  frameEarthSectionMm2: number;
+  earthToPitSectionMm2: number;
+  targetResistanceOhm: number;
+}
+
 export interface BuildTemplateDataInput {
   workerResult: DossierWorkerResult;
   engineInput: RunEngineInput;
@@ -13,6 +22,8 @@ export interface BuildTemplateDataInput {
   snapshot: {
     client: { fullName: string; address: string | null; stegReference: string | null; cin: string | null } | null;
     cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];
+    /** The project's earthing row; null when the project has none. */
+    earthing: EarthingRow | null;
     // Each inverter's own brand/model, by snapshot array index — projectMeta.inverterBrandModel
     // is only the FIRST inverter's model (see I7: a mixed-model array must not show the wrong
     // model on every other inverter's row).
@@ -61,6 +72,38 @@ function buildIdentityLines(input: BuildTemplateDataInput): Pick<
     installerLegalRepLine: `Représentant légal : ${installer.legalRepFullName}, ${installer.legalRepRole}`,
     clientCinLine: cin ? `CIN : ${cin}` : 'CIN : copie jointe en annexe N°1',
   };
+}
+
+function floorText(floors: number): string {
+  return floors === 0 ? 'RDC' : `R+${floors}`;
+}
+
+/** `Bâtiment : …` line of the presentation section; empty for a project that predates the question. */
+export function buildSiteBuildingLine(meta: Pick<ProjectMeta, 'buildingType' | 'floors'>): string {
+  if (meta.buildingType === null || meta.buildingType === undefined || meta.floors === null || meta.floors === undefined) return '';
+  return meta.buildingType === 'HOUSE'
+    ? `Bâtiment : maison individuelle, toiture au niveau ${floorText(meta.floors)}`
+    : `Bâtiment : immeuble collectif (appartement), toiture-terrasse au niveau ${floorText(meta.floors)}`;
+}
+
+/** Rows of the earthing table, from the earthing row (TT scheme: single-phase BT). */
+export function buildEarthingDetails(
+  earthing: EarthingRow | null,
+  mode: ProjectMeta['earthingMode'],
+): { label: string; value: string }[] {
+  if (!earthing) return [];
+  const dedicated = mode !== 'BUILDING_EARTH';
+  return [
+    { label: 'Schéma de liaison à la terre', value: 'TT' },
+    {
+      label: 'Prise de terre',
+      value: dedicated ? `Piquet dédié (${fmtUpTo(earthing.rodCount, 0)} × ${fmtUpTo(earthing.rodLengthM, 2)} m)` : 'Terre existante du bâtiment',
+    },
+    { label: 'Conducteur principal de protection', value: `${fmtUpTo(earthing.mainEarthSectionMm2, 2)} mm²` },
+    { label: 'Liaison équipotentielle des cadres', value: `${fmtUpTo(earthing.frameEarthSectionMm2, 2)} mm²` },
+    ...(dedicated ? [{ label: 'Conducteur de terre vers le piquet', value: `${fmtUpTo(earthing.earthToPitSectionMm2, 2)} mm²` }] : []),
+    { label: 'Résistance de terre visée', value: `≤ ${fmtUpTo(earthing.targetResistanceOhm, 2)} Ω` },
+  ];
 }
 
 function formatConsumption(consumption: SnapshotConsumption | null): string {
@@ -210,6 +253,8 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     solution: workerResult.sections.solution,
     cabling: workerResult.sections.cabling,
     earthing: workerResult.sections.earthing,
+    siteBuildingLine: buildSiteBuildingLine(projectMeta),
+    earthingDetails: buildEarthingDetails(snapshot.earthing, projectMeta.earthingMode),
     structure: workerResult.sections.structure,
     conclusion: workerResult.sections.conclusion,
     moduleBrandModel: projectMeta.moduleBrandModel,

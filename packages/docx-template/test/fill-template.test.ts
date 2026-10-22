@@ -30,6 +30,8 @@ function paragraphsWithStyle(buffer: Buffer, style: string): string[] {
 }
 
 const baseData: DossierTemplateData = {
+  siteBuildingLine: 'Bâtiment : maison individuelle, toiture au niveau R+1',
+  earthingDetails: [{ label: 'Schéma de liaison à la terre', value: 'TT' }],
   companyName: 'SolarPro Tunisie',
   companyAddress: '12 Rue de la République, Tunis',
   companyPhone: '+216 71 000 000',

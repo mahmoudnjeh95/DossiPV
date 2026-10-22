@@ -86,7 +86,7 @@ export async function generateDossierDocument(
     phases: input.engineInput.site.phases,
     mountingType: input.projectMeta.mountingType,
     structureMaterial: input.projectMeta.structureMaterial,
-    earthRodCount: input.projectMeta.earthRodCount,
+    earthingMode: input.projectMeta.earthingMode,
     dcFuseRequired: fuseRequired,
     acIsolatorRequired: input.engineInput.array.length > 1,
     protectionLines,

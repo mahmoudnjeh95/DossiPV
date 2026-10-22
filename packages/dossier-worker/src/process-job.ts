@@ -7,7 +7,7 @@ import { formatRunLengthFormula, groundDistanceM, runEngine } from '@dossipv/eng
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
-import { buildTemplateData, computeSectionNumbers } from './build-template-data';
+import { buildTemplateData, computeSectionNumbers, type EarthingRow } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { annexPageCount, mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import {
@@ -122,6 +122,12 @@ const ANNEX_MIME_TYPES: Record<string, AnnexFile['mimeType']> = {
 };
 
 /** How an annex document is named in the job warnings. */
+function earthingRow(earthing: WorkerJobSnapshot['earthing']): EarthingRow | null {
+  if (!earthing) return null;
+  const { rodCount, rodLengthM, mainEarthSectionMm2, frameEarthSectionMm2, earthToPitSectionMm2, targetResistanceOhm } = earthing;
+  return { rodCount, rodLengthM, mainEarthSectionMm2, frameEarthSectionMm2, earthToPitSectionMm2, targetResistanceOhm };
+}
+
 function annexLabel(document: AnnexDocument): string {
   return `Annexe N°${ANNEX_NUMBERS[document.slot]} — ${document.label}`;
 }
@@ -354,6 +360,7 @@ export async function processJob(jobId: string): Promise<void> {
       snapshot: {
         client: snapshot.client,
         cableRuns: snapshot.cableRuns,
+        earthing: earthingRow(snapshot.earthing),
         inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
       },
       installer,

@@ -16,6 +16,9 @@ function makeContext(): PlaceholderSourceContext {
       mountingType: 'FLAT_ROOF_BALLAST',
       structureMaterial: 'Aluminium',
       earthRodCount: 3,
+      earthingMode: 'DEDICATED_ROD' as const,
+      buildingType: 'HOUSE' as const,
+      floors: 1,
       protections: {
         dcSwitch: 'ZJ BENY BB1H-63',
         dcSpd: 'Generic DC-SPD-1',
@@ -89,9 +92,8 @@ describe('buildPlaceholderValues', () => {
     expect(values.INVERTER_COUNT).toBe('1');
   });
 
-  it('reads EARTH_ROD_COUNT from projectMeta, not from the engine', () => {
-    const values = buildPlaceholderValues(makeContext());
-    expect(values.EARTH_ROD_COUNT).toBe('3');
+  it('no longer offers a rod count placeholder', () => {
+    expect(buildPlaceholderValues(makeContext())).not.toHaveProperty('EARTH_ROD_COUNT');
   });
 
   it('formats STRING_VMP_STC with decimals:1 and unit "V", tracking the engine formula', () => {

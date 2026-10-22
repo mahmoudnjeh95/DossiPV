@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
+import { guessBuildingType } from '../../../../../lib/building-type';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { LocationsMapClientOnly as LocationsMap } from './locations-map-loader';
 
@@ -35,7 +36,8 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
           meter: point(site.meterPointLat, site.meterPointLon),
           earthPit: point(site.earthPitPointLat, site.earthPitPointLon),
         }}
-        initialFloors={site.floors ?? 0}
+        initialFloors={site.floors}
+        initialBuildingType={site.buildingType ?? guessBuildingType(project.client?.address ?? null)}
       />
     </main>
   );

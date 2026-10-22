@@ -53,6 +53,7 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberPresentation} Présentation du projet', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{introduction}'),
+        new Paragraph('{siteBuildingLine}'),
 
         new Paragraph({ text: '{sectionNumberDimensionnement} Dimensionnement et productible', heading: HeadingLevel.HEADING_1 }),
         specTable([
@@ -155,6 +156,13 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberTerre} Mise à la terre', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{earthing}'),
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({ children: [cell('Désignation'), cell('Valeur')] }),
+            new TableRow({ children: [cell('{#earthingDetails}{label}'), cell('{value}{/earthingDetails}')] }),
+          ],
+        }),
 
         new Paragraph({ text: '{sectionNumberStructure} Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),

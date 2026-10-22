@@ -22,6 +22,10 @@ export interface DossierTemplateData {
   solution: string;
   cabling: string;
   earthing: string;
+  /** `Bâtiment : maison individuelle, toiture au niveau R+1`; empty when the building type is unknown. */
+  siteBuildingLine: string;
+  /** Rows of the earthing table. */
+  earthingDetails: { label: string; value: string }[];
   structure: string;
   conclusion: string;
   moduleBrandModel: string;

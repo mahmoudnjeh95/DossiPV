@@ -233,7 +233,7 @@ function drawUnifilar(doc: PDFDocument, input: DrawingsInput, fonts: Fonts): voi
   drawPdfText(page, `Liaison AC : ${frNumber.format(input.acRun.sectionMm2)} mm² — ${frNumber.format(input.acRun.lengthM)} m`, {
     x: MARGIN, y: summaryY - 20, size: 10, font: fonts.regular, color: BLACK,
   });
-  drawPdfText(page, `Mise à la terre : ${input.earthRodCount} piquet(s)`, {
+  drawPdfText(page, input.earthRodCount === 0 ? 'Mise à la terre : terre existante du bâtiment' : `Mise à la terre : ${input.earthRodCount} piquet(s)`, {
     x: MARGIN, y: summaryY - 40, size: 10, font: fonts.regular, color: BLACK,
   });
 }

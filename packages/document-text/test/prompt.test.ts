@@ -10,7 +10,7 @@ const sampleInput: DossierTextInput = {
   phases: 1,
   mountingType: 'FLAT_ROOF_BALLAST',
   structureMaterial: 'Aluminium',
-  earthRodCount: 3,
+  earthingMode: 'DEDICATED_ROD',
   dcFuseRequired: true,
   acIsolatorRequired: true,
   protectionLines: [
@@ -81,10 +81,22 @@ describe('buildDossierTextUserPrompt', () => {
     expect(prompt).toContain("n'écris pas non plus qu'un appareil (par exemple un fusible) est absent ou non requis");
   });
 
-  it('never embeds the inverter count or earth rod count as a literal number — always a placeholder', () => {
-    const prompt = buildDossierTextUserPrompt(sampleInput, ['INVERTER_COUNT', 'EARTH_ROD_COUNT']);
+  it('describes a dedicated rod without a rod count', () => {
+    const prompt = buildDossierTextUserPrompt(sampleInput, ['INVERTER_COUNT']);
+    expect(prompt).toContain('un piquet de terre dédié');
+    expect(prompt).not.toContain('{EARTH_ROD_COUNT}');
+  });
+
+  it('describes the existing building earth, with no dedicated rod', () => {
+    const prompt = buildDossierTextUserPrompt({ ...sampleInput, earthingMode: 'BUILDING_EARTH' }, ['INVERTER_COUNT']);
+    expect(prompt).toContain("raccordement à la prise de terre existante du bâtiment (pas de piquet dédié)");
+    expect(prompt).not.toContain('un piquet de terre dédié');
+    expect(prompt).not.toContain('EARTH_ROD_COUNT');
+  });
+
+  it('never embeds the inverter count as a literal number — always a placeholder', () => {
+    const prompt = buildDossierTextUserPrompt(sampleInput, ['INVERTER_COUNT']);
     expect(prompt).toContain('{INVERTER_COUNT}');
-    expect(prompt).toContain('{EARTH_ROD_COUNT}');
     // The count values themselves (1 inverter, 3 earth rods) must never appear as a
     // standalone number — only inside {PLACEHOLDER} tokens or as part of a brand/model
     // string (e.g. "Sofar 1-4KTL2-G3", where "1" is part of the product name, not a count).

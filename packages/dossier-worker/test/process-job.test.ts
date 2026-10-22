@@ -118,7 +118,7 @@ const validSnapshot = {
     acRun: { sectionMm2: 10, lengthM: 15 },
   },
   projectMeta: {
-    moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1,
+    moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1, earthingMode: 'DEDICATED_ROD', buildingType: 'HOUSE', floors: 1,
     protections: { dcSwitch: 'S', dcSpd: 'P', dcFuse: null, acBreaker: 'B', acSpd: 'Q' },
     acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
   },

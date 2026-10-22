@@ -54,6 +54,11 @@ model File {
   @@map("file")
 }
 
+enum BuildingType {
+  HOUSE
+  APARTMENT_BUILDING
+}
+
 enum CatalogStatus {
   DRAFT
   PUBLISHED
@@ -659,6 +664,7 @@ model ProjectSite {
   roofMaterial             String?
   buildingHeightM          Float?
   floors                   Int?
+  buildingType             BuildingType?
   tiltDeg                  Float
   azimuthDeg               Float?
   shading                  String?
@@ -812,6 +818,7 @@ model ProjectEarthing {
   frameEarthSectionMm2     Float
   earthToPitSectionMm2     Float
   rodCount                 Int
+  useBuildingEarth         Boolean    @default(false)
   rodLengthM               Float
   rodSpacingCm             Float?
   pitSizeCm                String?

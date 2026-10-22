@@ -49,6 +49,10 @@ export interface ProjectMetaForWorker {
   mountingType: string;
   structureMaterial: string;
   earthRodCount: number;
+  earthingMode: 'DEDICATED_ROD' | 'BUILDING_EARTH';
+  buildingType: 'HOUSE' | 'APARTMENT_BUILDING' | null;
+  /** Roof level the panels stand on (0 = ground floor); null before the installer answered. */
+  floors: number | null;
   protections: {
     dcSwitch: string;
     dcSpd: string;
@@ -371,6 +375,9 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     mountingType: site.mountingType,
     structureMaterial: structure.material,
     earthRodCount: project.earthing.rodCount,
+    earthingMode: project.earthing.useBuildingEarth ? 'BUILDING_EARTH' : 'DEDICATED_ROD',
+    buildingType: site.buildingType,
+    floors: site.floors,
     protections: {
       dcSwitch: `${protections.dcSwitch.brand} ${protections.dcSwitch.model}`,
       dcSpd: `${protections.dcSpd.brand} ${protections.dcSpd.model}`,

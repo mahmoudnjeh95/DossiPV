@@ -29,7 +29,8 @@ export interface DossierTextInput {
   /** "FLAT_ROOF_BALLAST" | "FLAT_ROOF_ANCHORED" | "SLOPED_ROOF" | "GROUND" | "CARPORT" */
   mountingType: string;
   structureMaterial: string;
-  earthRodCount: number;
+  /** DEDICATED_ROD: a rod driven for this installation; BUILDING_EARTH: the building's existing earth. */
+  earthingMode: 'DEDICATED_ROD' | 'BUILDING_EARTH';
   /** true when the DC fuse section applies (x-rules DC_FUSE_REQUIRED) */
   dcFuseRequired: boolean;
   /** true when the AC isolator section applies (more than one inverter) */

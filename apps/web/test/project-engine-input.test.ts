@@ -32,6 +32,9 @@ describe('buildEngineInput', () => {
       mountingType: 'FLAT_ROOF_BALLAST',
       structureMaterial: 'ALUMINIUM',
       earthRodCount: 3,
+      earthingMode: 'DEDICATED_ROD',
+      buildingType: null,
+      floors: null,
       protections: {
         dcSwitch: 'ZJ BENY BB1H-63',
         dcSpd: 'Generic DC-SPD-1',

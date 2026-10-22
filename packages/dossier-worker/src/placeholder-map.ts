@@ -7,6 +7,10 @@ export interface ProjectMeta {
   mountingType: string;
   structureMaterial: string;
   earthRodCount: number;
+  earthingMode: 'DEDICATED_ROD' | 'BUILDING_EARTH';
+  buildingType: 'HOUSE' | 'APARTMENT_BUILDING' | null;
+  /** Roof level the panels stand on (0 = ground floor). */
+  floors: number | null;
   /** Each installed protection device as `brand model`. */
   protections: {
     dcSwitch: string;
@@ -47,7 +51,6 @@ export const PLACEHOLDER_DEFINITIONS: Record<string, PlaceholderDefinition> = {
   DU_DC_PCT: { source: (c) => c.derived.DU_DC_PCT!, decimals: 2, unit: '%' },
   DU_AC_PCT: { source: (c) => c.derived.DU_AC_PCT!, decimals: 2, unit: '%' },
   INVERTER_COUNT: { source: (c) => c.engineInput.array.length },
-  EARTH_ROD_COUNT: { source: (c) => c.projectMeta.earthRodCount },
   DC_SWITCH_REF: { source: (c) => c.projectMeta.protections.dcSwitch },
   DC_SPD_REF: { source: (c) => c.projectMeta.protections.dcSpd },
   DC_FUSE_REF: { source: (c) => c.projectMeta.protections.dcFuse ?? '—' },

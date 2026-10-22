@@ -21,6 +21,9 @@ const sampleProjectMeta = {
   mountingType: 'FLAT_ROOF_BALLAST',
   structureMaterial: 'Aluminium',
   earthRodCount: 3,
+  earthingMode: 'DEDICATED_ROD' as const,
+  buildingType: 'HOUSE' as const,
+  floors: 1,
   protections: {
     dcSwitch: 'ZJ BENY BB1H-63',
     dcSpd: 'Generic DC-SPD-1',
@@ -35,7 +38,7 @@ const placeholderSections: DossierTextSections = {
   introduction: 'Installation de {P_DC_W}, {MODULE_COUNT} modules.',
   solution: '{NS} modules en série, {NP} chaîne(s) en parallèle.',
   cabling: 'Chute de tension DC {DU_DC_PCT}, norme {NORME_CABLAGE}.',
-  earthing: '{EARTH_ROD_COUNT} piquets de terre.',
+  earthing: 'Mise à la terre par un piquet dédié.',
   structure: 'Structure conforme.',
   conclusion: '{INVERTER_COUNT} onduleur(s) installé(s).',
 };
@@ -59,7 +62,8 @@ describe('generateDossierDocument', () => {
     // separator; the unit-prefix space inserted by formatValue() is U+00A0.
     expect(result.sections.introduction).toContain('3 100 W');
     expect(result.sections.solution).toContain('5 modules en série');
-    expect(result.sections.earthing).toContain('3 piquets de terre');
+    expect(result.sections.earthing).toContain('piquet dédié');
+    expect(result.sections.earthing).not.toMatch(/\d/);
     expect(result.engineResult.hasBlockingFailure).toBe(false);
   });
 

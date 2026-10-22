@@ -70,6 +70,11 @@ export interface SnapshotStructure {
 
 export interface SnapshotEarthing {
   rodCount: number;
+  rodLengthM: number;
+  mainEarthSectionMm2: number;
+  frameEarthSectionMm2: number;
+  earthToPitSectionMm2: number;
+  targetResistanceOhm: number;
   earthCable?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
   distributionBlock?: (SnapshotEquipmentRef & Record<string, unknown>) | null;
   [key: string]: unknown;

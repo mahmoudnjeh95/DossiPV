@@ -32,7 +32,7 @@ export function buildDossierTextUserPrompt(
 - Raccordement : ${input.gridType}, réseau ${input.phases === 1 ? 'monophasé' : 'triphasé'}
 - Type de pose : ${input.mountingType}
 - Structure : ${input.structureMaterial}
-- Mise à la terre : {EARTH_ROD_COUNT} piquets de terre
+- Mise à la terre : ${input.earthingMode === 'BUILDING_EARTH' ? "raccordement à la prise de terre existante du bâtiment (pas de piquet dédié)" : 'un piquet de terre dédié'}
 
 Appareils de protection installés (liste exhaustive) :
 ${input.protectionLines.map((line) => `- ${line}`).join('\n')}
