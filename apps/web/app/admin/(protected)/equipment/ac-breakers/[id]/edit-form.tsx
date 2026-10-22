@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import type { AcBreaker } from '@dossipv/db';
+import { RCD_TYPE_OPTIONS } from '../../../../../../lib/labels';
 import { updateAcBreakerAction } from '../actions';
 
 function toDateInputValue(date: Date | null): string | undefined {
@@ -36,6 +37,21 @@ export function EditAcBreakerForm({ acBreaker }: { acBreaker: AcBreaker }): Reac
         <label>
           Pouvoir de coupure (kA, optionnel){' '}
           <input type="number" name="breakingCapacityKA" step="0.01" defaultValue={acBreaker.breakingCapacityKA ?? undefined} />
+        </label>
+        <label>
+          Sensibilité différentielle IΔn (mA, vide pour un disjoncteur sans différentiel){' '}
+          <input type="number" name="residualCurrentMA" step="1" min="1" defaultValue={acBreaker.residualCurrentMA ?? undefined} />
+        </label>
+        <label>
+          Type de différentiel{' '}
+          <select name="rcdType" defaultValue={acBreaker.rcdType ?? ''}>
+            <option value="">— Sans différentiel —</option>
+            {RCD_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Référence d&apos;homologation (optionnel){' '}

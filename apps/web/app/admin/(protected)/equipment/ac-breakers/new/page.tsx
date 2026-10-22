@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { RCD_TYPE_OPTIONS } from '../../../../../../lib/labels';
 import { createAcBreakerAction } from '../actions';
 
 export default function NewAcBreakerPage(): React.JSX.Element {
@@ -24,6 +25,21 @@ export default function NewAcBreakerPage(): React.JSX.Element {
         </label>
         <label>
           Pouvoir de coupure (kA, optionnel) <input type="number" name="breakingCapacityKA" step="0.01" />
+        </label>
+        <label>
+          Sensibilité différentielle IΔn (mA, vide pour un disjoncteur sans différentiel){' '}
+          <input type="number" name="residualCurrentMA" step="1" min="1" />
+        </label>
+        <label>
+          Type de différentiel{' '}
+          <select name="rcdType" defaultValue="">
+            <option value="">— Sans différentiel —</option>
+            {RCD_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Référence d&apos;homologation (optionnel) <input name="homologationReference" />

@@ -41,7 +41,15 @@ export function ProtectionsForm({
       <fieldset>
         <legend>Côté AC</legend>
         <div className="form-grid">
-          <SelectField name="acBreakerId" label="Disjoncteur AC" options={equipmentOptions(catalog.acBreakers)} defaultValue={protections?.acBreakerId} allowEmpty required />
+          <SelectField
+            name="acBreakerId"
+            label="Disjoncteur différentiel AC"
+            options={equipmentOptions(catalog.acBreakers)}
+            defaultValue={protections?.acBreakerId}
+            allowEmpty
+            required
+            hint="Disjoncteur différentiel 30 mA de type A au minimum (contrôle C24) : un disjoncteur sans différentiel bloque la génération du dossier."
+          />
           <SelectField name="acSpdId" label="Parafoudre AC" options={equipmentOptions(catalog.acSpds)} defaultValue={protections?.acSpdId} allowEmpty required />
           <SelectField
             name="acIsolatorId"

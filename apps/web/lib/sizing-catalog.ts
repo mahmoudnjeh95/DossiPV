@@ -1,4 +1,5 @@
 import { db } from '@dossipv/db';
+import { checkC24 } from '@dossipv/engine';
 import type {
   CatalogCable,
   CatalogInverter,
@@ -9,7 +10,7 @@ import type {
   SizingCatalog,
 } from '@dossipv/engine';
 import { catalogScope, libraryScope, provenanceScope } from './project-access';
-import { toIsoDate } from './project-engine-input';
+import { toIsoDate, toRcdType } from './project-engine-input';
 
 const CONDUCTORS: readonly string[] = ['Cu', 'Al'] satisfies ConductorType[];
 const INSULATIONS: readonly string[] = ['PR', 'PVC', 'EPR', 'XLPO'] satisfies InsulationType[];
@@ -131,6 +132,8 @@ export async function loadSizingCatalog(companyId: string): Promise<SizingCatalo
       brand: row.brand,
       model: row.model,
       ratedCurrentA: row.ratedCurrentA,
+      residualCurrentMA: row.residualCurrentMA,
+      rcdType: toRcdType(row.rcdType),
     })),
     cables: cables.flatMap((row): CatalogCable[] => {
       const { conductor, insulation } = row;
@@ -171,7 +174,8 @@ export function missingLibraryKinds(catalog: SizingCatalog): string[] {
     ['Interrupteurs-sectionneurs DC', catalog.dcSwitches.length > 0],
     ['Parafoudres DC', catalog.spds.some((spd) => spd.side === 'DC')],
     ['Parafoudres AC', catalog.spds.some((spd) => spd.side === 'AC')],
-    ['Disjoncteurs AC', catalog.acBreakers.length > 0],
+    // The 30 mA protection is the AC breaker itself: a plain or type AC breaker does not count.
+    ['Disjoncteurs différentiels AC 30 mA (type A)', catalog.acBreakers.some((breaker) => checkC24(breaker).pass)],
     ['Câbles DC (solaire)', hasCable('DC_SOLAR')],
     ['Câbles AC', hasCable('AC')],
     ['Câbles de terre', hasCable('EARTH')],

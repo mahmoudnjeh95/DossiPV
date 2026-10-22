@@ -188,6 +188,105 @@
     "source": "https://assets.hager.com/step-content/P/PDS_452700485101EN/Document/std.lang.all/NCN240A_5101_en-GB.pdf"
   },
   {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "ADH816F",
+    "ratedCurrentA": 16,
+    "curve": "C",
+    "breakingCapacityKA": 4.5,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.hager.com/step-content/P/PDS_160330180044FR/Document/std.lang.all/ADH816F_0044_fr-FR.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Hager",
+    "model": "ADH820F",
+    "ratedCurrentA": 20,
+    "curve": "C",
+    "breakingCapacityKA": 4.5,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.hager.com/step-content/P/PDS_157611360044FR/Document/std.lang.all/ADH820F_0044_fr-FR.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Legrand",
+    "model": "411131",
+    "ratedCurrentA": 16,
+    "curve": "C",
+    "breakingCapacityKA": 6,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.legrand.com/pim/DOCUMENT/ex223001_0062.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Legrand",
+    "model": "411132",
+    "ratedCurrentA": 20,
+    "curve": "C",
+    "breakingCapacityKA": 6,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.legrand.com/pim/DOCUMENT/ex223001_0062.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Legrand",
+    "model": "411133",
+    "ratedCurrentA": 25,
+    "curve": "C",
+    "breakingCapacityKA": 6,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.legrand.com/pim/DOCUMENT/ex223001_0062.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Legrand",
+    "model": "411134",
+    "ratedCurrentA": 32,
+    "curve": "C",
+    "breakingCapacityKA": 6,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://assets.legrand.com/pim/DOCUMENT/ex223001_0062.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Schneider Electric",
+    "model": "A9DC4616",
+    "ratedCurrentA": 16,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://docs.rs-online.com/c0b2/A700000014499592.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Schneider Electric",
+    "model": "A9DC4620",
+    "ratedCurrentA": 20,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://docs.rs-online.com/0abd/A700000014499652.pdf"
+  },
+  {
+    "kind": "AC_BREAKER",
+    "brand": "Schneider Electric",
+    "model": "A9DC4632",
+    "ratedCurrentA": 32,
+    "curve": "C",
+    "breakingCapacityKA": 10,
+    "residualCurrentMA": 30,
+    "rcdType": "A",
+    "source": "https://docs.rs-online.com/a554/A700000014499697.pdf"
+  },
+  {
     "kind": "AC_ISOLATOR",
     "brand": "Hager",
     "model": "SBN240",

@@ -166,7 +166,7 @@ describe('buildCandidate', () => {
       dcSwitchId: 'dc-switch-32a',
       dcFuseId: null,
       dcSpdId: 'dc-spd-600v',
-      acBreakerId: 'ac-breaker-16a',
+      acBreakerId: 'rcbo-16a',
       acSpdId: 'ac-spd-275v',
       dcCable: { cableId: 'cable-dc', sectionMm2: 4, lengthM: 15 },
       acCable: { cableId: 'cable-ac', sectionMm2: 2.5, lengthM: 10 },
@@ -174,5 +174,39 @@ describe('buildCandidate', () => {
     });
     expect(candidate.engineInput.site).toEqual({ phases: 1, lightningRod: false, gps: { lat: 34.42, lon: 8.78 } });
     expect(candidate.engineInput.acIsolator).toBeNull();
+  });
+
+  it('picks the smallest differential breaker that passes C13 and C24', () => {
+    // Real 16 A Legrand DX3 devices that fail C24: 4 110 02 (30 mA type AC) and 4 110 24 (300 mA type AC).
+    const catalog: SizingCatalog = {
+      ...sizingCatalog,
+      acBreakers: [
+        { id: 'rcbo-16a-type-ac', brand: 'Legrand', model: '411002', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: 'AC' },
+        { id: 'rcbo-16a-300ma', brand: 'Legrand', model: '411024', ratedCurrentA: 16, residualCurrentMA: 300, rcdType: 'AC' },
+        ...sizingCatalog.acBreakers,
+      ],
+    };
+    // 3 kW inverter, 13.7 A: the plain NCN216A and both 16 A type AC devices are skipped.
+    const small = expectCandidate(buildCandidate(module550, inverter3kW, 6, 1, catalog, sizingContext));
+    expect(small.acBreakerId).toBe('rcbo-16a');
+    expect(small.engineInput.acBreaker).toEqual({ ratedCurrentA: 16 });
+    expect(small.engineInput.rcd).toEqual({ residualCurrentMA: 30, rcdType: 'A' });
+    expect(small.engineResult.checks.find((c) => c.id === 'C24')?.pass).toBe(true);
+    // 5 kW inverter, 22.8 A on a 10 kVA client: the 25 A differential breaker (C13 rejects 16 and 20 A).
+    const larger = expectCandidate(
+      buildCandidate(module550, inverterById('inverter-5kw'), 9, 1, catalog, { ...sizingContext, subscribedPowerKVA: 10 }),
+    );
+    expect(larger.acBreakerId).toBe('rcbo-25a');
+  });
+
+  it('returns the differential reason when only plain breakers exist', () => {
+    const plainOnly: SizingCatalog = {
+      ...sizingCatalog,
+      acBreakers: sizingCatalog.acBreakers.filter((b) => b.residualCurrentMA === null),
+    };
+    expect(buildCandidate(module550, inverter3kW, 6, 1, plainOnly, sizingContext)).toEqual({
+      ok: false,
+      reason: 'Aucun disjoncteur différentiel 30 mA de type A dans le catalogue.',
+    });
   });
 });

@@ -25,6 +25,7 @@ export default async function AcBreakerListPage(): Promise<React.JSX.Element> {
             <th>Marque</th>
             <th>Modèle</th>
             <th>Courant nominal (A)</th>
+            <th>Différentiel</th>
             <th></th>
           </tr>
         </thead>
@@ -34,6 +35,7 @@ export default async function AcBreakerListPage(): Promise<React.JSX.Element> {
               <td>{acBreaker.brand}</td>
               <td>{acBreaker.model}</td>
               <td>{acBreaker.ratedCurrentA}</td>
+              <td>{acBreaker.residualCurrentMA !== null && acBreaker.rcdType !== null ? `${acBreaker.residualCurrentMA} mA type ${acBreaker.rcdType}` : '—'}</td>
               <td>
                 <Link href={`/admin/equipment/ac-breakers/${acBreaker.id}`}>Modifier</Link>
                 <DeleteAcBreakerButton acBreakerId={acBreaker.id} />

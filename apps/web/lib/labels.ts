@@ -123,3 +123,20 @@ export function labelFor(options: Option<string | number>[], value: string | num
   }
   return options.find((option) => option.value === value)?.label ?? String(value);
 }
+
+const ratingFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
+/** `16 A · 30 mA type A` for a differential breaker, `16 A` for a plain one. */
+export function acBreakerRating(breaker: { ratedCurrentA: number; residualCurrentMA: number | null; rcdType: string | null }): string {
+  const rating = `${ratingFormat.format(breaker.ratedCurrentA)} A`;
+  return breaker.residualCurrentMA !== null && breaker.rcdType !== null
+    ? `${rating} · ${ratingFormat.format(breaker.residualCurrentMA)} mA type ${breaker.rcdType}`
+    : rating;
+}
+
+export const RCD_TYPE_OPTIONS: Option[] = [
+  { value: 'A', label: 'Type A' },
+  { value: 'F', label: 'Type F' },
+  { value: 'B', label: 'Type B' },
+  { value: 'AC', label: 'Type AC (insuffisant pour le PV)' },
+];

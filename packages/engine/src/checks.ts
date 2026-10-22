@@ -311,6 +311,31 @@ export function checkC23(totalInverterPacW: number, subscribedPowerKVA: number):
   };
 }
 
+/** Residual-current type of a differential device (IEC 61008/61009/62423); AC detects only sinusoidal faults. */
+export type RcdType = 'AC' | 'A' | 'F' | 'B';
+
+/** The AC breaker's differential function; both null for a plain breaker. */
+export interface RcdInput {
+  residualCurrentMA: number | null;
+  rcdType: RcdType | null;
+}
+
+const RCD_TYPES_WITH_DC_COMPONENT: readonly RcdType[] = ['A', 'F', 'B'];
+
+/** STEG rule: the AC side has a 30 mA differential protection of type A or better (F, B) (BLOCK) */
+export function checkC24(rcd: RcdInput): CheckResult {
+  return {
+    id: 'C24',
+    level: 'BLOCK',
+    pass:
+      rcd.residualCurrentMA !== null &&
+      rcd.residualCurrentMA <= 30 &&
+      rcd.rcdType !== null &&
+      RCD_TYPES_WITH_DC_COMPONENT.includes(rcd.rcdType),
+    message: 'Aucune protection différentielle 30 mA de type A (ou F, B) côté AC',
+  };
+}
+
 /**
  * Flat set of pre-derived values every check needs. Built by run-engine.ts (Task 11) from the
  * outputs of module-electrical, string-sizing, protections, cabling, and structure, plus a few

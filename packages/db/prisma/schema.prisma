@@ -430,6 +430,10 @@ model AcBreaker {
   ratedCurrentA         Float
   curve                 String?
   breakingCapacityKA    Float?
+  /// Differential function (disjoncteur différentiel): sensitivity IΔn in mA; null for a plain breaker.
+  residualCurrentMA     Int?
+  /// 'AC' | 'A' | 'F' | 'B'; null for a plain breaker.
+  rcdType               String?
 
   createdAt             DateTime @default(now())
 

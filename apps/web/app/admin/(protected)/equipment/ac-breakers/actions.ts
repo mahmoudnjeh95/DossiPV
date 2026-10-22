@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
+import type { RcdType } from '@dossipv/engine';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
+import { isRcdType } from '../../../../../lib/project-engine-input';
 
 export interface AcBreakerActionState {
   error: string;
@@ -34,6 +36,30 @@ async function uploadIfPresent(formData: FormData, fieldName: string): Promise<U
 
 const NUMERIC_FIELDS = ['ratedCurrentA', 'breakingCapacityKA'] as const;
 
+interface Differential {
+  residualCurrentMA: number | null;
+  rcdType: RcdType | null;
+}
+
+/** The differential function: both fields empty (plain breaker) or a positive mA sensitivity and a known type. */
+function parseDifferential(formData: FormData): Differential | { error: string } {
+  const rawSensitivity = formData.get('residualCurrentMA');
+  const rawType = formData.get('rcdType');
+  const sensitivity = typeof rawSensitivity === 'string' ? rawSensitivity.trim() : '';
+  const type = typeof rawType === 'string' ? rawType.trim() : '';
+  if (type !== '' && !isRcdType(type)) {
+    return { error: 'Type de différentiel invalide (AC, A, F ou B).' };
+  }
+  const residualCurrentMA = sensitivity === '' ? null : Number(sensitivity);
+  if (residualCurrentMA !== null && (!Number.isInteger(residualCurrentMA) || residualCurrentMA <= 0)) {
+    return { error: 'Sensibilité du différentiel invalide (nombre entier de mA).' };
+  }
+  if ((residualCurrentMA === null) !== (type === '')) {
+    return { error: 'Renseignez à la fois la sensibilité (mA) et le type du différentiel, ou aucun des deux.' };
+  }
+  return { residualCurrentMA, rcdType: type !== '' && isRcdType(type) ? type : null };
+}
+
 function parseFields(formData: FormData): Record<string, string> {
   const result: Record<string, string> = {};
   for (const key of ['brand', 'model', 'curve', 'homologationReference', 'homologationValidTo', ...NUMERIC_FIELDS]) {
@@ -50,6 +76,11 @@ export async function createAcBreakerAction(
   formData: FormData,
 ): Promise<AcBreakerActionState | undefined> {
   await requireAuthenticatedSuperAdmin();
+
+  const differential = parseDifferential(formData);
+  if ('error' in differential) {
+    return { error: differential.error };
+  }
 
   const datasheetResult = await uploadIfPresent(formData, 'datasheet');
   if (datasheetResult && 'error' in datasheetResult) {
@@ -81,6 +112,8 @@ export async function createAcBreakerAction(
       ratedCurrentA: Number(fields.ratedCurrentA),
       curve: fields.curve ?? null,
       breakingCapacityKA: fields.breakingCapacityKA ? Number(fields.breakingCapacityKA) : null,
+      residualCurrentMA: differential.residualCurrentMA,
+      rcdType: differential.rcdType,
       homologationReference: fields.homologationReference ?? null,
       homologationValidTo: fields.homologationValidTo ? new Date(fields.homologationValidTo) : null,
       ...(datasheetFileId ? { datasheetFileId } : {}),
@@ -101,6 +134,11 @@ export async function updateAcBreakerAction(
   const existing = await db.acBreaker.findUnique({ where: { id: acBreakerId } });
   if (!existing) {
     return { error: 'Disjoncteur AC introuvable.' };
+  }
+
+  const differential = parseDifferential(formData);
+  if ('error' in differential) {
+    return { error: differential.error };
   }
 
   const datasheetResult = await uploadIfPresent(formData, 'datasheet');
@@ -124,6 +162,8 @@ export async function updateAcBreakerAction(
       ratedCurrentA: Number(fields.ratedCurrentA),
       curve: fields.curve ?? null,
       breakingCapacityKA: fields.breakingCapacityKA ? Number(fields.breakingCapacityKA) : null,
+      residualCurrentMA: differential.residualCurrentMA,
+      rcdType: differential.rcdType,
       homologationReference: fields.homologationReference ?? null,
       homologationValidTo: fields.homologationValidTo ? new Date(fields.homologationValidTo) : null,
       ...(newDatasheetFileId ? { datasheetFileId: newDatasheetFileId } : {}),

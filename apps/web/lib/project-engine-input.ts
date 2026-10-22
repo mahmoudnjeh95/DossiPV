@@ -4,6 +4,7 @@ import type {
   CableRunInput,
   PvModuleInput,
   InverterArrayEntry,
+  RcdType,
 } from '@dossipv/engine';
 import { AMBIENT_TEMP_BY_CONTEXT } from './labels';
 
@@ -56,6 +57,17 @@ export type EngineInputResult =
 
 function isPhases(value: number): value is 1 | 3 {
   return value === 1 || value === 3;
+}
+
+const RCD_TYPES: readonly string[] = ['AC', 'A', 'F', 'B'] satisfies RcdType[];
+
+export function isRcdType(value: string): value is RcdType {
+  return RCD_TYPES.includes(value);
+}
+
+/** The stored differential type, or null when absent or unknown (C24 then fails). */
+export function toRcdType(value: string | null): RcdType | null {
+  return value !== null && isRcdType(value) ? value : null;
 }
 
 /** `YYYY-MM-DD` (UTC), the date format every engine input uses. */
@@ -282,6 +294,11 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
       type: protections.dcSpd.type,
     },
     acBreaker: { ratedCurrentA: protections.acBreaker.ratedCurrentA },
+    // Always set: a plain breaker (no 30 mA type A function) blocks generation through C24.
+    rcd: {
+      residualCurrentMA: protections.acBreaker.residualCurrentMA,
+      rcdType: toRcdType(protections.acBreaker.rcdType),
+    },
     acSpd: {
       ucV: protections.acSpd.ucV,
       upKV: protections.acSpd.upKV,

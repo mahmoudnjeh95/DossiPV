@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../../../../layout';
 import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../../lib/project-access';
+import { acBreakerRating } from '../../../../../../lib/labels';
 import { ClientForm } from '../forms/client-form';
 import { SiteForm } from '../forms/site-form';
 import { ProtectionsForm } from '../forms/protections-form';
@@ -141,7 +142,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
             acSpds: spds.filter((s) => s.side === 'AC').map((s) => ({ id: s.id, label: tag(`${s.brand} ${s.model} — T${s.type}, Uc ${s.ucV} V`, s), isPrivate: s.ownerCompanyId !== null })),
             dcSwitches: dcSwitches.map((s) => ({ id: s.id, label: tag(`${s.brand} ${s.model} — ${s.ratedVoltageV} V / ${s.ratedCurrentA} A`, s), isPrivate: s.ownerCompanyId !== null })),
             dcFuses: dcFuses.map((f) => ({ id: f.id, label: tag(`${f.brand} ${f.model} — ${f.ratedVoltageV} V / ${f.ratedCurrentA} A`, f), isPrivate: f.ownerCompanyId !== null })),
-            acBreakers: acBreakers.map((b) => ({ id: b.id, label: tag(`${b.brand} ${b.model} — ${b.ratedCurrentA} A${b.curve ? ` courbe ${b.curve}` : ''}`, b), isPrivate: b.ownerCompanyId !== null })),
+            acBreakers: acBreakers.map((b) => ({ id: b.id, label: tag(`${b.brand} ${b.model} — ${acBreakerRating(b)}${b.curve ? ` courbe ${b.curve}` : ''}`, b), isPrivate: b.ownerCompanyId !== null })),
             acIsolators: acIsolators.map((i) => ({ id: i.id, label: tag(`${i.brand} ${i.model} — ${i.ratedCurrentA} A`, i), isPrivate: i.ownerCompanyId !== null })),
           }}
         />

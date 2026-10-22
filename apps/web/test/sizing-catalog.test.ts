@@ -39,7 +39,7 @@ const ALL_KINDS = [
   'Interrupteurs-sectionneurs DC',
   'Parafoudres DC',
   'Parafoudres AC',
-  'Disjoncteurs AC',
+  'Disjoncteurs différentiels AC 30 mA (type A)',
   'Câbles DC (solaire)',
   'Câbles AC',
   'Câbles de terre',
@@ -79,7 +79,9 @@ beforeEach(() => {
   m.spd.mockResolvedValue([
     { id: 'spd-ac', brand: 'Hager', model: 'SPB215D', side: 'AC', type: 2, poles: 2, ucV: 275, upKV: 1.6, inKA: 5, imaxKA: 15, iscpvKA: null },
   ]);
-  m.acBreaker.mockResolvedValue([{ id: 'brk-1', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16, curve: 'C', breakingCapacityKA: 6 }]);
+  m.acBreaker.mockResolvedValue([
+    { id: 'brk-1', brand: 'Hager', model: 'ADH816F', ratedCurrentA: 16, curve: 'C', breakingCapacityKA: 4.5, residualCurrentMA: 30, rcdType: 'A' },
+  ]);
   m.cable.mockResolvedValue([
     {
       id: 'cable-dc', brand: 'Generic', model: 'H1Z2Z2-K', usage: 'DC_SOLAR', conductor: 'Cu', insulation: 'PR', standard: null,
@@ -113,7 +115,7 @@ describe('loadSizingCatalog', () => {
       dcSwitches: [{ id: 'sw-1', brand: 'Hager', model: 'SB216PV', ratedVoltageV: 600, ratedCurrentA: 16 }],
       dcFuses: [{ id: 'fuse-1', brand: 'Hager', model: 'LF315PV', ratedCurrentA: 15, ratedVoltageV: 1000 }],
       spds: [{ id: 'spd-ac', brand: 'Hager', model: 'SPB215D', side: 'AC', type: 2, ucV: 275, upKV: 1.6, inKA: 5, iscpvKA: null }],
-      acBreakers: [{ id: 'brk-1', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16 }],
+      acBreakers: [{ id: 'brk-1', brand: 'Hager', model: 'ADH816F', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: 'A' }],
       cables: [
         {
           id: 'cable-dc', brand: 'Generic', model: 'H1Z2Z2-K', usage: 'DC_SOLAR', conductor: 'Cu', insulation: 'PR',
@@ -155,11 +157,46 @@ describe('loadSizingCatalog', () => {
 
     expect(catalog.cables[0]?.sections).toEqual([{ sectionMm2: 4, izA: 45, izReferenceMethod: 'C' }]);
   });
+
+  it('maps a plain breaker and an unknown differential type to null', async () => {
+    m.acBreaker.mockResolvedValue([
+      { id: 'brk-plain', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16, curve: 'C', breakingCapacityKA: 10, residualCurrentMA: null, rcdType: null },
+      { id: 'brk-odd', brand: 'Hager', model: 'X', ratedCurrentA: 16, curve: 'C', breakingCapacityKA: 10, residualCurrentMA: 30, rcdType: 'X' },
+    ]);
+
+    const catalog = await loadSizingCatalog('company-1');
+
+    expect(catalog.acBreakers).toEqual([
+      { id: 'brk-plain', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16, residualCurrentMA: null, rcdType: null },
+      { id: 'brk-odd', brand: 'Hager', model: 'X', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: null },
+    ]);
+  });
 });
 
 describe('missingLibraryKinds', () => {
   it('lists all nine kinds, in order, for an empty catalog', () => {
     expect(missingLibraryKinds(emptyCatalog)).toEqual(ALL_KINDS);
+  });
+
+  it('asks for a 30 mA type A differential breaker when the library only has plain or type AC breakers', () => {
+    const catalog: SizingCatalog = {
+      ...emptyCatalog,
+      acBreakers: [
+        { id: 'brk-plain', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16, residualCurrentMA: null, rcdType: null },
+        { id: 'brk-ac', brand: 'Hager', model: 'ADC816F', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: 'AC' },
+      ],
+    };
+    expect(missingLibraryKinds(catalog)).toContain('Disjoncteurs différentiels AC 30 mA (type A)');
+    expect(missingLibraryKinds(catalog)).not.toContain('Disjoncteurs AC');
+
+    const withDifferential: SizingCatalog = {
+      ...catalog,
+      acBreakers: [
+        ...catalog.acBreakers,
+        { id: 'brk-a', brand: 'Hager', model: 'ADH816F', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: 'A' },
+      ],
+    };
+    expect(missingLibraryKinds(withDifferential)).not.toContain('Disjoncteurs différentiels AC 30 mA (type A)');
   });
 
   it('asks for a single-phase STEG inverter when the library only has three-phase ones', async () => {

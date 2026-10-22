@@ -177,7 +177,7 @@ describe('computeProjectProposals', () => {
 
     const computed = await computeProjectProposals(billProject(), NOW);
 
-    expect(computed).toEqual({ ok: false, missing: [], missingLibraryKinds: ['Disjoncteurs AC'], blockedReasons: [] });
+    expect(computed).toEqual({ ok: false, missing: [], missingLibraryKinds: ['Disjoncteurs différentiels AC 30 mA (type A)'], blockedReasons: [] });
     expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
   });
 });

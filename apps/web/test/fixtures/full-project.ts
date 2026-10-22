@@ -218,6 +218,8 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
         ratedCurrentA: 20,
         curve: null,
         breakingCapacityKA: null,
+        residualCurrentMA: 30,
+        rcdType: 'A',
       },
       acSpd: {
         ...equipmentBase,

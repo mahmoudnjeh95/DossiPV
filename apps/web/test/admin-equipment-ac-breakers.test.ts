@@ -94,6 +94,44 @@ describe('createAcBreakerAction', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/admin/equipment/ac-breakers');
   });
 
+  it('saves the differential function (30 mA, type A)', async () => {
+    mockAcBreakerCreate.mockResolvedValue({ id: 'new-ac-breaker-1' });
+
+    await createAcBreakerAction(undefined, buildFormData({ residualCurrentMA: '30', rcdType: 'A' }));
+
+    const createCallArg = mockAcBreakerCreate.mock.calls[0]?.[0] as { data: { residualCurrentMA: number | null; rcdType: string | null } };
+    expect(createCallArg.data.residualCurrentMA).toBe(30);
+    expect(createCallArg.data.rcdType).toBe('A');
+  });
+
+  it('saves a plain breaker with no differential function', async () => {
+    mockAcBreakerCreate.mockResolvedValue({ id: 'new-ac-breaker-1' });
+
+    await createAcBreakerAction(undefined, buildFormData({ residualCurrentMA: '', rcdType: '' }));
+
+    const createCallArg = mockAcBreakerCreate.mock.calls[0]?.[0] as { data: { residualCurrentMA: number | null; rcdType: string | null } };
+    expect(createCallArg.data.residualCurrentMA).toBeNull();
+    expect(createCallArg.data.rcdType).toBeNull();
+  });
+
+  it("refuses an unknown differential type ('X') without saving anything", async () => {
+    const formData = buildFormData({ residualCurrentMA: '30', rcdType: 'X' });
+    formData.set('datasheet', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], 'fiche.pdf', { type: 'application/pdf' }));
+
+    const result = await createAcBreakerAction(undefined, formData);
+
+    expect(result).toEqual({ error: 'Type de différentiel invalide (AC, A, F ou B).' });
+    expect(mockAcBreakerCreate).not.toHaveBeenCalled();
+    expect(mockSaveFile).not.toHaveBeenCalled();
+  });
+
+  it('refuses a sensitivity without a differential type', async () => {
+    const result = await createAcBreakerAction(undefined, buildFormData({ residualCurrentMA: '30', rcdType: '' }));
+
+    expect(result).toEqual({ error: 'Renseignez à la fois la sensibilité (mA) et le type du différentiel, ou aucun des deux.' });
+    expect(mockAcBreakerCreate).not.toHaveBeenCalled();
+  });
+
   it('rejects the action with a French error when the uploaded file fails validation, without creating the row', async () => {
     mockValidateUploadedFile.mockReturnValue({ valid: false, error: 'Type de fichier non autorisé.' });
 
@@ -109,6 +147,25 @@ describe('createAcBreakerAction', () => {
 });
 
 describe('updateAcBreakerAction', () => {
+  it('saves the differential function on update', async () => {
+    mockAcBreakerFindUnique.mockResolvedValue({ id: 'ac-breaker-1', datasheetFileId: null });
+    mockAcBreakerUpdate.mockResolvedValue({ id: 'ac-breaker-1' });
+
+    await updateAcBreakerAction('ac-breaker-1', undefined, buildFormData({ residualCurrentMA: '30', rcdType: 'A' }));
+
+    const updateCallArg = mockAcBreakerUpdate.mock.calls[0]?.[0] as { data: { residualCurrentMA: number | null; rcdType: string | null } };
+    expect(updateCallArg.data).toMatchObject({ residualCurrentMA: 30, rcdType: 'A' });
+  });
+
+  it("refuses an unknown differential type ('X') on update", async () => {
+    mockAcBreakerFindUnique.mockResolvedValue({ id: 'ac-breaker-1', datasheetFileId: null });
+
+    const result = await updateAcBreakerAction('ac-breaker-1', undefined, buildFormData({ residualCurrentMA: '30', rcdType: 'X' }));
+
+    expect(result).toEqual({ error: 'Type de différentiel invalide (AC, A, F ou B).' });
+    expect(mockAcBreakerUpdate).not.toHaveBeenCalled();
+  });
+
   it('deletes the OLD file only after the new one is successfully saved', async () => {
     mockAcBreakerFindUnique.mockResolvedValue({ id: 'ac-breaker-1', datasheetFileId: 'old-file-1' });
     mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });

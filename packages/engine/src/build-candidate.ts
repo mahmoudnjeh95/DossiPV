@@ -12,7 +12,7 @@ import type {
 import { runEngine, type CableRunInput, type RunEngineInput } from './run-engine';
 import { dcFuseCheckInput, dcFuseRequired, iscFieldDesign, stringVmpStc, stringVocTmin } from './protections';
 import { izCorrected, duDcV, duDcPct, duAcV, duAcPct } from './cabling';
-import { checkC08, checkC09, checkC10, checkC11, checkC13, checkC14, checkC16 } from './checks';
+import { checkC08, checkC09, checkC10, checkC11, checkC13, checkC14, checkC16, checkC24 } from './checks';
 
 // Fixed run parameters (spec §5 B5; the cabling form's defaults for a new run).
 const SITE_PHASES = 1;
@@ -185,14 +185,17 @@ export function buildCandidate(
     );
   }
 
-  // AC cable + breaker: the smallest section that some breaker fits (C13) within the drop limit.
+  // AC cable + breaker: the smallest section that some differential breaker (C24) fits (C13)
+  // within the drop limit. The 30 mA protection is the breaker itself: a plain breaker never qualifies.
   const acSections = cableSections(catalog.cables, 'AC');
   if (acSections.length === 0) return fail('Aucun câble AC compatible dans le catalogue.');
+  const differentialBreakers = catalog.acBreakers.filter((b) => checkC24(b).pass);
+  if (differentialBreakers.length === 0) return fail('Aucun disjoncteur différentiel 30 mA de type A dans le catalogue.');
   const acRuns = acSections.flatMap((option) => {
     const run = cableRun(option, context.acLengthM, AC_INSTALL_METHOD, AC_AMBIENT_TEMP_C);
     const iz = runIzCorrected(run);
     const breaker = smallestPassing(
-      catalog.acBreakers,
+      differentialBreakers,
       (b) => b.ratedCurrentA,
       (b) => checkC13(inverter.iacMaxA, b.ratedCurrentA, iz).pass,
     );
@@ -231,6 +234,7 @@ export function buildCandidate(
     dcFuse: dcFuse ? { ratedCurrentA: dcFuse.ratedCurrentA, ratedVoltageV: dcFuse.ratedVoltageV } : null,
     dcSpd: { ucV: dcSpd.ucV, inKA: dcSpd.inKA, iscpvKA: dcSpd.iscpvKA, upKV: dcSpd.upKV, type: dcSpd.type },
     acBreaker: { ratedCurrentA: ac.breaker.ratedCurrentA },
+    rcd: { residualCurrentMA: ac.breaker.residualCurrentMA, rcdType: ac.breaker.rcdType },
     acSpd: { ucV: acSpd.ucV, upKV: acSpd.upKV, type: acSpd.type },
     acIsolator: null,
     equipmentImpulseWithstandKV: EQUIPMENT_IMPULSE_WITHSTAND_KV,

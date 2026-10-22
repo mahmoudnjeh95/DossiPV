@@ -52,7 +52,8 @@ type CuratedProtection =
   | { kind: 'SPD'; brand: string; model: string; side: 'DC' | 'AC'; type: number; poles: number; ucV: number; upKV: number; inKA: number; imaxKA: number; iscpvKA: number | null; source: string }
   | { kind: 'DC_SWITCH'; brand: string; model: string; ratedVoltageV: number; ratedCurrentA: number; poles: number; source: string }
   | { kind: 'DC_FUSE'; brand: string; model: string; ratedVoltageV: number; ratedCurrentA: number; source: string }
-  | { kind: 'AC_BREAKER'; brand: string; model: string; ratedCurrentA: number; curve: string | null; breakingCapacityKA: number | null; source: string }
+  // A differential breaker carries its sensitivity (mA) and type ('AC' | 'A' | 'F' | 'B'); a plain one leaves both out.
+  | { kind: 'AC_BREAKER'; brand: string; model: string; ratedCurrentA: number; curve: string | null; breakingCapacityKA: number | null; residualCurrentMA?: number | null; rcdType?: 'AC' | 'A' | 'F' | 'B' | null; source: string }
   | { kind: 'AC_ISOLATOR'; brand: string; model: string; ratedCurrentA: number; source: string };
 
 interface CuratedAccessory { kind: string; brand: string; model: string; spec: string | null; source: string }

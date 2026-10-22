@@ -1,6 +1,7 @@
 import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
 import { provenanceScope } from '../../../lib/project-access';
+import { acBreakerRating } from '../../../lib/labels';
 
 export interface LibraryRow {
   itemId: string;
@@ -115,7 +116,7 @@ export async function loadSections(companyId: string, mode: 'library' | 'catalog
       bulk: true,
       rows: dcFuses.map((x) => row(x, join([`${n(x.ratedCurrentA)} A`, `${n(x.ratedVoltageV)} V`]))),
     },
-    { kind: 'AC_BREAKER', title: 'Disjoncteurs AC', bulk: true, rows: acBreakers.map((x) => row(x, `${n(x.ratedCurrentA)} A`)) },
+    { kind: 'AC_BREAKER', title: 'Disjoncteurs AC', bulk: true, rows: acBreakers.map((x) => row(x, acBreakerRating(x))) },
     {
       kind: 'AC_ISOLATOR',
       title: 'Interrupteurs-sectionneurs AC',

@@ -1,6 +1,7 @@
 import type { PvModuleInput, InverterInput, MpptConfig, EngineResult } from './types';
 import type { ConductorType, InsulationType, ReferenceMethod } from './cabling';
 import type { RunEngineInput } from './run-engine';
+import type { RcdType } from './checks';
 
 /** Equipment the installer can use, as the sizing functions see it (one company's library). */
 export interface CatalogModule extends PvModuleInput { id: string; brand: string; model: string; homologationValidTo: string | null }
@@ -8,7 +9,8 @@ export interface CatalogInverter extends InverterInput { id: string; brand: stri
 export interface CatalogDcSwitch { id: string; brand: string; model: string; ratedVoltageV: number; ratedCurrentA: number }
 export interface CatalogDcFuse { id: string; brand: string; model: string; ratedCurrentA: number; ratedVoltageV: number }
 export interface CatalogSpd { id: string; brand: string; model: string; side: 'DC' | 'AC'; type: number; ucV: number; upKV: number; inKA: number; iscpvKA: number | null }
-export interface CatalogAcBreaker { id: string; brand: string; model: string; ratedCurrentA: number }
+/** `residualCurrentMA`/`rcdType` are null for a plain breaker (no differential function). */
+export interface CatalogAcBreaker { id: string; brand: string; model: string; ratedCurrentA: number; residualCurrentMA: number | null; rcdType: RcdType | null }
 export interface CatalogCable { id: string; brand: string; model: string; usage: 'DC_SOLAR' | 'AC' | 'EARTH'; conductor: ConductorType; insulation: InsulationType; sections: { sectionMm2: number; izA: number; izReferenceMethod: ReferenceMethod }[] }
 export interface SizingCatalog { modules: CatalogModule[]; inverters: CatalogInverter[]; dcSwitches: CatalogDcSwitch[]; dcFuses: CatalogDcFuse[]; spds: CatalogSpd[]; acBreakers: CatalogAcBreaker[]; cables: CatalogCable[] }
 

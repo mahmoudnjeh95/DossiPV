@@ -46,7 +46,9 @@ import {
   checkC19,
   checkC21,
   checkC23,
+  checkC24,
   type ChecksContext,
+  type RcdInput,
 } from './checks';
 import type { InverterInput, MpptConfig, CheckResult } from './types';
 
@@ -110,6 +112,8 @@ export interface RunEngineInput {
   equipmentHomologationExpiries?: Array<string | null>;
   /** Client's subscribed power (kVA); when set, C23 checks the total inverter AC power against it. */
   subscribedPowerKVA?: number;
+  /** The AC breaker's differential function; when set, C24 requires 30 mA type A (or F, B). */
+  rcd?: RcdInput;
 }
 
 /**
@@ -397,11 +401,14 @@ export function runEngine(input: RunEngineInput): EngineResult {
         ]
       : [];
 
+  const differentialChecks: CheckResult[] = input.rcd !== undefined ? [checkC24(input.rcd)] : [];
+
   const checks = [
     ...runAllChecks(checksContext),
     ...perMpptChecks,
     ...perInverterChecks,
     ...subscribedPowerChecks,
+    ...differentialChecks,
   ];
   const hasBlockingFailure = checks.some((c) => c.level === 'BLOCK' && !c.pass);
 

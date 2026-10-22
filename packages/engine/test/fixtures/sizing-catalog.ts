@@ -217,16 +217,26 @@ export const sizingCatalog: SizingCatalog = {
     { id: 'dc-spd-1000v', brand: 'ABB', model: 'OVR PV T2 40-1000 P', side: 'DC', type: 2, ucV: 1000, upKV: 4, inKA: 20, iscpvKA: 10 },
     { id: 'ac-spd-275v', brand: 'Hager', model: 'SPB215D', side: 'AC', type: 2, ucV: 275, upKV: 1.6, inKA: 5, iscpvKA: null },
   ],
-  // data/catalog/protections.json for 10–40 A; NCN250A and NCN263A complete the same Hager range.
   acBreakers: [
-    { id: 'ac-breaker-10a', brand: 'Hager', model: 'NCN210A', ratedCurrentA: 10 },
-    { id: 'ac-breaker-16a', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16 },
-    { id: 'ac-breaker-20a', brand: 'Hager', model: 'NCN220A', ratedCurrentA: 20 },
-    { id: 'ac-breaker-25a', brand: 'Hager', model: 'NCN225A', ratedCurrentA: 25 },
-    { id: 'ac-breaker-32a', brand: 'Hager', model: 'NCN232A', ratedCurrentA: 32 },
-    { id: 'ac-breaker-40a', brand: 'Hager', model: 'NCN240A', ratedCurrentA: 40 },
-    { id: 'ac-breaker-50a', brand: 'Hager', model: 'NCN250A', ratedCurrentA: 50 },
-    { id: 'ac-breaker-63a', brand: 'Hager', model: 'NCN263A', ratedCurrentA: 63 },
+    // Plain MCBs (no differential function, never selectable since C24):
+    // data/catalog/protections.json for 10–40 A; NCN250A and NCN263A complete the same Hager range.
+    { id: 'ac-breaker-10a', brand: 'Hager', model: 'NCN210A', ratedCurrentA: 10, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-16a', brand: 'Hager', model: 'NCN216A', ratedCurrentA: 16, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-20a', brand: 'Hager', model: 'NCN220A', ratedCurrentA: 20, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-25a', brand: 'Hager', model: 'NCN225A', ratedCurrentA: 25, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-32a', brand: 'Hager', model: 'NCN232A', ratedCurrentA: 32, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-40a', brand: 'Hager', model: 'NCN240A', ratedCurrentA: 40, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-50a', brand: 'Hager', model: 'NCN250A', ratedCurrentA: 50, residualCurrentMA: null, rcdType: null },
+    { id: 'ac-breaker-63a', brand: 'Hager', model: 'NCN263A', ratedCurrentA: 63, residualCurrentMA: null, rcdType: null },
+    // Differential breakers 1P+N, C curve, 30 mA type A (data/catalog/protections.json).
+    { id: 'rcbo-16a', brand: 'Legrand', model: '411131', ratedCurrentA: 16, residualCurrentMA: 30, rcdType: 'A' },
+    { id: 'rcbo-20a', brand: 'Legrand', model: '411132', ratedCurrentA: 20, residualCurrentMA: 30, rcdType: 'A' },
+    { id: 'rcbo-25a', brand: 'Legrand', model: '411133', ratedCurrentA: 25, residualCurrentMA: 30, rcdType: 'A' },
+    { id: 'rcbo-32a', brand: 'Legrand', model: '411134', ratedCurrentA: 32, residualCurrentMA: 30, rcdType: 'A' },
+    { id: 'rcbo-32a-schneider', brand: 'Schneider Electric', model: 'A9DC4632', ratedCurrentA: 32, residualCurrentMA: 30, rcdType: 'A' },
+    // Fictitious: the curated 1P+N differential ranges stop at 40 A. This one keeps the 10 kW
+    // single-phase inverter (47.9 A) buildable for the large-consumer and enumeration tests.
+    { id: 'rcbo-63a', brand: 'Generic', model: 'RCBO-63A-30mA-A', ratedCurrentA: 63, residualCurrentMA: 30, rcdType: 'A' },
   ],
   // data/catalog/cables.json
   cables: [

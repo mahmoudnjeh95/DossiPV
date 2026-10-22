@@ -37,7 +37,29 @@ describe('buildEngineInput', () => {
     const engine = runEngine(result.input);
     expect(engine.derived.P_DC_W).toBe(3100);
     expect(engine.derived.MODULE_COUNT).toBe(5);
-    expect(engine.checks).toHaveLength(22);
+    // C01..C22 (with C18) plus C24, which always runs at dossier time.
+    expect(engine.checks).toHaveLength(23);
+  });
+
+  it("passes the AC breaker's differential function so C24 runs at dossier time", () => {
+    const result = buildEngineInput(buildFullProject(), FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.rcd).toEqual({ residualCurrentMA: 30, rcdType: 'A' });
+    expect(runEngine(result.input).checks.find((c) => c.id === 'C24')?.pass).toBe(true);
+  });
+
+  it('blocks a project whose AC breaker has no differential function (C24)', () => {
+    const project = buildFullProject();
+    project.protections!.acBreaker.residualCurrentMA = null;
+    project.protections!.acBreaker.rcdType = null;
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.rcd).toEqual({ residualCurrentMA: null, rcdType: null });
+    const engine = runEngine(result.input);
+    expect(engine.checks.find((c) => c.id === 'C24')).toMatchObject({ pass: false, level: 'BLOCK' });
+    expect(engine.hasBlockingFailure).toBe(true);
   });
 
   it('accepts a structure with only material + wind speed and runs the engine without the stability check', () => {
