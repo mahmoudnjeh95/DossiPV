@@ -4,20 +4,25 @@ import type { DossierWorkerResult } from './generate-dossier-document';
 import type { DossierTemplateData } from '@dossipv/docx-template';
 import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
+import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
 
 export interface BuildTemplateDataInput {
   workerResult: DossierWorkerResult;
   engineInput: RunEngineInput;
   projectMeta: ProjectMeta;
   snapshot: {
-    client: { fullName: string; address: string | null; stegReference: string | null } | null;
+    client: { fullName: string; address: string | null; stegReference: string | null; cin: string | null } | null;
     cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];
     // Each inverter's own brand/model, by snapshot array index — projectMeta.inverterBrandModel
     // is only the FIRST inverter's model (see I7: a mixed-model array must not show the wrong
     // model on every other inverter's row).
     inverterBrandModels: string[];
   };
-  companyInfo: { name: string; address: string; phone: string; email: string };
+  installer: InstallerIdentity;
+  /** The installer's own dossier number (e.g. `434 - 303`); empty only for a legacy snapshot. */
+  dossierNumber: string | null;
+  /** ISO date or timestamp of the dossier. */
+  dossierDate: string;
   production: ProductionSimulation;
   consumption: SnapshotConsumption | null;
   subscribedPowerKVA: number | null;
@@ -39,6 +44,23 @@ function fmtUpTo(value: number, maxDecimals: number): string {
 function formatIsoDate(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split('-');
   return `${day}/${month}/${year}`;
+}
+
+/** The preamble's installer and client identity lines. */
+function buildIdentityLines(input: BuildTemplateDataInput): Pick<
+  DossierTemplateData,
+  'dossierNumber' | 'dossierDateText' | 'installerAnmeLine' | 'installerTaxIdLine' | 'installerLegalRepLine' | 'clientCinLine'
+> {
+  const { installer, snapshot } = input;
+  const cin = snapshot.client?.cin?.trim();
+  return {
+    dossierNumber: input.dossierNumber ?? '',
+    dossierDateText: formatIsoDate(input.dossierDate),
+    installerAnmeLine: `Installateur agréé ANME n° ${installer.anmeCode} (catégorie ${anmeCategoryLabel(installer.anmeCategory)}), agrément valable jusqu'au ${formatIsoDate(installer.anmeValidTo)}`,
+    installerTaxIdLine: `Matricule fiscal : ${installer.taxId ?? 'non renseigné'}`,
+    installerLegalRepLine: `Représentant légal : ${installer.legalRepFullName}, ${installer.legalRepRole}`,
+    clientCinLine: cin ? `CIN : ${cin}` : 'CIN : copie jointe en annexe N°1',
+  };
 }
 
 function formatConsumption(consumption: SnapshotConsumption | null): string {
@@ -165,7 +187,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
 }
 
 export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplateData {
-  const { workerResult, engineInput, projectMeta, snapshot, companyInfo } = input;
+  const { workerResult, engineInput, projectMeta, snapshot, installer } = input;
   const dcFuseRequired = engineInput.dcFuse !== null;
   const acIsolatorRequired = engineInput.acIsolator !== null;
   const derived = workerResult.engineResult.derived;
@@ -176,10 +198,11 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     derived.STABILITY_RHS !== undefined;
 
   return {
-    companyName: companyInfo.name,
-    companyAddress: companyInfo.address,
-    companyPhone: companyInfo.phone,
-    companyEmail: companyInfo.email,
+    companyName: installer.name,
+    companyAddress: installer.address,
+    companyPhone: installer.phone,
+    companyEmail: installer.email,
+    ...buildIdentityLines(input),
     clientFullName: snapshot.client?.fullName ?? '',
     clientAddress: snapshot.client?.address ?? '',
     clientStegReference: snapshot.client?.stegReference ?? '',

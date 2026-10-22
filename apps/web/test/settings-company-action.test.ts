@@ -215,3 +215,47 @@ describe('saveCompanyAction — logo and ANME certificate uploads', () => {
     expect(mockCompanyUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe('saveCompanyAction — dossier numbering', () => {
+  beforeEach(() => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockCompanyUpdate.mockResolvedValue({ id: 'company-1' });
+  });
+
+  it('saves the prefix and the next number (dossierCounter = next - 1)', async () => {
+    await saveCompanyAction(undefined, buildFormData({ dossierPrefix: '434', dossierNextNumber: '303', dossierNextNumberShown: '1' }));
+
+    const arg = mockCompanyUpdate.mock.calls[0]?.[0] as { data: { dossierPrefix: string | null; dossierCounter?: number } };
+    expect(arg.data.dossierPrefix).toBe('434');
+    expect(arg.data.dossierCounter).toBe(302);
+  });
+
+  it('stores an empty prefix as none', async () => {
+    await saveCompanyAction(undefined, buildFormData({ dossierPrefix: '', dossierNextNumber: '1', dossierNextNumberShown: '5' }));
+
+    const arg = mockCompanyUpdate.mock.calls[0]?.[0] as { data: { dossierPrefix: string | null; dossierCounter?: number } };
+    expect(arg.data.dossierPrefix).toBeNull();
+    expect(arg.data.dossierCounter).toBe(0);
+  });
+
+  it.each(['0', '-3', '2.5'])('rejects a next number of %s', async (value) => {
+    const result = await saveCompanyAction(undefined, buildFormData({ dossierPrefix: '434', dossierNextNumber: value, dossierNextNumberShown: '1' }));
+
+    expect(result?.error).toContain('Prochain numéro de dossier');
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a prefix longer than 20 characters', async () => {
+    const result = await saveCompanyAction(undefined, buildFormData({ dossierPrefix: 'x'.repeat(21), dossierNextNumber: '1', dossierNextNumberShown: '1' }));
+
+    expect(result?.error).toContain('Préfixe de numérotation des dossiers');
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
+  });
+
+  it('leaves the counter alone when the next number was not changed, so a dossier numbered meanwhile is not reused', async () => {
+    await saveCompanyAction(undefined, buildFormData({ dossierPrefix: '434', dossierNextNumber: '303', dossierNextNumberShown: '303' }));
+
+    const arg = mockCompanyUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> };
+    expect(arg.data).not.toHaveProperty('dossierCounter');
+  });
+});

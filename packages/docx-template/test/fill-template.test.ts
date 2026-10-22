@@ -21,6 +21,14 @@ function extractText(buffer: Buffer): string {
     .replace(/&gt;/g, '>');
 }
 
+/** The text of every paragraph styled `style` (e.g. the docx `Title`), in document order. */
+function paragraphsWithStyle(buffer: Buffer, style: string): string[] {
+  const xml = new PizZip(buffer).file('word/document.xml')!.asText();
+  return (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? [])
+    .filter((p) => p.includes(`<w:pStyle w:val="${style}"/>`))
+    .map((p) => p.replace(/<[^>]+>/g, '').replace(/&apos;/g, "'"));
+}
+
 const baseData: DossierTemplateData = {
   companyName: 'SolarPro Tunisie',
   companyAddress: '12 Rue de la République, Tunis',
@@ -29,6 +37,12 @@ const baseData: DossierTemplateData = {
   clientFullName: 'Ahmed Ben Ali',
   clientAddress: '45 Avenue Habib Bourguiba, Sousse',
   clientStegReference: 'STEG-2026-001',
+  dossierNumber: '434 - 303',
+  dossierDateText: '25/11/2026',
+  installerAnmeLine: "Installateur agréé ANME n° ANME-TEST-01 (catégorie BT), agrément valable jusqu'au 31/12/2027",
+  installerTaxIdLine: 'Matricule fiscal : 1234567/A/M/000',
+  installerLegalRepLine: 'Représentant légal : MR TEST GERANT, Gérant',
+  clientCinLine: 'CIN : 01234567',
   introduction: "Ce dossier présente l'installation photovoltaïque réalisée à l'adresse ci-dessus.",
   solution: 'La solution retenue utilise des modules à haute performance et un onduleur certifié.',
   cabling: 'Le câblage respecte la norme NF C 15-100.',
@@ -269,5 +283,37 @@ describe('fillDossierTemplate', () => {
     expect(text).toContain('Total');
     expect(text).toContain('550');
     expect(text).not.toContain('undefined');
+  });
+
+  it('titles the dossier with its subject and number, no longer with the company name', () => {
+    const result = fillDossierTemplate(templateBuffer, baseData);
+    const titles = paragraphsWithStyle(result, 'Title');
+
+    expect(titles).toEqual(["Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG"]);
+    expect(extractText(result)).toContain('Dossier n° 434 - 303 du 25/11/2026');
+  });
+
+  it('prints the installer block and the client CIN line in the preamble', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, baseData));
+
+    expect(text).toContain("Installateur agréé ANME n° ANME-TEST-01 (catégorie BT), agrément valable jusqu'au 31/12/2027");
+    expect(text).toContain('Matricule fiscal : 1234567/A/M/000');
+    expect(text).toContain('Représentant légal : MR TEST GERANT, Gérant');
+    expect(text).toContain('CIN : 01234567');
+    expect(text.indexOf('CIN : 01234567')).toBeLessThan(text.indexOf('Présentation du projet'));
+  });
+
+  it('ends with the two-column signature table after the conclusion', () => {
+    const result = fillDossierTemplate(templateBuffer, baseData);
+    const xml = new PizZip(result).file('word/document.xml')!.asText();
+    const text = extractText(result);
+    const signatureTable = xml.slice(xml.lastIndexOf('<w:tbl>'));
+
+    expect(text.indexOf("Établi par l'installateur")).toBeGreaterThan(text.indexOf(baseData.conclusion));
+    for (const expected of ["Établi par l'installateur", 'Représentant légal : MR TEST GERANT, Gérant', 'Signature et cachet :', 'Lu et approuvé — le titulaire du contrat', 'Ahmed Ben Ali', 'Signature :']) {
+      expect(signatureTable.replace(/<[^>]+>/g, '').replace(/&apos;/g, "'")).toContain(expected);
+    }
+    expect(signatureTable.match(/<w:tc>/g)).toHaveLength(2);
+    expect(signatureTable.match(/Date :/g)).toHaveLength(2);
   });
 });

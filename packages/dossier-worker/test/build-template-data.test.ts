@@ -5,6 +5,7 @@ import type { RunEngineInput } from '@dossipv/engine';
 import type { ProjectMeta } from '../src/placeholder-map';
 import type { ProductionSimulation } from '../src/run-simulation';
 import type { SnapshotConsumption } from '../src/job-snapshot';
+import type { InstallerIdentity } from '../src/installer-identity';
 
 const NNBSP = '\u202f';
 
@@ -38,6 +39,22 @@ const billConsumption: SnapshotConsumption = {
   periodStart: '2026-01-05',
   periodEnd: '2026-07-04',
 };
+
+const installer: InstallerIdentity = {
+  name: 'SolarPro Tunisie',
+  address: '12 Rue de la République, Tunis',
+  phone: '+216 71 000 000',
+  email: 'contact@solarpro.tn',
+  anmeCode: 'ANME-TEST-01',
+  anmeCategory: 'BT',
+  anmeValidTo: '2027-12-31T00:00:00.000Z',
+  taxId: '1234567/A/M/000',
+  legalRepFullName: 'MR TEST GERANT',
+  legalRepRole: 'Gérant',
+  commercialRegister: null,
+};
+
+const installerInputs = { installer, dossierNumber: '434 - 303', dossierDate: '2026-11-25T09:30:00.000Z' };
 
 const sizingInputs = { production, consumption: billConsumption, subscribedPowerKVA: 6, phases: 1 as const };
 
@@ -95,11 +112,11 @@ describe('buildTemplateData', () => {
       engineInput,
       projectMeta,
       snapshot: {
-        client: { fullName: 'Ahmed Ben Ali', address: '45 Avenue Habib Bourguiba, Sousse', stegReference: 'STEG-2026-001' },
+        client: { fullName: 'Ahmed Ben Ali', address: '45 Avenue Habib Bourguiba, Sousse', stegReference: 'STEG-2026-001', cin: '01234567' },
         cableRuns: [{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }],
         inverterBrandModels: ['Sofar 1-4KTL2-G3'],
       },
-      companyInfo: { name: 'SolarPro Tunisie', address: '12 Rue de la République, Tunis', phone: '+216 71 000 000', email: 'contact@solarpro.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.companyName).toBe('SolarPro Tunisie');
@@ -158,7 +175,7 @@ describe('buildTemplateData', () => {
       },
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(result.moduleSpecPmaxW).toEqual(expect.any(String));
@@ -190,7 +207,7 @@ describe('buildTemplateData', () => {
       engineInput,
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(result.stabilityComputed).toBe(false);
@@ -203,7 +220,7 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.clientFullName).toBe('');
@@ -216,7 +233,7 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.sectionNumberPreambule).toBe('I.');
@@ -237,7 +254,7 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.sectionNumberStructure).toBe('VII.');
@@ -252,7 +269,7 @@ describe('buildTemplateData', () => {
       engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.sectionNumberFusible).toBe('VIII.');
@@ -274,7 +291,7 @@ describe('buildTemplateData', () => {
       engineInput: mixedEngineInput,
       projectMeta, // projectMeta.inverterBrandModel is 'Sofar 1-4KTL2-G3' — the FIRST inverter only
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3', 'Huawei SUN2000-5KTL'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.inverters).toHaveLength(2);
@@ -288,17 +305,50 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: [] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+      ...installerInputs, ...sizingInputs,
     });
 
     expect(data.inverters[0]!.inverterBrandModel).toBe(projectMeta.inverterBrandModel);
+  });
+
+  describe('installer and client identity', () => {
+    const base = {
+      workerResult, engineInput, projectMeta, ...installerInputs, ...sizingInputs,
+      snapshot: { client: { fullName: 'MR TEST CLIENT', address: null, stegReference: null, cin: '01234567' }, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+    };
+
+    it('formats the dossier number, date and the installer lines', () => {
+      const data = buildTemplateData(base);
+
+      expect(data.dossierNumber).toBe('434 - 303');
+      expect(data.dossierDateText).toBe('25/11/2026');
+      expect(data.installerAnmeLine).toBe("Installateur agréé ANME n° ANME-TEST-01 (catégorie BT), agrément valable jusqu'au 31/12/2027");
+      expect(data.installerTaxIdLine).toBe('Matricule fiscal : 1234567/A/M/000');
+      expect(data.installerLegalRepLine).toBe('Représentant légal : MR TEST GERANT, Gérant');
+      expect(data.clientCinLine).toBe('CIN : 01234567');
+    });
+
+    it("says « non renseigné » without a tax id and points to annex N°1 without a CIN", () => {
+      const data = buildTemplateData({
+        ...base,
+        installer: { ...installer, taxId: null },
+        snapshot: { ...base.snapshot, client: { ...base.snapshot.client, cin: null } },
+      });
+
+      expect(data.installerTaxIdLine).toBe('Matricule fiscal : non renseigné');
+      expect(data.clientCinLine).toBe('CIN : copie jointe en annexe N°1');
+    });
+
+    it('prints a mixed ANME category readably', () => {
+      expect(buildTemplateData({ ...base, installer: { ...installer, anmeCategory: 'BT_MT' } }).installerAnmeLine).toContain('(catégorie BT + MT)');
+    });
   });
 
   describe('dimensioning and production section', () => {
     const base = {
       workerResult, engineInput, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      ...installerInputs,
     };
 
     it('fills the sizing and production section from a bill', () => {

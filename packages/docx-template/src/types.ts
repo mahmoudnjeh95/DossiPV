@@ -6,6 +6,18 @@ export interface DossierTemplateData {
   clientFullName: string;
   clientAddress: string;
   clientStegReference: string;
+  /** The installer's own dossier number (e.g. `434 - 303`). */
+  dossierNumber: string;
+  /** The dossier date, `dd/MM/yyyy`. */
+  dossierDateText: string;
+  /** `Installateur agréé ANME n° … (catégorie …), agrément valable jusqu'au dd/MM/yyyy`. */
+  installerAnmeLine: string;
+  /** `Matricule fiscal : …`, or `… non renseigné`. */
+  installerTaxIdLine: string;
+  /** `Représentant légal : name, role` — also signs the dossier. */
+  installerLegalRepLine: string;
+  /** `CIN : …`, or a pointer to the CIN copy in annex N°1. */
+  clientCinLine: string;
   introduction: string;
   solution: string;
   cabling: string;

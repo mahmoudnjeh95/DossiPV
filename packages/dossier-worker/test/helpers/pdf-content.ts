@@ -288,6 +288,12 @@ export async function extractPdfContent(buffer: Buffer | Uint8Array): Promise<Pa
   });
 }
 
+/** Each page's decoded content stream, for asserting on raw operators (e.g. a fill colour). */
+export async function rawPageStreams(buffer: Buffer | Uint8Array): Promise<string[]> {
+  const doc = await PDFDocument.load(buffer);
+  return doc.getPages().map((p) => streamText(doc, p.node.Contents()));
+}
+
 /** Joined text of one page, in drawing order — handy for `toContain` assertions. */
 export function pageText(page: PageContent): string {
   return page.texts.map((t) => t.text).join('\n');

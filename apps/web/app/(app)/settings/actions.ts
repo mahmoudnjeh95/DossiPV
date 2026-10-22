@@ -19,6 +19,20 @@ function positiveDropPct(reader: FormReader, name: string, label: string): numbe
   return value;
 }
 
+/**
+ * The counter to store for the typed « Prochain numéro de dossier » (the counter is the last
+ * number used, so next − 1), or undefined to leave it alone. It is written only when the installer
+ * changed the value shown on the page: re-saving the form for another field must not rewind a
+ * counter that a generation moved since the page was opened, which would reuse a number.
+ */
+function nextDossierCounter(reader: FormReader): number | undefined {
+  const label = 'Prochain numéro de dossier';
+  const next = reader.optionalInteger('dossierNextNumber', label, { min: 1, max: 1_000_000_000 });
+  if (next === null || next < 1) return undefined;
+  const shown = reader.optionalInteger('dossierNextNumberShown', label);
+  return next === shown ? undefined : next - 1;
+}
+
 interface UploadSuccess {
   storageKey: string;
   mimeType: string;
@@ -81,7 +95,9 @@ export async function saveCompanyAction(
     defaultEarthResistanceTargetOhm: reader.optionalNumber('defaultEarthResistanceTargetOhm', 'Résistance de terre cible', { min: 0 }),
     defaultDesignWindSpeedKmh: reader.number('defaultDesignWindSpeedKmh', 'Vitesse de vent par défaut', { min: 0, max: 400 }),
     defaultCosPhi: reader.number('defaultCosPhi', 'cos φ par défaut', { min: 0.1, max: 1 }),
+    dossierPrefix: reader.optionalText('dossierPrefix', 'Préfixe de numérotation des dossiers', 20),
   };
+  const dossierCounter = nextDossierCounter(reader);
 
   const anmeValidFrom = new Date(anmeValidFromRaw);
   const anmeValidTo = new Date(anmeValidToRaw);
@@ -120,6 +136,7 @@ export async function saveCompanyAction(
       ...data,
       anmeValidFrom,
       anmeValidTo,
+      ...(dossierCounter !== undefined ? { dossierCounter } : {}),
       ...(logoFileId ? { logoFileId } : {}),
       ...(anmeCertificateFileId ? { anmeCertificateFileId } : {}),
     },

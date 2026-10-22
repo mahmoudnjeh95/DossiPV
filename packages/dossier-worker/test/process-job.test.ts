@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   catalogSourceDocumentFindUnique: vi.fn(),
   buildListPageAnnex: vi.fn(),
   dropBlankTrailingPages: vi.fn(),
+  tryLoadStegLogo: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -71,6 +72,7 @@ vi.mock('../src/clean-pdf-annex', async () => {
   return { ...actual, dropBlankTrailingPages: mocks.dropBlankTrailingPages };
 });
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
+vi.mock('../src/steg-logo', () => ({ tryLoadStegLogo: mocks.tryLoadStegLogo }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
@@ -144,6 +146,21 @@ async function makePdf(pageCount: number): Promise<Buffer> {
 }
 
 const COVER_PDF = Buffer.from('%PDF-fake-cover');
+const STEG_LOGO = Buffer.from('fake-steg-logo-png');
+/** The Company columns processJob reads (identity, accreditation, logo, agreement). */
+const COMPANY = {
+  name: 'SolarPro',
+  address: 'Tunis',
+  phone: '71000000',
+  email: 'a@b.tn',
+  anmeCode: 'ANME-TEST-01',
+  anmeCategory: 'BT',
+  anmeValidTo: new Date('2027-12-31T00:00:00.000Z'),
+  taxId: null,
+  legalRepFullName: 'MR TEST GERANT',
+  legalRepRole: 'Gérant',
+  commercialRegister: null,
+};
 const TOC_PDF = Buffer.from('%PDF-fake-toc');
 const ASSEMBLED_PDF = Buffer.from('%PDF-fake-assembled');
 const SATELLITE_TILE = Buffer.from('fake satellite tile');
@@ -192,7 +209,7 @@ beforeEach(async () => {
   drawingsPdf = await makePdf(2);
   sitePlanPdf = await makePdf(2);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
-  mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: 'file-anme' });
+  mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
   mocks.fileFindMany.mockResolvedValue([ANME_ROW]);
   mocks.generateDossierDocument.mockResolvedValue({
@@ -237,6 +254,7 @@ beforeEach(async () => {
   mocks.projectSimulationUpsert.mockResolvedValue({});
   mocks.catalogSourceDocumentFindUnique.mockResolvedValue(null);
   mocks.buildListPageAnnex.mockResolvedValue(null);
+  mocks.tryLoadStegLogo.mockResolvedValue(STEG_LOGO);
 });
 
 describe('processJob — success path', () => {
@@ -361,7 +379,7 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
   });
 
   it('fails at "annexes" without PVGIS, Claude or the merge when the company has no ANME agreement', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: null });
+    mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: null });
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await processJob('job-1');
@@ -774,7 +792,28 @@ describe('processJob — fragment assembly details', () => {
   it('builds the cover page and the drawings from the company and the frozen snapshot', async () => {
     await processJob('job-1');
 
-    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ companyName: 'SolarPro', clientFullName: 'Ahmed', companyLogoBuffer: null }));
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith({
+      installer: {
+        name: 'SolarPro',
+        address: 'Tunis',
+        phone: '71000000',
+        email: 'a@b.tn',
+        anmeCode: 'ANME-TEST-01',
+        anmeCategory: 'BT',
+        anmeValidTo: '2027-12-31T00:00:00.000Z',
+        taxId: null,
+        legalRepFullName: 'MR TEST GERANT',
+        legalRepRole: 'Gérant',
+        commercialRegister: null,
+      },
+      companyLogoBuffer: null,
+      stegLogoBuffer: STEG_LOGO,
+      dossierNumber: null,
+      dossierDate: '2026-10-03',
+      client: { fullName: 'Ahmed', cin: null, address: 'Tunis', stegReference: 'STEG-1' },
+      gps: { lat: 36.8, lon: 10.2 },
+      installedKWp: 3.1,
+    });
     expect(mocks.renderDrawingPages).toHaveBeenCalledWith(
       expect.objectContaining({
         moduleLabel: 'X',
@@ -787,8 +826,45 @@ describe('processJob — fragment assembly details', () => {
     );
   });
 
+  it('passes the installer identity, number and dossier date to the template data', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...validSnapshot, dossierNumber: '434 - 303', client: { ...validSnapshot.client, cin: '01234567' } },
+    });
+
+    await processJob('job-1');
+
+    const data = mocks.fillDossierTemplate.mock.calls[0]?.[1] as Record<string, string>;
+    expect(data.dossierNumber).toBe('434 - 303');
+    expect(data.dossierDateText).toBe('03/10/2026');
+    expect(data.installerAnmeLine).toBe("Installateur agréé ANME n° ANME-TEST-01 (catégorie BT), agrément valable jusqu'au 31/12/2027");
+    expect(data.installerTaxIdLine).toBe('Matricule fiscal : non renseigné');
+    expect(data.clientCinLine).toBe('CIN : 01234567');
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ dossierNumber: '434 - 303' }));
+  });
+
+  it('renders the cover without the STEG logo and warns, never failing, while the logo file is absent', async () => {
+    mocks.tryLoadStegLogo.mockResolvedValue(null);
+
+    await processJob('job-1');
+
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ stegLogoBuffer: null }));
+    const update = findSucceededUpdate() as [{ data: { warnings: string[] } }];
+    expect(update[0].data.warnings).toContain('Logo STEG absent : ajoutez steg-logo.png dans les ressources du worker.');
+  });
+
+  it('treats an unreadable STEG logo like an absent one', async () => {
+    mocks.tryLoadStegLogo.mockRejectedValue(new Error('EACCES'));
+
+    await processJob('job-1');
+
+    expect(mocks.renderCoverPage).toHaveBeenCalledWith(expect.objectContaining({ stegLogoBuffer: null }));
+    expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toContain('Logo STEG absent : ajoutez steg-logo.png dans les ressources du worker.');
+  });
+
   it('resolves company.logoFileId to a real buffer and passes it to both the cover page and the site-plan pages (I5)', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-logo', anmeCertificateFileId: 'file-anme' });
+    mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: 'file-logo', anmeCertificateFileId: 'file-anme' });
     mocks.fileFindUnique.mockResolvedValue({ id: 'file-logo', storageKey: 'logo.png', mimeType: 'png' });
     const logoBuffer = Buffer.from('fake-logo-png-bytes');
     mocks.readFile.mockImplementation((path: string) => Promise.resolve(path === '/fake/path' ? logoBuffer : Buffer.from('template bytes')));
@@ -801,7 +877,7 @@ describe('processJob — fragment assembly details', () => {
   });
 
   it('does not fail the job when the logo file row exists but cannot be read from disk (I5 resilience)', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-missing-logo', anmeCertificateFileId: 'file-anme' });
+    mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: 'file-missing-logo', anmeCertificateFileId: 'file-anme' });
     mocks.fileFindUnique.mockResolvedValue({ id: 'file-missing-logo', storageKey: 'gone.png', mimeType: 'png' });
     // Only the logo's bytes are gone; the ANME agreement (a required annex) is still readable.
     mocks.getFilePath.mockImplementation((storageKey: string) => (storageKey === 'gone.png' ? '/fake/path' : `/storage/${storageKey}`));
@@ -865,6 +941,7 @@ describe('processJob — fragment assembly details', () => {
       clientAddress: 'Tunis',
       gps: { lat: 36.8, lon: 10.2 },
       installerName: 'SolarPro',
+      installerAnmeCode: 'ANME-TEST-01',
       installerContact: { address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
       companyLogoBuffer: null,
       dossierDate: '2026-10-03',
@@ -1091,7 +1168,7 @@ describe('processJob — annex plan', () => {
     mocks.fileFindMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
       Promise.resolve(where.id.in.map((id) => ({ id, ...files[id]! }))),
     );
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: 'file-anme' });
+    mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
     mocks.projectFindUnique.mockResolvedValue({
       annexes: { cinFileId: null, commercialRegisterFileId: null, stegContractFileId: null, lastPaidBillFileId: 'file-bill', moduleAcceptanceFileId: null, extraFiles: [] },
       structure: { structureAttestationFileId: 'file-structure' },

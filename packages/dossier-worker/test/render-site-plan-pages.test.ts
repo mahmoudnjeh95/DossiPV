@@ -15,6 +15,7 @@ const baseInput: Omit<SitePlanPagesInput, 'planData'> = {
   clientAddress: '1 Rue du Test, Sfax',
   gps: { lat: 34.742111, lon: 10.76 },
   installerName: 'SolarPro Tunisie',
+  installerAnmeCode: 'ANME-TEST-01',
   installerContact: { address: '12 Rue de la Liberté, Tunis', phone: '+216 71 234 567', email: 'contact@solarpro.tn' },
   companyLogoBuffer: null,
   dossierDate: '2026-11-25',
@@ -244,6 +245,15 @@ describe('renderSitePlanPages — implantation plan (page 37)', () => {
     expect(text).toContain('N° dossier : 434-303');
     expect(text).toContain('Installateur : SolarPro Tunisie');
     expect(text).toContain('Esri');
+  });
+
+  it("adds the installer's ANME accreditation to both plans' title blocks", async () => {
+    const pages = await render(planData());
+
+    expect(pages).toHaveLength(2);
+    for (const page of pages) {
+      expect(pageText(page)).toContain('Agrément ANME n° ANME-TEST-01');
+    }
   });
 });
 

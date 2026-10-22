@@ -92,6 +92,10 @@ model Company {
   defaultEarthResistanceTargetOhm Float?
   defaultDesignWindSpeedKmh Float    @default(120)
   defaultCosPhi            Float     @default(0.8)
+  /// The installer's own dossier numbering (e.g. `434` in `434 - 303`); null or empty for none.
+  dossierPrefix            String?
+  /// The last dossier number used; the next first generation takes dossierCounter + 1.
+  dossierCounter           Int       @default(0)
   createdAt                DateTime  @default(now())
 
   users        CompanyUser[]

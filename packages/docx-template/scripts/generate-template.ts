@@ -9,6 +9,7 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  BorderStyle,
 } from 'docx';
 
 function cell(text: string): TableCell {
@@ -22,14 +23,31 @@ function specTable(rows: [string, string][]): Table {
   });
 }
 
+/** One side of the closing signature table: a heading, the signer, then room to sign. */
+function signatureCell(lines: string[]): TableCell {
+  return new TableCell({
+    width: { size: 50, type: WidthType.PERCENTAGE },
+    children: [...lines.map((line) => new Paragraph(line)), ...Array.from({ length: 4 }, () => new Paragraph(''))],
+  });
+}
+
+const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+
 const doc = new Document({
   sections: [
     {
       children: [
-        new Paragraph({ text: '{companyName}', heading: HeadingLevel.TITLE }),
-        new Paragraph('{companyAddress} — {companyPhone} — {companyEmail}'),
+        // The company moves to the running page header (Task 17); the title names the subject.
+        new Paragraph({ text: "Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG", heading: HeadingLevel.TITLE }),
+        new Paragraph('Dossier n° {dossierNumber} du {dossierDateText}'),
         new Paragraph({ text: '{sectionNumberPreambule} Préambule', heading: HeadingLevel.HEADING_1 }),
-        new Paragraph('Nom : {clientFullName}'),
+        new Paragraph('Installateur : {companyName}'),
+        new Paragraph('{companyAddress} — {companyPhone} — {companyEmail}'),
+        new Paragraph('{installerAnmeLine}'),
+        new Paragraph('{installerTaxIdLine}'),
+        new Paragraph('{installerLegalRepLine}'),
+        new Paragraph('Titulaire du contrat : {clientFullName}'),
+        new Paragraph('{clientCinLine}'),
         new Paragraph('Adresse : {clientAddress}'),
         new Paragraph('Référence STEG : {clientStegReference}'),
 
@@ -160,6 +178,20 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberConclusion} Conclusion', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{conclusion}'),
+
+        new Paragraph(''),
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER, insideHorizontal: NO_BORDER, insideVertical: NO_BORDER },
+          rows: [
+            new TableRow({
+              children: [
+                signatureCell(["Établi par l'installateur", '{installerLegalRepLine}', 'Date :', 'Signature et cachet :']),
+                signatureCell(['Lu et approuvé — le titulaire du contrat', '{clientFullName}', 'Date :', 'Signature :']),
+              ],
+            }),
+          ],
+        }),
       ],
     },
   ],

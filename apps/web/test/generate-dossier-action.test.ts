@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
     jobFindMany: vi.fn(),
     jobCreate: vi.fn(),
     transaction: vi.fn(),
+    assignDossierNumber: vi.fn(),
   };
 });
 
@@ -36,6 +37,11 @@ vi.mock('@dossipv/db', async () => {
   };
 });
 
+vi.mock('../lib/dossier-number', async () => {
+  const actual = await vi.importActual<typeof import('../lib/dossier-number')>('../lib/dossier-number');
+  return { ...actual, assignDossierNumber: mocks.assignDossierNumber };
+});
+
 import { generateDossierAction } from '../app/(app)/projects/[id]/actions';
 import { buildFullProject } from './fixtures/full-project';
 
@@ -52,6 +58,12 @@ const activeSubscription = {
   plan: { name: 'Standard', monthlyDossierLimit: 10, tier: 'STANDARD' },
 };
 
+/** The interactive transaction's client: the same mocks, so call assertions stay simple. */
+const tx = {
+  project: { update: mocks.projectUpdate },
+  dossierJob: { create: mocks.jobCreate },
+};
+
 beforeEach(() => {
   for (const fn of Object.values(mocks)) {
     if (typeof fn === 'function' && 'mockReset' in fn) {
@@ -64,7 +76,8 @@ beforeEach(() => {
   mocks.projectFindFirst.mockResolvedValue(buildFullProject());
   mocks.subscriptionFindUnique.mockResolvedValue(activeSubscription);
   mocks.jobFindMany.mockResolvedValue([]);
-  mocks.transaction.mockImplementation((ops: Promise<unknown>[]) => Promise.all(ops));
+  mocks.transaction.mockImplementation((run: (tx: unknown) => Promise<unknown>) => run(tx));
+  mocks.assignDossierNumber.mockResolvedValue('434 - 303');
   mocks.jobCreate.mockResolvedValue({ id: 'job-1' });
   mocks.projectUpdate.mockResolvedValue({});
 });
@@ -217,6 +230,24 @@ describe('generateDossierAction', () => {
       data: { dossierDate: expect.any(Date) as Date },
     });
     expect(mocks.mockRedirect).toHaveBeenCalledWith('/projects/project-1');
+  });
+
+  it('assigns the installer dossier number inside the transaction and snapshots it', async () => {
+    await generateDossierAction('project-1', undefined);
+
+    expect(mocks.assignDossierNumber).toHaveBeenCalledTimes(1);
+    expect(mocks.assignDossierNumber).toHaveBeenCalledWith(tx, 'company-1', 'project-1');
+    expect(mocks.assignDossierNumber.mock.invocationCallOrder[0]).toBeLessThan(mocks.jobCreate.mock.invocationCallOrder[0]!);
+    const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
+    expect(data.data.inputSnapshot.dossierNumber).toBe('434 - 303');
+  });
+
+  it('does not take a number when the generation is refused', async () => {
+    mocks.projectFindFirst.mockResolvedValue(buildFullProject({ structure: null }));
+
+    await generateDossierAction('project-1', undefined);
+
+    expect(mocks.assignDossierNumber).not.toHaveBeenCalled();
   });
 
   it('snapshots the consumption from the bill import', async () => {

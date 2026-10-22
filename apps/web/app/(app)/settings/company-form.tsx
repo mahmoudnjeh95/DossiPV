@@ -27,6 +27,9 @@ export interface CompanyFormValues {
   defaultEarthResistanceTargetOhm: number | null;
   defaultDesignWindSpeedKmh: number;
   defaultCosPhi: number;
+  dossierPrefix: string | null;
+  /** The number the next first generation takes (dossierCounter + 1). */
+  dossierNextNumber: number;
   hasLogo: boolean;
   hasAnmeCertificate: boolean;
 }
@@ -129,6 +132,22 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
             )}
           </label>
         </div>
+      </fieldset>
+
+      <fieldset className="card">
+        <legend>Numérotation des dossiers</legend>
+        <div className="form-grid">
+          <label>
+            Préfixe de numérotation des dossiers
+            <input type="text" name="dossierPrefix" defaultValue={company.dossierPrefix ?? ''} maxLength={20} />
+          </label>
+          <label>
+            Prochain numéro de dossier
+            <input type="number" name="dossierNextNumber" min={1} step={1} defaultValue={company.dossierNextNumber} required />
+            <input type="hidden" name="dossierNextNumberShown" value={company.dossierNextNumber} />
+          </label>
+        </div>
+        <p className="hint">Exemple : préfixe 434 et prochain numéro 303 donnent « 434 - 303 ».</p>
       </fieldset>
 
       <fieldset className="card">

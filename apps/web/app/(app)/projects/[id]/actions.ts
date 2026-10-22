@@ -14,6 +14,7 @@ import { unsourcedEquipment } from '../../../../lib/project-access';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../../lib/labels';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
+import { assignDossierNumber } from '../../../../lib/dossier-number';
 
 export interface GenerateDossierActionState {
   error: string;
@@ -127,40 +128,42 @@ export async function generateDossierAction(
   // cover-page date always matches the date the engine's own checks (C20/C22) actually ran against.
   const dossierDate = project.dossierDate ?? now;
 
-  const snapshot: DossierJobSnapshotV1 = {
-    version: 1,
-    projectId: project.id,
-    companyId: project.companyId,
-    tier: project.tier,
-    dossierNumber: project.dossierNumber,
-    dossierDate: dossierDate.toISOString(),
-    capturedAt: now.toISOString(),
-    client: project.client,
-    site: project.site,
-    arrayConfig: project.arrayConfig,
-    protections: project.protections,
-    cablingConfig: project.cablingConfig,
-    cableRuns: project.cableRuns,
-    structure: project.structure,
-    earthing: project.earthing,
-    consumption: buildSnapshotConsumption(project.client, project.billImport),
-    engineInput: engineInput.input,
-    projectMeta: engineInput.meta,
-  };
-
-  await db.$transaction([
-    db.dossierJob.create({
+  await db.$transaction(async (tx) => {
+    // The installer's own numbering, taken on the project's first generation only; a regeneration
+    // or a retry after a failed job keeps the stored number and never moves the counter.
+    const dossierNumber = await assignDossierNumber(tx, project.companyId, project.id);
+    const snapshot: DossierJobSnapshotV1 = {
+      version: 1,
+      projectId: project.id,
+      companyId: project.companyId,
+      tier: project.tier,
+      dossierNumber,
+      dossierDate: dossierDate.toISOString(),
+      capturedAt: now.toISOString(),
+      client: project.client,
+      site: project.site,
+      arrayConfig: project.arrayConfig,
+      protections: project.protections,
+      cablingConfig: project.cablingConfig,
+      cableRuns: project.cableRuns,
+      structure: project.structure,
+      earthing: project.earthing,
+      consumption: buildSnapshotConsumption(project.client, project.billImport),
+      engineInput: engineInput.input,
+      projectMeta: engineInput.meta,
+    };
+    await tx.dossierJob.create({
       data: {
         projectId: project.id,
         status: 'PENDING',
         inputSnapshot: snapshot as unknown as Prisma.InputJsonValue,
       },
-    }),
-    db.project.update({
+    });
+    await tx.project.update({
       where: { id: project.id },
       data: { dossierDate },
-    }),
-  ]);
+    });
+  });
 
   redirect(`/projects/${project.id}`);
   return undefined;

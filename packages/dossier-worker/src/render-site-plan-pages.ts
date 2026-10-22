@@ -58,6 +58,8 @@ export interface SitePlanPagesInput {
   clientAddress: string;
   gps: LatLon;
   installerName: string;
+  /** The installer's ANME accreditation code, printed in both title blocks. */
+  installerAnmeCode: string;
   installerContact: { address: string; phone: string; email: string };
   companyLogoBuffer: Buffer | null;
   /** ISO date, printed dd/MM/yyyy in the title block. */
@@ -471,7 +473,8 @@ async function drawImplantationTitleBlock(doc: PDFDocument, page: PDFPage, input
   y = drawFittedLines(page, `Adresse : ${input.clientAddress}`, x, y, width, fonts.regular, { maxLines: 2 });
   y = drawFittedLines(page, `Date : ${formatFrenchDate(input.dossierDate)}`, x, y, width, fonts.regular);
   if (input.dossierNumber) y = drawFittedLines(page, `N° dossier : ${input.dossierNumber}`, x, y, width, fonts.regular);
-  drawFittedLines(page, `Installateur : ${input.installerName}`, x, y, width, fonts.regular, { maxLines: 2 });
+  y = drawFittedLines(page, `Installateur : ${input.installerName}`, x, y, width, fonts.regular, { maxLines: 2 });
+  drawFittedLines(page, `Agrément ANME n° ${input.installerAnmeCode}`, x, y, width, fonts.regular);
 }
 
 const formatSection = (mm2: number): string => `${frenchNumber(mm2, { max: 1 })} mm²`;
@@ -570,7 +573,8 @@ async function drawSituationPage(doc: PDFDocument, input: SitePlanPagesInput, da
   y = drawFittedLines(page, input.installerName, x, y, nameWidth, fonts.bold, { maxLines: 2 });
   y = drawFittedLines(page, input.installerContact.address, x, y, width, fonts.regular, { maxLines: 3 });
   y = drawFittedLines(page, `Tél : ${input.installerContact.phone}`, x, y, width, fonts.regular);
-  drawFittedLines(page, `E-mail : ${input.installerContact.email}`, x, y, width, fonts.regular);
+  y = drawFittedLines(page, `E-mail : ${input.installerContact.email}`, x, y, width, fonts.regular);
+  drawFittedLines(page, `Agrément ANME n° ${input.installerAnmeCode}`, x, y, width, fonts.regular);
 }
 
 function drawEmptyFrame(doc: PDFDocument, title: string, fonts: Fonts): void {

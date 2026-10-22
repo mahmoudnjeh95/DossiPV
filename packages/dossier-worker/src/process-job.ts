@@ -24,6 +24,8 @@ import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
 import { simulateProduction, type ProductionSimulation, type ProductionSimulationInput } from './run-simulation';
 import { withRetry, isRetryableError } from './retry';
 import { renderCoverPage } from './render-cover-page';
+import { tryLoadStegLogo } from './steg-logo';
+import { installerIdentityFromCompany } from './installer-identity';
 import { renderDrawingPages } from './render-drawings';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
 import {
@@ -84,6 +86,9 @@ const GENERIC_FAILURE_REASONS: Record<string, string> = {
   annexes: 'La fusion des annexes a échoué.',
   save: "L'enregistrement du dossier a échoué.",
 };
+
+/** Job warning while the official STEG logo file has not been added to the worker's assets. */
+export const STEG_LOGO_MISSING_WARNING = 'Logo STEG absent : ajoutez steg-logo.png dans les ressources du worker.';
 
 /** No dossier without the company's ANME agreement (product owner, 2026-10-22). */
 export const ANME_AGREEMENT_MISSING_REASON = "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.";
@@ -318,6 +323,9 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'annexes', new Error(`Company ${snapshot.companyId} has no ANME agreement`), ANME_AGREEMENT_MISSING_REASON);
   }
 
+  const installer = installerIdentityFromCompany(company);
+  const warnings: string[] = [];
+
   // PVGIS is mandatory (user, 2026-10-22) and runs first, so an outage fails the job before any
   // paid Claude call or rendering work. A 403 (PVGIS maintenance page) is not retried.
   let production: ProductionSimulation;
@@ -348,7 +356,9 @@ export async function processJob(jobId: string): Promise<void> {
         cableRuns: snapshot.cableRuns,
         inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
       },
-      companyInfo: { name: company.name, address: company.address, phone: company.phone, email: company.email },
+      installer,
+      dossierNumber: snapshot.dossierNumber,
+      dossierDate: snapshot.engineInput.dossierDate,
       production,
       consumption: snapshot.consumption,
       subscribedPowerKVA: snapshot.client?.subscribedPowerKVA ?? null,
@@ -388,13 +398,32 @@ export async function processJob(jobId: string): Promise<void> {
     }
   }
 
+  // The official STEG logo is a static asset the product owner supplies; until it is there the
+  // cover simply has no STEG logo and the job says so — it never fails the dossier.
+  let stegLogoBuffer: Buffer | null = null;
+  try {
+    stegLogoBuffer = await tryLoadStegLogo();
+  } catch (error) {
+    console.warn(`processJob: job ${jobId}: the STEG logo could not be read.`, error);
+  }
+  if (!stegLogoBuffer) warnings.push(STEG_LOGO_MISSING_WARNING);
+
   let coverPageBuffer: Buffer;
   try {
     coverPageBuffer = await renderCoverPage({
-      companyName: company.name,
+      installer,
       companyLogoBuffer,
+      stegLogoBuffer,
       dossierNumber: snapshot.dossierNumber,
-      clientFullName: snapshot.client?.fullName ?? '',
+      client: {
+        fullName: snapshot.client?.fullName ?? '',
+        cin: snapshot.client?.cin ?? null,
+        address: snapshot.client?.address ?? null,
+        stegReference: snapshot.client?.stegReference ?? null,
+      },
+      // The point PVGIS simulated: the installation point when placed, else the site GPS.
+      gps: { lat: production.lat, lon: production.lon },
+      installedKWp: production.installedKWp,
       // engineInput.dossierDate is the persisted date the engine's own checks (C20/C22) ran
       // against — using it here keeps the cover consistent with what was actually validated,
       // rather than a fresh "today" that could differ from a regenerated dossier's original run.
@@ -527,6 +556,7 @@ export async function processJob(jobId: string): Promise<void> {
       clientAddress: snapshot.client?.address ?? '',
       gps: snapshot.site ? { lat: snapshot.site.gpsLat, lon: snapshot.site.gpsLon } : { lat: 0, lon: 0 },
       installerName: company.name,
+      installerAnmeCode: company.anmeCode,
       installerContact: { address: company.address, phone: company.phone, email: company.email },
       companyLogoBuffer,
       dossierDate: snapshot.engineInput.dossierDate,
@@ -598,7 +628,6 @@ export async function processJob(jobId: string): Promise<void> {
   let annexFiles: AnnexFile[];
   let dividerBuffer: Buffer;
   let annexesOnlyDividerBuffer: Buffer;
-  const warnings: string[] = [];
   try {
     const project = await db.project.findUnique({
       where: { id: snapshot.projectId },

@@ -59,6 +59,8 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       defaultEarthResistanceTargetOhm: null,
       defaultDesignWindSpeedKmh: 120,
       defaultCosPhi: 0.8,
+      dossierPrefix: null,
+      dossierCounter: 0,
       createdAt: NOW,
     },
     client: {
