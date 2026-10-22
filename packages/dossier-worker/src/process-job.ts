@@ -40,6 +40,7 @@ import {
 import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
 import { renderTableOfContents } from './render-toc';
 import { buildListPageAnnex } from './steg-list-annex';
+import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
@@ -173,7 +174,16 @@ async function loadAnnexFiles(documents: AnnexDocument[], projectFileIds: Set<st
       }
       throw error;
     }
-    files.set(document, { buffer, mimeType: ANNEX_MIME_TYPES[row.mimeType] ?? 'pdf', label });
+    const mimeType = ANNEX_MIME_TYPES[row.mimeType] ?? 'pdf';
+    if (document.slot === 'ADMIN' && mimeType === 'pdf') {
+      // A page printed from a browser often ends on an empty page; an unreadable PDF stays as it is.
+      try {
+        buffer = await dropBlankTrailingPages(buffer);
+      } catch (error) {
+        console.warn(`loadAnnexFiles: ${label} could not be cleaned of blank trailing pages.`, error);
+      }
+    }
+    files.set(document, { buffer, mimeType, label });
   }
   return { files, warnings };
 }

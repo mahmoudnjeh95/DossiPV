@@ -18,7 +18,7 @@ export default function NewProjectPage(): React.JSX.Element {
       <h1>Nouveau projet</h1>
       <form action={formAction} className="card stack">
         <p className="muted">
-          Importez la photo ou le PDF de la facture STEG du client : le dossier se prépare automatiquement.
+          Importez la photo ou le PDF de la facture STEG du client : le dossier se prépare automatiquement. Photographiez la dernière facture payée (papier), avec le nom du titulaire.
         </p>
         <label>
           Facture STEG

@@ -15,6 +15,7 @@ import {
   type BillMediaType,
   type StegBillReading,
 } from '@dossipv/bill-reader';
+import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/pdf-locate';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { summarizeSubscription } from '../../../lib/subscription';
 
@@ -78,6 +79,19 @@ function inBounds<T extends string | number>(
   return null;
 }
 
+const BROWSER_PRINTED_BILL_WARNING =
+  "Facture imprimée depuis le site STEG (adresse web avec identifiant de session) : elle n'est pas jointe au dossier. Ajoutez une photo ou un scan de la facture papier acquittée.";
+
+/** Whether the text of a PDF bill shows a browser print; an unreadable PDF is treated as not printed. */
+async function isBrowserPrintedPdf(pdf: Buffer): Promise<boolean> {
+  try {
+    const pages = await extractTextBoxes(pdf);
+    return isBrowserPrintedBill(pages.flatMap((boxes) => boxes.map((box) => box.text)).join(' '));
+  } catch {
+    return false;
+  }
+}
+
 /** Reads a STEG bill with Claude and creates the project (client, site, annex) from it. */
 export async function importStegBillAction(
   _prevState: ImportBillState | undefined,
@@ -120,6 +134,9 @@ export async function importStegBillAction(
   }
   const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
 
+  // A PDF printed from the STEG site carries the session URL in its footer: it is read, never annexed.
+  const browserPrinted = validation.mimeType === 'pdf' && (await isBrowserPrintedPdf(buffer));
+
   const refused = await reserveBillReading(user.companyId, now);
   if (refused) {
     return refused;
@@ -144,6 +161,10 @@ export async function importStegBillAction(
     warnings.push('Gouvernorat non reconnu : position par défaut (Tunis).');
   }
   const position = governorate ?? { lat: TUNIS.lat, lon: TUNIS.lon };
+
+  if (browserPrinted) {
+    warnings.push(BROWSER_PRINTED_BILL_WARNING);
+  }
 
   const threePhaseOrMv = reading.tariffLabel !== null && THREE_PHASE_OR_MV_TARIFF.test(reading.tariffLabel);
   if (threePhaseOrMv) {
@@ -206,7 +227,8 @@ export async function importStegBillAction(
           azimuthDeg: 0,
         },
       });
-      await tx.projectAnnexes.create({ data: { projectId: project.id, lastPaidBillFileId: file.id } });
+      await tx.projectAnnexes.create({ data: { projectId: project.id, ...(browserPrinted ? {} : { lastPaidBillFileId: file.id }) },
+      });
       await tx.projectBillImport.create({
         data: {
           projectId: project.id,

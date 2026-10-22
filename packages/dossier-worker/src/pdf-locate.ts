@@ -40,6 +40,14 @@ export async function extractTextBoxes(pdf: Buffer): Promise<TextBox[][]> {
   }
 }
 
+/**
+ * True when the text of a PDF bill shows it was printed from a browser: the page footer then
+ * carries the address with the session id (`sid=`), or any web address.
+ */
+export function isBrowserPrintedBill(pdfText: string): boolean {
+  return /sid=|https?:\/\//i.test(pdfText);
+}
+
 /** Upper-case, without spaces, '-', '_', '.', '/': how list and datasheet models are compared. */
 export function normalizeModel(text: string): string {
   return text.toUpperCase().replace(/[\s\-_./]/g, '');

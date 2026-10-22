@@ -25,6 +25,7 @@ const m = vi.hoisted(() => {
     mockReadStegBill: vi.fn(),
     mockSaveFile: vi.fn(),
     mockDeleteFile: vi.fn(),
+    mockExtractTextBoxes: vi.fn(),
     mockSharpToBuffer: vi.fn(),
     mockSharp: vi.fn(),
     mockRotate: vi.fn(),
@@ -58,6 +59,10 @@ vi.mock('@dossipv/bill-reader', async () => {
   return { ...actual, readStegBill: m.mockReadStegBill };
 });
 vi.mock('@anthropic-ai/sdk', () => ({ default: class FakeAnthropic {} }));
+vi.mock('@dossipv/dossier-worker/pdf-locate', async () => {
+  const actual = await vi.importActual<typeof import('@dossipv/dossier-worker/pdf-locate')>('@dossipv/dossier-worker/pdf-locate');
+  return { ...actual, extractTextBoxes: m.mockExtractTextBoxes };
+});
 vi.mock('sharp', () => ({ default: m.mockSharp }));
 
 import { BillReadingError } from '@dossipv/bill-reader';
@@ -105,6 +110,7 @@ beforeEach(() => {
   m.mockReadStegBill.mockResolvedValue({ ...testBill, governorate: 'Gafsa' });
   m.mockSaveFile.mockResolvedValue({ storageKey: 'equipment/abc-facture.jpg' });
   m.mockDeleteFile.mockResolvedValue(undefined);
+  m.mockExtractTextBoxes.mockResolvedValue([[]]);
   const chain = { rotate: m.mockRotate, jpeg: vi.fn(), toBuffer: m.mockSharpToBuffer };
   m.mockSharp.mockReturnValue(chain);
   m.mockRotate.mockReturnValue(chain);
@@ -187,6 +193,29 @@ describe('importStegBillAction', () => {
       modelId: 'claude-opus-5-5',
     });
     expect(imported['warnings']).toEqual(expect.arrayContaining([expect.stringContaining('inhabituelle')]));
+  });
+
+  it('annexes a photo bill as before', async () => {
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(m.mockExtractTextBoxes).not.toHaveBeenCalled();
+    expect(m.tx.projectAnnexes.create).toHaveBeenCalledWith({ data: { projectId: 'project-1', lastPaidBillFileId: 'file-1' } });
+  });
+
+  it('does not annex a browser-printed PDF bill', async () => {
+    m.mockExtractTextBoxes.mockResolvedValue([
+      [{ text: 'MR TEST CLIENT', x: 0, y: 0, width: 10, height: 10 }, { text: 'https://example.test/facture?sid=abc123', x: 0, y: 0, width: 10, height: 10 }],
+    ]);
+    const pdf = Buffer.from('%PDF-1.4 test');
+
+    expect(await redirectTarget(importStegBillAction(undefined, billForm(pdf, 'application/pdf', 'facture.pdf')))).toBe(
+      '/projects/project-1/proposals',
+    );
+    expect(m.tx.project.create).toHaveBeenCalled();
+    expect(m.tx.projectAnnexes.create).toHaveBeenCalledWith({ data: { projectId: 'project-1' } });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toEqual(
+      expect.arrayContaining([expect.stringContaining("elle n'est pas jointe au dossier")]),
+    );
   });
 
   it('keeps unreadable fields null', async () => {
