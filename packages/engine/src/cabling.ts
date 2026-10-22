@@ -74,22 +74,33 @@ function k4ForLayers(layers: number): number {
   return K4_LAYERS[String(clampedLayers)] ?? 1.0;
 }
 
+/** The four NF C 15-100 correction factors applied to a cable's reference Iz. */
+export interface IzCorrectionFactors {
+  /** Install method (K1_BY_METHOD). */
+  k1: number;
+  /** Grouping of circuits side by side (K2 tables). */
+  k2: number;
+  /** Ambient temperature and insulation (K3 tables). */
+  k3: number;
+  /** Number of layers (K4_LAYERS). */
+  k4: number;
+}
+
 /**
- * x-rules.derived IZ_CORRECTED: Iz * K1 * K2 * K3 * K4.
+ * The correction factors of IZ_CORRECTED, so the dossier can print each one.
  * K1 from install method (K1_BY_METHOD). K2 from grouped circuits, using the tray table for
  * reference methods E/F (perforated) and the enclosed table for B/C.
  * K3 from ambient temperature and insulation — schema note: PR/EPR/XLPO all use the PR column.
  * K4 from layer count.
  */
-export function izCorrected(
-  izBase: number,
+export function izCorrectionFactors(
   installMethod: string,
   referenceMethod: ReferenceMethod,
   groupedCircuits: number,
   layers: number,
   ambientTempC: number,
   insulation: InsulationType,
-): number {
+): IzCorrectionFactors {
   const k1 = K1_BY_METHOD[installMethod];
   if (k1 === undefined) {
     throw new UnsupportedInstallMethodError(installMethod);
@@ -115,6 +126,21 @@ export function izCorrected(
 
   const k4 = k4ForLayers(layers);
 
+  return { k1, k2, k3, k4 };
+}
+
+/** x-rules.derived IZ_CORRECTED: Iz * K1 * K2 * K3 * K4 (factors: izCorrectionFactors). */
+export function izCorrected(
+  izBase: number,
+  installMethod: string,
+  referenceMethod: ReferenceMethod,
+  groupedCircuits: number,
+  layers: number,
+  ambientTempC: number,
+  insulation: InsulationType,
+): number {
+  const { k1, k2, k3, k4 } = izCorrectionFactors(installMethod, referenceMethod, groupedCircuits, layers, ambientTempC, insulation);
+  // Same left-to-right product as before the factors were split out, so results stay bit-identical.
   return izBase * k1 * k2 * k3 * k4;
 }
 

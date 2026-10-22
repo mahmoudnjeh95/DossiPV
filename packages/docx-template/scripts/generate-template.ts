@@ -1,6 +1,6 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType, BorderStyle } from 'docx';
+import { AlignmentType, Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType, BorderStyle } from 'docx';
 import { DOCUMENT_STYLES, anLabel, conclusionRun, styledTable, valueRun } from './template-styles';
 
 /** A label / value table: salmon labels, the values (template tags) in blue. */
@@ -155,13 +155,77 @@ const doc = new Document({
           ],
           { header: true, labelColumn: true },
         ),
-        new Paragraph({ text: '{sectionNumberCablage}1 Chute de tension', heading: HeadingLevel.HEADING_2 }),
-        specTable([
-          ['Chute de tension DC (V)', '{voltageDropDuDcV}'],
-          ['Chute de tension DC (%)', '{voltageDropDuDcPct}'],
-          ['Chute de tension AC (V)', '{voltageDropDuAcV}'],
-          ['Chute de tension AC (%)', '{voltageDropDuAcPct}'],
-        ]),
+
+        // Cable sizing note (Task 21): Iz' with each NF C 15-100 factor, then one note per run.
+        new Paragraph({ text: '{sectionNumberCablage}1 Dimensionnement des câbles', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph(
+          "Le courant admissible des câbles est déterminé selon la norme NF C 15-100 (partie 5-52, courants admissibles) et, pour les câbles DC du champ photovoltaïque, selon le guide UTE C15-712-1. Il tient compte des facteurs de correction liés aux conditions de pose :",
+        ),
+        new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true, children: [new TextRun({ text: "Iz' = Iz × K1 × K2 × K3 × K4", bold: true })] }),
+        new Paragraph({ keepNext: true, children: [new TextRun('Avec :')] }),
+        ...[
+          "Iz' : courant admissible du câble dans ses conditions de pose (A) ;",
+          'Iz : courant admissible de référence du câble choisi, donné par le fabricant pour sa méthode de référence (B, C, E ou F) à 30 °C (A) ;',
+          'K1 : facteur de correction lié au mode de pose (NF C 15-100, tableau 52C pour le mode de pose, tableau 52G pour la méthode de référence) ;',
+          'K2 : facteur de correction lié au groupement de circuits jointifs (NF C 15-100, tableau 52N) ;',
+          "K3 : facteur de correction lié à la température ambiante et à la nature de l'isolant (NF C 15-100, tableau 52K) ;",
+          'K4 : facteur de correction lié au nombre de couches de câbles (NF C 15-100, tableau 52O).',
+        ].map((line) => new Paragraph({ indent: { left: 360 }, children: [new TextRun(line)] })),
+        new Paragraph(
+          "Conditions à vérifier : côté DC, Iz' ≥ 1,25 × Isc × Np, courant de conception du champ (UTE C15-712-1) ; côté AC, Ib ≤ In ≤ Iz', avec Ib le courant d'emploi (Iac max de l'onduleur) et In le calibre du disjoncteur (NF C 15-100).",
+        ),
+        styledTable(
+          [
+            ['Liaison', 'S (mm²)', 'Iz (A)', 'K1', 'K2', 'K3', 'K4', "Iz' (A)", 'Courant de conception (A)'],
+            [
+              '{#cableSizingRows}{link}',
+              [valueRun('{sectionMm2}')],
+              [valueRun('{iz}')],
+              [valueRun('{k1}')],
+              [valueRun('{k2}')],
+              [valueRun('{k3}')],
+              [valueRun('{k4}')],
+              [valueRun('{izCorrected}')],
+              [valueRun('{designCurrent}{/cableSizingRows}')],
+            ],
+          ],
+          { header: true, labelColumn: true },
+        ),
+        new Paragraph('{#cableSizingRows}'),
+        new Paragraph({ spacing: { before: 200 }, keepNext: true, children: [new TextRun({ text: '{link}', bold: true })] }),
+        new Paragraph({ keepNext: true, children: [valueRun('{factorsText}')] }),
+        new Paragraph({ keepNext: true, children: [anLabel(), new TextRun(' {application}')] }),
+        new Paragraph({ keepNext: true, children: [new TextRun('Résultat : '), valueRun('{result}')] }),
+        new Paragraph({ children: [conclusionRun('{conclusion}')] }),
+        new Paragraph('{/cableSizingRows}'),
+
+        // Voltage drop note (Task 21): replaces the bare drop table; each run against its own limit.
+        new Paragraph({ text: '{sectionNumberCablage}2 Chute de tension', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph('{voltageDropLimitsText}'),
+        styledTable(
+          [
+            ['Liaison', 'ρ (Ω·mm²/m)', 'L (m)', 'I (A)', 'S (mm²)', 'U (V)', 'ΔU (V)', 'ΔU (%)', 'Limite (%)'],
+            [
+              '{#voltageDropRows}{link}',
+              [valueRun('{rho}')],
+              [valueRun('{lengthM}')],
+              [valueRun('{currentA}')],
+              [valueRun('{sectionMm2}')],
+              [valueRun('{voltageV}')],
+              [valueRun('{dropV}')],
+              [valueRun('{dropPct}')],
+              [valueRun('{limitPct}{/voltageDropRows}')],
+            ],
+          ],
+          { header: true, labelColumn: true },
+        ),
+        new Paragraph('{#voltageDropRows}'),
+        new Paragraph({ spacing: { before: 200 }, keepNext: true, children: [new TextRun({ text: '{link}', bold: true })] }),
+        new Paragraph({ keepNext: true, children: [new TextRun('Formule : '), new TextRun('{formula}')] }),
+        new Paragraph({ keepNext: true, children: [anLabel(), new TextRun(' {application}')] }),
+        new Paragraph({ keepNext: true, children: [new TextRun('Résultat : '), valueRun('{result}')] }),
+        new Paragraph({ children: [conclusionRun('{conclusion}')] }),
+        new Paragraph('{/voltageDropRows}'),
 
         new Paragraph({ text: '{sectionNumberTerre} Mise à la terre', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{earthing}'),

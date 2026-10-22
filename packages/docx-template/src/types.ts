@@ -19,6 +19,56 @@ export interface ProtectionNote extends CalculationNote {
   chosen: string;
 }
 
+/**
+ * The current-carrying capacity note of one cable run (DC, then AC): Iz' = Iz × K1 × K2 × K3 × K4
+ * with each NF C 15-100 factor, against the run's design current. Pre-formatted French text.
+ */
+export interface CableSizingRow {
+  /** `Liaison DC (label)`. */
+  link: string;
+  /** The install method named in French with its code, e.g. `Chemin de câbles perforé (mode de pose 13)`. */
+  installMethodText: string;
+  sectionMm2: string;
+  /** Reference current-carrying capacity of the cable (A). */
+  iz: string;
+  k1: string;
+  k2: string;
+  k3: string;
+  k4: string;
+  /** Iz' (A), the engine's `*_RUN_IZ_CORRECTED`. */
+  izCorrected: string;
+  /** DC: 1,25 × Isc × Np; AC: Ib = Σ Iac max (A). */
+  designCurrent: string;
+  /** One line per factor, with the install conditions it comes from (`\n`-separated). */
+  factorsText: string;
+  /** `Iz' = 56 × 1 × 1 × 0,82 × 1 = 45,92 A`. */
+  application: string;
+  result: string;
+  conclusion: string;
+}
+
+/** The voltage drop note of one cable run: the engine formula, its inputs and the run's own limit. */
+export interface VoltageDropRow {
+  link: string;
+  /** The formula, then its legend (`\n`-separated). */
+  formula: string;
+  /** Resistivity (Ω·mm²/m). */
+  rho: string;
+  lengthM: string;
+  currentA: string;
+  sectionMm2: string;
+  /** The reference voltage: the string Vmp (DC) or Un (AC), in V. */
+  voltageV: string;
+  dropV: string;
+  dropPct: string;
+  /** This run's own limit (%): DC 3, AC 1 by default. */
+  limitPct: string;
+  /** Two lines: ΔU in V, then in %. */
+  application: string;
+  result: string;
+  conclusion: string;
+}
+
 export interface DossierTemplateData {
   /** True when STEG pieces are missing: the title is followed by the draft notice. */
   isDraft: boolean;
@@ -77,10 +127,12 @@ export interface DossierTemplateData {
   stringSizingNotes: CalculationNote[];
   /** The protection sizing notes (DC switch, DC SPD, differential breaker, AC SPD, AC disconnection). */
   protectionNotes: ProtectionNote[];
-  voltageDropDuDcV: string;
-  voltageDropDuDcPct: string;
-  voltageDropDuAcV: string;
-  voltageDropDuAcPct: string;
+  /** The current-carrying capacity notes, DC run then AC run (Task 21). */
+  cableSizingRows: CableSizingRow[];
+  /** The voltage drop notes, DC run then AC run, each with its own limit (Task 21). */
+  voltageDropRows: VoltageDropRow[];
+  /** `La chute de tension est calculée pour chaque tronçon ; limites : DC 3 %, AC 1 % (UTE C15-712-1).` */
+  voltageDropLimitsText: string;
   // The stability table is only rendered when stabilityComputed is true (the project supplied
   // the wind-stability inputs); otherwise the three strings below are empty and unused.
   stabilityComputed: boolean;
@@ -126,7 +178,8 @@ export interface DossierTemplateData {
     pacW: string;
     mppts: { mpptLabel: string; stringsInParallel: number; modulesPerString: number }[];
   }[];
-  cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];
+  /** Every cable run: numbers formatted fr-FR, the install method named (not a bare code). */
+  cableRuns: { label: string; sectionMm2: string; lengthM: string; installMethod: string }[];
   dcFuseRequired: boolean;
   acIsolatorRequired: boolean;
 }

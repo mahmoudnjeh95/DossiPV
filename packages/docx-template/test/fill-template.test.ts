@@ -92,10 +92,42 @@ const baseData: DossierTemplateData = {
       conclusion: "L'interrupteur-sectionneur DC choisi est conforme.",
     },
   ],
-  voltageDropDuDcV: '2,3',
-  voltageDropDuDcPct: '0,74',
-  voltageDropDuAcV: '1,1',
-  voltageDropDuAcPct: '0,48',
+  cableSizingRows: [
+    {
+      link: 'Liaison DC (Ch PV 1)',
+      installMethodText: 'Chemin de câbles perforé (mode de pose 13)',
+      sectionMm2: '6',
+      iz: '56',
+      k1: '1',
+      k2: '1',
+      k3: '0,82',
+      k4: '1',
+      izCorrected: '45,92',
+      designCurrent: '17,40',
+      factorsText: 'Mode de pose : Chemin de câbles perforé (mode de pose 13) → K1 = 1\nGroupement : un seul circuit → K2 = 1',
+      application: "Iz' = 56 × 1 × 1 × 0,82 × 1 = 45,92 A",
+      result: "Iz' = 45,92 A",
+      conclusion: "Iz' = 45,92 A ≥ courant de conception 1,25 × Isc × Np = 17,40 A : condition vérifiée, la section de 6 mm² est retenue.",
+    },
+  ],
+  voltageDropRows: [
+    {
+      link: 'Liaison AC (Onduleur → TGBT)',
+      formula: 'ΔU = b × (ρ × L / S × cos φ + λ × L × sin φ) × Iac max ; ΔU (%) = 100 × ΔU / Un\nb = 2 en monophasé',
+      rho: '0,02314',
+      lengthM: '10',
+      currentA: '16',
+      sectionMm2: '4',
+      voltageV: '230',
+      dropV: '1,496',
+      dropPct: '0,65',
+      limitPct: '1',
+      application: 'ΔU = 2 × (0,02314 × 10 / 4 × 0,8 + 0,00008 × 10 × 0,6) × 16 = 1,496 V\nΔU (%) = 100 × 1,496 / 230 = 0,65 %',
+      result: 'ΔU = 1,496 V, soit 0,65 %',
+      conclusion: 'ΔU = 0,65 % ≤ 1 % : la chute de tension est admissible.',
+    },
+  ],
+  voltageDropLimitsText: 'La chute de tension est calculée pour chaque tronçon ; limites : DC 3 %, AC 1 % (UTE C15-712-1).',
   stabilityComputed: true,
   stabilityWeightN: '1200',
   stabilityLhs: '1500',
@@ -137,7 +169,7 @@ const baseData: DossierTemplateData = {
       mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }],
     },
   ],
-  cableRuns: [{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }],
+  cableRuns: [{ label: 'DC-1', sectionMm2: '6', lengthM: '20', installMethod: 'Chemin de câbles perforé (mode de pose 13)' }],
   dcFuseRequired: false,
   acIsolatorRequired: false,
 };
@@ -277,10 +309,6 @@ describe('fillDossierTemplate', () => {
       inverterSpecVdcMaxV: '550',
       inverterSpecMpptMinV: '90',
       inverterSpecMpptMaxV: '550',
-      voltageDropDuDcV: '2,1',
-      voltageDropDuDcPct: '1,11',
-      voltageDropDuAcV: '3,4',
-      voltageDropDuAcPct: '1,47',
       stabilityWeightN: '2450',
       stabilityLhs: '1200',
       stabilityRhs: '900',
@@ -292,7 +320,63 @@ describe('fillDossierTemplate', () => {
     const documentXml = zip.file('word/document.xml')!.asText();
     expect(documentXml).toContain('620');
     expect(documentXml).toContain('46,5');
-    expect(documentXml).toContain('1,11');
+    expect(documentXml).toContain('2450');
+  });
+
+  describe('cable sizing and voltage drop notes (Task 21)', () => {
+    const filled = fillDossierTemplate(templateBuffer, baseData);
+    const xml = new PizZip(filled).file('word/document.xml')!.asText();
+    const lines = (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? [])
+      .map((p) => p.replace(/<w:br\/>/g, '|').replace(/<[^>]+>/g, '').replace(/&apos;/g, "'"))
+      .filter((line) => line !== '');
+    const runOf = (needle: string): string => (xml.match(/<w:r>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g) ?? []).find((run) => run.includes(needle))!;
+    const tables = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) ?? [];
+    const tableText = (needle: string): string => tables.map((t) => t.replace(/<[^>]+>/g, '')).map((t) => t.replace(/&apos;/g, "'")).find((t) => t.includes(needle))!;
+
+    it('prints the Iz\' formula with the K1–K4 definitions and their NF C 15-100 tables, the table, then each run note', () => {
+      const start = lines.indexOf('VI.1 Dimensionnement des câbles');
+      expect(start).toBeGreaterThan(lines.indexOf('VI. Câblage'));
+      expect(lines.slice(start + 2, start + 10)).toEqual([
+        "Iz' = Iz × K1 × K2 × K3 × K4",
+        'Avec :',
+        "Iz' : courant admissible du câble dans ses conditions de pose (A) ;",
+        'Iz : courant admissible de référence du câble choisi, donné par le fabricant pour sa méthode de référence (B, C, E ou F) à 30 °C (A) ;',
+        'K1 : facteur de correction lié au mode de pose (NF C 15-100, tableau 52C pour le mode de pose, tableau 52G pour la méthode de référence) ;',
+        'K2 : facteur de correction lié au groupement de circuits jointifs (NF C 15-100, tableau 52N) ;',
+        "K3 : facteur de correction lié à la température ambiante et à la nature de l'isolant (NF C 15-100, tableau 52K) ;",
+        'K4 : facteur de correction lié au nombre de couches de câbles (NF C 15-100, tableau 52O).',
+      ]);
+      expect(tableText("Iz' (A)")).toContain(['Liaison DC (Ch PV 1)', '6', '56', '1', '1', '0,82', '1', '45,92', '17,40'].join(''));
+      const note = lines.lastIndexOf('Liaison DC (Ch PV 1)');
+      expect(lines.slice(note, note + 5)).toEqual([
+        'Liaison DC (Ch PV 1)',
+        'Mode de pose : Chemin de câbles perforé (mode de pose 13) → K1 = 1|Groupement : un seul circuit → K2 = 1',
+        "Application numérique : Iz' = 56 × 1 × 1 × 0,82 × 1 = 45,92 A",
+        "Résultat : Iz' = 45,92 A",
+        "Iz' = 45,92 A ≥ courant de conception 1,25 × Isc × Np = 17,40 A : condition vérifiée, la section de 6 mm² est retenue.",
+      ]);
+      expect(runOf('45,92 A ≥ courant')).toContain('<w:color w:val="C00000"/>');
+      expect(runOf('45,92 A ≥ courant')).toMatch(/<w:u w:val="single"\/>/);
+      expect(runOf('Mode de pose : Chemin')).toContain('<w:color w:val="1F4E9A"/>');
+    });
+
+    it('prints the voltage drop limits, the per-run table with its own limit, then each run note, before the earthing section', () => {
+      const start = lines.indexOf('VI.2 Chute de tension');
+      expect(start).toBeGreaterThan(lines.indexOf('VI.1 Dimensionnement des câbles'));
+      expect(lines[start + 1]).toBe('La chute de tension est calculée pour chaque tronçon ; limites : DC 3 %, AC 1 % (UTE C15-712-1).');
+      expect(tableText('ΔU (%)')).toContain(['Liaison', 'ρ (Ω·mm²/m)', 'L (m)', 'I (A)', 'S (mm²)', 'U (V)', 'ΔU (V)', 'ΔU (%)', 'Limite (%)'].join(''));
+      expect(tableText('ΔU (%)')).toContain(['Liaison AC (Onduleur → TGBT)', '0,02314', '10', '16', '4', '230', '1,496', '0,65', '1'].join(''));
+      const note = lines.lastIndexOf('Liaison AC (Onduleur → TGBT)');
+      expect(lines.slice(note, note + 5)).toEqual([
+        'Liaison AC (Onduleur → TGBT)',
+        'Formule : ΔU = b × (ρ × L / S × cos φ + λ × L × sin φ) × Iac max ; ΔU (%) = 100 × ΔU / Un|b = 2 en monophasé',
+        'Application numérique : ΔU = 2 × (0,02314 × 10 / 4 × 0,8 + 0,00008 × 10 × 0,6) × 16 = 1,496 V|ΔU (%) = 100 × 1,496 / 230 = 0,65 %',
+        'Résultat : ΔU = 1,496 V, soit 0,65 %',
+        'ΔU = 0,65 % ≤ 1 % : la chute de tension est admissible.',
+      ]);
+      expect(lines[note + 5]).toBe('VII. Mise à la terre');
+      expect(runOf('la chute de tension est admissible')).toContain('<w:color w:val="C00000"/>');
+    });
   });
 
   it('renders the dimensioning and production section with its monthly rows', () => {

@@ -6,6 +6,7 @@ import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
 import { buildProtectionNotes, buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
+import { buildCableSizingRows, buildVoltageDropLimitsText, buildVoltageDropRows, installMethodText } from './cable-notes';
 
 export interface EarthingRow {
   rodCount: number;
@@ -22,7 +23,8 @@ export interface BuildTemplateDataInput {
   projectMeta: ProjectMeta;
   snapshot: {
     client: { fullName: string; address: string | null; stegReference: string | null; cin: string | null } | null;
-    cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string }[];
+    /** circuitType ('DC' | 'AC') names the engine's dcRun/acRun links; absent from older test snapshots. */
+    cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string; circuitType?: string }[];
     /** The project's earthing row; null when the project has none. */
     earthing: EarthingRow | null;
     // Each inverter's own brand/model, by snapshot array index — projectMeta.inverterBrandModel
@@ -249,6 +251,7 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     derived.STABILITY_RHS !== undefined;
 
   const draftMissing = input.draftMissing ?? [];
+  const cableNotesInput = { engineInput, engineResult: workerResult.engineResult, cableRuns: snapshot.cableRuns };
   return {
     isDraft: draftMissing.length > 0,
     draftMissingText: draftMissing.join(' ; '),
@@ -288,9 +291,9 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     })),
     cableRuns: snapshot.cableRuns.map((run) => ({
       label: run.label,
-      sectionMm2: run.sectionMm2,
-      lengthM: run.lengthM,
-      installMethod: run.installMethod,
+      sectionMm2: fmtUpTo(run.sectionMm2, 2),
+      lengthM: fmtUpTo(run.lengthM, 2),
+      installMethod: installMethodText(run.installMethod),
     })),
     dcFuseRequired,
     acIsolatorRequired,
@@ -312,10 +315,10 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
       labels: projectMeta.protections,
       acSpdInKA: snapshot.acSpdInKA ?? null,
     }),
-    voltageDropDuDcV: fmt(workerResult.engineResult.derived.DU_DC_V!),
-    voltageDropDuDcPct: fmt(workerResult.engineResult.derived.DU_DC_PCT!, 2),
-    voltageDropDuAcV: fmt(workerResult.engineResult.derived.DU_AC_V!),
-    voltageDropDuAcPct: fmt(workerResult.engineResult.derived.DU_AC_PCT!, 2),
+    // The bare drop table (old IV.1) is replaced by the per-run notes with their inputs (Task 21).
+    cableSizingRows: buildCableSizingRows(cableNotesInput),
+    voltageDropRows: buildVoltageDropRows(cableNotesInput),
+    voltageDropLimitsText: buildVoltageDropLimitsText(engineInput),
     stabilityComputed,
     stabilityWeightN: stabilityComputed ? fmt(derived.F_WEIGHT_N!, 0) : '',
     stabilityLhs: stabilityComputed ? fmt(derived.STABILITY_LHS!, 0) : '',

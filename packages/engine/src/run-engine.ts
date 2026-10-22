@@ -18,12 +18,14 @@ import {
 import { ncMaxNoFuse, dcFuseCheckInput, stringVocTmin, iscFieldDesign } from './protections';
 import {
   izCorrected,
+  izCorrectionFactors,
   duDcV,
   duDcPct,
   duAcV,
   duAcPct,
   type ConductorType,
   type InsulationType,
+  type IzCorrectionFactors,
   type ReferenceMethod,
 } from './cabling';
 import {
@@ -224,6 +226,11 @@ export function runEngine(input: RunEngineInput): EngineResult {
   const fieldDesignCurrent = iscFieldDesign(module, np);
   const fuse = dcFuseCheckInput(module, ns, np, tMinC, input.dcFuse);
 
+  // The factors are exposed for the dossier's cable sizing note; izCorrected multiplies the same ones.
+  const factorsOf = (run: CableRunInput): IzCorrectionFactors =>
+    izCorrectionFactors(run.installMethod, run.referenceMethod, run.groupedCircuits, run.layers, run.ambientTempC, run.insulation);
+  const dcRunFactors = factorsOf(input.dcRun);
+  const acRunFactors = factorsOf(input.acRun);
   const dcRunIz = izCorrected(
     input.dcRun.izBaseA,
     input.dcRun.installMethod,
@@ -433,6 +440,20 @@ export function runEngine(input: RunEngineInput): EngineResult {
       NC_MAX_NO_FUSE: ncMaxNoFuse(module),
       DC_RUN_IZ_CORRECTED: dcRunIz,
       AC_RUN_IZ_CORRECTED: acRunIz,
+      DC_RUN_IZ: input.dcRun.izBaseA,
+      DC_RUN_K1: dcRunFactors.k1,
+      DC_RUN_K2: dcRunFactors.k2,
+      DC_RUN_K3: dcRunFactors.k3,
+      DC_RUN_K4: dcRunFactors.k4,
+      DC_RUN_AMBIENT_C: input.dcRun.ambientTempC,
+      AC_RUN_IZ: input.acRun.izBaseA,
+      AC_RUN_K1: acRunFactors.k1,
+      AC_RUN_K2: acRunFactors.k2,
+      AC_RUN_K3: acRunFactors.k3,
+      AC_RUN_K4: acRunFactors.k4,
+      AC_RUN_AMBIENT_C: input.acRun.ambientTempC,
+      // Design current of the AC run: every inverter's Iac max (NF C 15-100 Ib).
+      AC_DESIGN_CURRENT: sumInverterIacMaxA,
       DU_DC_V: dcDrop,
       DU_DC_PCT: dcDropPct,
       DU_AC_V: acDrop,

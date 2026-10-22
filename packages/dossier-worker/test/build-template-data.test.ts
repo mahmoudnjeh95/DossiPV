@@ -149,7 +149,8 @@ describe('buildTemplateData', () => {
     // fr-FR Intl.NumberFormat uses U+202F (narrow no-break space) as its thousands separator,
     // not a plain space — same gotcha this codebase has hit before (see pDcW above, '3 100 W').
     expect(data.inverters).toEqual([{ inverterLabel: 'Onduleur 1', inverterBrandModel: 'Sofar 1-4KTL2-G3', pacW: '3 000', mppts: [{ mpptLabel: 'MPPT 1', stringsInParallel: 1, modulesPerString: 5 }] }]);
-    expect(data.cableRuns).toEqual([{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }]);
+    // STEG remark 10: the install method is named, never a bare code; numbers use a decimal comma.
+    expect(data.cableRuns).toEqual([{ label: 'DC-1', sectionMm2: '6', lengthM: '20', installMethod: 'Chemin de câbles perforé (mode de pose 13)' }]);
     expect(data.dcFuseRequired).toBe(false);
     expect(data.acIsolatorRequired).toBe(false);
   });
@@ -205,10 +206,6 @@ describe('buildTemplateData', () => {
     expect(result.inverterSpecVdcMaxV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMinV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMaxV).toEqual(expect.any(String));
-    expect(result.voltageDropDuDcV).toEqual(expect.any(String));
-    expect(result.voltageDropDuDcPct).toEqual(expect.any(String));
-    expect(result.voltageDropDuAcV).toEqual(expect.any(String));
-    expect(result.voltageDropDuAcPct).toEqual(expect.any(String));
     expect(result.stabilityWeightN).toEqual(expect.any(String));
     expect(result.stabilityLhs).toEqual(expect.any(String));
     expect(result.stabilityRhs).toEqual(expect.any(String));
@@ -678,7 +675,7 @@ function expectApplicationConsistent(application: string): number {
   for (const line of application.split('\n')) {
     const segments = line.split(' = ');
     expect(segments.length, line).toBeGreaterThanOrEqual(3);
-    const printed = frNumber(segments[segments.length - 1]!.replace(/ (V|A|kV)$/, ''));
+    const printed = frNumber(segments[segments.length - 1]!.replace(/ (V|A|kV|%)$/, ''));
     const evaluated = evaluatePrinted(segments[1]!);
     expect(Math.abs(evaluated - printed), line).toBeLessThanOrEqual(0.006 + 1e-3 * Math.abs(printed));
     last = printed;
@@ -977,5 +974,239 @@ describe('protection sizing notes (Task 20)', () => {
       }
     }
     expect(text).not.toMatch(/undefined|NaN/);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Cable sizing and voltage drop notes (Task 21): every printed factor, current and drop is the
+// engine's, and every « Application numérique » recomputes the engine value from its own numbers.
+// ---------------------------------------------------------------------------------------------
+
+/** The reference fixture with the separate AC limit of Task 28 (DC 3 %, AC 1 %). */
+const referenceWithLimits: RunEngineInput = { ...habibKhedhiraFixture, maxAcVoltageDropPct: 1 };
+
+/**
+ * Other install conditions on both runs: DC fixed on a wall (mode 11, method C, 2 circuits, in
+ * the sun at 80 °C, 30 m); AC on a perforated tray (mode 13, method E, 2 circuits, 2 layers, PVC
+ * at 40 °C) over 25 m, where 4 mm² would exceed 1 %: the AC section is enlarged to 10 mm².
+ */
+const longAcFixture: RunEngineInput = {
+  ...referenceWithLimits,
+  dcRun: { ...habibKhedhiraFixture.dcRun, installMethod: '11', referenceMethod: 'C', groupedCircuits: 2, ambientTempC: 80, lengthM: 30, izBaseA: 70 },
+  acRun: {
+    ...habibKhedhiraFixture.acRun,
+    installMethod: '13',
+    referenceMethod: 'E',
+    insulation: 'PVC',
+    groupedCircuits: 2,
+    layers: 2,
+    ambientTempC: 40,
+    lengthM: 25,
+    sectionMm2: 10,
+    izBaseA: 57,
+  },
+};
+
+const CABLE_FIXTURES: [string, RunEngineInput][] = [
+  ['reference with DC 3 % / AC 1 %', referenceWithLimits],
+  ['long AC run on a tray', longAcFixture],
+  ['2 bifacial strings', twoStringBifacialFixture],
+  ['3 fused strings', fusedFixture],
+];
+
+const CABLE_RUNS = [
+  { label: 'Ch PV 1', sectionMm2: 6, lengthM: 20, installMethod: '13', circuitType: 'DC' },
+  { label: 'Onduleur → TGBT', sectionMm2: 4, lengthM: 10, installMethod: '3A', circuitType: 'AC' },
+];
+
+function cableData(engineInput: RunEngineInput): { engineResult: EngineResult; data: DossierTemplateData } {
+  const { engineResult, input } = notesInput(engineInput);
+  return { engineResult, data: buildTemplateData({ ...input, snapshot: { ...input.snapshot, cableRuns: CABLE_RUNS } }) };
+}
+
+/** Independent of the code under test: up to `decimals` decimals, decimal comma. */
+function upTo(value: number, decimals = 4): string {
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: decimals }).format(value);
+}
+
+function three(value: number): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).format(value);
+}
+
+describe('cable sizing and voltage drop notes (Task 21)', () => {
+  it.each(CABLE_FIXTURES)("prints Iz, K1–K4, Iz' and the design current of the engine, and applications that recompute them (%s)", (_name, fixture) => {
+    const { engineResult, data } = cableData(fixture);
+    const d = engineResult.derived;
+    const [dc, ac] = data.cableSizingRows;
+
+    expect(engineResult.hasBlockingFailure).toBe(false);
+    expect(data.cableSizingRows).toHaveLength(2);
+    for (const [row, side, design, run] of [
+      [dc!, 'DC', two(d.ISC_FIELD_DESIGN!), fixture.dcRun],
+      [ac!, 'AC', upTo(d.AC_DESIGN_CURRENT!), fixture.acRun],
+    ] as const) {
+      expect(row).toMatchObject({
+        sectionMm2: upTo(run.sectionMm2),
+        iz: upTo(d[`${side}_RUN_IZ`]!),
+        k1: upTo(d[`${side}_RUN_K1`]!),
+        k2: upTo(d[`${side}_RUN_K2`]!),
+        k3: upTo(d[`${side}_RUN_K3`]!),
+        k4: upTo(d[`${side}_RUN_K4`]!),
+        izCorrected: two(d[`${side}_RUN_IZ_CORRECTED`]!),
+        designCurrent: design,
+      });
+      expect(row.application).toBe(`Iz' = ${row.iz} × ${row.k1} × ${row.k2} × ${row.k3} × ${row.k4} = ${row.izCorrected} A`);
+      expect(expectApplicationConsistent(row.application)).toBeCloseTo(d[`${side}_RUN_IZ_CORRECTED`]!, 2);
+      expect(row.factorsText).toContain(`Température ambiante : ${upTo(d[`${side}_RUN_AMBIENT_C`]!)} °C`);
+      expect(row.conclusion).toContain('condition vérifiée');
+    }
+  });
+
+  it.each(CABLE_FIXTURES)('prints the voltage drops of the engine, each against its own run limit (%s)', (_name, fixture) => {
+    const { engineResult, data } = cableData(fixture);
+    const d = engineResult.derived;
+    const [dc, ac] = data.voltageDropRows;
+
+    expect(data.voltageDropRows).toHaveLength(2);
+    expect(dc).toMatchObject({ dropV: three(d.DU_DC_V!), dropPct: two(d.DU_DC_PCT!), limitPct: upTo(fixture.maxVoltageDropPct) });
+    expect(ac).toMatchObject({ dropV: three(d.DU_AC_V!), dropPct: two(d.DU_AC_PCT!), limitPct: upTo(fixture.maxAcVoltageDropPct ?? fixture.maxVoltageDropPct) });
+    for (const [row, volts, pct] of [[dc!, d.DU_DC_V!, d.DU_DC_PCT!], [ac!, d.DU_AC_V!, d.DU_AC_PCT!]] as const) {
+      const [voltsLine, pctLine] = row.application.split('\n');
+      expect(expectApplicationConsistent(voltsLine!)).toBeCloseTo(volts, 3);
+      expect(Math.abs(expectApplicationConsistent(pctLine!) - pct)).toBeLessThanOrEqual(0.005);
+      expect(voltsLine!.endsWith(`= ${three(volts)} V`), voltsLine).toBe(true);
+      expect(pctLine!.endsWith(`= ${two(pct)} %`), pctLine).toBe(true);
+      expect(row.conclusion).toBe(`ΔU = ${two(pct)} % ≤ ${row.limitPct} % : la chute de tension est admissible.`);
+    }
+    // The inputs printed are the engine's own.
+    expect(dc).toMatchObject({ rho: '0,02314', lengthM: upTo(fixture.dcRun.lengthM), sectionMm2: upTo(fixture.dcRun.sectionMm2), voltageV: upTo(d.STRING_VMP_STC!) });
+    expect(ac).toMatchObject({ rho: '0,02314', lengthM: upTo(fixture.acRun.lengthM), sectionMm2: upTo(fixture.acRun.sectionMm2), voltageV: '230' });
+    for (const row of [...data.cableSizingRows, ...data.voltageDropRows]) expect(Object.values(row).join('\n')).not.toMatch(/\d\.\d|NaN|undefined/);
+  });
+
+  it("writes the reference rows: mode 13 named, Iz' of the engine, DC limit 3 % and AC limit 1 %", () => {
+    const { engineResult, data } = cableData(referenceWithLimits);
+    const [dc, ac] = data.cableSizingRows;
+    const duDc = three(engineResult.derived.DU_DC_V!);
+
+    expect(dc).toEqual({
+      link: 'Liaison DC (Ch PV 1)',
+      installMethodText: 'Chemin de câbles perforé (mode de pose 13)',
+      sectionMm2: '6',
+      iz: '56',
+      k1: '1',
+      k2: '1',
+      k3: '0,82',
+      k4: '1',
+      izCorrected: two(engineResult.derived.DC_RUN_IZ_CORRECTED!),
+      designCurrent: '17,40',
+      factorsText: [
+        'Mode de pose : Chemin de câbles perforé (mode de pose 13) → K1 = 1',
+        'Groupement : un seul circuit → K2 = 1',
+        'Température ambiante : 50 °C, isolant PR → K3 = 0,82',
+        'Pose en 1 couche → K4 = 1',
+        'Iz du câble de 6 mm² (méthode de référence B, 30 °C) = 56 A',
+      ].join('\n'),
+      application: "Iz' = 56 × 1 × 1 × 0,82 × 1 = 45,92 A",
+      result: "Iz' = 45,92 A",
+      conclusion: "Iz' = 45,92 A ≥ courant de conception 1,25 × Isc × Np = 17,40 A : condition vérifiée, la section de 6 mm² est retenue.",
+    });
+    expect(ac).toMatchObject({
+      link: 'Liaison AC (Onduleur → TGBT)',
+      installMethodText: 'Conduit en montage apparent (mode de pose 3A)',
+      k1: '0,9',
+      izCorrected: '23,62',
+      designCurrent: '16',
+      conclusion: "Ib = 16 A ≤ In = 20 A ≤ Iz' = 23,62 A : condition vérifiée, la section de 4 mm² est retenue.",
+    });
+
+    const [dcDrop, acDrop] = data.voltageDropRows;
+    expect(dcDrop).toEqual({
+      link: 'Liaison DC (Ch PV 1)',
+      formula: [
+        'ΔU = 2 × ρ × L / S × Imp × Np ; ΔU (%) = 100 × ΔU / (Ns × Vmp)',
+        'ρ : résistivité du conducteur (Ω·mm²/m) ; L : longueur simple du tronçon (m) ; S : section (mm²) ; Imp : courant du module au point de puissance maximale (A) ; Np : chaînes en parallèle ; Ns × Vmp : tension de la chaîne au point de puissance maximale (V)',
+      ].join('\n'),
+      rho: '0,02314',
+      lengthM: '20',
+      currentA: '13,33',
+      sectionMm2: '6',
+      voltageV: '232,5',
+      dropV: duDc,
+      dropPct: '0,88',
+      limitPct: '3',
+      application: `ΔU = 2 × 0,02314 × 20 / 6 × 13,33 × 1 = ${duDc} V\nΔU (%) = 100 × ${duDc} / (5 × 46,5) = 0,88 %`,
+      result: `ΔU = ${duDc} V, soit 0,88 %`,
+      conclusion: 'ΔU = 0,88 % ≤ 3 % : la chute de tension est admissible.',
+    });
+    expect(acDrop!.formula.split('\n')[0]).toBe('ΔU = b × (ρ × L / S × cos φ + λ × L × sin φ) × Iac max ; ΔU (%) = 100 × ΔU / Un');
+    expect(acDrop!.application).toBe('ΔU = 2 × (0,02314 × 10 / 4 × 0,8 + 0,00008 × 10 × 0,6) × 16 = 1,496 V\nΔU (%) = 100 × 1,496 / 230 = 0,65 %');
+    expect(acDrop).toMatchObject({ currentA: '16', voltageV: '230', dropPct: two(engineResult.derived.DU_AC_PCT!), limitPct: '1' });
+    expect(dcDrop!.limitPct).toBe('3');
+    expect(data.voltageDropLimitsText).toBe('La chute de tension est calculée pour chaque tronçon ; limites : DC 3 %, AC 1 % (UTE C15-712-1).');
+  });
+
+  it('names the tray install method and the enlarged AC section of the long AC run', () => {
+    const { data } = cableData(longAcFixture);
+    const [dc, ac] = data.cableSizingRows;
+
+    expect(dc!.installMethodText).toBe('Câble fixé sur un mur (mode de pose 11)');
+    expect(dc!.factorsText).toContain('Groupement : 2 circuits jointifs (méthode de référence C) → K2 = 0,8');
+    expect(ac!.installMethodText).toBe('Chemin de câbles perforé (mode de pose 13)');
+    expect(ac!.factorsText).toContain('Groupement : 2 circuits jointifs (méthode de référence E) → K2 = 0,88');
+    expect(ac!.factorsText).toContain('Température ambiante : 40 °C, isolant PVC → K3 = 0,87');
+    expect(ac!.factorsText).toContain('Pose en 2 couches → K4 = 0,8');
+    expect(data.voltageDropRows[1]!.limitPct).toBe('1');
+  });
+
+  it('says the AC drop is not admissible when 4 mm² over 25 m exceeds the 1 % limit', () => {
+    const tooThin: RunEngineInput = { ...longAcFixture, acRun: { ...longAcFixture.acRun, sectionMm2: 4, izBaseA: 32 } };
+    const { engineResult, data } = cableData(tooThin);
+
+    expect(engineResult.checks.find((check) => check.id === 'C17')?.pass).toBe(false);
+    expect(data.voltageDropRows[1]!.conclusion).toBe(`ΔU = ${two(engineResult.derived.DU_AC_PCT!)} % > 1 % : la chute de tension n'est pas admissible.`);
+    expect(data.voltageDropRows[0]!.conclusion).toContain('est admissible');
+  });
+
+  it('never claims a cable conformity the engine checks do not support', () => {
+    const { data } = cableData({ ...referenceWithLimits, dcRun: { ...referenceWithLimits.dcRun, izBaseA: 20 }, acBreaker: { ratedCurrentA: 25 } });
+    const [dc, ac] = data.cableSizingRows;
+
+    expect(dc!.conclusion).toBe("Condition Iz' ≥ courant de conception non vérifiée : Courant admissible du câble DC insuffisant pour le courant de champ.");
+    expect(ac!.conclusion).toBe("Condition Ib ≤ In ≤ Iz' non vérifiée : Calibre du disjoncteur AC hors plage [Iac onduleur, Iz câble].");
+  });
+
+  it('fills the cable sizing and voltage drop notes into the real Word template, in order', () => {
+    const { data } = cableData(referenceWithLimits);
+    const text = filledTemplateText(data);
+    const start = text.indexOf('VI.1 Dimensionnement des câbles');
+
+    expect(start).toBeGreaterThan(text.indexOf('VI. Câblage'));
+    expect(text).not.toMatch(/undefined|NaN/);
+    // The cable table names the install method (STEG remark 10).
+    expect(text.slice(text.indexOf('VI. Câblage'), start)).toContain('Conduit en montage apparent (mode de pose 3A)');
+    let cursor = start;
+    const expectNext = (part: string): void => {
+      const at = text.indexOf(part, cursor);
+      expect(at, part).toBeGreaterThanOrEqual(cursor);
+      cursor = at;
+    };
+    expectNext("Iz' = Iz × K1 × K2 × K3 × K4");
+    expectNext('K1 : facteur de correction lié au mode de pose');
+    expectNext('K4 : facteur de correction lié au nombre de couches');
+    for (const row of data.cableSizingRows) {
+      expectNext(row.link);
+      expectNext(row.factorsText.split('\n')[0]!);
+      expectNext(`Application numérique : ${row.application}`);
+      expectNext(row.conclusion);
+    }
+    expectNext('VI.2 Chute de tension');
+    expectNext(data.voltageDropLimitsText);
+    for (const row of data.voltageDropRows) {
+      expectNext(row.link);
+      expectNext(`Application numérique : ${row.application.split('\n')[0]!}`);
+      expectNext(row.conclusion);
+    }
+    expect(cursor).toBeLessThan(text.indexOf('VII. Mise à la terre'));
   });
 });

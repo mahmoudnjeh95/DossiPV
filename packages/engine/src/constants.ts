@@ -58,6 +58,30 @@ export const K1_BY_METHOD: Record<string, number> = {
   '18': 1.21,
 };
 
+/**
+ * Plain French name of every install method that has a K1 factor, worded after NF C 15-100
+ * table 52C, with its code (STEG remark 10: the dossier must not print bare codes). Not part of
+ * the schema's x-rules.constants, so constants.test.ts does not diff it.
+ */
+export const INSTALL_METHOD_LABELS: Record<string, string> = {
+  '1': 'Conducteurs isolés sous conduit encastré dans une paroi thermiquement isolante (mode de pose 1)',
+  '2': 'Câble multiconducteur sous conduit encastré dans une paroi thermiquement isolante (mode de pose 2)',
+  '3': 'Conducteurs isolés sous conduit en montage apparent (mode de pose 3)',
+  '3A': 'Conduit en montage apparent (mode de pose 3A)',
+  '4': 'Conducteurs isolés sous conduit profilé en montage apparent (mode de pose 4)',
+  '4A': 'Conduit profilé en montage apparent (mode de pose 4A)',
+  '5': 'Conducteurs isolés sous conduit encastré dans une paroi (mode de pose 5)',
+  '5A': 'Conduit encastré dans une paroi (mode de pose 5A)',
+  '11': 'Câble fixé sur un mur (mode de pose 11)',
+  '11A': 'Câble fixé à un plafond (mode de pose 11A)',
+  '12': 'Chemin de câbles ou tablette non perforés (mode de pose 12)',
+  '13': 'Chemin de câbles perforé (mode de pose 13)',
+  '14': 'Corbeaux ou chemin de câbles en treillis soudé (mode de pose 14)',
+  '16': 'Échelle à câbles (mode de pose 16)',
+  '17': 'Câble suspendu à un câble porteur ou autoporteur (mode de pose 17)',
+  '18': 'Conducteurs nus ou isolés sur isolateurs (mode de pose 18)',
+};
+
 export const K2_TRAY_PERFORATED_E_F: number[] = [
   1.0, 0.88, 0.82, 0.77, 0.75, 0.73, 0.73, 0.72, 0.72,
 ];

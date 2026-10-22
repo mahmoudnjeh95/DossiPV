@@ -41,6 +41,22 @@ describe('runEngine — reference dossier (Habib Khedhira, corrected)', () => {
     expect(strict?.message).toContain('Chute de tension AC');
   });
 
+  it('exposes the cable sizing inputs: Iz, K1–K4, ambient temperature and the AC design current', () => {
+    const d = runEngine(habibKhedhiraFixture).derived;
+    // DC: mode 13, method B, 1 circuit, 1 layer, 50 °C PR; AC: mode 3A, same conditions.
+    expect([d.DC_RUN_IZ, d.DC_RUN_K1, d.DC_RUN_K2, d.DC_RUN_K3, d.DC_RUN_K4, d.DC_RUN_AMBIENT_C]).toEqual([56, 1, 1, 0.82, 1, 50]);
+    expect([d.AC_RUN_IZ, d.AC_RUN_K1, d.AC_RUN_K2, d.AC_RUN_K3, d.AC_RUN_K4, d.AC_RUN_AMBIENT_C]).toEqual([32, 0.9, 1, 0.82, 1, 50]);
+    expect(d.AC_DESIGN_CURRENT).toBe(16);
+    expect(d.DC_RUN_IZ! * d.DC_RUN_K1! * d.DC_RUN_K2! * d.DC_RUN_K3! * d.DC_RUN_K4!).toBe(d.DC_RUN_IZ_CORRECTED);
+    expect(d.AC_RUN_IZ! * d.AC_RUN_K1! * d.AC_RUN_K2! * d.AC_RUN_K3! * d.AC_RUN_K4!).toBe(d.AC_RUN_IZ_CORRECTED);
+  });
+
+  it('sums every inverter Iac max into AC_DESIGN_CURRENT', () => {
+    const first = habibKhedhiraFixture.array[0]!;
+    const d = runEngine({ ...habibKhedhiraFixture, array: [first, { ...first, inverter: { ...first.inverter, iacMaxA: 10 } }] }).derived;
+    expect(d.AC_DESIGN_CURRENT).toBe(26);
+  });
+
   it('returns exactly 22 checks', () => {
     const result = runEngine(habibKhedhiraFixture);
     expect(result.checks).toHaveLength(22);

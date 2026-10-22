@@ -20,7 +20,7 @@ import type { CalculationNote, ProtectionNote } from '@dossipv/docx-template';
  */
 
 /** An input as entered (up to 4 decimals), decimal comma. */
-function fr(value: number): string {
+export function fr(value: number): string {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 4 }).format(value);
 }
 
