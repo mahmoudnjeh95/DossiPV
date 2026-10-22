@@ -222,7 +222,7 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
     const urls = fetchSpy.mock.calls.map((call) => requestUrl(call[0])).sort();
     expect(urls).toEqual(
       [[10, 20], [11, 20], [10, 21], [11, 21]]
-        .map(([x, y]) => `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/20/${x}/${y}@2x.jpg90?access_token=${TOKEN}`)
+        .map(([x, y]) => `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/20/${x}/${y}@2x?access_token=${TOKEN}`)
         .sort(),
     );
     const decoded = decodeJpeg(jpeg, { useTArray: true, formatAsRGBA: true });
