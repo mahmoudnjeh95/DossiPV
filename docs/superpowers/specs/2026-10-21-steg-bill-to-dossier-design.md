@@ -42,6 +42,12 @@ app produces a dossier that a STEG reviewer would accept, and an installer finds
 - **Installer library** (user, 2026-10-21): each installer selects, from the shared catalog, the
   items it wants to use; only those items are available to that company — in the proposals and in
   every equipment choice of a project. (This is Part 1 of the 2026-10-07 spec, now built here.)
+- **STEG rules confirmed by the user (2026-10-22):** no ceiling on production versus
+  consumption — the only limit is the maximum (inverter AC power ≤ subscribed power, check C23);
+  no dedicated AC isolator is required.
+- **PVGIS is mandatory in the dossier (user, 2026-10-22):** the dossier always contains the PVGIS
+  production simulation computed at the installation's exact GPS point; if PVGIS fails, the dossier
+  is **not generated** (the job fails with a clear French message and produces no file).
 - Work is carried out by five agents: (1) implementer, (2) code reviewer, (3) STEG reviewer who
   judges the generated dossier, (4) facilitator who gathers all feedback into improvements,
   (5) installer/user who judges simplicity.
@@ -198,7 +204,9 @@ Pure function in `packages/engine/src/sizing.ts`:
 - Three proposals (deduplicated; fewer if they coincide):
   1. **Recommandée** — estimated production closest to the consumption.
   2. **Économique** — fewest modules with coverage ≥ 80 %.
-  3. **Production maximale** — highest production with coverage ≤ 120 % and DC/AC ratio ≤ 1.3.
+  3. **Production maximale** — highest production allowed by the subscribed power (C23) and DC/AC
+     ratio ≤ 1.3 (no coverage ceiling — user decision 2026-10-22; the cheap pre-filter keeps only
+     its 50 % lower bound).
   Ties: DC/AC ratio closest to 1.15, then lower module count, then brand/model alphabetical.
 - Each proposal carries the full section payload (array, protections, cabling, earthing cable),
   the summary for the card (§3), and a one-sentence French explanation.
