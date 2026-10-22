@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
-import type { LatLon, PixelPoint } from './fetch-satellite-image';
+import { IMAGERY_ATTRIBUTION, type ImageryProvider, type LatLon, type PixelPoint } from './fetch-satellite-image';
 import type { Page37Layout } from './generate-page-37-layout';
 import { drawPdfText, fitPdfText, toPdfSafeText } from './pdf-text';
 import { embedLogo, formatFrenchDate } from './render-cover-page';
@@ -19,6 +19,8 @@ export interface SitePlanImage {
   heightPx: number;
   /** Ground metres per image pixel, for the scale bar. */
   metersPerPixel: number;
+  /** Which imagery the photo came from, for the credit under it; Esri when omitted. */
+  provider?: ImageryProvider;
 }
 
 /** Installer-placed points in page-37 image pixels; `field` falls back to the site GPS. */
@@ -86,7 +88,6 @@ const INFO_TOP = 262;
 const INFO_BOTTOM = MARGIN;
 const LEFT_BLOCK = { x: MARGIN, width: 285 };
 const RIGHT_BLOCK = { x: MARGIN + 295, width: PAGE_WIDTH - 2 * MARGIN - 295 };
-const ATTRIBUTION = 'Imagerie : Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG';
 const NO_IMAGERY_TITLE = "Fond satellite indisponible — positions à l'échelle";
 const IMPLANTATION_TITLE = "Schéma d'implantation et de connexion";
 const SITUATION_TITLE = 'Plan de Situation';
@@ -205,7 +206,7 @@ async function drawBackground(doc: PDFDocument, page: PDFPage, image: SitePlanIm
   if (embedded) {
     page.drawImage(embedded, { x: placement.x, y: placement.y, width, height });
     page.drawRectangle({ x: placement.x, y: placement.y, width, height, borderColor: BLACK, borderWidth: 1 });
-    drawPdfText(page, ATTRIBUTION, { x: placement.x, y: placement.y - 11, size: 6.5, font: fonts.regular, color: GREY });
+    drawPdfText(page, IMAGERY_ATTRIBUTION[image.provider ?? 'esri'], { x: placement.x, y: placement.y - 11, size: 6.5, font: fonts.regular, color: GREY });
     return { placement, titleRect: null };
   }
 

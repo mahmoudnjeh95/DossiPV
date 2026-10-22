@@ -359,3 +359,25 @@ describe('renderSitePlanPages — non-WinAnsi text', () => {
     }
   });
 });
+
+describe('renderSitePlanPages — imagery attribution per provider', () => {
+  it('credits Mapbox, Maxar and OpenStreetMap (not Esri) on a Mapbox photo, on both plans', async () => {
+    const data = planData();
+    data.page37.image = { ...data.page37.image, provider: 'mapbox' };
+    data.page38.image = { ...data.page38.image, provider: 'mapbox' };
+
+    const pages = await render(data);
+
+    for (const page of pages) {
+      expect(pageText(page)).toContain('© Mapbox © Maxar © OpenStreetMap');
+      expect(pageText(page)).not.toContain('Esri');
+    }
+  });
+
+  it('keeps the Esri credit when no provider is given', async () => {
+    const [page37] = await render(planData());
+
+    expect(pageText(page37!)).toContain('Esri');
+    expect(pageText(page37!)).not.toContain('Mapbox');
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { computeSectionNumbers } from '../src/build-template-data';
 
@@ -107,7 +107,7 @@ import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM } from '@dossipv/engine';
 import { processJob, IMPLANTATION_VIEW_OPTIONS } from '../src/process-job';
 import type { ProductionSimulation } from '../src/run-simulation';
-import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel } from '../src/fetch-satellite-image';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, type SatelliteView } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 import { DRAFT_INSERTED_PAGE_COUNT } from '../src/draft-watermark';
@@ -1623,5 +1623,77 @@ describe('processJob — annex plan', () => {
     const failCall = mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'FAILED');
     expect((failCall![0] as { data: { failedStep: string } }).data.failedStep).toBe('annexes');
     error.mockRestore();
+  });
+});
+
+describe('processJob — Mapbox imagery', () => {
+  const originalEnv = { a: process.env.MAPBOX_ACCESS_TOKEN, b: process.env.NEXT_PUBLIC_MAPBOX_TOKEN };
+  afterEach(() => {
+    for (const [key, value] of [['MAPBOX_ACCESS_TOKEN', originalEnv.a], ['NEXT_PUBLIC_MAPBOX_TOKEN', originalEnv.b]] as const) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  it('plans the implantation view beyond zoom 18 and credits Mapbox when a token is set', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-secret-token';
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+
+    await processJob('job-1');
+
+    const view = mocks.fetchSatelliteImage.mock.calls[0]![0] as SatelliteView;
+    expect(view.zoom).toBeGreaterThan(18);
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.provider).toBe('mapbox');
+    expect(planData.page38.image.provider).toBe('mapbox');
+    const update = findSucceededUpdate() as [{ data: { warnings: string[] } }];
+    expect(JSON.stringify(update[0].data.warnings)).not.toContain('pk.test-secret-token');
+  });
+
+  it('stays on Esri (zoom <= 18, no provider credit) without a token', async () => {
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+
+    await processJob('job-1');
+
+    expect((mocks.fetchSatelliteImage.mock.calls[0]![0] as SatelliteView).zoom).toBeLessThanOrEqual(18);
+    expect(sitePlanInput().planData!.page37.image.provider).toBeUndefined();
+  });
+
+  it('warns once and re-plans on Esri when Mapbox refuses the token', async () => {
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = 'pk.test-secret-token';
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockRejectedValueOnce(new MapboxAuthError(401));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const calls = mocks.fetchSatelliteImage.mock.calls;
+    expect(calls).toHaveLength(3);
+    expect(calls[0]!.length).toBe(1);
+    expect(calls[1]![1]).toBe('esri');
+    expect((calls[1]![0] as SatelliteView).zoom).toBeLessThanOrEqual(18);
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.buffer).toBe(SATELLITE_TILE);
+    expect(planData.page37.image.provider).toBeUndefined();
+    const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+    expect(warnings).toContain('Imagerie Mapbox refusée : vérifiez MAPBOX_ACCESS_TOKEN.');
+    expect(JSON.stringify([warnings, warn.mock.calls])).not.toContain('pk.test-secret-token');
+    warn.mockRestore();
+  });
+
+  it('degrades to a plain background (no failure) when the Mapbox fetch fails otherwise', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-secret-token';
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockRejectedValue(new Error('Mapbox tile 404'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(sitePlanInput().planData!.page37.image.buffer).toBeNull();
+    expect(findSucceededUpdate()).toBeDefined();
+    warn.mockRestore();
   });
 });

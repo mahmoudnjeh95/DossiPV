@@ -2,6 +2,11 @@ import { describe, it, expect, vi, afterEach, type MockInstance } from 'vitest';
 import { decode as decodeJpeg, encode as encodeJpeg } from 'jpeg-js';
 import {
   fetchSatelliteImage,
+  activeImageryProvider,
+  redactSecrets,
+  MapboxAuthError,
+  MAX_NATIVE_ZOOM,
+  IMAGERY_ATTRIBUTION,
   latLonToWorldPixel,
   projectToImage,
   planImplantationView,
@@ -151,5 +156,130 @@ describe('fetchSatelliteImage', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) } as Response);
 
     await expect(fetchSatelliteImage({ zoom: 19, originX: 0, originY: 0, widthPx: 256, heightPx: 256 })).rejects.toThrow(/not a decodable JPEG/);
+  });
+});
+
+describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
+  const saved = { a: process.env.MAPBOX_ACCESS_TOKEN, b: process.env.NEXT_PUBLIC_MAPBOX_TOKEN };
+  const TOKEN = 'pk.test-secret-token';
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (saved.a === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
+    else process.env.MAPBOX_ACCESS_TOKEN = saved.a;
+    if (saved.b === undefined) delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    else process.env.NEXT_PUBLIC_MAPBOX_TOKEN = saved.b;
+  });
+
+  /** A solid 512x512 (@2x) JPEG: left half dark, right half light, to prove the 2x downscale. */
+  function retinaTile(): Uint8Array {
+    const size = TILE_SIZE * 2;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y += 1) {
+      for (let x = 0; x < size; x += 1) {
+        const i = (y * size + x) * 4;
+        const v = x < TILE_SIZE ? 40 : 200;
+        data[i] = v;
+        data[i + 1] = v;
+        data[i + 2] = v;
+        data[i + 3] = 255;
+      }
+    }
+    return new Uint8Array(encodeJpeg({ data, width: size, height: size }, 95).data);
+  }
+
+  function mockMapbox(): MockInstance<typeof fetch> {
+    return vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      const bytes = retinaTile();
+      return Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)) } as Response);
+    });
+  }
+
+  it('selects the provider from the env: MAPBOX_ACCESS_TOKEN, then NEXT_PUBLIC_MAPBOX_TOKEN, else Esri', () => {
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    expect(activeImageryProvider()).toBe('esri');
+    process.env.NEXT_PUBLIC_MAPBOX_TOKEN = TOKEN;
+    expect(activeImageryProvider()).toBe('mapbox');
+    delete process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    process.env.MAPBOX_ACCESS_TOKEN = '  ';
+    expect(activeImageryProvider()).toBe('esri');
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    expect(activeImageryProvider()).toBe('mapbox');
+  });
+
+  it('requests the @2x satellite-v9 tiles (x/y order) and stitches them on the 256 px grid', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const fetchSpy = mockMapbox();
+    const view: SatelliteView = { zoom: 20, originX: 10 * TILE_SIZE + 100, originY: 20 * TILE_SIZE + 150, widthPx: 300, heightPx: 200 };
+
+    const jpeg = await fetchSatelliteImage(view);
+
+    const urls = fetchSpy.mock.calls.map((call) => requestUrl(call[0])).sort();
+    expect(urls).toEqual(
+      [[10, 20], [11, 20], [10, 21], [11, 21]]
+        .map(([x, y]) => `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/20/${x}/${y}@2x?access_token=${TOKEN}`)
+        .sort(),
+    );
+    const decoded = decodeJpeg(jpeg, { useTArray: true, formatAsRGBA: true });
+    expect(decoded.width).toBe(300);
+    expect(decoded.height).toBe(200);
+    // Tile 10 starts at view x = -100: its bright half (tile px >= 128 after downscale) begins at x = 28.
+    const red = (x: number, y: number): number => decoded.data[(y * 300 + x) * 4]!;
+    expect(Math.abs(red(10, 10) - 40)).toBeLessThan(12);
+    expect(Math.abs(red(60, 10) - 200)).toBeLessThan(12);
+  });
+
+  it('keeps metersPerPixel for a Mapbox view identical to a 256 px tile view at the same zoom', () => {
+    const view: SatelliteView = { zoom: 20, originX: 0, originY: 0, widthPx: 256, heightPx: 256 };
+    expect(metersPerPixel(view, 36.8)).toBeCloseTo((156543.03392 * Math.cos((36.8 * Math.PI) / 180)) / 2 ** 20, 8);
+  });
+
+  it('exposes the native zoom ceilings and the attribution per provider', () => {
+    expect(MAX_NATIVE_ZOOM).toEqual({ esri: 18, mapbox: 20 });
+    expect(IMAGERY_ATTRIBUTION.mapbox).toContain('© Mapbox © Maxar © OpenStreetMap');
+    expect(IMAGERY_ATTRIBUTION.esri).toContain('Esri');
+  });
+
+  it('never leaks the token in errors (HTTP status, network error, undecodable tile)', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const view: SatelliteView = { zoom: 20, originX: 0, originY: 0, widthPx: 256, heightPx: 256 };
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: false, status: 500 } as Response);
+    const http = await fetchSatelliteImage(view).catch((e: Error) => e);
+    expect((http as Error).message).toMatch(/500/);
+    expect((http as Error).message).not.toContain(TOKEN);
+    expect((http as Error).message).toContain('access_token=REDACTED');
+
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error(`socket hang up https://x/?access_token=${TOKEN}`));
+    const net = await fetchSatelliteImage(view).catch((e: Error) => e);
+    expect((net as Error).message).not.toContain(TOKEN);
+    expect((net as Error).cause).toBeUndefined();
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) } as Response);
+    const bad = await fetchSatelliteImage(view).catch((e: Error) => e);
+    expect((bad as Error).message).toMatch(/not a decodable JPEG/);
+    expect((bad as Error).message).not.toContain(TOKEN);
+    expect(redactSecrets(`a?access_token=${TOKEN}&b=1`)).toBe('a?access_token=REDACTED&b=1');
+  });
+
+  it.each([401, 403])('throws MapboxAuthError (without the token) on HTTP %i', async (status) => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status } as Response);
+
+    const error = await fetchSatelliteImage({ zoom: 20, originX: 0, originY: 0, widthPx: 256, heightPx: 256 }).catch((e: Error) => e);
+
+    expect(error).toBeInstanceOf(MapboxAuthError);
+    expect((error as MapboxAuthError).status).toBe(status);
+    expect((error as Error).message).not.toContain(TOKEN);
+  });
+
+  it('uses Esri when told to, even with a token set (the fallback path)', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const fetchSpy = mockEsriTiles();
+
+    await fetchSatelliteImage({ zoom: 18, originX: 0, originY: 0, widthPx: 256, heightPx: 256 }, 'esri');
+
+    expect(requestUrl(fetchSpy.mock.calls[0]![0])).toContain('server.arcgisonline.com');
   });
 });

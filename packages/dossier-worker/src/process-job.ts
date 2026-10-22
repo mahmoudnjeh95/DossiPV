@@ -29,7 +29,12 @@ import { installerIdentityFromCompany } from './installer-identity';
 import { renderDrawingPages } from './render-drawings';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
 import {
+  activeImageryProvider,
   fetchSatelliteImage,
+  MapboxAuthError,
+  MAPBOX_REFUSED_WARNING,
+  MAX_NATIVE_ZOOM,
+  type ImageryProvider,
   metersPerPixel,
   planImplantationView,
   planSituationView,
@@ -52,17 +57,22 @@ const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'te
 const STUDY_PAGE_COUNT_BEFORE_BODY = 2;
 
 /**
- * Page 37's view: zoom 18 at most, because Esri World Imagery has no zoom-19 imagery outside the
- * large Tunisian cities (it answers a "Map data not yet available" tile there), and a small
- * minimum size (≈ 80 m across) so the house fills the plan rather than a whole neighbourhood.
+ * Page 37's view: at most the provider's native zoom (Esri has no zoom-19 imagery outside the
+ * large Tunisian cities and answers a "Map data not yet available" tile there; Mapbox goes to 20),
+ * and a small minimum size (≈ 80 m across) so the house fills the plan rather than a whole neighbourhood.
  */
-export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: 18, minSizePx: 160, paddingPx: 40 };
+export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: MAX_NATIVE_ZOOM.esri, minSizePx: 160, paddingPx: 40 };
+
+/** Page 37's options for a provider: only the zoom ceiling differs. Page 38 stays at zoom 17 on both. */
+const implantationViewOptions = (provider: ImageryProvider): ImplantationViewOptions => ({ ...IMPLANTATION_VIEW_OPTIONS, maxZoom: MAX_NATIVE_ZOOM[provider] });
 
 /** A plan's satellite photo, or null (with an operator warning) when the tiles cannot be had. */
-async function fetchPlanImage(jobId: string, view: SatelliteView, plan: string): Promise<Buffer | null> {
+async function fetchPlanImage(jobId: string, view: SatelliteView, plan: string, provider?: ImageryProvider): Promise<Buffer | null> {
   try {
-    return await withRetry(() => fetchSatelliteImage(view));
+    // A refused Mapbox token is not transient: no retry, the caller decides about the fallback.
+    return await withRetry(() => (provider ? fetchSatelliteImage(view, provider) : fetchSatelliteImage(view)), { isRetryable: (error) => !(error instanceof MapboxAuthError) && isRetryableError(error) });
   } catch (error) {
+    if (error instanceof MapboxAuthError) throw error;
     console.warn(`processJob: job ${jobId}: the ${plan} plan's satellite image is unavailable; drawn without it.`, error);
     return null;
   }
@@ -496,11 +506,28 @@ export async function processJob(jobId: string): Promise<void> {
     // Page 37 covers every point at the best zoom; page 38 is a neighbourhood-scale view centred
     // on the site. Both have exact pixel bounds, so every GPS point is projected to the image
     // pixel it really falls on.
-    const implantationView = planImplantationView([field, ...placedPoints], IMPLANTATION_VIEW_OPTIONS);
-    const situationView = planSituationView(sitePoint);
-    const page37Image = await fetchPlanImage(jobId, implantationView, 'implantation');
-    const page38Image = await fetchPlanImage(jobId, situationView, 'situation');
+    let provider = activeImageryProvider();
+    let implantationView = planImplantationView([field, ...placedPoints], implantationViewOptions(provider));
+    let situationView = planSituationView(sitePoint);
+    let page37Image: Buffer | null;
+    let page38Image: Buffer | null;
+    try {
+      page37Image = await fetchPlanImage(jobId, implantationView, 'implantation');
+      page38Image = await fetchPlanImage(jobId, situationView, 'situation');
+    } catch (error) {
+      if (!(error instanceof MapboxAuthError)) throw error;
+      // Mapbox refused the token: say so on the job and redo the plans on Esri (re-planned, since
+      // Esri has no imagery past zoom 18).
+      console.warn(`processJob: job ${jobId}: Mapbox refused the access token (HTTP ${error.status}); falling back to Esri.`);
+      warnings.push(MAPBOX_REFUSED_WARNING);
+      provider = 'esri';
+      implantationView = planImplantationView([field, ...placedPoints], implantationViewOptions(provider));
+      situationView = planSituationView(sitePoint);
+      page37Image = await fetchPlanImage(jobId, implantationView, 'implantation', provider);
+      page38Image = await fetchPlanImage(jobId, situationView, 'situation', provider);
+    }
 
+    const providerCredit = provider === 'mapbox' ? { provider } : {}; // Esri is the default credit
     const toPixels = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(implantationView, p) : null);
     const pixelPoints: SitePlanPoints = {
       field: toPixels(field),
@@ -546,7 +573,7 @@ export async function processJob(jobId: string): Promise<void> {
     const acFormula = gps.technicalRoom && gps.meter ? formatRunLengthFormula(groundDistanceM(gps.technicalRoom, gps.meter), acRun.lengthM, site.floors, 'AC') : null;
     sitePlanData = {
       page37: {
-        image: { buffer: page37Image, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel },
+        image: { buffer: page37Image, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel, ...providerCredit },
         layout,
         points: pixelPoints,
         gps,
@@ -554,7 +581,7 @@ export async function processJob(jobId: string): Promise<void> {
         ac: { lengthM: acRun.lengthM, sectionMm2: acRun.sectionMm2, formula: acFormula },
       },
       page38: {
-        image: { buffer: page38Image, widthPx: situationView.widthPx, heightPx: situationView.heightPx, metersPerPixel: metersPerPixel(situationView, sitePoint.lat) },
+        image: { buffer: page38Image, widthPx: situationView.widthPx, heightPx: situationView.heightPx, metersPerPixel: metersPerPixel(situationView, sitePoint.lat), ...providerCredit },
         sitePin: projectToImage(situationView, sitePoint),
       },
     };

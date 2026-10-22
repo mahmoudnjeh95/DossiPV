@@ -1,8 +1,8 @@
 import { decode as decodeJpeg, encode as encodeJpeg } from 'jpeg-js';
 
 /**
- * Esri World Imagery satellite views for pages 37-38 — the same free, no-key tile source the live
- * map editor already uses.
+ * Satellite views for pages 37-38 — Mapbox satellite-v9 when MAPBOX_ACCESS_TOKEN (or
+ * NEXT_PUBLIC_MAPBOX_TOKEN) is set, like the live map editor; Esri World Imagery otherwise.
  *
  * A view is an exact window onto the Web-Mercator world-pixel grid at one zoom level, so the
  * image's geographic bounds are known to the pixel. Tiles covering the window are fetched and
@@ -108,29 +108,108 @@ export function planSituationView(site: LatLon, zoom = 17, sizePx = 768): Satell
   return squareViewAround(zoom, latLonToWorldPixel(site, zoom), sizePx);
 }
 
-function tileUrl(zoom: number, x: number, y: number): string {
+export type ImageryProvider = 'mapbox' | 'esri';
+
+/** Highest zoom at which each provider has real imagery (Esri has none at 19+ outside big cities). */
+export const MAX_NATIVE_ZOOM: Record<ImageryProvider, number> = { esri: 18, mapbox: 20 };
+
+/** Credit printed under the imagery on plan pages; Mapbox's terms require it. */
+export const IMAGERY_ATTRIBUTION: Record<ImageryProvider, string> = {
+  esri: 'Imagerie : Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG',
+  mapbox: 'Imagerie : © Mapbox © Maxar © OpenStreetMap',
+};
+
+/** Warning recorded on the job when Mapbox rejects the token (it never contains the token). */
+export const MAPBOX_REFUSED_WARNING = 'Imagerie Mapbox refusée : vérifiez MAPBOX_ACCESS_TOKEN.';
+
+/** The server-side Mapbox token; NEXT_PUBLIC_MAPBOX_TOKEN is the fallback so one value serves web and worker. */
+function mapboxToken(): string | null {
+  const token = (process.env.MAPBOX_ACCESS_TOKEN ?? '').trim() || (process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? '').trim();
+  return token || null;
+}
+
+/** Mapbox when a token is configured, else Esri. Read at call time so the env can change between jobs. */
+export function activeImageryProvider(): ImageryProvider {
+  return mapboxToken() ? 'mapbox' : 'esri';
+}
+
+/** Mapbox refused the token (HTTP 401/403): the caller may fall back to Esri. */
+export class MapboxAuthError extends Error {
+  constructor(public readonly status: number) {
+    super(`Mapbox tile fetch refused with status ${status}`);
+    this.name = 'MapboxAuthError';
+  }
+}
+
+/** Removes the access token from any text that may be logged or thrown. */
+export function redactSecrets(text: string): string {
+  let out = text.replace(/access_token=[^&\s"'<>]*/gi, 'access_token=REDACTED');
+  const token = mapboxToken();
+  if (token) out = out.split(token).join('REDACTED');
+  return out;
+}
+
+function tileUrl(provider: ImageryProvider, zoom: number, x: number, y: number): string {
+  if (provider === 'mapbox') {
+    // 256 "@2x": a 512 px bitmap covering the same ground as a 256 px tile at this zoom.
+    return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/${zoom}/${x}/${y}@2x?access_token=${encodeURIComponent(mapboxToken() ?? '')}`;
+  }
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${y}/${x}`;
 }
 
-async function fetchTile(zoom: number, x: number, y: number): Promise<{ width: number; height: number; data: Uint8Array }> {
-  const url = tileUrl(zoom, x, y);
-  const response = await fetch(url);
+type Bitmap = { width: number; height: number; data: Uint8Array };
+
+/** Box-filters an RGBA bitmap down by an integer factor (512 px @2x tiles -> the 256 px grid). */
+function downscale(tile: Bitmap, factor: number): Bitmap {
+  const width = Math.floor(tile.width / factor);
+  const height = Math.floor(tile.height / factor);
+  const data = new Uint8Array(width * height * 4);
+  const samples = factor * factor;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      for (let c = 0; c < 4; c += 1) {
+        let sum = 0;
+        for (let dy = 0; dy < factor; dy += 1) {
+          for (let dx = 0; dx < factor; dx += 1) sum += tile.data[((y * factor + dy) * tile.width + x * factor + dx) * 4 + c]!;
+        }
+        data[(y * width + x) * 4 + c] = Math.round(sum / samples);
+      }
+    }
+  }
+  return { width, height, data };
+}
+
+async function fetchTile(provider: ImageryProvider, zoom: number, x: number, y: number): Promise<Bitmap> {
+  const url = tileUrl(provider, zoom, x, y);
+  const label = provider === 'mapbox' ? 'Mapbox' : 'Esri';
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    // The token may sit in the URL or the message: rethrow a redacted error without the cause.
+    throw new Error(redactSecrets(`${label} tile fetch failed for ${url}: ${error instanceof Error ? error.message : String(error)}`));
+  }
   if (!response.ok) {
-    throw new Error(`Esri tile fetch failed with status ${response.status} for ${url}`);
+    if (provider === 'mapbox' && (response.status === 401 || response.status === 403)) throw new MapboxAuthError(response.status);
+    throw new Error(redactSecrets(`${label} tile fetch failed with status ${response.status} for ${url}`));
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
+  let tile: Bitmap;
   try {
-    return decodeJpeg(bytes, { useTArray: true, formatAsRGBA: true, maxResolutionInMP: 4 });
+    tile = decodeJpeg(bytes, { useTArray: true, formatAsRGBA: true, maxResolutionInMP: 4 });
   } catch (error) {
-    throw new Error(`Esri tile ${url} is not a decodable JPEG: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(redactSecrets(`${label} tile ${url} is not a decodable JPEG: ${error instanceof Error ? error.message : String(error)}`));
   }
+  // Bring a retina tile back onto the 256 px grid so view maths and metersPerPixel stay unchanged.
+  const factor = tile.width >= 2 * TILE_SIZE && tile.width % TILE_SIZE === 0 ? tile.width / TILE_SIZE : 1;
+  return factor > 1 ? downscale(tile, factor) : tile;
 }
 
 /**
  * Fetches every tile overlapping `view` and stitches them into one JPEG of exactly
  * `view.widthPx` × `view.heightPx`, whose top-left pixel is world pixel (originX, originY).
  */
-export async function fetchSatelliteImage(view: SatelliteView): Promise<Buffer> {
+export async function fetchSatelliteImage(view: SatelliteView, provider: ImageryProvider = activeImageryProvider()): Promise<Buffer> {
   const tilesPerAxis = 2 ** view.zoom;
   const firstX = Math.floor(view.originX / TILE_SIZE);
   const lastX = Math.floor((view.originX + view.widthPx - 1) / TILE_SIZE);
@@ -141,7 +220,7 @@ export async function fetchSatelliteImage(view: SatelliteView): Promise<Buffer> 
   for (let tileY = firstY; tileY <= lastY; tileY += 1) {
     for (let tileX = firstX; tileX <= lastX; tileX += 1) {
       const wrappedX = ((tileX % tilesPerAxis) + tilesPerAxis) % tilesPerAxis; // antimeridian wrap
-      jobs.push(fetchTile(view.zoom, wrappedX, tileY).then((tile) => ({ tileX, tileY, tile })));
+      jobs.push(fetchTile(provider, view.zoom, wrappedX, tileY).then((tile) => ({ tileX, tileY, tile })));
     }
   }
   const tiles = await Promise.all(jobs);
