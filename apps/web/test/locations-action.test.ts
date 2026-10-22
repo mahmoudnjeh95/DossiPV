@@ -12,7 +12,12 @@ const m = vi.hoisted(() => ({
   mockBuildEngineInput: vi.fn(),
   mockRunEngine: vi.fn(),
   mockGenerate: vi.fn(),
+  mockRedirect: vi.fn((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  }),
 }));
+
+vi.mock('next/navigation', () => ({ redirect: m.mockRedirect }));
 
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
@@ -41,7 +46,7 @@ vi.mock('@dossipv/engine', async () => {
 });
 vi.mock('../app/(app)/projects/[id]/actions', () => ({ generateDossierAction: m.mockGenerate }));
 
-import { saveLocationsAndGenerateAction } from '../app/(app)/projects/[id]/locations/actions';
+import { saveLocationsAction } from '../app/(app)/projects/[id]/locations/actions';
 
 const field = { lat: 34.4, lon: 10.1 };
 const technicalRoom = { lat: 34.4, lon: 10.10005 };
@@ -93,11 +98,11 @@ beforeEach(() => {
   m.mockGenerate.mockResolvedValue(undefined);
 });
 
-describe('saveLocationsAndGenerateAction', () => {
+describe('saveLocationsAction', () => {
   it('guards first', async () => {
     m.mockRequireOwnedProject.mockRejectedValue(new Error('NEXT_REDIRECT:/login'));
 
-    await expect(saveLocationsAndGenerateAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/login');
+    await expect(saveLocationsAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/login');
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
@@ -111,28 +116,28 @@ describe('saveLocationsAndGenerateAction', () => {
     ['a point that is not an object', { ...payload, earthPit: 'here' }],
     ['a non-numeric floor count', { ...payload, floors: '1' }],
   ])('refuses %s as the payload before touching the database', async (_label, invalidPayload) => {
-    const result = await saveLocationsAndGenerateAction('p1', invalidPayload as never);
+    const result = await saveLocationsAction('p1', invalidPayload as never);
 
     expect(result).toEqual({ error: 'Données des emplacements invalides.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
   it('asks for the building type', async () => {
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: null });
+    const result = await saveLocationsAction('p1', { ...payload, buildingType: null });
 
     expect(result).toEqual({ error: 'Indiquez si le client habite une maison ou un immeuble.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
   it('asks for the roof level', async () => {
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, floors: null });
+    const result = await saveLocationsAction('p1', { ...payload, floors: null });
 
     expect(result).toEqual({ error: "Indiquez l'étage du toit où seront posés les panneaux." });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
   it('requires the earth pit for a house', async () => {
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE' });
+    const result = await saveLocationsAction('p1', { ...payload, buildingType: 'HOUSE' });
 
     expect(result).toEqual({ error: 'Placez le point « Piquet de terre » : il est obligatoire pour une maison.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
@@ -140,20 +145,19 @@ describe('saveLocationsAndGenerateAction', () => {
 
   it('refuses floor 5 for a house but accepts it for a building', async () => {
     const pit = { lat: 34.4, lon: 10.1002 };
-    const house = await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 5 });
+    const house = await saveLocationsAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 5 });
     expect(house).toEqual({ error: 'Niveau du toit invalide.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
 
-    const building = await saveLocationsAndGenerateAction('p1', { ...payload, floors: 5 });
-    expect(building).toBeUndefined();
+    await expect(saveLocationsAction('p1', { ...payload, floors: 5 })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
     expect(m.mockSiteUpdate).toHaveBeenCalled();
 
-    expect(await saveLocationsAndGenerateAction('p1', { ...payload, floors: 16 })).toEqual({ error: 'Niveau du toit invalide.' });
-    expect(await saveLocationsAndGenerateAction('p1', { ...payload, floors: 1.5 })).toEqual({ error: 'Niveau du toit invalide.' });
+    expect(await saveLocationsAction('p1', { ...payload, floors: 16 })).toEqual({ error: 'Niveau du toit invalide.' });
+    expect(await saveLocationsAction('p1', { ...payload, floors: 1.5 })).toEqual({ error: 'Niveau du toit invalide.' });
   });
 
   it('uses the building earth for a flat without a pit', async () => {
-    await saveLocationsAndGenerateAction('p1', payload);
+    await expect(saveLocationsAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
 
     expect(m.mockEarthingUpdateMany).toHaveBeenCalledWith({
       where: { projectId: 'p1' },
@@ -166,12 +170,12 @@ describe('saveLocationsAndGenerateAction', () => {
 
   it('keeps a dedicated rod when a flat places a pit, and for a house', async () => {
     const pit = { lat: 34.4, lon: 10.1002 };
-    await saveLocationsAndGenerateAction('p1', { ...payload, earthPit: pit });
+    await expect(saveLocationsAction('p1', { ...payload, earthPit: pit })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
     expect(m.mockEarthingUpdateMany).toHaveBeenLastCalledWith({
       where: { projectId: 'p1' },
       data: { useBuildingEarth: false, rodCount: 1 },
     });
-    await saveLocationsAndGenerateAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 0 });
+    await expect(saveLocationsAction('p1', { ...payload, buildingType: 'HOUSE', earthPit: pit, floors: 0 })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
     expect(m.mockEarthingUpdateMany).toHaveBeenLastCalledWith({
       where: { projectId: 'p1' },
       data: { useBuildingEarth: false, rodCount: 1 },
@@ -179,25 +183,24 @@ describe('saveLocationsAndGenerateAction', () => {
   });
 
   it('asks for the meter point', async () => {
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, meter: null });
+    const result = await saveLocationsAction('p1', { ...payload, meter: null });
 
     expect(result).toEqual({ error: 'Placez le point « Compteur STEG » sur la carte.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
   it('refuses points 2 km apart', async () => {
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, meter: { lat: 34.418, lon: 10.1 } });
+    const result = await saveLocationsAction('p1', { ...payload, meter: { lat: 34.418, lon: 10.1 } });
 
     expect(result).toEqual({ error: 'Les points sont trop éloignés (plus de 500 m) : vérifiez leur emplacement.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
   });
 
-  it('saves points, lengths and generates', async () => {
+  it('saves points and lengths, then opens the summary without generating', async () => {
     const lengths = computeRunLengthsM({ field, technicalRoom, meter }, 1);
 
-    const result = await saveLocationsAndGenerateAction('p1', { ...payload, earthPit: { lat: 34.4, lon: 10.1002 } });
+    await expect(saveLocationsAction('p1', { ...payload, earthPit: { lat: 34.4, lon: 10.1002 } })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
 
-    expect(result).toBeUndefined();
     const siteUpdate = m.mockSiteUpdate.mock.calls[0]?.[0] as { where: unknown; data: Record<string, unknown> };
     expect(siteUpdate.where).toEqual({ projectId: 'p1' });
     expect(siteUpdate.data).toMatchObject({
@@ -218,7 +221,9 @@ describe('saveLocationsAndGenerateAction', () => {
       data: { lengthM: lengths.acLengthM },
     });
     expect(m.mockProjectUpdate).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { flowStep: 'READY' } });
-    expect(m.mockGenerate).toHaveBeenCalledWith('p1', undefined);
+    expect(m.mockRedirect).toHaveBeenCalledWith('/projects/p1/summary');
+    expect(m.mockProjectUpdate.mock.invocationCallOrder[0]).toBeLessThan(m.mockRedirect.mock.invocationCallOrder[0]!);
+    expect(m.mockGenerate).not.toHaveBeenCalled();
   });
 
   it('bumps the AC section when the voltage drop fails', async () => {
@@ -227,7 +232,7 @@ describe('saveLocationsAndGenerateAction', () => {
       .mockReturnValueOnce(engineResult({ acDropPct: 4 })) // AC 2.5 mm² too small
       .mockReturnValue(engineResult()); // AC 4 mm² fits
 
-    await saveLocationsAndGenerateAction('p1', payload);
+    await expect(saveLocationsAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
 
     expect(m.mockRunUpdateMany).toHaveBeenCalledWith({
       where: { projectId: 'p1', circuitType: 'AC' },
@@ -238,7 +243,7 @@ describe('saveLocationsAndGenerateAction', () => {
       return arg.where.circuitType === 'DC' && 'sectionMm2' in arg.data;
     });
     expect(dcSectionWrites).toHaveLength(0);
-    expect(m.mockGenerate).toHaveBeenCalled();
+    expect(m.mockGenerate).not.toHaveBeenCalled();
   });
 
   it('bumps the AC run to a larger section for the 1 % limit but keeps the DC run at 3 %', async () => {
@@ -248,7 +253,7 @@ describe('saveLocationsAndGenerateAction', () => {
       .mockReturnValueOnce(engineResult({ dcDropPct: 2.5, acDropPct: 2 })) // AC 2.5 mm² over 1 %
       .mockReturnValue(engineResult({ dcDropPct: 2.5, acDropPct: 0.9 })); // AC 4 mm² within 1 %
 
-    await saveLocationsAndGenerateAction('p1', payload);
+    await expect(saveLocationsAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
 
     expect(m.mockRunUpdateMany).toHaveBeenCalledWith({
       where: { projectId: 'p1', circuitType: 'AC' },
@@ -259,23 +264,24 @@ describe('saveLocationsAndGenerateAction', () => {
       return arg.where.circuitType === 'DC' && 'sectionMm2' in arg.data;
     });
     expect(dcSectionWrites).toHaveLength(0);
-    expect(m.mockGenerate).toHaveBeenCalled();
+    expect(m.mockGenerate).not.toHaveBeenCalled();
   });
 
   it('reports the AC circuit when no section fits', async () => {
     m.mockRunEngine.mockReturnValue(engineResult({ acDropPct: 2 })); // AC never gets under 1 %
 
-    const result = await saveLocationsAndGenerateAction('p1', payload);
+    const result = await saveLocationsAction('p1', payload);
 
     expect(result?.error).toMatch(/liaison AC \(\d+ m\)\.$/);
-    expect(m.mockGenerate).not.toHaveBeenCalled();
+    expect(m.mockRedirect).not.toHaveBeenCalled();
+    expect(m.mockProjectUpdate).not.toHaveBeenCalled();
   });
 
   it('stops when no larger section is left, keeping the points', async () => {
     m.mockRunEngine.mockReturnValue(engineResult({ c13: false }));
     m.mockRunEngine.mockReturnValueOnce(engineResult());
 
-    const result = await saveLocationsAndGenerateAction('p1', payload);
+    const result = await saveLocationsAction('p1', payload);
 
     expect(result?.error).toMatch(/^Aucune section de câble ne respecte la chute de tension pour la liaison AC \(\d+ m\)\.$/);
     expect(m.mockSiteUpdate).toHaveBeenCalled();
@@ -288,7 +294,7 @@ describe('saveLocationsAndGenerateAction', () => {
       throw new Error('boom');
     });
 
-    const result = await saveLocationsAndGenerateAction('p1', payload);
+    const result = await saveLocationsAction('p1', payload);
 
     expect(result).toEqual({ error: 'Erreur de calcul : vérifiez les sections du projet.' });
     expect(spy).toHaveBeenCalled();

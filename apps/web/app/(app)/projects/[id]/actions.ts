@@ -15,6 +15,7 @@ import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../../lib/labels';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
 import { assignDossierNumber } from '../../../../lib/dossier-number';
+import { LOCATIONS_PENDING_MESSAGE, locationsPending, stegCompleteness } from '../../../../lib/steg-completeness';
 
 export interface GenerateDossierActionState {
   error: string;
@@ -53,13 +54,17 @@ export interface DossierJobSnapshotV1 {
   consumption: SnapshotConsumption | null;
   engineInput: RunEngineInput;
   projectMeta: ProjectMetaForWorker;
+  /** STEG pieces still missing: non-empty makes the dossier a watermarked draft. */
+  draftMissing: string[];
 }
 
 /**
  * Installer's "Générer" action (spec §5). Re-validates everything server-side — subscription,
  * quota, section completeness, the 22 checks — and only then enqueues a PENDING DossierJob
- * with the frozen engine input as its snapshot. The worker picks the job up from there; this
- * action never generates anything itself.
+ * with the frozen engine input as its snapshot, then opens the job page. A bill-flow project
+ * whose points are not saved yet is refused. Missing STEG papers never block: they are frozen as
+ * `draftMissing` and the worker watermarks the dossier as a draft. This action never generates
+ * anything itself.
  */
 export async function generateDossierAction(
   projectId: string,
@@ -75,6 +80,11 @@ export async function generateDossierAction(
   });
   if (!project) {
     return { error: 'Projet introuvable.' };
+  }
+
+  // A re-applied proposal resets the cable lengths and the earthing until the points are saved again.
+  if (locationsPending(project.flowStep)) {
+    return { error: LOCATIONS_PENDING_MESSAGE };
   }
 
   // The ANME agreement opens the administrative annex: no dossier without it.
@@ -127,8 +137,10 @@ export async function generateDossierAction(
   // Resolved once, used both for the snapshot and the Project row update below, so the dossier's
   // cover-page date always matches the date the engine's own checks (C20/C22) actually ran against.
   const dossierDate = project.dossierDate ?? now;
+  const hasAnmeList = (await db.catalogSourceDocument.count({ where: { kind: 'ANME_PANEL_LIST' } })) > 0;
+  const { missingLabels } = stegCompleteness(project, dossierDate, hasAnmeList);
 
-  await db.$transaction(async (tx) => {
+  const jobId = await db.$transaction(async (tx) => {
     // The installer's own numbering, taken on the project's first generation only; a regeneration
     // or a retry after a failed job keeps the stored number and never moves the counter.
     const dossierNumber = await assignDossierNumber(tx, project.companyId, project.id);
@@ -151,8 +163,9 @@ export async function generateDossierAction(
       consumption: buildSnapshotConsumption(project.client, project.billImport),
       engineInput: engineInput.input,
       projectMeta: engineInput.meta,
+      draftMissing: missingLabels,
     };
-    await tx.dossierJob.create({
+    const job = await tx.dossierJob.create({
       data: {
         projectId: project.id,
         status: 'PENDING',
@@ -163,8 +176,9 @@ export async function generateDossierAction(
       where: { id: project.id },
       data: { dossierDate },
     });
+    return job.id;
   });
 
-  redirect(`/projects/${project.id}`);
+  redirect(`/projects/${project.id}/jobs/${jobId}`);
   return undefined;
 }

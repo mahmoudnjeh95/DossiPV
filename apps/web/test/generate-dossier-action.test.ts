@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => {
   return {
     mockGet,
     mockCookies: vi.fn(() => Promise.resolve({ get: mockGet })),
-    mockRedirect: vi.fn(),
+    mockRedirect: vi.fn((url: string) => {
+      throw new Error(`NEXT_REDIRECT:${url}`);
+    }),
     mockValidateSession: vi.fn(),
     projectFindFirst: vi.fn(),
     projectUpdate: vi.fn(),
@@ -14,6 +16,7 @@ const mocks = vi.hoisted(() => {
     jobCreate: vi.fn(),
     transaction: vi.fn(),
     assignDossierNumber: vi.fn(),
+    sourceDocumentCount: vi.fn(),
   };
 });
 
@@ -32,6 +35,7 @@ vi.mock('@dossipv/db', async () => {
       project: { findFirst: mocks.projectFindFirst, update: mocks.projectUpdate },
       subscription: { findUnique: mocks.subscriptionFindUnique },
       dossierJob: { findMany: mocks.jobFindMany, create: mocks.jobCreate },
+      catalogSourceDocument: { count: mocks.sourceDocumentCount },
       $transaction: mocks.transaction,
     },
   };
@@ -80,7 +84,19 @@ beforeEach(() => {
   mocks.assignDossierNumber.mockResolvedValue('434 - 303');
   mocks.jobCreate.mockResolvedValue({ id: 'job-1' });
   mocks.projectUpdate.mockResolvedValue({});
+  mocks.sourceDocumentCount.mockResolvedValue(0);
+  mocks.mockRedirect.mockImplementation((url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  });
 });
+
+const JOB_PAGE = 'NEXT_REDIRECT:/projects/project-1/jobs/job-1';
+
+/** The snapshot of the one job the action created. */
+function createdSnapshot(): Record<string, unknown> {
+  const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
+  return data.data.inputSnapshot;
+}
 
 describe('generateDossierAction', () => {
   it('refuses a project from another company', async () => {
@@ -191,10 +207,52 @@ describe('generateDossierAction', () => {
     expect(result?.error).toContain('liftCoeffNPerM2 and dragCoeffNPerM2');
   });
 
-  it('enqueues a PENDING job carrying the frozen engine input and redirects to the project', async () => {
-    const result = await generateDossierAction('project-1', undefined);
+  it.each(['PROPOSALS', 'LOCATIONS'] as const)('refuses a %s project whose points are not saved yet', async (flowStep) => {
+    mocks.projectFindFirst.mockResolvedValue(buildFullProject({ flowStep }));
 
-    expect(result).toBeUndefined();
+    expect(await generateDossierAction('project-1', undefined)).toEqual({
+      error: 'Les longueurs de câble et la mise à la terre ne sont pas encore confirmées : placez les points sur la carte avant de générer.',
+    });
+    expect(mocks.assignDossierNumber).not.toHaveBeenCalled();
+    expect(mocks.jobCreate).not.toHaveBeenCalled();
+  });
+
+  it('generates a READY project and a manually created one (no flow step)', async () => {
+    mocks.projectFindFirst.mockResolvedValue(buildFullProject({ flowStep: 'READY' }));
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+
+    mocks.projectFindFirst.mockResolvedValue(buildFullProject({ flowStep: null }));
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+    expect(mocks.jobCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it('snapshots the missing STEG pieces as draftMissing', async () => {
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+
+    expect(createdSnapshot().draftMissing).toEqual([
+      'Copie de la CIN du titulaire',
+      "Contrat STEG ou attestation d'abonnement",
+      'Dernière facture STEG acquittée',
+      "Matricule fiscal de l'installateur",
+      'Attestation de conformité de la structure (bureau de contrôle)',
+      'Acceptation ANME du module',
+      'Fiches techniques de tous les équipements',
+      "Points GPS du plan d'implantation",
+    ]);
+    expect(mocks.sourceDocumentCount).toHaveBeenCalledWith({ where: { kind: 'ANME_PANEL_LIST' } });
+  });
+
+  it('counts the stored ANME list as the module acceptance', async () => {
+    mocks.sourceDocumentCount.mockResolvedValue(1);
+
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+
+    expect(createdSnapshot().draftMissing).not.toContain('Acceptation ANME du module');
+  });
+
+  it('enqueues a PENDING job carrying the frozen engine input and opens the job page', async () => {
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+
     expect(mocks.jobCreate).toHaveBeenCalledTimes(1);
     const data = mocks.jobCreate.mock.calls[0]?.[0] as {
       data: { projectId: string; status: string; inputSnapshot: Record<string, unknown> };
@@ -229,11 +287,11 @@ describe('generateDossierAction', () => {
       where: { id: 'project-1' },
       data: { dossierDate: expect.any(Date) as Date },
     });
-    expect(mocks.mockRedirect).toHaveBeenCalledWith('/projects/project-1');
+    expect(mocks.mockRedirect).toHaveBeenCalledWith('/projects/project-1/jobs/job-1');
   });
 
   it('assigns the installer dossier number inside the transaction and snapshots it', async () => {
-    await generateDossierAction('project-1', undefined);
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
 
     expect(mocks.assignDossierNumber).toHaveBeenCalledTimes(1);
     expect(mocks.assignDossierNumber).toHaveBeenCalledWith(tx, 'company-1', 'project-1');
@@ -265,7 +323,7 @@ describe('generateDossierAction', () => {
     } as unknown as typeof project.billImport;
     mocks.projectFindFirst.mockResolvedValue(project);
 
-    await generateDossierAction('project-1', undefined);
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
 
     const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
     expect(data.data.inputSnapshot.consumption).toEqual({
@@ -287,7 +345,7 @@ describe('generateDossierAction', () => {
     } as unknown as typeof project.billImport;
     mocks.projectFindFirst.mockResolvedValue(project);
 
-    await generateDossierAction('project-1', undefined);
+    await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
 
     const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
     expect(data.data.inputSnapshot.consumption).toEqual({

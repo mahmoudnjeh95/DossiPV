@@ -44,6 +44,7 @@ model File {
   annexStegContractFor      ProjectAnnexes[] @relation("AnnexStegContract")
   annexLastPaidBillFor      ProjectAnnexes[] @relation("AnnexLastPaidBill")
   annexModuleAcceptanceFor  ProjectAnnexes[] @relation("AnnexModuleAcceptance")
+  annexSyndicAuthorizationFor ProjectAnnexes[] @relation("AnnexSyndicAuthorization")
   projectAnnexExtraFiles    ProjectAnnexExtraFile[] @relation("ProjectAnnexExtraFile")
   projectBillImportFor    ProjectBillImport[] @relation("ProjectBillImportFile")
   dossierJobDocxFor       DossierJob[] @relation("DossierJobDocx")
@@ -919,6 +920,9 @@ model ProjectAnnexes {
   /// The distributor's ANME acceptance letter for the module (annex N°11).
   moduleAcceptanceFileId    String?
   moduleAcceptance          File?   @relation("AnnexModuleAcceptance", fields: [moduleAcceptanceFileId], references: [id])
+  /// The syndic's (or co-owners') authorization to install on a flat's building (annex N°1).
+  syndicAuthorizationFileId String?
+  syndicAuthorization       File?   @relation("AnnexSyndicAuthorization", fields: [syndicAuthorizationFileId], references: [id])
 
   extraFiles                ProjectAnnexExtraFile[]
 

@@ -13,13 +13,14 @@ interface ValidatedFile {
   fileName: string;
 }
 
-export const ANNEX_FIELDS = ['cin', 'commercialRegister', 'stegContract', 'lastPaidBill', 'moduleAcceptance'] as const;
+export const ANNEX_FIELDS = ['cin', 'commercialRegister', 'stegContract', 'lastPaidBill', 'moduleAcceptance', 'syndicAuthorization'] as const;
 const ANNEX_FILE_ID_KEYS = {
   cin: 'cinFileId',
   commercialRegister: 'commercialRegisterFileId',
   stegContract: 'stegContractFileId',
   lastPaidBill: 'lastPaidBillFileId',
   moduleAcceptance: 'moduleAcceptanceFileId',
+  syndicAuthorization: 'syndicAuthorizationFileId',
 } as const;
 
 /** Reads and validates a field's file (if present) without writing anything to disk yet. */
@@ -58,6 +59,7 @@ export async function storeAnnexFiles(projectId: string, formData: FormData): Pr
     stegContract: null,
     lastPaidBill: null,
     moduleAcceptance: null,
+    syndicAuthorization: null,
   };
   for (const field of ANNEX_FIELDS) {
     const result = await validateFileField(formData, field);
@@ -127,5 +129,35 @@ export async function storeAnnexFiles(projectId: string, formData: FormData): Pr
     }
   }
 
+  return null;
+}
+
+/**
+ * Stores the structure's conformity attestation (bureau de contrôle) on the project's structure row
+ * and deletes the file it replaces. Refuses before writing anything when the project has no
+ * structure yet. The caller owns auth.
+ */
+export async function storeStructureAttestation(projectId: string, file: File): Promise<{ error: string } | null> {
+  const structure = await db.projectStructure.findUnique({ where: { projectId }, select: { structureAttestationFileId: true } });
+  if (!structure) {
+    return { error: 'Structure non renseignée.' };
+  }
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const validation = validateUploadedFile(buffer, file.type, file.size);
+  if (!validation.valid) {
+    return { error: validation.error };
+  }
+  const saved = await saveValidatedFile({ buffer, mimeType: validation.mimeType, fileName: file.name });
+  const row = await db.file.create({ data: { fileName: saved.fileName, mimeType: saved.mimeType, storageKey: saved.storageKey } });
+  await db.projectStructure.update({ where: { projectId }, data: { structureAttestationFileId: row.id } });
+
+  const oldId = structure.structureAttestationFileId;
+  if (oldId) {
+    const oldFile = await db.file.findUnique({ where: { id: oldId } });
+    if (oldFile) {
+      await deleteFile(oldFile.storageKey);
+      await db.file.delete({ where: { id: oldFile.id } });
+    }
+  }
   return null;
 }

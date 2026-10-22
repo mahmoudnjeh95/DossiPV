@@ -127,6 +127,7 @@ function annexesSummary(annexes: ProjectForEngine['annexes']): string | null {
     (annexes.stegContractFileId !== null ? 1 : 0) +
     (annexes.lastPaidBillFileId !== null ? 1 : 0) +
     (annexes.moduleAcceptanceFileId !== null ? 1 : 0) +
+    (annexes.syndicAuthorizationFileId !== null ? 1 : 0) +
     annexes.extraFiles.length;
   return count > 0 ? `${count} fichier(s)` : null;
 }

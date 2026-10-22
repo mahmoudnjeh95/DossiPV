@@ -378,6 +378,39 @@ th {
   flex: 1;
 }
 
+.piece-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.piece-list li {
+  align-items: flex-start;
+}
+
+.piece-list .badge {
+  flex: none;
+  width: 6.5em;
+  text-align: center;
+}
+
+.piece-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.piece-list .grow {
+  min-width: 0;
+}
+
+.piece-upload input[type='file'] {
+  flex: 1 1 200px;
+  width: auto;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
 .check-list {
   list-style: none;
   padding: 0;

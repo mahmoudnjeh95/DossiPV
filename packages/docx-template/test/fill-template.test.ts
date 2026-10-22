@@ -30,6 +30,8 @@ function paragraphsWithStyle(buffer: Buffer, style: string): string[] {
 }
 
 const baseData: DossierTemplateData = {
+  isDraft: false,
+  draftMissingText: '',
   siteBuildingLine: 'Bâtiment : maison individuelle, toiture au niveau R+1',
   earthingDetails: [{ label: 'Schéma de liaison à la terre', value: 'TT' }],
   companyName: 'SolarPro Tunisie',
@@ -293,6 +295,24 @@ describe('fillDossierTemplate', () => {
 
     expect(titles).toEqual(["Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG"]);
     expect(extractText(result)).toContain('Dossier n° 434 - 303 du 25/11/2026');
+  });
+
+  it('prints the draft notice under the title only for a draft', () => {
+    const draft = extractText(
+      fillDossierTemplate(templateBuffer, {
+        ...baseData,
+        isDraft: true,
+        draftMissingText: 'Copie de la CIN du titulaire ; Autorisation du syndic ou des copropriétaires',
+      }),
+    );
+    const title = "Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG";
+    const notice =
+      'BROUILLON – NON RECEVABLE. Pièces manquantes : Copie de la CIN du titulaire ; Autorisation du syndic ou des copropriétaires';
+    expect(draft).toContain(`${title}${notice}Dossier n° 434 - 303`);
+
+    const complete = extractText(fillDossierTemplate(templateBuffer, baseData));
+    expect(complete).not.toContain('BROUILLON');
+    expect(complete).not.toContain('Pièces manquantes');
   });
 
   it('prints the installer block and the client CIN line in the preamble', () => {

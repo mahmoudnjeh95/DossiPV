@@ -8,7 +8,7 @@ import { ACTIVE_MAP_PROVIDER } from '../map/esri-provider';
 import { POINT_STYLES, pointIcon, type PointKind } from '../../../../../components/map/point-markers';
 import { computeRunLengthsM } from '@dossipv/engine';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
-import { saveLocationsAndGenerateAction } from './actions';
+import { saveLocationsAction } from './actions';
 
 type Point = { lat: number; lon: number };
 type Points = Record<PointKind, Point | null>;
@@ -79,7 +79,7 @@ export function LocationsMap({ projectId, center, initial, initialFloors, initia
   function submit(): void {
     setError(null);
     startTransition(async () => {
-      const result = await saveLocationsAndGenerateAction(projectId, { ...points, floors, buildingType });
+      const result = await saveLocationsAction(projectId, { ...points, floors, buildingType });
       if (result?.error) setError(result.error);
     });
   }
@@ -187,7 +187,7 @@ export function LocationsMap({ projectId, center, initial, initialFloors, initia
         ))}
       </ul>
       <button type="button" onClick={submit} disabled={!ready || pending}>
-        {pending ? 'Génération en cours…' : 'Enregistrer et générer le dossier'}
+        {pending ? 'Enregistrement…' : 'Enregistrer et voir le récapitulatif'}
       </button>
       {error && (
         <div className="banner banner-danger" role="alert" style={{ marginTop: 12 }}>

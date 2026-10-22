@@ -39,6 +39,8 @@ const doc = new Document({
       children: [
         // The company moves to the running page header (Task 17); the title names the subject.
         new Paragraph({ text: "Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG", heading: HeadingLevel.TITLE }),
+        // A draft (STEG pieces missing) says so right under the title; the paragraph is dropped otherwise.
+        new Paragraph('{#isDraft}BROUILLON – NON RECEVABLE. Pièces manquantes : {draftMissingText}{/isDraft}'),
         new Paragraph('Dossier n° {dossierNumber} du {dossierDateText}'),
         new Paragraph({ text: '{sectionNumberPreambule} Préambule', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Installateur : {companyName}'),

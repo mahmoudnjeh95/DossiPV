@@ -1,4 +1,8 @@
 export interface DossierTemplateData {
+  /** True when STEG pieces are missing: the title is followed by the draft notice. */
+  isDraft: boolean;
+  /** The missing pieces, `a ; b ; c`; empty when the dossier is complete. */
+  draftMissingText: string;
   companyName: string;
   companyAddress: string;
   companyPhone: string;

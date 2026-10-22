@@ -80,6 +80,14 @@ describe('parseJobSnapshot', () => {
     expect(parsed!.cablingConfig?.cableTray).toBeNull();
   });
 
+  it('reads the missing STEG pieces, defaulting to none for an older snapshot', () => {
+    expect(parseJobSnapshot(validSnapshot)!.draftMissing).toEqual([]);
+    expect(parseJobSnapshot({ ...validSnapshot, draftMissing: 'Copie de la CIN' })!.draftMissing).toEqual([]);
+    expect(parseJobSnapshot({ ...validSnapshot, draftMissing: ['Copie de la CIN du titulaire', 7, ''] })!.draftMissing).toEqual([
+      'Copie de la CIN du titulaire',
+    ]);
+  });
+
   it('parses a pre-round-2 snapshot', () => {
     const parsed = parseJobSnapshot({
       ...validSnapshot,

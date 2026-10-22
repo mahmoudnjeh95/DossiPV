@@ -225,6 +225,25 @@ describe('buildTemplateData', () => {
     expect(result.stabilityRhs).toBe('');
   });
 
+  it('marks a dossier with missing STEG pieces as a draft and lists them', () => {
+    const input = {
+      workerResult,
+      engineInput,
+      projectMeta,
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: [] },
+      ...installerInputs,
+      ...sizingInputs,
+    };
+
+    const draft = buildTemplateData({ ...input, draftMissing: ['Copie de la CIN du titulaire', 'Acceptation ANME du module'] });
+    expect(draft.isDraft).toBe(true);
+    expect(draft.draftMissingText).toBe('Copie de la CIN du titulaire ; Acceptation ANME du module');
+
+    const complete = buildTemplateData(input);
+    expect(complete.isDraft).toBe(false);
+    expect(complete.draftMissingText).toBe('');
+  });
+
   it('falls back to empty strings for a null client rather than throwing', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,

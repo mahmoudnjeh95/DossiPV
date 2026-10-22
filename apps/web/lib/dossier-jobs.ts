@@ -83,6 +83,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** The STEG pieces a job's snapshot recorded as missing (its dossier is then a draft); [] for older snapshots. */
+export function snapshotDraftMissing(value: unknown): string[] {
+  return isRecord(value) ? jobWarnings(value['draftMissing']) : [];
+}
+
 /**
  * Narrows a `DossierJob.inputSnapshot` JSON value to the shape the installer app writes.
  * Returns null for any other shape (a job created by a different writer, or a future version)

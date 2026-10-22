@@ -185,6 +185,8 @@ export interface AnnexProjectFiles {
   stegContractFileId: string | null;
   lastPaidBillFileId: string | null;
   moduleAcceptanceFileId: string | null;
+  /** A flat's syndic (or co-owners') authorization; absent before the field existed. */
+  syndicAuthorizationFileId?: string | null;
   extraFileIds: string[];
 }
 
@@ -238,6 +240,7 @@ export function annexDocumentsFromSnapshot(
     ...fileDocument('ADMIN', 'Copie de la CIN du titulaire', annexes?.cinFileId),
     ...fileDocument('ADMIN', 'Registre de commerce', annexes?.commercialRegisterFileId),
     ...fileDocument('ADMIN', "Contrat STEG / attestation d'abonnement", annexes?.stegContractFileId),
+    ...fileDocument('ADMIN', 'Autorisation du syndic ou des copropriétaires', annexes?.syndicAuthorizationFileId),
     ...fileDocument('ADMIN', 'Dernière facture STEG', annexes?.lastPaidBillFileId),
     ...(annexes?.extraFileIds ?? []).flatMap((fileId, i) => fileDocument('ADMIN', `Pièce complémentaire ${i + 1}`, fileId)),
     ...fileDocument('STRUCTURE', ANNEX_TITLES.STRUCTURE, structureAttestationFileId),

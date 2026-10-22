@@ -1,11 +1,11 @@
 'use server';
 
+import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { computeRunLengthsM, groundDistanceM, runEngine, type EngineResult, type GpsPoint } from '@dossipv/engine';
 import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput, type ProjectForEngine } from '../../../../../lib/project-engine-input';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
-import { generateDossierAction } from '../actions';
 
 const NOT_FOUND = 'Projet introuvable.';
 const MAX_POINT_SPREAD_M = 500;
@@ -100,9 +100,10 @@ function circuitFits(result: EngineResult, circuit: Circuit, maxDropPct: number)
 /**
  * The installer placed the points: save them, derive the DC/AC run lengths, bump a run to the
  * cable's next larger section while its current-carrying check or voltage drop fails with the new
- * length, then enqueue the dossier like the regular "Générer" button does.
+ * length, mark the cable runs and earthing as confirmed (flowStep READY) and open the summary
+ * screen. Nothing is generated here: the installer reviews the summary first.
  */
-export async function saveLocationsAndGenerateAction(
+export async function saveLocationsAction(
   projectId: string,
   payload: LocationsPayload,
 ): Promise<{ error: string } | undefined> {
@@ -190,5 +191,5 @@ export async function saveLocationsAndGenerateAction(
   }
 
   await db.project.update({ where: { id: projectId }, data: { flowStep: 'READY' } });
-  return generateDossierAction(projectId, undefined);
+  redirect(`/projects/${projectId}/summary`);
 }

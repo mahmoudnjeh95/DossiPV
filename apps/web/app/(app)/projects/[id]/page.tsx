@@ -9,7 +9,7 @@ import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/s
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../../lib/labels';
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
 import { ChecksPanel } from '../../../../components/checks-panel';
-import { GenerateButton } from './generate-button';
+import { locationsPending } from '../../../../lib/steg-completeness';
 import { Projects } from '@dossipv/icons';
 
 const DERIVED_LABELS: { key: string; label: string; unit: string; decimals: number }[] = [
@@ -87,7 +87,9 @@ export default async function ProjectOverviewPage({
     (job) => job.status === 'PENDING' || job.status === 'RUNNING',
   );
   let generateReason: string | null = null;
-  if (!subscription || !subscription.canGenerate) {
+  if (locationsPending(project.flowStep)) {
+    generateReason = 'Placez les points avant de générer.';
+  } else if (!subscription || !subscription.canGenerate) {
     generateReason = 'Abonnement inactif.';
   } else if (quota?.blocked) {
     generateReason = `Quota mensuel atteint (${quota.used}/${quota.limit}).`;
@@ -205,11 +207,12 @@ export default async function ProjectOverviewPage({
                 : ''}
           </p>
         )}
-        <GenerateButton
-          projectId={project.id}
-          disabled={generateReason !== null}
-          reason={generateReason}
-        />
+        <div className="actions">
+          <Link className="button" href={`/projects/${project.id}/summary`}>
+            Récapitulatif et génération
+          </Link>
+          {generateReason && <span className="muted">{generateReason}</span>}
+        </div>
 
         {project.jobs.length > 0 && (
           <div className="table-wrap" style={{ marginTop: 12 }}>

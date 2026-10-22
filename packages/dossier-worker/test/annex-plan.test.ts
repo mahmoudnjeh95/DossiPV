@@ -30,6 +30,7 @@ function snapshot(overrides: Partial<WorkerJobSnapshot> = {}): WorkerJobSnapshot
     structure: null,
     earthing: null,
     cablingConfig: null,
+    draftMissing: [],
     ...overrides,
   };
 }
@@ -111,6 +112,25 @@ describe('annexDocumentsFromSnapshot', () => {
       'Pièce complémentaire 2',
     ]);
     expect(fileIds(admin)).toEqual(['anme', 'cin', 'rc', 'contract', 'bill', 'x1', 'x2']);
+  });
+
+  it("puts a flat's syndic authorization right after the STEG contract", () => {
+    const documents = annexDocumentsFromSnapshot(
+      snapshot(),
+      { anmeCertificateFileId: 'anme' },
+      { cinFileId: 'cin', commercialRegisterFileId: null, stegContractFileId: 'contract', lastPaidBillFileId: 'bill', moduleAcceptanceFileId: null, syndicAuthorizationFileId: 'syndic', extraFileIds: [] },
+      null,
+    );
+
+    const admin = documents.filter((d) => d.slot === 'ADMIN');
+    expect(admin.map((d) => d.label)).toEqual([
+      "Agrément ANME de l'installateur",
+      'Copie de la CIN du titulaire',
+      "Contrat STEG / attestation d'abonnement",
+      'Autorisation du syndic ou des copropriétaires',
+      'Dernière facture STEG',
+    ]);
+    expect(fileIds(admin)).toEqual(['anme', 'cin', 'contract', 'syndic', 'bill']);
   });
 
   it('collects the structure attestation', () => {

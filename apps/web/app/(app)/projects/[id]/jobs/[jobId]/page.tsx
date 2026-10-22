@@ -8,6 +8,7 @@ import {
   derivePipelineSteps,
   jobWarnings,
   parseJobSnapshot,
+  snapshotDraftMissing,
   summarizeSnapshot,
   CANCELLED_BY_INSTALLER_REASON,
 } from '../../../../../../lib/dossier-jobs';
@@ -98,6 +99,7 @@ export default async function DossierJobPage({
   const duration = formatDuration(job.startedAt, job.completedAt);
   const warnings = jobWarnings(job.warnings);
   const isCancelled = job.failureReason === CANCELLED_BY_INSTALLER_REASON;
+  const draftMissing = snapshotDraftMissing(job.inputSnapshot);
 
   return (
     <main>
@@ -136,6 +138,14 @@ export default async function DossierJobPage({
       )}
       {job.status === 'SUCCEEDED' && (
         <div className="banner banner-ok">Dossier généré{duration ? ` en ${duration}` : ''}.</div>
+      )}
+      {draftMissing.length > 0 && !isCancelled && (
+        <div className="banner banner-warn">
+          Brouillon : le PDF {job.status === 'SUCCEEDED' ? 'porte' : 'portera'} la mention « BROUILLON – NON RECEVABLE ».
+          Pièces manquantes :{' '}
+          {draftMissing.join(' ; ')}.{' '}
+          <Link href={`/projects/${projectId}/summary`}>Compléter les pièces</Link>
+        </div>
       )}
 
       <div className="card-grid" style={{ alignItems: 'start' }}>

@@ -38,6 +38,8 @@ export interface BuildTemplateDataInput {
   consumption: SnapshotConsumption | null;
   subscribedPowerKVA: number | null;
   phases: 1 | 3;
+  /** STEG pieces missing when the job was queued; the dossier is then a draft. Absent = none. */
+  draftMissing?: string[];
 }
 
 const MONTH_LABELS = [
@@ -240,7 +242,10 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     derived.STABILITY_LHS !== undefined &&
     derived.STABILITY_RHS !== undefined;
 
+  const draftMissing = input.draftMissing ?? [];
   return {
+    isDraft: draftMissing.length > 0,
+    draftMissingText: draftMissing.join(' ; '),
     companyName: installer.name,
     companyAddress: installer.address,
     companyPhone: installer.phone,

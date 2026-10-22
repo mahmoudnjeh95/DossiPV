@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   buildListPageAnnex: vi.fn(),
   dropBlankTrailingPages: vi.fn(),
   tryLoadStegLogo: vi.fn(),
+  applyDraftWatermark: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -73,6 +74,7 @@ vi.mock('../src/clean-pdf-annex', async () => {
 });
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
 vi.mock('../src/steg-logo', () => ({ tryLoadStegLogo: mocks.tryLoadStegLogo }));
+vi.mock('../src/draft-watermark', () => ({ applyDraftWatermark: mocks.applyDraftWatermark }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
@@ -1002,6 +1004,59 @@ describe('processJob — fragment assembly details', () => {
     // 1 failed attempt + 1 retried success (page 37) + 1 fetch for page 38.
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     expect(findSucceededUpdate()).toBeDefined();
+  });
+});
+
+describe('processJob — draft dossiers (STEG pieces missing)', () => {
+  const DOSSIER_PDF = Buffer.from('%PDF-fake-dossier');
+  const ANNEXES_PDF = Buffer.from('%PDF-fake-annexes');
+  const WATERMARKED_PDF = Buffer.from('%PDF-fake-watermarked');
+  const MISSING = ['Copie de la CIN du titulaire', 'Autorisation du syndic ou des copropriétaires'];
+
+  beforeEach(() => {
+    mocks.mergeDocumentFragments
+      .mockResolvedValueOnce({ pdf: DOSSIER_PDF, skipped: [] })
+      .mockResolvedValueOnce({ pdf: ANNEXES_PDF, skipped: [] });
+    mocks.applyDraftWatermark.mockResolvedValue(WATERMARKED_PDF);
+  });
+
+  it('watermarks dossier.pdf of a draft and leaves annexes.pdf as it is', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing: MISSING } });
+
+    await processJob('job-1');
+
+    expect(mocks.applyDraftWatermark).toHaveBeenCalledTimes(1);
+    expect(mocks.applyDraftWatermark).toHaveBeenCalledWith(DOSSIER_PDF, MISSING);
+    expect(mocks.saveFile).toHaveBeenCalledWith(WATERMARKED_PDF, 'dossier.pdf', 'application/pdf');
+    expect(mocks.saveFile).toHaveBeenCalledWith(ANNEXES_PDF, 'annexes.pdf', 'application/pdf');
+    // The Word body carries the same notice under its title.
+    expect(mocks.fillDossierTemplate.mock.calls[0]?.[1]).toMatchObject({
+      isDraft: true,
+      draftMissingText: 'Copie de la CIN du titulaire ; Autorisation du syndic ou des copropriétaires',
+    });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('leaves a complete dossier untouched', async () => {
+    await processJob('job-1');
+
+    expect(mocks.applyDraftWatermark).not.toHaveBeenCalled();
+    expect(mocks.saveFile).toHaveBeenCalledWith(DOSSIER_PDF, 'dossier.pdf', 'application/pdf');
+    expect(mocks.fillDossierTemplate.mock.calls[0]?.[1]).toMatchObject({ isDraft: false, draftMissingText: '' });
+  });
+
+  it('fails the job at the assembly step when the watermark cannot be applied', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing: MISSING } });
+    mocks.applyDraftWatermark.mockRejectedValue(new Error('corrupt'));
+
+    await processJob('job-1');
+
+    expect(mocks.dossierJobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED', failedStep: 'assembly' }) as object }),
+    );
+    expect(mocks.saveFile).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 });
 

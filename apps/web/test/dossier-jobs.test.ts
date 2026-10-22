@@ -3,6 +3,7 @@ import {
   derivePipelineSteps,
   jobWarnings,
   parseJobSnapshot,
+  snapshotDraftMissing,
   summarizeSnapshot,
   PIPELINE_STEPS,
 } from '../lib/dossier-jobs';
@@ -35,6 +36,7 @@ function fixtureSnapshot(): DossierJobSnapshotV1 {
     earthing: project.earthing,
     engineInput: result.input,
     projectMeta: result.meta,
+    draftMissing: [],
   };
 }
 
@@ -154,5 +156,15 @@ describe('summarizeSnapshot', () => {
     const snapshot = fixtureSnapshot();
     snapshot.arrayConfig = null;
     expect(summarizeSnapshot(snapshot).inverters[0]?.label).toBe('Sofar 1-4KTL2-G3');
+  });
+});
+
+describe('snapshotDraftMissing', () => {
+  it('reads the missing STEG pieces, and nothing from an older snapshot', () => {
+    expect(snapshotDraftMissing({ ...fixtureSnapshot(), draftMissing: ['Copie de la CIN du titulaire', 3] })).toEqual([
+      'Copie de la CIN du titulaire',
+    ]);
+    expect(snapshotDraftMissing({ version: 1 })).toEqual([]);
+    expect(snapshotDraftMissing(null)).toEqual([]);
   });
 });

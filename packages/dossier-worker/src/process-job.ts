@@ -44,6 +44,7 @@ import { renderTableOfContents } from './render-toc';
 import { buildListPageAnnex } from './steg-list-annex';
 import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
+import { applyDraftWatermark } from './draft-watermark';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 
@@ -370,6 +371,7 @@ export async function processJob(jobId: string): Promise<void> {
       consumption: snapshot.consumption,
       subscribedPowerKVA: snapshot.client?.subscribedPowerKVA ?? null,
       phases: snapshot.engineInput.site.phases,
+      draftMissing: snapshot.draftMissing,
     });
     const templateBuffer = await readFile(TEMPLATE_PATH);
     docxBuffer = fillDossierTemplate(templateBuffer, templateData);
@@ -652,6 +654,7 @@ export async function processJob(jobId: string): Promise<void> {
             stegContractFileId: annexes.stegContractFileId,
             lastPaidBillFileId: annexes.lastPaidBillFileId,
             moduleAcceptanceFileId: annexes.moduleAcceptanceFileId ?? null,
+            syndicAuthorizationFileId: annexes.syndicAuthorizationFileId ?? null,
             extraFileIds: annexes.extraFiles.map((f) => f.fileId),
           }
         : null,
@@ -683,6 +686,7 @@ export async function processJob(jobId: string): Promise<void> {
         annexes?.stegContractFileId,
         annexes?.lastPaidBillFileId,
         annexes?.moduleAcceptanceFileId,
+        annexes?.syndicAuthorizationFileId,
         ...(annexes?.extraFiles.map((f) => f.fileId) ?? []),
         project?.structure?.structureAttestationFileId,
       ].filter((id): id is string => typeof id === 'string'),
@@ -735,6 +739,16 @@ export async function processJob(jobId: string): Promise<void> {
     annexesPdfBuffer = (await mergeDocumentFragments([annexesOnlyDividerBuffer], annexFiles)).pdf;
   } catch (error) {
     return fail(jobId, 'annexes', error);
+  }
+
+  // A dossier queued with STEG pieces missing is a draft: dossier.pdf says so on every page and
+  // lists what is missing after the cover. annexes.pdf holds only the annexes and stays as it is.
+  if (snapshot.draftMissing.length > 0) {
+    try {
+      pdfBuffer = await applyDraftWatermark(pdfBuffer, snapshot.draftMissing);
+    } catch (error) {
+      return fail(jobId, 'assembly', error);
+    }
   }
 
   try {

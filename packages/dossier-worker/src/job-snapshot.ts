@@ -113,6 +113,8 @@ export interface WorkerJobSnapshot {
   structure: SnapshotStructure | null;
   earthing: SnapshotEarthing | null;
   cablingConfig: SnapshotCablingConfig | null;
+  /** STEG pieces missing when the job was queued: non-empty makes dossier.pdf a watermarked draft. */
+  draftMissing: string[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -129,6 +131,11 @@ function optionalRecord(value: unknown): Record<string, unknown> | null {
 
 function optionalNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+/** The non-empty strings of an array; [] for anything else (snapshots queued before the field). */
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '') : [];
 }
 
 // Snapshots written before round 2 lack the newer fields; each one parses as null.
@@ -234,5 +241,6 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     structure: optionalRecord(value.structure) as unknown as SnapshotStructure | null,
     earthing: optionalRecord(value.earthing) as unknown as SnapshotEarthing | null,
     cablingConfig: optionalRecord(value.cablingConfig) as unknown as SnapshotCablingConfig | null,
+    draftMissing: stringList(value.draftMissing),
   };
 }

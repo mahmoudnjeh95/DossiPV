@@ -226,6 +226,7 @@ describe('computeSectionStatuses', () => {
         annexes: {
           id: 'annexes-1', projectId: 'project-1', cinFileId: 'file-1', commercialRegisterFileId: null,
           stegContractFileId: 'file-2', lastPaidBillFileId: null, moduleAcceptanceFileId: 'file-4',
+          syndicAuthorizationFileId: null,
           extraFiles: [{ id: 'extra-1', annexesId: 'annexes-1', fileId: 'file-3' }],
         },
       }),
