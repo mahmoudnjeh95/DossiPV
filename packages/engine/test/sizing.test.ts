@@ -286,43 +286,47 @@ describe('proposeInstallations', () => {
   }, 30_000);
 
   it('builds the largest installation in phase 2 when phase 1 runs out of budget', () => {
-    // 28 800 combinations, far above the 18 000 of phase 1: the largest ones sort last by coverage
-    // distance and are reachable only through the reserve.
-    const catalog = syntheticCatalog(60, 40);
+    // A small need (8 000 kWh) makes the biggest layouts the farthest from 100 % coverage, so they
+    // sort last. Only the unique 14 kW inverter can reach the largest DC power, and only via phase 2.
+    const base = syntheticCatalog(60, 40);
+    const bigInverter = {
+      ...byId(base.inverters, 'inverter-0'),
+      id: 'inverter-big',
+      model: 'BIG',
+      pacW: 14_000,
+    };
+    const catalog: SizingCatalog = { ...base, inverters: [...base.inverters, bigInverter] };
+    const context: SizingContext = { ...largeConsumer, annualConsumptionKWh: 8000 };
     const module = byId(catalog.modules, 'module-0');
-    const inverter = byId(catalog.inverters, 'inverter-0');
     let bestDcW = 0;
-    let bestCoverage = 0;
-    const nsLow = Math.max(1, nsMin(module, inverter, largeConsumer.tMaxC));
-    const nsHigh = Math.min(
-      nsOptMax(module, inverter, largeConsumer.tMinC),
-      nsMax(module, inverter, largeConsumer.tMinC),
-    );
-    const inputs =
-      inverter.mpptCount *
-      Math.min(inverter.inputsPerMppt, npOpt(module, inverter, largeConsumer.tMaxC));
-    for (let ns = nsLow; ns <= nsHigh; ns++) {
-      for (let strings = 1; strings <= inputs; strings++) {
-        const dcW = ns * strings * module.pmaxW;
-        const ratio = dcW / inverter.pacW;
-        if (ratio < 0.8 || ratio > 1.3) continue;
-        if (!buildCandidate(module, inverter, ns, strings, catalog, largeConsumer).ok) continue;
-        if (dcW > bestDcW) {
-          bestDcW = dcW;
-          bestCoverage =
-            ((dcW / 1000) * largeConsumer.specificYieldKWhPerKWp) /
-            largeConsumer.annualConsumptionKWh;
+    for (const inverter of catalog.inverters) {
+      const nsLow = Math.max(1, nsMin(module, inverter, context.tMaxC));
+      const nsHigh = Math.min(
+        nsOptMax(module, inverter, context.tMinC),
+        nsMax(module, inverter, context.tMinC),
+      );
+      const inputs =
+        inverter.mpptCount *
+        Math.min(inverter.inputsPerMppt, npOpt(module, inverter, context.tMaxC));
+      for (let ns = nsLow; ns <= nsHigh; ns++) {
+        for (let strings = 1; strings <= inputs; strings++) {
+          const dcW = ns * strings * module.pmaxW;
+          const ratio = dcW / inverter.pacW;
+          if (ratio < 0.8 || ratio > 1.3) continue;
+          if (!buildCandidate(module, inverter, ns, strings, catalog, context).ok) continue;
+          bestDcW = Math.max(bestDcW, dcW);
         }
       }
     }
 
-    const result = proposeInstallations(catalog, largeConsumer);
+    const result = proposeInstallations(catalog, context);
 
     expect(result.stats.combinations).toBeGreaterThan(
       MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS,
     );
-    expect(bestCoverage).toBeGreaterThan(0);
-    expect(withKind(result.proposals, 'MAX_PRODUCTION').dcPowerKWp * 1000).toBeCloseTo(bestDcW, 6);
+    const maxProduction = withKind(result.proposals, 'MAX_PRODUCTION');
+    expect(maxProduction.candidate.inverter.id).toBe('inverter-big');
+    expect(maxProduction.dcPowerKWp * 1000).toBeCloseTo(bestDcW, 6);
   }, 30_000);
 
   it('caps the enumerated combinations', () => {
