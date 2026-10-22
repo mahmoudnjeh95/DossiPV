@@ -60,7 +60,7 @@ function drawHeaderLogo(page: PDFPage, image: PDFImage, align: 'left' | 'right')
   return { left: x, right: x + width };
 }
 
-interface HeaderParts {
+export interface HeaderParts {
   logo: PDFImage | null;
   stegLogo: PDFImage | null;
   installerName: string;
@@ -68,7 +68,7 @@ interface HeaderParts {
 }
 
 /** Installer logo (or name) on the left; « Dossier n° … » then the STEG logo on the right. */
-function drawHeader(page: PDFPage, parts: HeaderParts, fonts: { regular: PDFFont; bold: PDFFont }): void {
+export function drawHeader(page: PDFPage, parts: HeaderParts, fonts: { regular: PDFFont; bold: PDFFont }): void {
   const box = page.getMediaBox();
   // Text lines up with the middle of the logo box.
   const textBaseline = box.y + box.height - HEADER_TOP_INSET - LOGO_MAX.height / 2 - HEADER_TEXT_SIZE * 0.35;

@@ -34,6 +34,7 @@ const mocks = vi.hoisted(() => ({
   tryLoadStegLogo: vi.fn(),
   applyDraftWatermark: vi.fn(),
   stampStudyPages: vi.fn(),
+  renderProductionReport: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -84,6 +85,7 @@ vi.mock('../src/draft-watermark', async () => ({
   applyDraftWatermark: mocks.applyDraftWatermark,
 }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
+vi.mock('../src/render-production-report', () => ({ renderProductionReport: mocks.renderProductionReport }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
 vi.mock('../src/generate-page-37-layout', async () => ({
@@ -199,6 +201,11 @@ const PRODUCTION: ProductionSimulation = {
     eGridKWh: 450,
     prPct: 81.5,
   })),
+  pvgis: { radiationDb: 'PVGIS-SARAH3', meteoDb: 'ERA5', elevationM: 4, useHorizon: true, horizonSource: 'DEM-calculated', fetchedAt: '2026-10-22T15:25:00.000Z' },
+  simulatedAt: '2026-10-22T15:25:02.000Z',
+  annualNominalKWh: 6324,
+  losses: { temperaturePct: 6.7, dcCablePct: 0.9, inverterEfficiencyPct: 3, clippingPct: 0, acCablePct: 0.5, totalPct: 14.6 },
+  pvcalc: null,
 };
 const PVGIS_DOWN_REASON = "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.";
 // Every company carries its ANME agreement: a job without one fails before any work.
@@ -209,6 +216,8 @@ let drawingsPdf: Buffer;
 // reads this fragment's own page count (for the TOC's Annexes entry), so it must be a real,
 // loadable PDF like bodyPdf/drawingsPdf, not a recognisable fake buffer.
 let sitePlanPdf: Buffer;
+// The PVGIS report (annex N°2) is three real pages: the bordereau counts them.
+let simulationReportPdf: Buffer;
 
 function findSucceededUpdate(): unknown {
   return mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED');
@@ -219,6 +228,7 @@ beforeEach(async () => {
   bodyPdf = await makePdf(3);
   drawingsPdf = await makePdf(2);
   sitePlanPdf = await makePdf(2);
+  simulationReportPdf = await makePdf(3);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
   mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
@@ -252,6 +262,7 @@ beforeEach(async () => {
   mocks.mergeDocumentFragments.mockResolvedValue({ pdf: ASSEMBLED_PDF, skipped: [] });
   mocks.renderCoverPage.mockResolvedValue(COVER_PDF);
   mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
+  mocks.renderProductionReport.mockResolvedValue(simulationReportPdf);
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
   mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
   mocks.renderSitePlanPages.mockResolvedValue(sitePlanPdf);
@@ -376,11 +387,12 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
 
     await processJob('job-1');
 
-    // With no project upload, the annexes are the company's ANME agreement and the rendered
-    // drawings and plans (N°4-6).
+    // With no project upload, the annexes are the company's ANME agreement, the PVGIS report
+    // (N°2) and the rendered drawings and plans (N°4-6).
     const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { label: string }[]][];
     expect(mergeCalls[0]![1].map((a) => a.label)).toEqual([
       "Annexe N°1 — Agrément ANME de l'installateur",
+      'Annexe N°2 — Rapport de simulation de production PVGIS',
       'Annexe N°4 — Schémas électriques',
       "Annexe N°5 — Plan d'implantation et de connexion",
       'Annexe N°6 — Plan de situation',
@@ -679,12 +691,14 @@ describe('processJob — fragment assembly details', () => {
     const dividerText = (await extractPdfContent(dossierCall![0][3]!)).map(pageText).join('\n');
     expect(dividerText).toContain('ANNEXES');
     expect(dividerText).toContain('Bordereau des annexes');
-    // The drawings and plans now follow the divider (after the N°1 agreement), as annexes N°4-6.
+    // After the divider: the N°1 agreement, the PVGIS report (N°2), then the drawings and plans
+    // as annexes N°4-6.
     const annexes = dossierCall![1];
     expect(annexes[0]!.label).toBe("Annexe N°1 — Agrément ANME de l'installateur");
-    expect(annexes[1]!.buffer).toBe(drawingsPdf);
-    expect((await PDFDocument.load(annexes[2]!.buffer)).getPageCount()).toBe(1);
+    expect(annexes[1]!.buffer).toBe(simulationReportPdf);
+    expect(annexes[2]!.buffer).toBe(drawingsPdf);
     expect((await PDFDocument.load(annexes[3]!.buffer)).getPageCount()).toBe(1);
+    expect((await PDFDocument.load(annexes[4]!.buffer)).getPageCount()).toBe(1);
     expect(annexesCall![1]).toEqual(annexes);
     expect(annexesCall![0]).toHaveLength(1);
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
@@ -1065,7 +1079,7 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
       const row = divider.texts.find((t) => t.text === title);
       return row ? divider.texts.find((t) => t !== row && Math.abs(t.y - row.y) < 1 && t.x > row.x)?.text : undefined;
     };
-    const titles = ['Schéma unifilaire', "Plan d'implantation et de connexion", 'Plan de situation'];
+    const titles = ['Simulation de production PVGIS', 'Schéma unifilaire', "Plan d'implantation et de connexion", 'Plan de situation'];
     return { toc, bordereau: Object.fromEntries(titles.map((title) => [title, pageOf(title)])) };
   }
 
@@ -1078,8 +1092,10 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
     await processJob('job-1');
     const draft = await printedPageNumbers();
 
-    // Cover 1, TOC 2, body 3-5, divider 6-7; the unreadable N°1 takes no page, so the drawings open on 8.
-    expect(complete.bordereau['Schéma unifilaire']).toBe('8');
+    // Cover 1, TOC 2, body 3-5, divider 6-7; the unreadable N°1 takes no page, so the PVGIS report
+    // fills 8-10 and the drawings open on 11.
+    expect(complete.bordereau['Simulation de production PVGIS']).toBe('8');
+    expect(complete.bordereau['Schéma unifilaire']).toBe('11');
     expect(draft.toc.map((entry) => entry.title)).toEqual(complete.toc.map((entry) => entry.title));
     expect(draft.toc.map((entry) => entry.pageNumber)).toEqual(complete.toc.map((entry) => entry.pageNumber + 1));
     for (const [title, page] of Object.entries(complete.bordereau)) {
@@ -1347,6 +1363,58 @@ describe('processJob — PVGIS production simulation (mandatory, first step)', (
     expect(findSucceededUpdate()).toBeDefined();
   });
 
+  it('does not retry a PVGIS HTTP error, which the PVGIS client has already retried', async () => {
+    mocks.simulateProduction.mockRejectedValue(new PvgisFetchError(503, 'PVGIS a rencontré une erreur serveur (HTTP 503).'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(mocks.simulateProduction).toHaveBeenCalledTimes(1);
+    expect(failedUpdate()).toMatchObject({ failedStep: 'simulation', failureReason: PVGIS_DOWN_REASON });
+    error.mockRestore();
+  });
+
+  it('renders the PVGIS report from the simulation, the equipment and the installer, as annex N°2 with its page in the bordereau', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, dossierNumber: '434 - 303' } });
+
+    await processJob('job-1');
+
+    expect(mocks.renderProductionReport).toHaveBeenCalledWith(PRODUCTION, {
+      moduleRef: 'X',
+      moduleCount: 5,
+      inverterRef: 'Y',
+      inverterPacW: 4000,
+      dcDropPct: 0.74,
+      acDropPct: 0.48,
+      dossierNumber: '434 - 303',
+      dossierDate: '2026-10-03',
+      installerName: 'SolarPro',
+      logo: null,
+      stegLogo: STEG_LOGO,
+      moduleSpecs: undefined, // this fixture's module has no temperature coefficient
+    });
+    const [dossierCall] = mocks.mergeDocumentFragments.mock.calls as [Buffer[], { label: string; buffer: Buffer }[]][];
+    const report = dossierCall![1].find((a) => a.label === 'Annexe N°2 — Rapport de simulation de production PVGIS');
+    expect(report?.buffer).toBe(simulationReportPdf);
+    // Cover 1, TOC 2, body 3-5, divider 6-7; the N°1 agreement's stand-in bytes are no PDF, so it
+    // takes no page and the report opens on page 8.
+    const divider = (await extractPdfContent(dossierCall![0][3]!))[1]!;
+    const row = divider.texts.find((t) => t.text === 'Simulation de production PVGIS');
+    const page = divider.texts.find((t) => t !== row && Math.abs(t.y - row!.y) < 1 && t.x > row!.x)?.text;
+    expect(page).toBe('8');
+  });
+
+  it('fails at "simulation-report", saving nothing, when the report cannot be rendered', async () => {
+    mocks.renderProductionReport.mockRejectedValue(new Error('pdf-lib exploded'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(failedUpdate()).toMatchObject({ failedStep: 'simulation-report', failureReason: 'La génération du rapport de simulation PVGIS a échoué.' });
+    expect(mocks.saveFile).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('retries a transient PVGIS network failure', async () => {
     mocks.simulateProduction.mockRejectedValueOnce(new TypeError('fetch failed'));
 
@@ -1493,6 +1561,7 @@ describe('processJob — annex plan', () => {
     expect(annexes.map((a) => a.label)).toEqual([
       "Annexe N°1 — Agrément ANME de l'installateur",
       'Annexe N°1 — Dernière facture STEG',
+      'Annexe N°2 — Rapport de simulation de production PVGIS',
       'Annexe N°3 — Attestation de conformité de la structure',
       'Annexe N°4 — Schémas électriques',
       "Annexe N°5 — Plan d'implantation et de connexion",
@@ -1509,19 +1578,20 @@ describe('processJob — annex plan', () => {
 
     await processJob('job-1');
 
-    // Body = pages 3-7, divider = pages 8-9; ADMIN 10-11, STRUCTURE 12, drawings 13-14,
-    // implantation 15, situation 16, module 17, inverter 18, (DC SPD unreadable), RCD 19.
+    // Body = pages 3-7, divider = pages 8-9; ADMIN 10-11, PVGIS report 12-14, STRUCTURE 15,
+    // drawings 16-17, implantation 18, situation 19, module 20, inverter 21, (DC SPD unreadable), RCD 22.
     const divider = (await extractPdfContent((mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[]])[0][3]!))[1]!;
     const pageOf = (title: string): string | undefined => {
       const row = divider.texts.find((t) => t.text === title);
       return row ? divider.texts.find((t) => t !== row && Math.abs(t.y - row.y) < 1 && t.x > row.x)?.text : undefined;
     };
     expect(pageOf('Dossier administratif')).toBe('10');
-    expect(pageOf('Attestation de conformité de la structure')).toBe('12');
-    expect(pageOf('Schéma unifilaire')).toBe('13');
-    expect(pageOf('Plan de situation')).toBe('16');
-    expect(pageOf('Fiche technique du module')).toBe('17');
-    expect(pageOf('Disjoncteur différentiel')).toBe('19');
+    expect(pageOf('Simulation de production PVGIS')).toBe('12');
+    expect(pageOf('Attestation de conformité de la structure')).toBe('15');
+    expect(pageOf('Schéma unifilaire')).toBe('16');
+    expect(pageOf('Plan de situation')).toBe('19');
+    expect(pageOf('Fiche technique du module')).toBe('20');
+    expect(pageOf('Disjoncteur différentiel')).toBe('22');
     expect(pageOf('Parafoudre DC (document non joint)')).toBe('—');
     expect(pageOf('Chemin de câbles (sans objet)')).toBe('—');
   });
@@ -1564,7 +1634,7 @@ describe('processJob — annex plan', () => {
       expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(stegList, 'Y');
       expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(anmeList, 'X');
       const labels = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1].map((a) => a.label);
-      expect(labels.slice(6)).toEqual([
+      expect(labels.slice(7)).toEqual([
         'Annexe N°11 — Fiche technique LONGi X',
         'Annexe N°11 — Liste ANME des panneaux acceptés — page 7',
         'Annexe N°12 — Fiche technique Sofar Y',

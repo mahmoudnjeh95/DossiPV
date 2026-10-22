@@ -1,20 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computeMonthlySimulationTable, type PvModuleInput } from '@dossipv/engine';
-import { PvgisFetchError, type PvgisHourlyRow } from '@dossipv/pvgis-client';
+import { PvgisFetchError, type PvgisHourlyRow, type PvgisHourlySeries, type PvgisPvcalcReference, type PvgisSeriesMeta } from '@dossipv/pvgis-client';
 
-const { mockCacheFindUnique, mockCacheUpsert, mockFetchPvgisHourlyData } = vi.hoisted(() => ({
+const { mockCacheFindUnique, mockCacheUpsert, mockCacheUpdate, mockFetchPvgisHourlySeries, mockFetchPvcalc } = vi.hoisted(() => ({
   mockCacheFindUnique: vi.fn(),
   mockCacheUpsert: vi.fn(),
-  mockFetchPvgisHourlyData: vi.fn(),
+  mockCacheUpdate: vi.fn(),
+  mockFetchPvgisHourlySeries: vi.fn(),
+  mockFetchPvcalc: vi.fn(),
 }));
 
 vi.mock('@dossipv/pvgis-client', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/pvgis-client')>('@dossipv/pvgis-client');
-  return { ...actual, fetchPvgisHourlyData: mockFetchPvgisHourlyData };
+  return { ...actual, fetchPvgisHourlySeries: mockFetchPvgisHourlySeries, fetchPvgisPvcalcReference: mockFetchPvcalc };
 });
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
-  return { ...actual, db: { ...actual.db, pvgisWeatherCache: { findUnique: mockCacheFindUnique, upsert: mockCacheUpsert } } };
+  return { ...actual, db: { ...actual.db, pvgisWeatherCache: { findUnique: mockCacheFindUnique, upsert: mockCacheUpsert, update: mockCacheUpdate } } };
 });
 
 import { roundForCacheKey, simulateProduction, ProductionSimulationError, type ProductionSimulationInput } from '../src/run-simulation';
@@ -49,6 +51,14 @@ function syntheticHourly(scale: number): PvgisHourlyRow[] {
 
 const IN_PLANE = syntheticHourly(1.1);
 const HORIZONTAL = syntheticHourly(1);
+const META: PvgisSeriesMeta = { radiationDb: 'PVGIS-SARAH3', meteoDb: 'ERA5', elevationM: 4, useHorizon: true, horizonSource: 'DEM-calculated' };
+const series = (rows: PvgisHourlyRow[]): Promise<PvgisHourlySeries> => Promise.resolve({ rows, meta: META });
+const REFERENCE: PvgisPvcalcReference = {
+  meta: { ...META, yearMin: 2005, yearMax: 2023, mountingType: 'free-standing', technology: 'c-Si' },
+  monthly: Array.from({ length: 12 }, (_, i) => ({ month: i + 1, energyKWhPerKWp: 160, dailyEnergyKWhPerKWp: 5.3, irradiationKWhM2: 180, energySdKWhPerKWp: 8 })),
+  yearly: { energyKWhPerKWp: 1920, dailyEnergyKWhPerKWp: 5.26, irradiationKWhM2: 2160, energySdKWhPerKWp: 30 },
+  losses: { aoiPct: -2.57, spectralPct: 0.47, temperatureIrradiancePct: -7.3, totalPct: -9.26 },
+};
 
 const MODULE: PvModuleInput = {
   pmaxW: 620,
@@ -81,12 +91,14 @@ const INPUT: ProductionSimulationInput = {
 beforeEach(() => {
   mockCacheFindUnique.mockReset();
   mockCacheUpsert.mockReset();
-  mockFetchPvgisHourlyData.mockReset();
+  mockFetchPvgisHourlySeries.mockReset();
+  mockFetchPvcalc.mockReset();
+  mockCacheUpdate.mockReset();
   mockCacheFindUnique.mockResolvedValue(null);
   mockCacheUpsert.mockResolvedValue({});
-  mockFetchPvgisHourlyData.mockImplementation((_lat: number, _lon: number, tiltDeg: number) =>
-    Promise.resolve(tiltDeg === 0 ? HORIZONTAL : IN_PLANE),
-  );
+  mockCacheUpdate.mockResolvedValue({});
+  mockFetchPvcalc.mockResolvedValue(REFERENCE);
+  mockFetchPvgisHourlySeries.mockImplementation((_lat: number, _lon: number, tiltDeg: number) => series(tiltDeg === 0 ? HORIZONTAL : IN_PLANE));
 });
 
 describe('roundForCacheKey', () => {
@@ -105,22 +117,108 @@ describe('simulateProduction', () => {
     const result = await simulateProduction(INPUT);
 
     expect(mockCacheFindUnique).toHaveBeenCalledWith({ where: { latRounded_lonRounded_tiltDeg_azimuthDeg_year: cacheKey } });
-    expect(mockFetchPvgisHourlyData).not.toHaveBeenCalled();
+    expect(mockFetchPvgisHourlySeries).not.toHaveBeenCalled();
     expect(mockCacheUpsert).not.toHaveBeenCalled();
     expect(result.monthly).toHaveLength(12);
+  });
+
+  it('reads the PVGIS metadata and the fetch date from a cache row', async () => {
+    const fetchedAt = new Date('2026-10-20T09:15:00Z');
+    mockCacheFindUnique.mockResolvedValue({ inPlaneDataJson: { meta: META, rows: IN_PLANE }, horizontalDataJson: HORIZONTAL, fetchedAt });
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.monthly).toHaveLength(12);
+    expect(result.pvgis).toEqual({ ...META, fetchedAt: '2026-10-20T09:15:00.000Z' });
+  });
+
+  it('gives unknown metadata for a cache row written before it was stored, when PVcalc fails too', async () => {
+    mockCacheFindUnique.mockResolvedValue({ inPlaneDataJson: IN_PLANE, horizontalDataJson: HORIZONTAL, fetchedAt: new Date('2026-10-01T00:00:00Z') });
+    mockFetchPvcalc.mockRejectedValue(new PvgisFetchError(403, 'PVGIS refuse la requête (HTTP 403) : le service est probablement en maintenance.'));
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvgis).toEqual({ radiationDb: null, meteoDb: null, elevationM: null, useHorizon: null, horizonSource: null, fetchedAt: '2026-10-01T00:00:00.000Z' });
+  });
+
+  it("fills a legacy row's unknown metadata from PVcalc, which reads the same PVGIS databases at the point", async () => {
+    mockCacheFindUnique.mockResolvedValue({ id: 'row-1', inPlaneDataJson: IN_PLANE, horizontalDataJson: HORIZONTAL, fetchedAt: new Date('2026-10-01T00:00:00Z') });
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvgis).toEqual({ ...META, fetchedAt: '2026-10-01T00:00:00.000Z' });
   });
 
   it('fetches both series and caches them on a miss', async () => {
     await simulateProduction(INPUT);
 
-    expect(mockFetchPvgisHourlyData).toHaveBeenCalledTimes(2);
-    expect(mockFetchPvgisHourlyData).toHaveBeenCalledWith(INPUT.lat, INPUT.lon, 30, 0, 2020);
-    expect(mockFetchPvgisHourlyData).toHaveBeenCalledWith(INPUT.lat, INPUT.lon, 0, 0, 2020);
+    expect(mockFetchPvgisHourlySeries).toHaveBeenCalledTimes(2);
+    expect(mockFetchPvgisHourlySeries).toHaveBeenCalledWith(INPUT.lat, INPUT.lon, 30, 0, 2020);
+    expect(mockFetchPvgisHourlySeries).toHaveBeenCalledWith(INPUT.lat, INPUT.lon, 0, 0, 2020);
+    // The in-plane entry carries PVGIS's metadata next to its rows; a refetch renews fetchedAt.
     expect(mockCacheUpsert).toHaveBeenCalledWith({
       where: { latRounded_lonRounded_tiltDeg_azimuthDeg_year: cacheKey },
-      create: { ...cacheKey, inPlaneDataJson: IN_PLANE, horizontalDataJson: HORIZONTAL },
-      update: { inPlaneDataJson: IN_PLANE, horizontalDataJson: HORIZONTAL },
+      create: { ...cacheKey, inPlaneDataJson: { meta: META, pvcalc: REFERENCE, rows: IN_PLANE }, horizontalDataJson: HORIZONTAL },
+      update: { inPlaneDataJson: { meta: META, pvcalc: REFERENCE, rows: IN_PLANE }, horizontalDataJson: HORIZONTAL, fetchedAt: expect.any(Date) as Date },
     });
+    expect(mockFetchPvcalc).toHaveBeenCalledWith(INPUT.lat, INPUT.lon, 30, 0);
+  });
+
+  it('returns the PVcalc reference with the simulation', async () => {
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvcalc).toEqual(REFERENCE);
+  });
+
+  it('still simulates when PVcalc fails, without a reference', async () => {
+    mockFetchPvcalc.mockRejectedValue(new PvgisFetchError(503, 'PVGIS a rencontré une erreur serveur (HTTP 503).'));
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvcalc).toBeNull();
+    expect(result.monthly).toHaveLength(12);
+    expect(mockCacheUpsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ inPlaneDataJson: { meta: META, pvcalc: null, rows: IN_PLANE } }) as unknown }));
+  });
+
+  it('uses a cached PVcalc reference without calling PVGIS', async () => {
+    mockCacheFindUnique.mockResolvedValue({ inPlaneDataJson: { meta: META, pvcalc: REFERENCE, rows: IN_PLANE }, horizontalDataJson: HORIZONTAL, fetchedAt: new Date() });
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvcalc).toEqual(REFERENCE);
+    expect(mockFetchPvcalc).not.toHaveBeenCalled();
+    expect(mockCacheUpdate).not.toHaveBeenCalled();
+  });
+
+  it('fetches a missing PVcalc reference for a cache hit and stores it in the row', async () => {
+    mockCacheFindUnique.mockResolvedValue({ id: 'row-1', inPlaneDataJson: { meta: META, pvcalc: null, rows: IN_PLANE }, horizontalDataJson: HORIZONTAL, fetchedAt: new Date() });
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvcalc).toEqual(REFERENCE);
+    expect(mockFetchPvgisHourlySeries).not.toHaveBeenCalled();
+    expect(mockCacheUpdate).toHaveBeenCalledWith({ where: { id: 'row-1' }, data: { inPlaneDataJson: { meta: META, pvcalc: REFERENCE, rows: IN_PLANE } } });
+  });
+
+  it('itemises the engine losses so that they compound to the overall PR', async () => {
+    const result = await simulateProduction(INPUT);
+    const { losses } = result;
+
+    expect(losses.inverterEfficiencyPct).toBeCloseTo(3, 9);
+    for (const value of [losses.temperaturePct, losses.dcCablePct, losses.acCablePct]) expect(value).toBeGreaterThan(0);
+    expect(losses.clippingPct).toBeGreaterThanOrEqual(0);
+    const kept = [losses.temperaturePct, losses.dcCablePct, losses.inverterEfficiencyPct, losses.clippingPct, losses.acCablePct].reduce((product, pct) => product * (1 - pct / 100), 1);
+    expect(1 - kept).toBeCloseTo(losses.totalPct / 100, 9);
+    expect(100 - losses.totalPct).toBeCloseTo(result.performanceRatioPct, 9);
+  });
+
+  it('returns the metadata of a fresh fetch with the fetch date of the stored row', async () => {
+    mockCacheUpsert.mockResolvedValue({ fetchedAt: new Date('2026-10-22T15:25:00Z') });
+
+    const result = await simulateProduction(INPUT);
+
+    expect(result.pvgis).toEqual({ ...META, fetchedAt: '2026-10-22T15:25:00.000Z' });
+    expect(Number.isNaN(Date.parse(result.simulatedAt))).toBe(false);
   });
 
   it('returns 12 months and a weighted PR', async () => {
@@ -169,8 +267,8 @@ describe('simulateProduction', () => {
   });
 
   it('throws ProductionSimulationError when the weather data does not cover 12 months', async () => {
-    mockFetchPvgisHourlyData.mockImplementation((_lat: number, _lon: number, tiltDeg: number) =>
-      Promise.resolve((tiltDeg === 0 ? HORIZONTAL : IN_PLANE).filter((row) => !row.time.startsWith('202012'))),
+    mockFetchPvgisHourlySeries.mockImplementation((_lat: number, _lon: number, tiltDeg: number) =>
+      series((tiltDeg === 0 ? HORIZONTAL : IN_PLANE).filter((row) => !row.time.startsWith('202012'))),
     );
 
     await expect(simulateProduction(INPUT)).rejects.toBeInstanceOf(ProductionSimulationError);
@@ -178,13 +276,13 @@ describe('simulateProduction', () => {
 
   it('throws ProductionSimulationError when the year produces nothing', async () => {
     const dark = IN_PLANE.map((row) => ({ ...row, beamWM2: 0, diffuseWM2: 0, reflectedWM2: 0 }));
-    mockFetchPvgisHourlyData.mockImplementation((_lat: number, _lon: number, tiltDeg: number) => Promise.resolve(tiltDeg === 0 ? HORIZONTAL : dark));
+    mockFetchPvgisHourlySeries.mockImplementation((_lat: number, _lon: number, tiltDeg: number) => series(tiltDeg === 0 ? HORIZONTAL : dark));
 
     await expect(simulateProduction(INPUT)).rejects.toBeInstanceOf(ProductionSimulationError);
   });
 
   it('propagates PvgisFetchError', async () => {
-    mockFetchPvgisHourlyData.mockRejectedValue(new PvgisFetchError(403, 'PVGIS request failed with status 403'));
+    mockFetchPvgisHourlySeries.mockRejectedValue(new PvgisFetchError(403, 'PVGIS refuse la requête (HTTP 403) : le service est probablement en maintenance.'));
 
     await expect(simulateProduction(INPUT)).rejects.toBeInstanceOf(PvgisFetchError);
     expect(mockCacheUpsert).not.toHaveBeenCalled();

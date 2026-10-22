@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
+import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { db } from '@dossipv/db';
 import { formatRunLengthFormula, groundDistanceM, runEngine } from '@dossipv/engine';
 import { saveFile } from '@dossipv/file-storage';
@@ -27,6 +28,7 @@ import { renderCoverPage } from './render-cover-page';
 import { tryLoadStegLogo } from './steg-logo';
 import { installerIdentityFromCompany } from './installer-identity';
 import { renderDrawingPages } from './render-drawings';
+import { renderProductionReport } from './render-production-report';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
 import {
   activeImageryProvider,
@@ -88,6 +90,7 @@ const anthropicClient = new Anthropic();
 const GENERIC_FAILURE_REASONS: Record<string, string> = {
   snapshot: 'Instantané de la saisie illisible, corrompu ou obsolète : relancez la génération du dossier depuis le projet.',
   simulation: "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.",
+  'simulation-report': 'La génération du rapport de simulation PVGIS a échoué.',
   text: 'La génération du texte du dossier a échoué.',
   docx: 'La génération du document Word a échoué.',
   pdf: 'La conversion en PDF a échoué.',
@@ -347,11 +350,14 @@ export async function processJob(jobId: string): Promise<void> {
   const warnings: string[] = [];
 
   // PVGIS is mandatory (user, 2026-10-22) and runs first, so an outage fails the job before any
-  // paid Claude call or rendering work. A 403 (PVGIS maintenance page) is not retried.
+  // paid Claude call or rendering work. The PVGIS client already retries a 429 / 5xx once and
+  // never a 403 (its maintenance page), so only network failures are retried here.
   let production: ProductionSimulation;
+  let simulationInput: ProductionSimulationInput;
   try {
-    const simulationInput = buildSimulationInput(snapshot);
-    production = await withRetry(() => simulateProduction(simulationInput));
+    simulationInput = buildSimulationInput(snapshot);
+    const input = simulationInput;
+    production = await withRetry(() => simulateProduction(input), { isRetryable: (error) => !(error instanceof PvgisFetchError) && isRetryableError(error) });
   } catch (error) {
     return fail(jobId, 'simulation', error);
   }
@@ -485,6 +491,31 @@ export async function processJob(jobId: string): Promise<void> {
     await PDFDocument.load(drawingsBuffer); // an unreadable drawing fails here, at its own step
   } catch (error) {
     return fail(jobId, 'drawings', error);
+  }
+
+  // Annex N°2: the PVGIS simulation report.
+  let simulationReportBuffer: Buffer;
+  try {
+    const inverterLabels = [...new Set((snapshot.arrayConfig?.inverters ?? []).map(({ inverter }) => `${inverter.brand} ${inverter.model}`.trim()))];
+    const { module } = snapshot.engineInput;
+    simulationReportBuffer = await renderProductionReport(production, {
+      moduleRef: snapshot.projectMeta.moduleBrandModel,
+      moduleCount: simulationInput.moduleCount,
+      inverterRef: inverterLabels.length > 0 ? inverterLabels.join(' + ') : snapshot.projectMeta.inverterBrandModel,
+      inverterPacW: simulationInput.inverterPacW,
+      dcDropPct: simulationInput.dcVoltageDropPct,
+      acDropPct: simulationInput.acVoltageDropPct,
+      dossierNumber: snapshot.dossierNumber,
+      dossierDate: snapshot.engineInput.dossierDate,
+      installerName: company.name,
+      logo: companyLogoBuffer,
+      stegLogo: stegLogoBuffer,
+      // An older snapshot may lack the coefficient: the method block then describes it in words.
+      moduleSpecs: Number.isFinite(module.pmaxW) && Number.isFinite(module.tempCoeffPmaxPct) ? { pmaxW: module.pmaxW, tempCoeffPmaxPct: module.tempCoeffPmaxPct, noctC: module.noctC ?? null } : undefined,
+    });
+    await PDFDocument.load(simulationReportBuffer); // an unreadable report fails here, at its own step
+  } catch (error) {
+    return fail(jobId, 'simulation-report', error);
   }
 
   // Annexes N°5-6, every tier: satellite imagery with the installer's points, cable legs and
@@ -695,6 +726,7 @@ export async function processJob(jobId: string): Promise<void> {
       project?.structure?.structureAttestationFileId ?? null,
     );
     const fragmentDocuments: AnnexDocument[] = [
+      { slot: 'SIMULATION', label: 'Rapport de simulation de production PVGIS', source: { kind: 'fragment', buffer: simulationReportBuffer } },
       { slot: 'SINGLE_LINE', label: 'Schémas électriques', source: { kind: 'fragment', buffer: drawingsBuffer } },
       { slot: 'IMPLANTATION', label: "Plan d'implantation et de connexion", source: { kind: 'fragment', buffer: implantationPlanBuffer } },
       ...(situationPlanBuffer ? [{ slot: 'SITUATION', label: 'Plan de situation', source: { kind: 'fragment', buffer: situationPlanBuffer } } satisfies AnnexDocument] : []),

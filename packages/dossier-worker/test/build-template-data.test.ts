@@ -29,6 +29,11 @@ const production: ProductionSimulation = {
     eGridKWh: 450,
     prPct: 81.5,
   })),
+  pvgis: { radiationDb: 'PVGIS-SARAH3', meteoDb: 'ERA5', elevationM: 4, useHorizon: true, horizonSource: 'DEM-calculated', fetchedAt: '2026-10-22T15:25:00.000Z' },
+  simulatedAt: '2026-10-22T15:25:02.000Z',
+  annualNominalKWh: 6324,
+  losses: { temperaturePct: 6.7, dcCablePct: 0.9, inverterEfficiencyPct: 3, clippingPct: 0, acCablePct: 0.5, totalPct: 14.6 },
+  pvcalc: null,
 };
 
 const billConsumption: SnapshotConsumption = {
