@@ -1,3 +1,4 @@
+import { fetchPvgisJson } from './http';
 import { PvgisFetchError } from './types';
 
 const PVGIS_PVCALC_URL = 'https://re.jrc.ec.europa.eu/api/v5_3/PVcalc';
@@ -31,15 +32,11 @@ export async function fetchPvgisSpecificYield(
   url.searchParams.set('aspect', String(azimuthDeg));
   url.searchParams.set('outputformat', 'json');
 
-  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!response.ok) {
-    throw new PvgisFetchError(response.status, `PVGIS request failed with status ${response.status}`);
-  }
-
-  const data = (await response.json()) as RawPvcalcResponse;
+  // No retry: the page waits on this call and has its own fallback.
+  const data = (await fetchPvgisJson(url.toString(), { timeoutMs: REQUEST_TIMEOUT_MS, retryTransient: false, timeoutAsPvgisError: false })) as RawPvcalcResponse;
   const yearlyYield = data.outputs?.totals?.fixed?.E_y;
   if (typeof yearlyYield !== 'number') {
-    throw new PvgisFetchError(response.status, 'PVGIS response is missing outputs.totals.fixed.E_y');
+    throw new PvgisFetchError(200, 'Réponse PVGIS incomplète : outputs.totals.fixed.E_y est absent.');
   }
   return yearlyYield;
 }

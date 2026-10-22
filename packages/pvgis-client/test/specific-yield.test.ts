@@ -36,6 +36,14 @@ describe('fetchPvgisSpecificYield', () => {
     await expect(fetchPvgisSpecificYield(34.42, 8.78, 30, 0)).rejects.toBeInstanceOf(PvgisFetchError);
   });
 
+  it('fails at once on a 403 with the French maintenance message (the page has its own fallback)', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status: 403 });
+    globalThis.fetch = mockFetch;
+
+    await expect(fetchPvgisSpecificYield(34.42, 8.78, 30, 0)).rejects.toThrow('PVGIS refuse la requête (HTTP 403) : le service est probablement en maintenance.');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('throws PvgisFetchError when E_y is missing', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
