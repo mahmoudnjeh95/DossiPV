@@ -3,7 +3,7 @@ import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 import { db } from '@dossipv/db';
-import { runEngine } from '@dossipv/engine';
+import { formatRunLengthFormula, groundDistanceM, runEngine } from '@dossipv/engine';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
@@ -22,13 +22,32 @@ import {
   planImplantationView,
   planSituationView,
   projectToImage,
+  type ImplantationViewOptions,
   type LatLon,
   type PixelPoint,
+  type SatelliteView,
 } from './fetch-satellite-image';
-import { renderSitePlanPages, type SitePlanPremiumData } from './render-site-plan-pages';
+import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
 import { renderTableOfContents } from './render-toc';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
+
+/**
+ * Page 37's view: zoom 18 at most, because Esri World Imagery has no zoom-19 imagery outside the
+ * large Tunisian cities (it answers a "Map data not yet available" tile there), and a small
+ * minimum size (≈ 80 m across) so the house fills the plan rather than a whole neighbourhood.
+ */
+export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: 18, minSizePx: 160, paddingPx: 40 };
+
+/** A plan's satellite photo, or null (with an operator warning) when the tiles cannot be had. */
+async function fetchPlanImage(jobId: string, view: SatelliteView, plan: string): Promise<Buffer | null> {
+  try {
+    return await withRetry(() => fetchSatelliteImage(view));
+  } catch (error) {
+    console.warn(`processJob: job ${jobId}: the ${plan} plan's satellite image is unavailable; drawn without it.`, error);
+    return null;
+  }
+}
 
 // Reads ANTHROPIC_API_KEY from the environment automatically (the SDK's own default
 // behavior) — no new env var convention needed for this worker specifically.
@@ -306,50 +325,46 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'drawings', error);
   }
 
-  // Pages 37-38: a Premium project with a located site gets real satellite imagery plus the
-  // AI-reasoned page-37 layout. Anything else (Standard tier, or a Premium project whose site
-  // isn't located yet) gets the empty title-block frames, with zero network or API calls.
-  let sitePlanPremiumData: SitePlanPremiumData | null = null;
-  const premiumSite = snapshot.tier === 'PREMIUM' ? snapshot.site : null;
-  if (premiumSite) {
+  // Pages 37-38, every tier: satellite imagery with the installer's points, cable legs and
+  // lengths. A failed tile fetch only drops the photo; Premium adds the AI-reasoned layout.
+  let sitePlanData: SitePlanData | null = null;
+  const site = snapshot.site;
+  if (site) {
     const geoPoint = (lat: number | null, lon: number | null): LatLon | null => (lat !== null && lon !== null ? { lat, lon } : null);
-    const geoPoints = {
-      technicalRoom: geoPoint(premiumSite.technicalRoomPointLat, premiumSite.technicalRoomPointLon),
-      meter: geoPoint(premiumSite.meterPointLat, premiumSite.meterPointLon),
-      earthPit: geoPoint(premiumSite.earthPitPointLat, premiumSite.earthPitPointLon),
+    const sitePoint: LatLon = { lat: site.gpsLat, lon: site.gpsLon };
+    const gps: SitePlanData['page37']['gps'] = {
+      field: geoPoint(site.installationPointLat, site.installationPointLon) ?? sitePoint,
+      technicalRoom: geoPoint(site.technicalRoomPointLat, site.technicalRoomPointLon),
+      meter: geoPoint(site.meterPointLat, site.meterPointLon),
+      earthPit: geoPoint(site.earthPitPointLat, site.earthPitPointLon),
     };
-    const sitePoint: LatLon = { lat: premiumSite.gpsLat, lon: premiumSite.gpsLon };
-    const placedPoints = [geoPoints.technicalRoom, geoPoints.meter, geoPoints.earthPit].filter((p): p is LatLon => p !== null);
+    const field = gps.field!;
+    const placedPoints = [gps.technicalRoom, gps.meter, gps.earthPit].filter((p): p is LatLon => p !== null);
 
-    // Page 37 covers the site and every placed point at the best zoom; page 38 is a
-    // neighbourhood-scale view centred on the site. Both have exact pixel bounds, so every GPS
-    // point is projected to the image pixel it really falls on.
-    const implantationView = planImplantationView([sitePoint, ...placedPoints]);
+    // Page 37 covers every point at the best zoom; page 38 is a neighbourhood-scale view centred
+    // on the site. Both have exact pixel bounds, so every GPS point is projected to the image
+    // pixel it really falls on.
+    const implantationView = planImplantationView([field, ...placedPoints], IMPLANTATION_VIEW_OPTIONS);
     const situationView = planSituationView(sitePoint);
-
-    let page37Image: Buffer;
-    let page38Image: Buffer;
-    try {
-      page37Image = await withRetry(() => fetchSatelliteImage(implantationView));
-      page38Image = await withRetry(() => fetchSatelliteImage(situationView));
-    } catch (error) {
-      return fail(jobId, 'map-pages', error);
-    }
+    const page37Image = await fetchPlanImage(jobId, implantationView, 'implantation');
+    const page38Image = await fetchPlanImage(jobId, situationView, 'situation');
 
     const toPixels = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(implantationView, p) : null);
-    const pixelPoints: Page37Points = {
-      technicalRoom: toPixels(geoPoints.technicalRoom),
-      meter: toPixels(geoPoints.meter),
-      earthPit: toPixels(geoPoints.earthPit),
+    const pixelPoints: SitePlanPoints = {
+      field: toPixels(field),
+      technicalRoom: toPixels(gps.technicalRoom),
+      meter: toPixels(gps.meter),
+      earthPit: toPixels(gps.earthPit),
     };
+    const implantationMetersPerPixel = metersPerPixel(implantationView, field.lat);
 
-    // With no point placed on the map there is nothing to route the wiring to: skip the vision
-    // call and show the satellite photo without an overlay rather than fail the job.
+    // The vision call needs a photo and at least one placed point to route the wiring to.
     let layout: Page37Layout | null = null;
-    if (placedPoints.length > 0) {
+    if (snapshot.tier === 'PREMIUM' && placedPoints.length > 0 && page37Image) {
       const moduleCount = snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0);
       const { lengthMm, widthMm } = snapshot.engineInput.module;
       const arrayAreaM2 = lengthMm && widthMm ? (moduleCount * lengthMm * widthMm) / 1e6 : null;
+      const aiPoints: Page37Points = { technicalRoom: pixelPoints.technicalRoom, meter: pixelPoints.meter, earthPit: pixelPoints.earthPit };
       try {
         layout = await withRetry(
           () =>
@@ -358,9 +373,9 @@ export async function processJob(jobId: string): Promise<void> {
                 satelliteImage: page37Image,
                 imageWidthPx: implantationView.widthPx,
                 imageHeightPx: implantationView.heightPx,
-                metersPerPixel: metersPerPixel(implantationView, sitePoint.lat),
-                sitePoint: projectToImage(implantationView, sitePoint),
-                points: pixelPoints,
+                metersPerPixel: implantationMetersPerPixel,
+                sitePoint: projectToImage(implantationView, field),
+                points: aiPoints,
                 arrayAreaM2,
               },
               anthropicClient,
@@ -374,9 +389,22 @@ export async function processJob(jobId: string): Promise<void> {
       }
     }
 
-    sitePlanPremiumData = {
-      page37: { image: { buffer: page37Image, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx }, layout, points: pixelPoints },
-      page38: { image: { buffer: page38Image, widthPx: situationView.widthPx, heightPx: situationView.heightPx }, sitePin: projectToImage(situationView, sitePoint) },
+    const { dcRun, acRun } = snapshot.engineInput;
+    const dcFormula = gps.technicalRoom ? formatRunLengthFormula(groundDistanceM(field, gps.technicalRoom), dcRun.lengthM, site.floors, 'DC') : null;
+    const acFormula = gps.technicalRoom && gps.meter ? formatRunLengthFormula(groundDistanceM(gps.technicalRoom, gps.meter), acRun.lengthM, site.floors, 'AC') : null;
+    sitePlanData = {
+      page37: {
+        image: { buffer: page37Image, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel },
+        layout,
+        points: pixelPoints,
+        gps,
+        dc: { lengthM: dcRun.lengthM, sectionMm2: dcRun.sectionMm2, formula: dcFormula },
+        ac: { lengthM: acRun.lengthM, sectionMm2: acRun.sectionMm2, formula: acFormula },
+      },
+      page38: {
+        image: { buffer: page38Image, widthPx: situationView.widthPx, heightPx: situationView.heightPx, metersPerPixel: metersPerPixel(situationView, sitePoint.lat) },
+        sitePin: projectToImage(situationView, sitePoint),
+      },
     };
   }
 
@@ -384,7 +412,6 @@ export async function processJob(jobId: string): Promise<void> {
   let sitePlanPageCount: number;
   try {
     sitePlanBuffer = await renderSitePlanPages({
-      tier: sitePlanPremiumData ? 'PREMIUM' : 'STANDARD',
       clientFullName: snapshot.client?.fullName ?? '',
       clientAddress: snapshot.client?.address ?? '',
       gps: snapshot.site ? { lat: snapshot.site.gpsLat, lon: snapshot.site.gpsLon } : { lat: 0, lon: 0 },
@@ -393,7 +420,7 @@ export async function processJob(jobId: string): Promise<void> {
       companyLogoBuffer,
       dossierDate: snapshot.engineInput.dossierDate,
       dossierNumber: snapshot.dossierNumber,
-      premiumData: sitePlanPremiumData,
+      planData: sitePlanData,
     });
     sitePlanPageCount = (await PDFDocument.load(sitePlanBuffer)).getPageCount();
   } catch (error) {

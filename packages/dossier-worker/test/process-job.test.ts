@@ -78,9 +78,11 @@ vi.mock('fs/promises', async () => {
 });
 
 import { PvgisFetchError } from '@dossipv/pvgis-client';
-import { processJob } from '../src/process-job';
+import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM } from '@dossipv/engine';
+import { processJob, IMPLANTATION_VIEW_OPTIONS } from '../src/process-job';
 import type { ProductionSimulation } from '../src/run-simulation';
-import { planImplantationView, planSituationView, projectToImage, isInsideImage } from '../src/fetch-satellite-image';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel } from '../src/fetch-satellite-image';
+import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 
 const validSnapshot = {
@@ -429,27 +431,135 @@ describe('processJob — missing annex bytes on disk', () => {
   });
 });
 
-describe('processJob — full fragment assembly (Premium tier)', () => {
-  it('calls every new renderer and merges fragments in the documented order for a PREMIUM project', async () => {
+function sitePlanInput(): { planData: SitePlanData | null } {
+  return mocks.renderSitePlanPages.mock.calls[0]![0] as { planData: SitePlanData | null };
+}
+
+describe('processJob — site plans (pages 37-38)', () => {
+  it('still calls the AI layout for PREMIUM', async () => {
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
 
     await processJob('job-1');
 
     expect(mocks.renderCoverPage).toHaveBeenCalled();
     expect(mocks.renderDrawingPages).toHaveBeenCalled();
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalled();
-    expect(mocks.generatePage37Layout).toHaveBeenCalled();
-    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'PREMIUM' }));
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(mocks.generatePage37Layout).toHaveBeenCalledTimes(1);
+    expect(sitePlanInput().planData!.page37.layout).toEqual(PAGE_37_LAYOUT);
     expect(mocks.renderTableOfContents).toHaveBeenCalled();
-    expect(mocks.mergeDocumentFragments).toHaveBeenCalled();
+    expect(findSucceededUpdate()).toBeDefined();
   });
 
-  it('skips fetchSatelliteImage and generatePage37Layout entirely for a STANDARD project (no network/API call)', async () => {
+  it('fetches satellite plans for a STANDARD project without calling the AI layout', async () => {
     await processJob('job-1'); // validSnapshot's default tier is STANDARD
 
-    expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
-    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'STANDARD' }));
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.buffer).toBe(SATELLITE_TILE);
+    expect(planData.page38.image.buffer).toBe(SATELLITE_TILE);
+    expect(planData.page37.layout).toBeNull();
+    expect(planData.page37.dc).toEqual({ lengthM: 20, sectionMm2: 6, formula: null });
+    expect(planData.page37.ac).toEqual({ lengthM: 15, sectionMm2: 10, formula: null });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('does not fail the job when a tile fetch fails', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockRejectedValue(new Error('Esri tile 404'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.buffer).toBeNull();
+    expect(planData.page38.image.buffer).toBeNull();
+    expect(planData.page37.points.technicalRoom).not.toBeNull();
+    // No photo to reason on: the AI layout is skipped rather than failing the job.
+    expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(findSucceededUpdate()).toBeDefined();
+    warn.mockRestore();
+  });
+
+  it('keeps the page-38 photo when only the page-37 fetch fails', async () => {
+    mocks.fetchSatelliteImage.mockRejectedValueOnce(new Error('Esri tile 404'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.buffer).toBeNull();
+    expect(planData.page38.image.buffer).toBe(SATELLITE_TILE);
+    expect(findSucceededUpdate()).toBeDefined();
+    warn.mockRestore();
+  });
+
+  it('gives the plans the run lengths, sections, GPS and formulas from the placed points', async () => {
+    const field = { lat: 36.8, lon: 10.2 };
+    const technicalRoom = { lat: 36.80008, lon: 10.20012 };
+    const meter = { lat: 36.79985, lon: 10.20021 };
+    const earthPit = { lat: 36.80011, lon: 10.20003 };
+    const lengths = computeRunLengthsM({ field, technicalRoom, meter }, 1);
+    const snapshot = {
+      ...validSnapshot,
+      engineInput: { ...validSnapshot.engineInput, dcRun: { sectionMm2: 6, lengthM: lengths.dcLengthM }, acRun: { sectionMm2: 10, lengthM: lengths.acLengthM } },
+      site: {
+        ...validSnapshot.site,
+        installationPointLat: field.lat,
+        installationPointLon: field.lon,
+        floors: 1,
+        technicalRoomPointLat: technicalRoom.lat,
+        technicalRoomPointLon: technicalRoom.lon,
+        meterPointLat: meter.lat,
+        meterPointLon: meter.lon,
+        earthPitPointLat: earthPit.lat,
+        earthPitPointLon: earthPit.lon,
+      },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshot });
+
+    await processJob('job-1');
+
+    const view = planImplantationView([field, technicalRoom, meter, earthPit], IMPLANTATION_VIEW_OPTIONS);
+    const situationView = planSituationView(field);
+    expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(1, view);
+    expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(2, situationView);
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image).toEqual({ buffer: SATELLITE_TILE, widthPx: view.widthPx, heightPx: view.heightPx, metersPerPixel: metersPerPixel(view, field.lat) });
+    expect(planData.page37.points).toEqual({
+      field: projectToImage(view, field),
+      technicalRoom: projectToImage(view, technicalRoom),
+      meter: projectToImage(view, meter),
+      earthPit: projectToImage(view, earthPit),
+    });
+    expect(planData.page37.gps).toEqual({ field, technicalRoom, meter, earthPit });
+    const dcFormula = formatRunLengthFormula(groundDistanceM(field, technicalRoom), lengths.dcLengthM, 1, 'DC');
+    const acFormula = formatRunLengthFormula(groundDistanceM(technicalRoom, meter), lengths.acLengthM, 1, 'AC');
+    expect(dcFormula).not.toBeNull();
+    expect(acFormula).not.toBeNull();
+    expect(planData.page37.dc).toEqual({ lengthM: lengths.dcLengthM, sectionMm2: 6, formula: dcFormula });
+    expect(planData.page37.ac).toEqual({ lengthM: lengths.acLengthM, sectionMm2: 10, formula: acFormula });
+    expect(planData.page38).toEqual({
+      image: { buffer: SATELLITE_TILE, widthPx: situationView.widthPx, heightPx: situationView.heightPx, metersPerPixel: metersPerPixel(situationView, field.lat) },
+      sitePin: projectToImage(situationView, field),
+    });
+    for (const p of [field, technicalRoom, meter, earthPit]) {
+      expect(isInsideImage(view, projectToImage(view, p))).toBe(true);
+    }
+  });
+
+  it('prints the entered length instead of a formula when the installer edited the run', async () => {
+    const snapshot = {
+      ...validSnapshot,
+      engineInput: { ...validSnapshot.engineInput, dcRun: { sectionMm2: 6, lengthM: 99 } },
+      site: { ...validSnapshot.site, floors: 0, technicalRoomPointLat: 36.80008, technicalRoomPointLon: 10.20012, meterPointLat: 36.79985, meterPointLon: 10.20021 },
+    };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshot });
+
+    await processJob('job-1');
+
+    expect(sitePlanInput().planData!.page37.dc).toEqual({ lengthM: 99, sectionMm2: 6, formula: null });
   });
 });
 
@@ -624,8 +734,11 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
-    const implantationView = planImplantationView([site, ...placed]);
+    const implantationView = planImplantationView([site, ...placed], IMPLANTATION_VIEW_OPTIONS);
     const situationView = planSituationView(site);
+    // Esri's native imagery stops at zoom 18 outside the large cities (zoom 19 is a "Map data not
+    // yet available" tile there).
+    expect(implantationView.zoom).toBeLessThanOrEqual(18);
     expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(1, implantationView);
     expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(2, situationView);
     expect(situationView.zoom).toBeLessThan(implantationView.zoom);
@@ -637,10 +750,12 @@ describe('processJob — fragment assembly details', () => {
   it('hands the vision call and the renderer the placed points projected to image PIXELS (null when not placed)', async () => {
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
     const site = { lat: 36.8, lon: 10.2 };
-    const view = planImplantationView([site, { lat: 36.801, lon: 10.201 }, { lat: 36.799, lon: 10.199 }]);
+    const technicalRoom = { lat: 36.801, lon: 10.201 };
+    const meter = { lat: 36.799, lon: 10.199 };
+    const view = planImplantationView([site, technicalRoom, meter], IMPLANTATION_VIEW_OPTIONS);
     const expectedPoints = {
-      technicalRoom: projectToImage(view, { lat: 36.801, lon: 10.201 }),
-      meter: projectToImage(view, { lat: 36.799, lon: 10.199 }),
+      technicalRoom: projectToImage(view, technicalRoom),
+      meter: projectToImage(view, meter),
       earthPit: null,
     };
 
@@ -651,6 +766,7 @@ describe('processJob — fragment assembly details', () => {
         satelliteImage: SATELLITE_TILE,
         imageWidthPx: view.widthPx,
         imageHeightPx: view.heightPx,
+        metersPerPixel: metersPerPixel(view, site.lat),
         sitePoint: projectToImage(view, site),
         points: expectedPoints,
       }),
@@ -658,7 +774,6 @@ describe('processJob — fragment assembly details', () => {
     );
     const situationView = planSituationView(site);
     expect(mocks.renderSitePlanPages).toHaveBeenCalledWith({
-      tier: 'PREMIUM',
       clientFullName: 'Ahmed',
       clientAddress: 'Tunis',
       gps: { lat: 36.8, lon: 10.2 },
@@ -667,15 +782,26 @@ describe('processJob — fragment assembly details', () => {
       companyLogoBuffer: null,
       dossierDate: '2026-10-03',
       dossierNumber: null,
-      premiumData: {
-        page37: { image: { buffer: SATELLITE_TILE, widthPx: view.widthPx, heightPx: view.heightPx }, layout: PAGE_37_LAYOUT, points: expectedPoints },
-        page38: { image: { buffer: SATELLITE_TILE, widthPx: situationView.widthPx, heightPx: situationView.heightPx }, sitePin: projectToImage(situationView, site) },
+      planData: {
+        page37: {
+          image: { buffer: SATELLITE_TILE, widthPx: view.widthPx, heightPx: view.heightPx, metersPerPixel: metersPerPixel(view, site.lat) },
+          layout: PAGE_37_LAYOUT,
+          points: { field: projectToImage(view, site), ...expectedPoints },
+          gps: { field: site, technicalRoom, meter, earthPit: null },
+          // No floors in this snapshot and lengths typed by hand: no formula.
+          dc: { lengthM: 20, sectionMm2: 6, formula: null },
+          ac: { lengthM: 15, sectionMm2: 10, formula: null },
+        },
+        page38: {
+          image: { buffer: SATELLITE_TILE, widthPx: situationView.widthPx, heightPx: situationView.heightPx, metersPerPixel: metersPerPixel(situationView, site.lat) },
+          sitePin: projectToImage(situationView, site),
+        },
       },
     });
     expect(findSucceededUpdate()).toBeDefined();
   });
 
-  it('skips the vision call for a PREMIUM project with NO map point placed, and renders the satellite photo without an overlay', async () => {
+  it('skips the vision call for a PREMIUM project with NO map point placed, and still draws the field point', async () => {
     const noPoints = {
       ...premiumSnapshot,
       site: { ...premiumSnapshot.site, technicalRoomPointLat: null, technicalRoomPointLon: null, meterPointLat: null, meterPointLon: null },
@@ -686,10 +812,9 @@ describe('processJob — fragment assembly details', () => {
 
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
-    const renderInput = mocks.renderSitePlanPages.mock.calls[0]![0] as { tier: string; premiumData: { page37: { layout: unknown; points: unknown } } };
-    expect(renderInput.tier).toBe('PREMIUM');
-    expect(renderInput.premiumData.page37.layout).toBeNull();
-    expect(renderInput.premiumData.page37.points).toEqual({ technicalRoom: null, meter: null, earthPit: null });
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.layout).toBeNull();
+    expect(planData.page37.points).toEqual({ field: projectToImage(planImplantationView([{ lat: 36.8, lon: 10.2 }], IMPLANTATION_VIEW_OPTIONS), { lat: 36.8, lon: 10.2 }), technicalRoom: null, meter: null, earthPit: null });
     expect(findSucceededUpdate()).toBeDefined();
   });
 
@@ -723,7 +848,6 @@ describe('processJob — failure paths of the fragment-assembly steps', () => {
     { failedStep: 'cover', tier: 'STANDARD', arrange: () => mocks.renderCoverPage.mockRejectedValue(new Error('cover boom')) },
     { failedStep: 'drawings', tier: 'STANDARD', arrange: () => mocks.renderDrawingPages.mockRejectedValue(new Error('drawings boom')) },
     { failedStep: 'drawings', tier: 'STANDARD', arrange: () => mocks.renderDrawingPages.mockResolvedValue(Buffer.from('not a pdf')) },
-    { failedStep: 'map-pages', tier: 'PREMIUM', arrange: () => mocks.fetchSatelliteImage.mockRejectedValue(new Error('satellite tile boom')) },
     { failedStep: 'map-pages', tier: 'STANDARD', arrange: () => mocks.renderSitePlanPages.mockRejectedValue(new Error('site plan boom')) },
     { failedStep: 'page-37-layout', tier: 'PREMIUM', arrange: () => mocks.generatePage37Layout.mockRejectedValue(new Error('page-37 layout boom')) },
     { failedStep: 'toc', tier: 'STANDARD', arrange: () => mocks.renderTableOfContents.mockRejectedValue(new Error('toc boom')) },

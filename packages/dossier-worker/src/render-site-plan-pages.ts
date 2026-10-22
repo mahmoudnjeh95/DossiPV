@@ -1,23 +1,50 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
-import type { PixelPoint } from './fetch-satellite-image';
-import type { Page37Layout, Page37Points } from './generate-page-37-layout';
+import type { LatLon, PixelPoint } from './fetch-satellite-image';
+import type { Page37Layout } from './generate-page-37-layout';
 import { drawPdfText, fitPdfText, toPdfSafeText } from './pdf-text';
 import { embedLogo, formatFrenchDate } from './render-cover-page';
 
+/**
+ * Pages 37-38 of the dossier: the implantation plan (the installer's four placed points, the DC,
+ * AC and earth legs with their lengths, the legend with GPS and length formulas) and the
+ * situation plan (site pin, north arrow, GPS in decimal and DMS). Both are drawn for every tier
+ * on Esri imagery; when the imagery is missing, on a plain frame at the same scale.
+ */
+
 /** A stitched satellite image plus its pixel size (the coordinate space of every overlay). */
 export interface SitePlanImage {
-  buffer: Buffer;
+  /** Null when the tiles could not be fetched: the plan is drawn on a plain frame instead. */
+  buffer: Buffer | null;
   widthPx: number;
   heightPx: number;
+  /** Ground metres per image pixel, for the scale bar. */
+  metersPerPixel: number;
 }
 
-export interface SitePlanPremiumData {
+/** Installer-placed points in page-37 image pixels; `field` falls back to the site GPS. */
+export interface SitePlanPoints {
+  field: PixelPoint | null;
+  technicalRoom: PixelPoint | null;
+  meter: PixelPoint | null;
+  earthPit: PixelPoint | null;
+}
+
+export interface SitePlanLink {
+  lengthM: number;
+  sectionMm2: number;
+  /** How the length was computed from the points; null when the installer typed it. */
+  formula: string | null;
+}
+
+export interface SitePlanData {
   page37: {
     image: SitePlanImage;
-    /** Null when no point was placed on the map: the photo is shown without an AI overlay. */
+    /** The Premium AI layout (panel rows and route); null otherwise. */
     layout: Page37Layout | null;
-    /** Installer-placed points, in page-37 image pixels. */
-    points: Page37Points;
+    points: SitePlanPoints;
+    gps: Record<keyof SitePlanPoints, LatLon | null>;
+    dc: SitePlanLink;
+    ac: SitePlanLink;
   };
   page38: {
     image: SitePlanImage;
@@ -27,17 +54,17 @@ export interface SitePlanPremiumData {
 }
 
 export interface SitePlanPagesInput {
-  tier: 'STANDARD' | 'PREMIUM';
   clientFullName: string;
   clientAddress: string;
-  gps: { lat: number; lon: number };
+  gps: LatLon;
   installerName: string;
   installerContact: { address: string; phone: string; email: string };
   companyLogoBuffer: Buffer | null;
   /** ISO date, printed dd/MM/yyyy in the title block. */
   dossierDate: string;
   dossierNumber: string | null;
-  premiumData: SitePlanPremiumData | null;
+  /** Null when the project has no located site: both pages are empty frames. */
+  planData: SitePlanData | null;
 }
 
 const PAGE_WIDTH = 595.28;
@@ -46,40 +73,80 @@ const MARGIN = 40;
 const BLACK = rgb(0, 0, 0);
 const WHITE = rgb(1, 1, 1);
 const GREY = rgb(0.4, 0.4, 0.4);
+const FALLBACK_GREY = rgb(0.95, 0.95, 0.95);
 const PANEL_BLUE = rgb(0.1, 0.3, 0.85);
 const ROUTE_ORANGE = rgb(0.95, 0.5, 0.05);
 const PIN_RED = rgb(0.85, 0.1, 0.1);
 
-// The satellite image is fitted (aspect kept) inside this square; the legend and title block sit
-// below it.
-const IMAGE_BOX = { x: MARGIN, y: 262, width: PAGE_WIDTH - 2 * MARGIN, height: PAGE_WIDTH - 2 * MARGIN };
-const INFO_TOP = 240;
+// The image is fitted (aspect kept) inside this box; the legend and title block sit below it.
+const IMAGE_BOX = { x: MARGIN, y: 282, width: PAGE_WIDTH - 2 * MARGIN, height: 495 };
+const INFO_TOP = 262;
 const INFO_BOTTOM = MARGIN;
-const LEFT_BLOCK = { x: MARGIN, width: 250 };
-const RIGHT_BLOCK = { x: MARGIN + 265, width: PAGE_WIDTH - 2 * MARGIN - 265 };
+const LEFT_BLOCK = { x: MARGIN, width: 285 };
+const RIGHT_BLOCK = { x: MARGIN + 295, width: PAGE_WIDTH - 2 * MARGIN - 295 };
 const ATTRIBUTION = 'Imagerie : Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG';
+const NO_IMAGERY_TITLE = "Fond satellite indisponible — positions à l'échelle";
+const IMPLANTATION_TITLE = "Schéma d'implantation et de connexion";
+const SITUATION_TITLE = 'Plan de Situation';
+
+const hexColour = (hex: string): RGB => rgb(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255);
+
+type PointKey = keyof SitePlanPoints;
+const POINT_KEYS: PointKey[] = ['field', 'technicalRoom', 'meter', 'earthPit'];
+
+// The map editor's colours and labels (apps/web/components/map/point-markers.ts).
+const POINT_STYLES: Record<PointKey, { label: string; color: RGB }> = {
+  field: { label: 'Champ PV', color: hexColour('#F5B800') },
+  technicalRoom: { label: 'Local technique (onduleur)', color: hexColour('#1E6FD9') },
+  meter: { label: 'Compteur STEG', color: hexColour('#D93025') },
+  earthPit: { label: 'Piquet de terre', color: hexColour('#1E8E3E') },
+};
+const MARKER_RADIUS = 6;
+
+// Conductor colours (skill): DC in red, AC phase in brown, PE green-yellow.
+const DC_RED = rgb(0.8, 0, 0);
+const AC_BROWN = rgb(0.55, 0.27, 0.07);
+const PE_GREEN = rgb(0.1, 0.55, 0.2);
+const PE_YELLOW = rgb(1, 0.85, 0);
 
 interface Fonts {
   regular: PDFFont;
   bold: PDFFont;
 }
 
-interface Placement {
+interface Rect {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+interface Placement extends Rect {
   widthPx: number;
   heightPx: number;
 }
 
-const MARKER_STYLES = {
-  technicalRoom: { label: 'Local technique', color: rgb(0.75, 0.1, 0.1), shape: 'square' },
-  meter: { label: 'Compteur STEG', color: rgb(0.1, 0.55, 0.15), shape: 'circle' },
-  earthPit: { label: 'Prise de terre', color: rgb(0.55, 0.35, 0.1), shape: 'triangle' },
-} as const;
+const frenchNumber = (value: number, decimals: { min?: number; max: number }): string =>
+  new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals.min ?? 0, maximumFractionDigits: decimals.max, useGrouping: false }).format(value);
 
-type MarkerKey = keyof typeof MARKER_STYLES;
+/** `34,74211° N, 10,76000° E` — five decimals, French decimal comma. */
+export function formatGpsDecimal(point: LatLon): string {
+  const coord = (value: number, positive: string, negative: string): string => `${frenchNumber(Math.abs(value), { min: 5, max: 5 })}° ${value >= 0 ? positive : negative}`;
+  return `${coord(point.lat, 'N', 'S')}, ${coord(point.lon, 'E', 'O')}`;
+}
+
+/** `34°44'31,6" N, 10°45'36,0" E` — rounded to the tenth of a second, carries included. */
+export function formatGpsDms(point: LatLon): string {
+  const coord = (value: number, positive: string, negative: string): string => {
+    const tenths = Math.round(Math.abs(value) * 36000);
+    const degrees = Math.floor(tenths / 36000);
+    const minutes = Math.floor((tenths % 36000) / 600);
+    const secondTenths = tenths % 600;
+    const seconds = `${String(Math.floor(secondTenths / 10)).padStart(2, '0')},${secondTenths % 10}`;
+    return `${degrees}°${String(minutes).padStart(2, '0')}'${seconds}" ${value >= 0 ? positive : negative}`;
+  };
+  return `${coord(point.lat, 'N', 'S')}, ${coord(point.lon, 'E', 'O')}`;
+}
 
 async function embedImageSafely(doc: PDFDocument, buffer: Buffer): Promise<PDFImage | null> {
   // pdf-lib reads `imageData.buffer` ignoring byteOffset, so a small pooled Node Buffer would be
@@ -96,7 +163,7 @@ async function embedImageSafely(doc: PDFDocument, buffer: Buffer): Promise<PDFIm
   }
 }
 
-/** Image pixel → PDF point, inside the rectangle the image was drawn in. */
+/** Image pixel → PDF point, inside the rectangle the image (or its fallback frame) occupies. */
 function toPdf(placement: Placement, p: PixelPoint): { x: number; y: number } {
   return {
     x: placement.x + (p.x / placement.widthPx) * placement.width,
@@ -108,29 +175,45 @@ function isInsidePlacement(placement: Placement, p: PixelPoint): boolean {
   return p.x >= 0 && p.y >= 0 && p.x <= placement.widthPx && p.y <= placement.heightPx;
 }
 
-/** Draws the image fitted in IMAGE_BOX; returns where it went, or null if it can't be embedded. */
-async function drawSatelliteImage(doc: PDFDocument, page: PDFPage, image: SitePlanImage, fonts: Fonts): Promise<Placement | null> {
-  const embedded = await embedImageSafely(doc, image.buffer);
-  if (!embedded || image.widthPx <= 0 || image.heightPx <= 0) {
-    page.drawRectangle({ ...IMAGE_BOX, borderColor: BLACK, borderWidth: 1 });
-    drawPdfText(page, 'Image satellite indisponible', { x: IMAGE_BOX.x + 20, y: IMAGE_BOX.y + IMAGE_BOX.height / 2, size: 12, font: fonts.regular, color: rgb(0.6, 0, 0) });
-    return null;
-  }
-  const scale = Math.min(IMAGE_BOX.width / image.widthPx, IMAGE_BOX.height / image.heightPx);
-  const width = image.widthPx * scale;
-  const height = image.heightPx * scale;
+/** PDF points per ground metre on the drawn image. */
+function pointsPerMetre(placement: Placement, image: SitePlanImage): number {
+  return placement.width / placement.widthPx / image.metersPerPixel;
+}
+
+/**
+ * Draws the photo fitted in IMAGE_BOX, or — when there is none or it cannot be embedded — a plain
+ * frame of the same size and scale, so every overlay still lands where it belongs.
+ */
+async function drawBackground(doc: PDFDocument, page: PDFPage, image: SitePlanImage, fonts: Fonts): Promise<{ placement: Placement; titleRect: Rect | null }> {
+  const widthPx = image.widthPx > 0 ? image.widthPx : 1;
+  const heightPx = image.heightPx > 0 ? image.heightPx : 1;
+  const scale = Math.min(IMAGE_BOX.width / widthPx, IMAGE_BOX.height / heightPx);
+  const width = widthPx * scale;
+  const height = heightPx * scale;
   const placement: Placement = {
     x: IMAGE_BOX.x + (IMAGE_BOX.width - width) / 2,
     y: IMAGE_BOX.y + (IMAGE_BOX.height - height) / 2,
     width,
     height,
-    widthPx: image.widthPx,
-    heightPx: image.heightPx,
+    widthPx,
+    heightPx,
   };
-  page.drawImage(embedded, { x: placement.x, y: placement.y, width, height });
-  page.drawRectangle({ x: placement.x, y: placement.y, width, height, borderColor: BLACK, borderWidth: 1 });
-  drawPdfText(page, ATTRIBUTION, { x: IMAGE_BOX.x, y: IMAGE_BOX.y - 11, size: 6.5, font: fonts.regular, color: GREY });
-  return placement;
+
+  const embedded = image.buffer ? await embedImageSafely(doc, image.buffer) : null;
+  if (embedded) {
+    page.drawImage(embedded, { x: placement.x, y: placement.y, width, height });
+    page.drawRectangle({ x: placement.x, y: placement.y, width, height, borderColor: BLACK, borderWidth: 1 });
+    drawPdfText(page, ATTRIBUTION, { x: placement.x, y: placement.y - 11, size: 6.5, font: fonts.regular, color: GREY });
+    return { placement, titleRect: null };
+  }
+
+  page.drawRectangle({ x: placement.x, y: placement.y, width, height, color: FALLBACK_GREY, borderColor: BLACK, borderWidth: 1 });
+  const size = 9;
+  const textX = placement.x + 8;
+  const textY = placement.y + height - 8 - size;
+  drawPdfText(page, NO_IMAGERY_TITLE, { x: textX, y: textY, size, font: fonts.bold, color: GREY });
+  const textWidth = fonts.bold.widthOfTextAtSize(toPdfSafeText(NO_IMAGERY_TITLE), size);
+  return { placement, titleRect: { x: textX - 2, y: textY - 3, width: textWidth + 4, height: size + 5 } };
 }
 
 function svgPolygon(points: { x: number; y: number }[]): string {
@@ -142,42 +225,108 @@ function drawPolygon(page: PDFPage, points: { x: number; y: number }[], options:
   page.drawSvgPath(svgPolygon(points), { x: 0, y: PAGE_HEIGHT, ...options });
 }
 
-function drawMarkerShape(page: PDFPage, key: MarkerKey, at: { x: number; y: number }, size = 5.5): void {
-  const style = MARKER_STYLES[key];
-  if (style.shape === 'square') {
-    page.drawRectangle({ x: at.x - size, y: at.y - size, width: 2 * size, height: 2 * size, color: style.color, borderColor: WHITE, borderWidth: 1.2 });
-  } else if (style.shape === 'circle') {
-    page.drawCircle({ x: at.x, y: at.y, size, color: style.color, borderColor: WHITE, borderWidth: 1.2 });
-  } else {
-    drawPolygon(page, [{ x: at.x, y: at.y - size }, { x: at.x - size, y: at.y + size }, { x: at.x + size, y: at.y + size }], { color: style.color, borderColor: WHITE, borderWidth: 1.2 });
+/**
+ * Free-space bookkeeping for the labels drawn on a plan: each label takes the first candidate
+ * position that stays inside the image and touches neither a marker, an arrow nor another label.
+ */
+class LabelSpace {
+  private readonly taken: Rect[] = [];
+
+  constructor(private readonly bounds: Rect) {}
+
+  reserve(rect: Rect): void {
+    this.taken.push(rect);
+  }
+
+  private inside(rect: Rect): boolean {
+    const b = this.bounds;
+    return rect.x >= b.x + 2 && rect.y >= b.y + 2 && rect.x + rect.width <= b.x + b.width - 2 && rect.y + rect.height <= b.y + b.height - 2;
+  }
+
+  private free(rect: Rect): boolean {
+    return this.inside(rect) && this.taken.every((t) => rect.x + rect.width <= t.x || t.x + t.width <= rect.x || rect.y + rect.height <= t.y || t.y + t.height <= rect.y);
+  }
+
+  /** The first free candidate (else the first one inside the image, else the first one clamped). */
+  place(candidates: Rect[]): Rect {
+    const chosen = candidates.find((c) => this.free(c)) ?? candidates.find((c) => this.inside(c)) ?? this.clamp(candidates[0]!);
+    this.taken.push(chosen);
+    return chosen;
+  }
+
+  private clamp(rect: Rect): Rect {
+    const b = this.bounds;
+    return {
+      ...rect,
+      x: Math.min(Math.max(rect.x, b.x + 2), b.x + b.width - 2 - rect.width),
+      y: Math.min(Math.max(rect.y, b.y + 2), b.y + b.height - 2 - rect.height),
+    };
   }
 }
 
-/** Label on a white backdrop next to a marker, kept inside the image. */
-function drawMarkerLabel(page: PDFPage, text: string, at: { x: number; y: number }, placement: Placement, font: PDFFont): void {
-  const size = 8;
-  const safe = toPdfSafeText(text);
-  const width = font.widthOfTextAtSize(safe, size);
-  let x = at.x + 9;
-  if (x + width + 3 > placement.x + placement.width) x = at.x - 9 - width;
-  x = Math.max(placement.x + 3, x);
-  const y = Math.min(placement.y + placement.height - size - 3, Math.max(placement.y + 4, at.y - 3));
-  page.drawRectangle({ x: x - 2, y: y - 2, width: width + 4, height: size + 3, color: WHITE, opacity: 0.85 });
-  page.drawText(safe, { x, y, size, font, color: BLACK });
+interface PlanLabel {
+  text: string;
+  size: number;
+  font: PDFFont;
+  border: RGB | null;
+  rect: Rect;
 }
 
-/** Map imagery is north-up, so south points straight down. */
-function drawSouthArrow(page: PDFPage, placement: Placement, font: PDFFont): void {
+const LABEL_PAD = 2.5;
+
+function labelBox(text: string, font: PDFFont, size: number): { width: number; height: number } {
+  return { width: font.widthOfTextAtSize(toPdfSafeText(text), size) + 2 * LABEL_PAD, height: size + 2 * LABEL_PAD };
+}
+
+function drawLabel(page: PDFPage, label: PlanLabel): void {
+  const { rect } = label;
+  page.drawRectangle({ ...rect, color: WHITE, opacity: 0.9, ...(label.border ? { borderColor: label.border, borderWidth: 0.8 } : {}) });
+  drawPdfText(page, label.text, { x: rect.x + LABEL_PAD, y: rect.y + LABEL_PAD + label.size * 0.22, size: label.size, font: label.font, color: BLACK });
+}
+
+/** Map imagery is north-up, so south points straight down. Returns the area it covers. */
+function drawSouthArrow(page: PDFPage, placement: Placement, font: PDFFont): Rect {
   const cx = placement.x + placement.width - 24;
   const top = placement.y + placement.height - 8;
-  page.drawRectangle({ x: cx - 14, y: top - 62, width: 28, height: 58, color: WHITE, opacity: 0.85, borderColor: BLACK, borderWidth: 0.5 });
+  const box = { x: cx - 14, y: top - 62, width: 28, height: 58 };
+  page.drawRectangle({ ...box, color: WHITE, opacity: 0.85, borderColor: BLACK, borderWidth: 0.5 });
   page.drawLine({ start: { x: cx, y: top - 10 }, end: { x: cx, y: top - 38 }, thickness: 2, color: BLACK });
   drawPolygon(page, [{ x: cx, y: top - 46 }, { x: cx - 6, y: top - 34 }, { x: cx + 6, y: top - 34 }], { color: BLACK });
   const label = 'Sud';
   page.drawText(label, { x: cx - font.widthOfTextAtSize(label, 8) / 2, y: top - 57, size: 8, font, color: BLACK });
+  return box;
 }
 
-function drawOverlay(page: PDFPage, layout: Page37Layout, placement: Placement): void {
+function drawNorthArrow(page: PDFPage, placement: Placement, font: PDFFont): void {
+  const cx = placement.x + placement.width - 24;
+  const top = placement.y + placement.height - 8;
+  page.drawRectangle({ x: cx - 14, y: top - 58, width: 28, height: 54, color: WHITE, opacity: 0.85, borderColor: BLACK, borderWidth: 0.5 });
+  const label = 'N';
+  page.drawText(label, { x: cx - font.widthOfTextAtSize(label, 10) / 2, y: top - 17, size: 10, font, color: BLACK });
+  drawPolygon(page, [{ x: cx, y: top - 20 }, { x: cx - 6, y: top - 32 }, { x: cx + 6, y: top - 32 }], { color: BLACK });
+  page.drawLine({ start: { x: cx, y: top - 30 }, end: { x: cx, y: top - 52 }, thickness: 2, color: BLACK });
+}
+
+/**
+ * A two-tone scale bar starting at (x, y): the shortest round length of at least 25 pt — 10 m on
+ * a normal implantation plan. Returns the height it used.
+ */
+function drawScaleBar(page: PDFPage, x: number, y: number, ptPerMetre: number, maxWidth: number, font: PDFFont): number {
+  if (!Number.isFinite(ptPerMetre) || ptPerMetre <= 0) return 0;
+  const lengths = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+  const metres = lengths.find((m) => m * ptPerMetre >= 25) ?? lengths[lengths.length - 1]!;
+  const width = Math.min(maxWidth, metres * ptPerMetre);
+  const barY = y + 9;
+  page.drawRectangle({ x, y: barY, width: width / 2, height: 4, color: BLACK, borderColor: BLACK, borderWidth: 0.5 });
+  page.drawRectangle({ x: x + width / 2, y: barY, width: width / 2, height: 4, color: WHITE, borderColor: BLACK, borderWidth: 0.5 });
+  page.drawText('0', { x: x - font.widthOfTextAtSize('0', 7) / 2, y, size: 7, font, color: BLACK });
+  const label = `${frenchNumber(metres, { max: 0 })} m`;
+  page.drawText(label, { x: x + width - font.widthOfTextAtSize(label, 7) / 2, y, size: 7, font, color: BLACK });
+  page.drawText('Échelle', { x: x + width + 14, y: barY - 1, size: 7, font, color: GREY });
+  return 22;
+}
+
+function drawLayoutOverlay(page: PDFPage, layout: Page37Layout, placement: Placement): void {
   const quad = layout.panelRectangle.map((p) => toPdf(placement, p));
   drawPolygon(page, quad, { color: PANEL_BLUE, opacity: 0.35 });
   for (let i = 0; i < quad.length; i += 1) {
@@ -189,14 +338,61 @@ function drawOverlay(page: PDFPage, layout: Page37Layout, placement: Placement):
   }
 }
 
+interface Leg {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  label: string;
+  color: RGB;
+  earth: boolean;
+}
+
+function drawLeg(page: PDFPage, leg: Leg): void {
+  // A white halo keeps the conductor readable on any roof colour.
+  page.drawLine({ start: leg.from, end: leg.to, thickness: 4.5, color: WHITE, opacity: 0.85 });
+  page.drawLine({ start: leg.from, end: leg.to, thickness: 2.2, color: leg.color });
+  if (leg.earth) page.drawLine({ start: leg.from, end: leg.to, thickness: 2.2, color: PE_YELLOW, dashArray: [4, 4] });
+}
+
+/** Label candidates along a leg: on it at mid-length first, then beside it, then further along. */
+function legLabelCandidates(leg: Leg, box: { width: number; height: number }): Rect[] {
+  const dx = leg.to.x - leg.from.x;
+  const dy = leg.to.y - leg.from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const normal = { x: -dy / length, y: dx / length };
+  const offset = box.height / 2 + 5;
+  const candidates: Rect[] = [];
+  for (const t of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+    for (const side of [0, 1, -1, 2, -2]) {
+      const cx = leg.from.x + dx * t + normal.x * offset * side;
+      const cy = leg.from.y + dy * t + normal.y * offset * side;
+      candidates.push({ x: cx - box.width / 2, y: cy - box.height / 2, ...box });
+    }
+  }
+  return candidates;
+}
+
+function markerLabelCandidates(at: { x: number; y: number }, box: { width: number; height: number }): Rect[] {
+  const gap = MARKER_RADIUS + 4;
+  return [
+    { x: at.x + gap, y: at.y - box.height / 2, ...box },
+    { x: at.x - gap - box.width, y: at.y - box.height / 2, ...box },
+    { x: at.x - box.width / 2, y: at.y + gap, ...box },
+    { x: at.x - box.width / 2, y: at.y - gap - box.height, ...box },
+    { x: at.x + gap, y: at.y + gap - 2, ...box },
+    { x: at.x - gap - box.width, y: at.y + gap - 2, ...box },
+    { x: at.x + gap, y: at.y - gap - box.height + 2, ...box },
+    { x: at.x - gap - box.width, y: at.y - gap - box.height + 2, ...box },
+  ];
+}
+
 /** One or more lines of text fitted to `width`, drawn downwards from `y`; returns the next y. */
-function drawFittedLines(page: PDFPage, text: string, x: number, y: number, width: number, font: PDFFont, options: { size?: number; maxLines?: number } = {}): number {
+function drawFittedLines(page: PDFPage, text: string, x: number, y: number, width: number, font: PDFFont, options: { size?: number; maxLines?: number; color?: RGB } = {}): number {
   const size = options.size ?? 9;
   const maxLines = options.maxLines ?? 1;
   const fitted = fitPdfText(font, text, { size, minSize: Math.min(size, 7), maxWidth: width, maxHeight: maxLines * size * 1.2 });
   let lineY = y;
   for (const line of fitted.lines) {
-    page.drawText(line, { x, y: lineY, size: fitted.size, font, color: BLACK });
+    page.drawText(line, { x, y: lineY, size: fitted.size, font, color: options.color ?? BLACK });
     lineY -= fitted.lineHeight;
   }
   return lineY - 3;
@@ -220,73 +416,120 @@ async function drawBlockLogo(doc: PDFDocument, page: PDFPage, logoBuffer: Buffer
   return fullTextWidth - 78;
 }
 
-function drawLegend(page: PDFPage, fonts: Fonts, points: Page37Points): void {
-  drawBlockFrame(page, LEFT_BLOCK);
-  const x = LEFT_BLOCK.x + 10;
-  let y = INFO_TOP - 18;
-  page.drawText('Légende', { x, y, size: 10, font: fonts.bold, color: BLACK });
-  y -= 22;
-
-  page.drawRectangle({ x, y: y - 2, width: 18, height: 10, color: PANEL_BLUE, opacity: 0.35, borderColor: PANEL_BLUE, borderWidth: 1.5 });
-  drawPdfText(page, 'Champ PV (implantation indicative)', { x: x + 26, y, size: 8, font: fonts.regular, color: BLACK });
-  y -= 18;
-  page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 18, y: y + 3 }, thickness: 2, color: ROUTE_ORANGE });
-  drawPdfText(page, 'Tracé de câblage', { x: x + 26, y, size: 8, font: fonts.regular, color: BLACK });
-  y -= 18;
-  for (const key of Object.keys(MARKER_STYLES) as MarkerKey[]) {
-    drawMarkerShape(page, key, { x: x + 9, y: y + 3 }, 4.5);
-    const placed = points[key] !== null;
-    drawPdfText(page, `${MARKER_STYLES[key].label}${placed ? '' : ' (non placé)'}`, { x: x + 26, y, size: 8, font: fonts.regular, color: placed ? BLACK : GREY });
-    y -= 18;
-  }
-  y -= 4;
-  drawFittedLines(page, 'Chaîne : DC -> Onduleur -> AC -> TGBT -> Compteur STEG', x, y, LEFT_BLOCK.width - 20, fonts.regular, { size: 8 });
+function linkLegendText(kind: 'DC' | 'AC', link: SitePlanLink): string {
+  return link.formula ? `${kind} : ${link.formula}` : `${kind} : ${frenchNumber(link.lengthM, { max: 1 })} m (longueur saisie par l'installateur)`;
 }
 
-async function drawTitleBlock(doc: PDFDocument, page: PDFPage, input: SitePlanPagesInput, fonts: Fonts, title: string): Promise<void> {
+function drawImplantationLegend(page: PDFPage, fonts: Fonts, data: SitePlanData['page37'], ptPerMetre: number, earthDrawn: boolean): void {
+  drawBlockFrame(page, LEFT_BLOCK);
+  const x = LEFT_BLOCK.x + 10;
+  const textX = x + 24;
+  const textWidth = LEFT_BLOCK.width - 20 - 24;
+  let y = INFO_TOP - 18;
+  page.drawText('Légende', { x, y, size: 10, font: fonts.bold, color: BLACK });
+  y -= 18;
+
+  for (const key of POINT_KEYS) {
+    const style = POINT_STYLES[key];
+    const gps = data.gps[key];
+    page.drawCircle({ x: x + 9, y: y + 3, size: 4, color: style.color, borderColor: WHITE, borderWidth: 1 });
+    const text = gps ? `${style.label} : ${formatGpsDecimal(gps)}` : `${style.label} (non placé)`;
+    y = drawFittedLines(page, text, textX, y, textWidth, fonts.regular, { size: 8, color: gps ? BLACK : GREY }) - 1;
+  }
+
+  if (data.layout) {
+    page.drawRectangle({ x, y: y - 2, width: 18, height: 9, color: PANEL_BLUE, opacity: 0.35, borderColor: PANEL_BLUE, borderWidth: 1.5 });
+    y = drawFittedLines(page, 'Champ PV (implantation indicative)', textX, y, textWidth, fonts.regular, { size: 8 }) - 1;
+    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 18, y: y + 3 }, thickness: 2, color: ROUTE_ORANGE });
+    y = drawFittedLines(page, 'Tracé de câblage', textX, y, textWidth, fonts.regular, { size: 8 }) - 1;
+  }
+
+  y -= 2;
+  const links: [RGB, string, boolean][] = [
+    [DC_RED, linkLegendText('DC', data.dc), false],
+    [AC_BROWN, linkLegendText('AC', data.ac), false],
+    ...(earthDrawn ? ([[PE_GREEN, 'Terre : local technique — piquet de terre', true]] as [RGB, string, boolean][]) : []),
+  ];
+  for (const [color, text, earth] of links) {
+    page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 18, y: y + 3 }, thickness: 2.2, color });
+    if (earth) page.drawLine({ start: { x, y: y + 3 }, end: { x: x + 18, y: y + 3 }, thickness: 2.2, color: PE_YELLOW, dashArray: [4, 4] });
+    y = drawFittedLines(page, text, textX, y, textWidth, fonts.regular, { size: 8, maxLines: 2 }) - 1;
+  }
+
+  drawScaleBar(page, x + 4, Math.max(INFO_BOTTOM + 8, y - 14), ptPerMetre, LEFT_BLOCK.width - 80, fonts.regular);
+}
+
+async function drawImplantationTitleBlock(doc: PDFDocument, page: PDFPage, input: SitePlanPagesInput, fonts: Fonts): Promise<void> {
   drawBlockFrame(page, RIGHT_BLOCK);
   const x = RIGHT_BLOCK.x + 8;
   const width = RIGHT_BLOCK.width - 16;
   const titleWidth = await drawBlockLogo(doc, page, input.companyLogoBuffer, width);
   let y = INFO_TOP - 18;
-  y = drawFittedLines(page, title, x, y, titleWidth, fonts.bold, { size: 10, maxLines: 2 });
+  y = drawFittedLines(page, IMPLANTATION_TITLE, x, y, titleWidth, fonts.bold, { size: 10, maxLines: 3 });
   y -= 6;
   y = drawFittedLines(page, `Client : ${input.clientFullName}`, x, y, width, fonts.regular);
   y = drawFittedLines(page, `Adresse : ${input.clientAddress}`, x, y, width, fonts.regular, { maxLines: 2 });
   y = drawFittedLines(page, `Date : ${formatFrenchDate(input.dossierDate)}`, x, y, width, fonts.regular);
   if (input.dossierNumber) y = drawFittedLines(page, `N° dossier : ${input.dossierNumber}`, x, y, width, fonts.regular);
-  drawFittedLines(page, `Installateur : ${input.installerName}`, x, y, width, fonts.regular);
+  drawFittedLines(page, `Installateur : ${input.installerName}`, x, y, width, fonts.regular, { maxLines: 2 });
 }
 
-async function drawPage37(doc: PDFDocument, input: SitePlanPagesInput, data: SitePlanPremiumData['page37'], fonts: Fonts): Promise<void> {
-  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  drawPdfText(page, "Schéma d'implantation et de connexion", { x: MARGIN, y: PAGE_HEIGHT - 45, size: 16, font: fonts.bold, color: BLACK });
+const formatSection = (mm2: number): string => `${frenchNumber(mm2, { max: 1 })} mm²`;
 
-  const placement = await drawSatelliteImage(doc, page, data.image, fonts);
-  if (placement) {
-    if (data.layout) {
-      drawOverlay(page, data.layout, placement);
-    } else {
-      drawPdfText(page, "Implantation indicative non générée : aucun point (local technique, compteur, prise de terre) n'a été placé sur la carte.", {
-        x: IMAGE_BOX.x,
-        y: IMAGE_BOX.y - 20,
-        size: 7,
-        font: fonts.regular,
-        color: GREY,
-      });
-    }
-    for (const key of Object.keys(MARKER_STYLES) as MarkerKey[]) {
-      const point = data.points[key];
-      if (!point || !isInsidePlacement(placement, point)) continue;
-      const at = toPdf(placement, point);
-      drawMarkerShape(page, key, at);
-      drawMarkerLabel(page, MARKER_STYLES[key].label, at, placement, fonts.bold);
-    }
-    drawSouthArrow(page, placement, fonts.bold);
+async function drawImplantationPage(doc: PDFDocument, input: SitePlanPagesInput, data: SitePlanData['page37'], fonts: Fonts): Promise<void> {
+  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  drawPdfText(page, IMPLANTATION_TITLE, { x: MARGIN, y: PAGE_HEIGHT - 45, size: 16, font: fonts.bold, color: BLACK });
+
+  const { placement, titleRect } = await drawBackground(doc, page, data.image, fonts);
+  if (data.layout) drawLayoutOverlay(page, data.layout, placement);
+
+  const at: Partial<Record<PointKey, { x: number; y: number }>> = {};
+  for (const key of POINT_KEYS) {
+    const point = data.points[key];
+    if (point && isInsidePlacement(placement, point)) at[key] = toPdf(placement, point);
   }
 
-  drawLegend(page, fonts, data.points);
-  await drawTitleBlock(doc, page, input, fonts, "Schéma d'implantation et de connexion");
+  const legs: Leg[] = [];
+  if (at.field && at.technicalRoom) {
+    legs.push({ from: at.field, to: at.technicalRoom, label: `DC : ${frenchNumber(data.dc.lengthM, { max: 1 })} m — ${formatSection(data.dc.sectionMm2)}`, color: DC_RED, earth: false });
+  }
+  if (at.technicalRoom && at.meter) {
+    legs.push({ from: at.technicalRoom, to: at.meter, label: `AC : ${frenchNumber(data.ac.lengthM, { max: 1 })} m — ${formatSection(data.ac.sectionMm2)}`, color: AC_BROWN, earth: false });
+  }
+  if (at.technicalRoom && at.earthPit) {
+    legs.push({ from: at.technicalRoom, to: at.earthPit, label: 'Terre', color: PE_GREEN, earth: true });
+  }
+  for (const leg of legs) drawLeg(page, leg);
+
+  const space = new LabelSpace(placement);
+  space.reserve(drawSouthArrow(page, placement, fonts.bold));
+  if (titleRect) space.reserve(titleRect);
+  for (const key of POINT_KEYS) {
+    const centre = at[key];
+    if (!centre) continue;
+    page.drawCircle({ x: centre.x, y: centre.y, size: MARKER_RADIUS, color: POINT_STYLES[key].color, borderColor: WHITE, borderWidth: 1.5 });
+    const r = MARKER_RADIUS + 2;
+    space.reserve({ x: centre.x - r, y: centre.y - r, width: 2 * r, height: 2 * r });
+  }
+
+  const labels: PlanLabel[] = [];
+  for (const leg of legs) {
+    const size = 7.5;
+    const box = labelBox(leg.label, fonts.bold, size);
+    labels.push({ text: leg.label, size, font: fonts.bold, border: leg.color, rect: space.place(legLabelCandidates(leg, box)) });
+  }
+  for (const key of POINT_KEYS) {
+    const centre = at[key];
+    if (!centre) continue;
+    const size = 8;
+    const text = POINT_STYLES[key].label;
+    const box = labelBox(text, fonts.bold, size);
+    labels.push({ text, size, font: fonts.bold, border: null, rect: space.place(markerLabelCandidates(centre, box)) });
+  }
+  for (const label of labels) drawLabel(page, label);
+
+  drawImplantationLegend(page, fonts, data, pointsPerMetre(placement, data.image), legs.some((leg) => leg.earth));
+  await drawImplantationTitleBlock(doc, page, input, fonts);
 }
 
 function drawPin(page: PDFPage, tip: { x: number; y: number }): void {
@@ -296,14 +539,13 @@ function drawPin(page: PDFPage, tip: { x: number; y: number }): void {
   page.drawCircle({ x: tip.x, y: headY, size: 2.5, color: WHITE });
 }
 
-async function drawPage38(doc: PDFDocument, input: SitePlanPagesInput, data: SitePlanPremiumData['page38'], fonts: Fonts): Promise<void> {
+async function drawSituationPage(doc: PDFDocument, input: SitePlanPagesInput, data: SitePlanData['page38'], fonts: Fonts): Promise<void> {
   const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  drawPdfText(page, 'Plan de Situation', { x: MARGIN, y: PAGE_HEIGHT - 45, size: 20, font: fonts.bold, color: BLACK });
+  drawPdfText(page, SITUATION_TITLE, { x: MARGIN, y: PAGE_HEIGHT - 45, size: 20, font: fonts.bold, color: BLACK });
 
-  const placement = await drawSatelliteImage(doc, page, data.image, fonts);
-  if (placement && isInsidePlacement(placement, data.sitePin)) {
-    drawPin(page, toPdf(placement, data.sitePin));
-  }
+  const { placement } = await drawBackground(doc, page, data.image, fonts);
+  if (isInsidePlacement(placement, data.sitePin)) drawPin(page, toPdf(placement, data.sitePin));
+  drawNorthArrow(page, placement, fonts.bold);
 
   drawBlockFrame(page, LEFT_BLOCK);
   let x = LEFT_BLOCK.x + 10;
@@ -313,8 +555,10 @@ async function drawPage38(doc: PDFDocument, input: SitePlanPagesInput, data: Sit
   y -= 18;
   y = drawFittedLines(page, `Client : ${input.clientFullName}`, x, y, width, fonts.regular);
   y = drawFittedLines(page, `Adresse : ${input.clientAddress}`, x, y, width, fonts.regular, { maxLines: 3 });
-  y = drawFittedLines(page, `Coordonnées GPS : ${input.gps.lat.toFixed(5)}, ${input.gps.lon.toFixed(5)}`, x, y, width, fonts.regular);
-  drawFittedLines(page, `Date : ${formatFrenchDate(input.dossierDate)}`, x, y, width, fonts.regular);
+  y = drawFittedLines(page, `Coordonnées GPS : ${formatGpsDecimal(input.gps)}`, x, y, width, fonts.regular);
+  y = drawFittedLines(page, `Coordonnées (DMS) : ${formatGpsDms(input.gps)}`, x, y, width, fonts.regular, { maxLines: 2 });
+  y = drawFittedLines(page, `Date : ${formatFrenchDate(input.dossierDate)}`, x, y, width, fonts.regular);
+  drawScaleBar(page, x + 4, Math.max(INFO_BOTTOM + 8, y - 16), pointsPerMetre(placement, data.image), width - 60, fonts.regular);
 
   drawBlockFrame(page, RIGHT_BLOCK);
   x = RIGHT_BLOCK.x + 8;
@@ -323,7 +567,7 @@ async function drawPage38(doc: PDFDocument, input: SitePlanPagesInput, data: Sit
   y = INFO_TOP - 18;
   page.drawText('Installateur', { x, y, size: 10, font: fonts.bold, color: BLACK });
   y -= 18;
-  y = drawFittedLines(page, input.installerName, x, y, nameWidth, fonts.bold);
+  y = drawFittedLines(page, input.installerName, x, y, nameWidth, fonts.bold, { maxLines: 2 });
   y = drawFittedLines(page, input.installerContact.address, x, y, width, fonts.regular, { maxLines: 3 });
   y = drawFittedLines(page, `Tél : ${input.installerContact.phone}`, x, y, width, fonts.regular);
   drawFittedLines(page, `E-mail : ${input.installerContact.email}`, x, y, width, fonts.regular);
@@ -340,13 +584,13 @@ export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Bu
   const doc = await PDFDocument.create();
   const fonts: Fonts = { regular: await doc.embedFont(StandardFonts.Helvetica), bold: await doc.embedFont(StandardFonts.HelveticaBold) };
 
-  if (input.tier === 'STANDARD' || !input.premiumData) {
-    drawEmptyFrame(doc, "Schéma d'implantation et de connexion", fonts);
-    drawEmptyFrame(doc, 'Plan de Situation', fonts);
+  if (!input.planData) {
+    drawEmptyFrame(doc, IMPLANTATION_TITLE, fonts);
+    drawEmptyFrame(doc, SITUATION_TITLE, fonts);
     return Buffer.from(await doc.save());
   }
 
-  await drawPage37(doc, input, input.premiumData.page37, fonts);
-  await drawPage38(doc, input, input.premiumData.page38, fonts);
+  await drawImplantationPage(doc, input, input.planData.page37, fonts);
+  await drawSituationPage(doc, input, input.planData.page38, fonts);
   return Buffer.from(await doc.save());
 }
