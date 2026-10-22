@@ -6,6 +6,8 @@ import { db } from '@dossipv/db';
 import { EQUIPMENT_IMPULSE_WITHSTAND_KV, SPD_TO_EQUIPMENT_DISTANCE_M } from '@dossipv/engine';
 import { requireOwnedProject, ProjectNotFoundError, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input';
+import { storeAnnexFiles } from '../../../../../lib/annex-upload';
+import { CLIENT_NAME_PLACEHOLDER } from '../../../../../lib/client-identity';
 import { FormReader } from '../../../../../lib/form-reader';
 import { computeProjectProposals } from '../../../../../lib/project-proposals';
 import { structureDataFor, EARTHING_FIXED_VALUES } from '../../../../../lib/section-defaults';
@@ -187,6 +189,60 @@ export async function saveBillCorrectionsAction(
       annualConsumptionKWh,
     },
   });
+  revalidatePath(`/projects/${projectId}/proposals`);
+  return undefined;
+}
+
+const NAME_REQUIRED = 'Indiquez le nom du titulaire du contrat STEG.';
+const CIN_PATTERN = /^\d{8}$/;
+
+/**
+ * The bill did not carry the holder's name or the installer has no CIN photo yet: store what was
+ * given. The name is read only when the field is on the form and stays as it was once a dossier was
+ * generated. The CIN number is personal data and is never logged.
+ */
+export async function saveClientIdentityAction(
+  projectId: string,
+  _prev: { error: string } | undefined,
+  formData: FormData,
+): Promise<{ error: string } | undefined> {
+  try {
+    await requireOwnedProject(projectId);
+  } catch (error) {
+    if (error instanceof ProjectNotFoundError) return { error: NOT_FOUND };
+    throw error;
+  }
+
+  const existing = await db.projectClient.findUnique({ where: { projectId } });
+  if (!existing) return { error: 'Client introuvable.' };
+  const locked = await isClientIdentityLocked(projectId);
+
+  let fullName: string | undefined;
+  const rawName = formData.get('fullName');
+  if (typeof rawName === 'string' && !locked) {
+    const trimmed = rawName.trim();
+    if (trimmed.length < 2 || trimmed.length > 200 || trimmed === CLIENT_NAME_PLACEHOLDER) {
+      return { error: NAME_REQUIRED };
+    }
+    fullName = trimmed;
+  }
+
+  let cin: string | undefined;
+  const rawCin = formData.getAll('cin').find((v): v is string => typeof v === 'string');
+  if (rawCin !== undefined && rawCin.trim() !== '') {
+    if (!CIN_PATTERN.test(rawCin.trim())) return { error: 'N° CIN invalide (8 chiffres).' };
+    cin = rawCin.trim();
+  }
+
+  const failure = await storeAnnexFiles(projectId, formData);
+  if (failure) return failure;
+
+  if (fullName !== undefined || cin !== undefined) {
+    await db.projectClient.update({
+      where: { projectId },
+      data: { ...(fullName !== undefined ? { fullName } : {}), ...(cin !== undefined ? { cin } : {}) },
+    });
+  }
   revalidatePath(`/projects/${projectId}/proposals`);
   return undefined;
 }

@@ -18,6 +18,7 @@ import {
 import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/pdf-locate';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { summarizeSubscription } from '../../../lib/subscription';
+import { CLIENT_NAME_PLACEHOLDER } from '../../../lib/client-identity';
 
 export interface ImportBillState {
   error: string;
@@ -224,7 +225,7 @@ export async function importStegBillAction(
       await tx.projectClient.create({
         data: {
           projectId: project.id,
-          fullName: clientName ?? 'Client à compléter',
+          fullName: clientName ?? CLIENT_NAME_PLACEHOLDER,
           civility: reading.civility ? CIVILITY_FROM_BILL[reading.civility] : null,
           clientKind: 'residential',
           address: reading.address,

@@ -7,6 +7,8 @@ import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input'
 import { computeProjectProposals } from '../../../../../lib/project-proposals';
 import { ProposalCard } from './proposal-card';
 import { CorrectionsForm } from './corrections-form';
+import { IdentityForm } from './identity-form';
+import { clientIdentityNeeds } from '../../../../../lib/client-identity';
 
 const fr = (value: number, decimals = 0): string =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: decimals }).format(value);
@@ -32,6 +34,10 @@ export default async function ProposalsPage({ params }: { params: Promise<{ id: 
   const blockedReasons = computed.ok ? [] : computed.blockedReasons;
   const proposals = computed.ok ? computed.result.proposals : [];
 
+  const identityNeeds = client
+    ? clientIdentityNeeds({ fullName: client.fullName, reading, cinFileId: project.annexes?.cinFileId ?? null })
+    : null;
+
   const months = reading?.monthsBilled ?? null;
   const consumedKWh = reading?.totalElectricityKWh ?? null;
 
@@ -41,6 +47,13 @@ export default async function ProposalsPage({ params }: { params: Promise<{ id: 
         <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{client?.fullName ?? 'Projet'}</Link> › Propositions
       </p>
       <h1>Propositions pour {client?.fullName ?? 'ce client'}</h1>
+
+      {identityNeeds && (identityNeeds.name || identityNeeds.cinPhoto) && (
+        <section className="card">
+          <h2>Identité du titulaire</h2>
+          <IdentityForm projectId={id} needs={identityNeeds} />
+        </section>
+      )}
 
       <section className="card">
         <h2>Lu sur la facture</h2>
