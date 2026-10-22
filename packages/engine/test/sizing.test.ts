@@ -281,8 +281,48 @@ describe('proposeInstallations', () => {
     expect(result.stats.combinations).toBe(28_800);
     expect(result.stats.engineRuns).toBeLessThanOrEqual(MAX_ENGINE_RUNS);
     // Phase 1 stops at the reserve; phase 2 builds the largest installations until one succeeds.
-    expect(result.stats.engineRuns).toBeGreaterThan(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
+    expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS + 1);
     expect(result.proposals.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('builds the largest installation in phase 2 when phase 1 runs out of budget', () => {
+    // 28 800 combinations, far above the 18 000 of phase 1: the largest ones sort last by coverage
+    // distance and are reachable only through the reserve.
+    const catalog = syntheticCatalog(60, 40);
+    const module = byId(catalog.modules, 'module-0');
+    const inverter = byId(catalog.inverters, 'inverter-0');
+    let bestDcW = 0;
+    let bestCoverage = 0;
+    const nsLow = Math.max(1, nsMin(module, inverter, largeConsumer.tMaxC));
+    const nsHigh = Math.min(
+      nsOptMax(module, inverter, largeConsumer.tMinC),
+      nsMax(module, inverter, largeConsumer.tMinC),
+    );
+    const inputs =
+      inverter.mpptCount *
+      Math.min(inverter.inputsPerMppt, npOpt(module, inverter, largeConsumer.tMaxC));
+    for (let ns = nsLow; ns <= nsHigh; ns++) {
+      for (let strings = 1; strings <= inputs; strings++) {
+        const dcW = ns * strings * module.pmaxW;
+        const ratio = dcW / inverter.pacW;
+        if (ratio < 0.8 || ratio > 1.3) continue;
+        if (!buildCandidate(module, inverter, ns, strings, catalog, largeConsumer).ok) continue;
+        if (dcW > bestDcW) {
+          bestDcW = dcW;
+          bestCoverage =
+            ((dcW / 1000) * largeConsumer.specificYieldKWhPerKWp) /
+            largeConsumer.annualConsumptionKWh;
+        }
+      }
+    }
+
+    const result = proposeInstallations(catalog, largeConsumer);
+
+    expect(result.stats.combinations).toBeGreaterThan(
+      MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS,
+    );
+    expect(bestCoverage).toBeGreaterThan(0);
+    expect(withKind(result.proposals, 'MAX_PRODUCTION').dcPowerKWp * 1000).toBeCloseTo(bestDcW, 6);
   }, 30_000);
 
   it('caps the enumerated combinations', () => {
@@ -291,7 +331,7 @@ describe('proposeInstallations', () => {
 
     expect(result.stats.combinations).toBe(MAX_COMBOS);
     // Phase 1 stops at the reserve; phase 2 builds the largest installations until one succeeds.
-    expect(result.stats.engineRuns).toBeGreaterThan(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
+    expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS + 1);
     expect(result.proposals.length).toBeGreaterThan(0);
   }, 30_000);
 

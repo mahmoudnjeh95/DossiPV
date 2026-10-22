@@ -301,7 +301,7 @@ export function proposeInstallations(
 
   // Phase 1: the combinations closest to the need, keeping a reserve for phase 2.
   const phase1Runs = Math.min(combos.length, MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
-  for (let i = 0; i < phase1Runs; i++) build(combos[i] as Combo);
+  for (const combo of combos.slice(0, phase1Runs)) build(combo);
 
   // Phase 2: the largest installations not built yet, until one succeeds.
   const dcPowerW = (c: Combo): number => c.modulesPerString * c.stringCount * c.module.pmaxW;
@@ -309,7 +309,7 @@ export function proposeInstallations(
     `${c.module.id}|${c.inverter.id}|${c.modulesPerString}x${c.stringCount}`;
   const remaining = combos
     .slice(phase1Runs)
-    .sort((a, b) => dcPowerW(b) - dcPowerW(a) || comboKey(a).localeCompare(comboKey(b)));
+    .sort((a, b) => dcPowerW(b) - dcPowerW(a) || (comboKey(a) < comboKey(b) ? -1 : 1));
   for (const combo of remaining) {
     if (engineRuns >= MAX_ENGINE_RUNS) break;
     if (build(combo)) break;
