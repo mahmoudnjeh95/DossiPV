@@ -7,6 +7,16 @@ export interface ProjectMeta {
   mountingType: string;
   structureMaterial: string;
   earthRodCount: number;
+  /** Each installed protection device as `brand model`. */
+  protections: {
+    dcSwitch: string;
+    dcSpd: string;
+    dcFuse: string | null;
+    acBreaker: string;
+    acSpd: string;
+  };
+  /** `disjoncteur différentiel 16 A, 30 mA type A` or `disjoncteur magnétothermique 16 A`. */
+  acBreakerFunction: string;
 }
 
 export interface PlaceholderSourceContext {
@@ -38,6 +48,14 @@ export const PLACEHOLDER_DEFINITIONS: Record<string, PlaceholderDefinition> = {
   DU_AC_PCT: { source: (c) => c.derived.DU_AC_PCT!, decimals: 2, unit: '%' },
   INVERTER_COUNT: { source: (c) => c.engineInput.array.length },
   EARTH_ROD_COUNT: { source: (c) => c.projectMeta.earthRodCount },
+  DC_SWITCH_REF: { source: (c) => c.projectMeta.protections.dcSwitch },
+  DC_SPD_REF: { source: (c) => c.projectMeta.protections.dcSpd },
+  DC_FUSE_REF: { source: (c) => c.projectMeta.protections.dcFuse ?? '—' },
+  AC_BREAKER_REF: { source: (c) => c.projectMeta.protections.acBreaker },
+  AC_BREAKER_FUNCTION: { source: (c) => c.projectMeta.acBreakerFunction },
+  AC_SPD_REF: { source: (c) => c.projectMeta.protections.acSpd },
+  MODULE_REF: { source: (c) => c.projectMeta.moduleBrandModel },
+  INVERTER_REF: { source: (c) => c.projectMeta.inverterBrandModel },
   NORME_CABLAGE: { source: () => 'NF C 15-100' },
 };
 

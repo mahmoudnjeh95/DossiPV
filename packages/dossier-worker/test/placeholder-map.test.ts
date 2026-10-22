@@ -16,11 +16,37 @@ function makeContext(): PlaceholderSourceContext {
       mountingType: 'FLAT_ROOF_BALLAST',
       structureMaterial: 'Aluminium',
       earthRodCount: 3,
+      protections: {
+        dcSwitch: 'ZJ BENY BB1H-63',
+        dcSpd: 'Generic DC-SPD-1',
+        dcFuse: null,
+        acBreaker: 'Generic AC-BRK-16',
+        acSpd: 'Generic AC-SPD-1',
+      },
+      acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
     },
   };
 }
 
 describe('buildPlaceholderValues', () => {
+  it('maps the protection references and the AC breaker function from the project meta', () => {
+    const values = buildPlaceholderValues(makeContext());
+    expect(values.AC_BREAKER_FUNCTION).toBe('disjoncteur différentiel 16 A, 30 mA type A');
+    expect(values.AC_BREAKER_REF).toBe('Generic AC-BRK-16');
+    expect(values.DC_SWITCH_REF).toBe('ZJ BENY BB1H-63');
+    expect(values.DC_SPD_REF).toBe('Generic DC-SPD-1');
+    expect(values.AC_SPD_REF).toBe('Generic AC-SPD-1');
+    expect(values.MODULE_REF).toBe('LONGi LR7-72HGD-620M');
+    expect(values.INVERTER_REF).toBe('Sofar 1-4KTL2-G3');
+  });
+
+  it('shows an em dash for the DC fuse reference when there is no fuse', () => {
+    expect(buildPlaceholderValues(makeContext()).DC_FUSE_REF).toBe('—');
+    const withFuse = makeContext();
+    withFuse.projectMeta.protections.dcFuse = 'Generic FUSE-15';
+    expect(buildPlaceholderValues(withFuse).DC_FUSE_REF).toBe('Generic FUSE-15');
+  });
+
   it('formats a decimals:0 numeric placeholder with no decimal point and a unit suffix', () => {
     const values = buildPlaceholderValues(makeContext());
     // habib-khedhira: 5 modules * 620W = 3100 W, decimals:0, unit "W".

@@ -69,6 +69,15 @@ export async function generateDossierDocument(
   const firstEntry = input.engineInput.array[0]!;
   const representativeMppt = firstEntry.mppts[0]!;
 
+  const fuseRequired = dcFuseRequired(input.engineInput.module, representativeMppt.stringsInParallel);
+  const protectionLines = [
+    'Interrupteur-sectionneur DC : {DC_SWITCH_REF}',
+    'Parafoudre DC : {DC_SPD_REF}',
+    ...(fuseRequired ? ['Fusible DC : {DC_FUSE_REF}'] : []),
+    'Protection AC et organe de sectionnement côté AC : {AC_BREAKER_FUNCTION} ({AC_BREAKER_REF})',
+    'Parafoudre AC : {AC_SPD_REF}',
+  ];
+
   const textInput: DossierTextInput = {
     moduleBrandModel: input.projectMeta.moduleBrandModel,
     inverterBrandModel: input.projectMeta.inverterBrandModel,
@@ -78,8 +87,9 @@ export async function generateDossierDocument(
     mountingType: input.projectMeta.mountingType,
     structureMaterial: input.projectMeta.structureMaterial,
     earthRodCount: input.projectMeta.earthRodCount,
-    dcFuseRequired: dcFuseRequired(input.engineInput.module, representativeMppt.stringsInParallel),
+    dcFuseRequired: fuseRequired,
     acIsolatorRequired: input.engineInput.array.length > 1,
+    protectionLines,
   };
 
   const allowedPlaceholderNames = Object.keys(PLACEHOLDER_DEFINITIONS);

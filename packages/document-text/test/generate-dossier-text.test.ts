@@ -15,6 +15,12 @@ const sampleInput: DossierTextInput = {
   earthRodCount: 3,
   dcFuseRequired: false,
   acIsolatorRequired: false,
+  protectionLines: [
+    'Interrupteur-sectionneur DC : {DC_SWITCH_REF}',
+    'Parafoudre DC : {DC_SPD_REF}',
+    'Protection AC et organe de sectionnement côté AC : {AC_BREAKER_FUNCTION} ({AC_BREAKER_REF})',
+    'Parafoudre AC : {AC_SPD_REF}',
+  ],
 };
 
 const cleanSections: DossierTextSections = {
@@ -75,7 +81,7 @@ describe('generateDossierText', () => {
     // DossierTextInput type), so this is a structural guarantee, not just
     // a string check — but we still assert the prompt only contains the
     // technical fields we expect, nothing invented.
-    expect(capturedPrompt).toContain(sampleInput.moduleBrandModel);
+    expect(capturedPrompt).toContain("{MODULE_REF}");
     expect(capturedPrompt).not.toMatch(/\bclient\b|\bnom\b|\badresse\b/i);
   });
 

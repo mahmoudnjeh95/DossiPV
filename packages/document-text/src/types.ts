@@ -34,6 +34,11 @@ export interface DossierTextInput {
   dcFuseRequired: boolean;
   /** true when the AC isolator section applies (more than one inverter) */
   acIsolatorRequired: boolean;
+  /**
+   * The exhaustive list of installed protection devices, one line each, written with
+   * `{..._REF}` / `{AC_BREAKER_FUNCTION}` placeholders (never literal model names or digits).
+   */
+  protectionLines: string[];
 }
 
 /**

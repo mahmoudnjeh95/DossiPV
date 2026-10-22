@@ -32,6 +32,14 @@ describe('buildEngineInput', () => {
       mountingType: 'FLAT_ROOF_BALLAST',
       structureMaterial: 'ALUMINIUM',
       earthRodCount: 3,
+      protections: {
+        dcSwitch: 'ZJ BENY BB1H-63',
+        dcSpd: 'Generic DC-SPD-1',
+        dcFuse: null,
+        acBreaker: 'Generic AC-BRK-20',
+        acSpd: 'Generic AC-SPD-1',
+      },
+      acBreakerFunction: 'disjoncteur différentiel 20 A, 30 mA type A',
     });
 
     const engine = runEngine(result.input);
@@ -47,6 +55,16 @@ describe('buildEngineInput', () => {
     if (!result.ok) return;
     expect(result.input.rcd).toEqual({ residualCurrentMA: 30, rcdType: 'A' });
     expect(runEngine(result.input).checks.find((c) => c.id === 'C24')?.pass).toBe(true);
+  });
+
+  it('describes a plain breaker as magnetothermic', () => {
+    const project = buildFullProject();
+    project.protections!.acBreaker.residualCurrentMA = null;
+    project.protections!.acBreaker.rcdType = null;
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.meta.acBreakerFunction).toBe('disjoncteur magnétothermique 20 A');
   });
 
   it('blocks a project whose AC breaker has no differential function (C24)', () => {

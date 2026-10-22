@@ -78,6 +78,14 @@ const projectMeta: ProjectMeta = {
   mountingType: 'ROOF',
   structureMaterial: 'ALUMINUM',
   earthRodCount: 1,
+  protections: {
+    dcSwitch: 'ZJ BENY BB1H-63',
+    dcSpd: 'Generic DC-SPD-1',
+    dcFuse: null,
+    acBreaker: 'Generic AC-BRK-16',
+    acSpd: 'Generic AC-SPD-1',
+  },
+  acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
 };
 
 describe('buildTemplateData', () => {

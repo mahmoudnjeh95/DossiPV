@@ -4,9 +4,15 @@ import {
   generateDossierDocument,
   DossierGenerationBlockedError,
 } from '../src/generate-dossier-document';
+import { dcFuseRequired } from '@dossipv/engine';
 import { habibKhedhiraFixture } from './fixtures/habib-khedhira';
 import { twoInverterSiteFixture } from './fixtures/two-inverter-site';
 import type { DossierTextSections } from '@dossipv/document-text';
+
+vi.mock('@dossipv/engine', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@dossipv/engine')>();
+  return { ...actual, dcFuseRequired: vi.fn(actual.dcFuseRequired) };
+});
 
 const sampleProjectMeta = {
   moduleBrandModel: 'LONGi LR7-72HGD-620M',
@@ -15,6 +21,14 @@ const sampleProjectMeta = {
   mountingType: 'FLAT_ROOF_BALLAST',
   structureMaterial: 'Aluminium',
   earthRodCount: 3,
+  protections: {
+    dcSwitch: 'ZJ BENY BB1H-63',
+    dcSpd: 'Generic DC-SPD-1',
+    dcFuse: null,
+    acBreaker: 'Generic AC-BRK-16',
+    acSpd: 'Generic AC-SPD-1',
+  },
+  acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
 };
 
 const placeholderSections: DossierTextSections = {
@@ -47,6 +61,51 @@ describe('generateDossierDocument', () => {
     expect(result.sections.solution).toContain('5 modules en série');
     expect(result.sections.earthing).toContain('3 piquets de terre');
     expect(result.engineResult.hasBlockingFailure).toBe(false);
+  });
+
+  it('sends the exact protection list to Claude and substitutes the references in the result', async () => {
+    const { client, parse } = fakeClientReturning({
+      ...placeholderSections,
+      cabling: 'Protection : {AC_BREAKER_FUNCTION} ({AC_BREAKER_REF}).',
+    });
+    const result = await generateDossierDocument(
+      { engineInput: habibKhedhiraFixture, projectMeta: sampleProjectMeta },
+      client,
+    );
+
+    const request = parse.mock.calls[0]![0] as { messages: Array<{ content: string }> };
+    const prompt = request.messages[0]!.content;
+    expect(prompt).toContain('Interrupteur-sectionneur DC : {DC_SWITCH_REF}');
+    expect(prompt).toContain('Parafoudre DC : {DC_SPD_REF}');
+    expect(prompt).toContain(
+      'Protection AC et organe de sectionnement côté AC : {AC_BREAKER_FUNCTION} ({AC_BREAKER_REF})',
+    );
+    expect(prompt).toContain('Parafoudre AC : {AC_SPD_REF}');
+    expect(prompt).not.toContain('Interrupteur-sectionneur général AC requis');
+    expect(prompt).not.toContain('LR7-72HGD-620M');
+    expect(result.sections.cabling).toBe(
+      'Protection : disjoncteur différentiel 16 A, 30 mA type A (Generic AC-BRK-16).',
+    );
+  });
+
+  it('lists a DC fuse line only when the engine says a fuse is required', async () => {
+    const withoutFuse = fakeClientReturning(placeholderSections);
+    await generateDossierDocument(
+      { engineInput: habibKhedhiraFixture, projectMeta: sampleProjectMeta },
+      withoutFuse.client,
+    );
+    const noFusePrompt = (withoutFuse.parse.mock.calls[0]![0] as { messages: Array<{ content: string }> }).messages[0]!.content;
+    expect(noFusePrompt).not.toContain('Fusible DC : {DC_FUSE_REF}');
+
+    // A real fuse-requiring design needs a larger array than this fixture; force the engine rule.
+    vi.mocked(dcFuseRequired).mockReturnValueOnce(true);
+    const withFuse = fakeClientReturning(placeholderSections);
+    await generateDossierDocument(
+      { engineInput: habibKhedhiraFixture, projectMeta: sampleProjectMeta },
+      withFuse.client,
+    );
+    const prompt = (withFuse.parse.mock.calls[0]![0] as { messages: Array<{ content: string }> }).messages[0]!.content;
+    expect(prompt).toContain('Fusible DC : {DC_FUSE_REF}');
   });
 
   it('derives INVERTER_COUNT and acIsolatorRequired correctly for a multi-inverter array', async () => {

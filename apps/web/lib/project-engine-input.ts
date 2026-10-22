@@ -49,6 +49,14 @@ export interface ProjectMetaForWorker {
   mountingType: string;
   structureMaterial: string;
   earthRodCount: number;
+  protections: {
+    dcSwitch: string;
+    dcSpd: string;
+    dcFuse: string | null;
+    acBreaker: string;
+    acSpd: string;
+  };
+  acBreakerFunction: string;
 }
 
 export type EngineInputResult =
@@ -68,6 +76,20 @@ export function isRcdType(value: string): value is RcdType {
 /** The stored differential type, or null when absent or unknown (C24 then fails). */
 export function toRcdType(value: string | null): RcdType | null {
   return value !== null && isRcdType(value) ? value : null;
+}
+
+const currentFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+
+/** The breaker's role in the dossier text: differential 30 mA type X, or plain magnetothermic. */
+export function describeAcBreakerFunction(breaker: {
+  ratedCurrentA: number;
+  residualCurrentMA: number | null;
+  rcdType: string | null;
+}): string {
+  const rating = `${currentFormat.format(breaker.ratedCurrentA)} A`;
+  return breaker.residualCurrentMA !== null && breaker.rcdType !== null
+    ? `disjoncteur différentiel ${rating}, ${currentFormat.format(breaker.residualCurrentMA)} mA type ${breaker.rcdType}`
+    : `disjoncteur magnétothermique ${rating}`;
 }
 
 /** `YYYY-MM-DD` (UTC), the date format every engine input uses. */
@@ -349,6 +371,14 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     mountingType: site.mountingType,
     structureMaterial: structure.material,
     earthRodCount: project.earthing.rodCount,
+    protections: {
+      dcSwitch: `${protections.dcSwitch.brand} ${protections.dcSwitch.model}`,
+      dcSpd: `${protections.dcSpd.brand} ${protections.dcSpd.model}`,
+      dcFuse: protections.dcFuse ? `${protections.dcFuse.brand} ${protections.dcFuse.model}` : null,
+      acBreaker: `${protections.acBreaker.brand} ${protections.acBreaker.model}`,
+      acSpd: `${protections.acSpd.brand} ${protections.acSpd.model}`,
+    },
+    acBreakerFunction: describeAcBreakerFunction(protections.acBreaker),
   };
 
   return { ok: true, input, meta };
