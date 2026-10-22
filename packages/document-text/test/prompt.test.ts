@@ -56,7 +56,7 @@ describe('buildDossierTextUserPrompt', () => {
     for (const line of sampleInput.protectionLines) {
       expect(prompt).toContain(line);
     }
-    expect(prompt).toContain('Ne mentionne aucun autre appareil de protection que ceux de cette liste.');
+    expect(prompt).toContain('Ne mentionne aucun autre appareil de protection que ceux de cette liste');
     expect(prompt).toContain('Ne parle de protection différentielle que si elle y figure.');
     expect(prompt).toContain("n'écris pas qu'un organe de sectionnement n'est pas requis");
   });
@@ -72,17 +72,13 @@ describe('buildDossierTextUserPrompt', () => {
     expect(prompt).not.toContain('Fusible DC : {DC_FUSE_REF}');
   });
 
-  it('mentions the fuse section only when dcFuseRequired is true', () => {
-    const withFuse = buildDossierTextUserPrompt(
-      { ...sampleInput, dcFuseRequired: true },
-      ['INVERTER_COUNT', 'EARTH_ROD_COUNT'],
-    );
-    const withoutFuse = buildDossierTextUserPrompt(
-      { ...sampleInput, dcFuseRequired: false },
-      ['INVERTER_COUNT', 'EARTH_ROD_COUNT'],
-    );
-    expect(withFuse).toContain('fusible DC');
-    expect(withoutFuse).not.toContain('(incluant la section fusible DC)');
+  it('never states whether a fuse is required: a fuse is named only through its protection line', () => {
+    const lines = sampleInput.protectionLines.filter((line) => !line.startsWith('Fusible DC'));
+    const prompt = buildDossierTextUserPrompt({ ...sampleInput, protectionLines: lines, dcFuseRequired: false }, ['DC_SWITCH_REF']);
+    expect(prompt).not.toContain('Fusible DC requis');
+    expect(prompt).not.toContain('Fusible DC :');
+    expect(buildDossierTextUserPrompt(sampleInput, ['DC_FUSE_REF'])).toContain('Fusible DC : {DC_FUSE_REF}');
+    expect(prompt).toContain("n'écris pas non plus qu'un appareil (par exemple un fusible) est absent ou non requis");
   });
 
   it('never embeds the inverter count or earth rod count as a literal number — always a placeholder', () => {

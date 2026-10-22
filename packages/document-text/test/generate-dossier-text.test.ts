@@ -81,7 +81,7 @@ describe('generateDossierText', () => {
     // DossierTextInput type), so this is a structural guarantee, not just
     // a string check — but we still assert the prompt only contains the
     // technical fields we expect, nothing invented.
-    expect(capturedPrompt).toContain("{MODULE_REF}");
+    expect(capturedPrompt).toContain('{MODULE_REF}');
     expect(capturedPrompt).not.toMatch(/\bclient\b|\bnom\b|\badresse\b/i);
   });
 

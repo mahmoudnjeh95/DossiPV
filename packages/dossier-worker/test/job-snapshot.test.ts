@@ -6,12 +6,22 @@ const validSnapshot = {
   projectId: 'project-1',
   companyId: 'company-1',
   engineInput: { array: [], dcFuse: null, acIsolator: null },
-  projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
+  projectMeta: {
+    moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1,
+    protections: { dcSwitch: 'S', dcSpd: 'P', dcFuse: null, acBreaker: 'B', acSpd: 'Q' },
+    acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
+  },
   client: { fullName: 'Ahmed', address: 'Tunis', stegReference: 'STEG-1' },
   cableRuns: [],
 };
 
 describe('parseJobSnapshot', () => {
+  it('rejects a snapshot whose projectMeta lacks the protection references (queued before they existed)', () => {
+    const oldMeta = { ...validSnapshot.projectMeta, protections: undefined, acBreakerFunction: undefined };
+    expect(parseJobSnapshot({ ...validSnapshot, projectMeta: oldMeta })).toBeNull();
+    expect(parseJobSnapshot({ ...validSnapshot, projectMeta: { ...validSnapshot.projectMeta, protections: { dcSwitch: 'S' } } })).toBeNull();
+  });
+
   it('parses a valid snapshot into its typed shape', () => {
     const result = parseJobSnapshot(validSnapshot);
     expect(result?.projectId).toBe('project-1');
@@ -43,7 +53,7 @@ describe('parseJobSnapshot', () => {
       dossierNumber: '434-303',
       dossierDate: '2026-11-25T00:00:00.000Z',
       engineInput: {},
-      projectMeta: {},
+      projectMeta: validSnapshot.projectMeta,
       client: null,
       cableRuns: [],
       site: { gpsLat: 36.8, gpsLon: 10.2, technicalRoomPointLat: 36.801, technicalRoomPointLon: 10.201, meterPointLat: 36.799, meterPointLon: 10.199, earthPitPointLat: 36.8005, earthPitPointLon: 10.2005 },
@@ -125,7 +135,7 @@ describe('parseJobSnapshot', () => {
       projectId: 'p1',
       companyId: 'c1',
       engineInput: {},
-      projectMeta: {},
+      projectMeta: validSnapshot.projectMeta,
       client: null,
       cableRuns: [],
     };

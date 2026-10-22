@@ -33,17 +33,16 @@ export function buildDossierTextUserPrompt(
 - Type de pose : ${input.mountingType}
 - Structure : ${input.structureMaterial}
 - Mise à la terre : {EARTH_ROD_COUNT} piquets de terre
-- Fusible DC requis : ${input.dcFuseRequired ? 'oui' : 'non'}
 
 Appareils de protection installés (liste exhaustive) :
 ${input.protectionLines.map((line) => `- ${line}`).join('\n')}
 
-Ne mentionne aucun autre appareil de protection que ceux de cette liste. Ne parle de protection différentielle que si elle y figure. Le sectionnement côté AC est assuré par l'appareil désigné ci-dessus : n'écris pas qu'un organe de sectionnement n'est pas requis.
+Ne mentionne aucun autre appareil de protection que ceux de cette liste : n'écris pas non plus qu'un appareil (par exemple un fusible) est absent ou non requis. Ne parle de protection différentielle que si elle y figure. Le sectionnement côté AC est assuré par l'appareil désigné ci-dessus : n'écris pas qu'un organe de sectionnement n'est pas requis.
 
 Rédige :
 1. introduction — présentation générale du projet
 2. solution — description de la solution technique proposée
-3. cabling — description du câblage DC et AC${input.dcFuseRequired ? ' (incluant la section fusible DC)' : ''}
+3. cabling — description du câblage DC et AC
 4. earthing — description de la mise à la terre
 5. structure — description de la structure et du lestage
 6. conclusion — conclusion du dossier

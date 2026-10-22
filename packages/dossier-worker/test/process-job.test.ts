@@ -99,7 +99,11 @@ const validSnapshot = {
     site: { phases: 1 },
     acRun: { sectionMm2: 10, lengthM: 15 },
   },
-  projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
+  projectMeta: {
+    moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1,
+    protections: { dcSwitch: 'S', dcSpd: 'P', dcFuse: null, acBreaker: 'B', acSpd: 'Q' },
+    acBreakerFunction: 'disjoncteur différentiel 16 A, 30 mA type A',
+  },
   client: { fullName: 'Ahmed', address: 'Tunis', stegReference: 'STEG-1' },
   cableRuns: [],
   site: { gpsLat: 36.8, gpsLon: 10.2, tiltDeg: 30, azimuthDeg: null },
@@ -244,6 +248,22 @@ describe('processJob — failure paths', () => {
     const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string; failedStep: string } };
     expect(failCall.data.status).toBe('FAILED');
     expect(failCall.data.failedStep).toBe('snapshot');
+  });
+
+  it('fails at the snapshot step, without calling Claude, when projectMeta predates the protection references', async () => {
+    const oldMeta = { ...validSnapshot.projectMeta, protections: undefined, acBreakerFunction: undefined };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...validSnapshot, projectMeta: oldMeta },
+    });
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { failedStep: string; failureReason: string } };
+    expect(failCall.data.failedStep).toBe('snapshot');
+    expect(failCall.data.failureReason).toMatch(/relancez la génération/);
+    expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
   });
 
   it('fails with failedStep "text" when generateDossierDocument throws', async () => {

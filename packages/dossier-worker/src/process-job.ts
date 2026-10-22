@@ -57,7 +57,7 @@ const anthropicClient = new Anthropic();
 // which can leak internals (file system paths, DB column/constraint names, SDK error bodies).
 // The real error is logged server-side for operators via console.error in each catch block below.
 const GENERIC_FAILURE_REASONS: Record<string, string> = {
-  snapshot: 'Instantané de la saisie illisible ou corrompu.',
+  snapshot: 'Instantané de la saisie illisible, corrompu ou obsolète : relancez la génération du dossier depuis le projet.',
   simulation: "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.",
   text: 'La génération du texte du dossier a échoué.',
   docx: 'La génération du document Word a échoué.',

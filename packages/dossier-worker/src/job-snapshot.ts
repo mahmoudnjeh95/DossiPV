@@ -164,6 +164,22 @@ function parseSite(value: unknown): SnapshotSite | null {
   };
 }
 
+/**
+ * True when projectMeta carries the protection references the dossier text needs. A snapshot
+ * queued before those fields existed fails here, at the snapshot step, before any Claude call.
+ */
+function hasProtectionMeta(meta: Record<string, unknown>): boolean {
+  const { protections, acBreakerFunction } = meta;
+  if (typeof acBreakerFunction !== 'string' || !isRecord(protections)) {
+    return false;
+  }
+  const required = ['dcSwitch', 'dcSpd', 'acBreaker', 'acSpd'];
+  return (
+    required.every((key) => typeof protections[key] === 'string') &&
+    (protections.dcFuse === null || typeof protections.dcFuse === 'string')
+  );
+}
+
 export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
   if (!isRecord(value)) {
     return null;
@@ -175,6 +191,9 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     return null;
   }
   if (!isRecord(value.engineInput) || !isRecord(value.projectMeta)) {
+    return null;
+  }
+  if (!hasProtectionMeta(value.projectMeta)) {
     return null;
   }
   if (!Array.isArray(value.cableRuns)) {
