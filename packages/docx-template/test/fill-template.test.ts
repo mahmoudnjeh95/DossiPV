@@ -62,13 +62,32 @@ const baseData: DossierTemplateData = {
   stabilityRhs: '1200',
   sectionNumberPreambule: 'I.',
   sectionNumberPresentation: 'II.',
-  sectionNumberSolution: 'III.',
-  sectionNumberCablage: 'IV.',
-  sectionNumberTerre: 'V.',
-  sectionNumberStructure: 'VI.',
+  sectionNumberDimensionnement: 'III.',
+  sectionNumberSolution: 'IV.',
+  sectionNumberCablage: 'V.',
+  sectionNumberTerre: 'VI.',
+  sectionNumberStructure: 'VII.',
   sectionNumberFusible: '',
   sectionNumberSectionneur: '',
-  sectionNumberConclusion: 'VII.',
+  sectionNumberConclusion: 'VIII.',
+  sizingBranchement: 'Monophasé BT',
+  sizingSubscribedPower: '6 kVA',
+  sizingConsumption: "4 800 kWh/an (valeur saisie par l'installateur)",
+  sizingInstalledKWp: '3,10',
+  sizingInverterPac: '3,00',
+  sizingDcAcRatio: '1,03',
+  sizingRule: 'Règle de test.',
+  productionAnnual: '5 400',
+  productionSpecificYield: '1 742',
+  productionPr: '81,6 %',
+  productionCoverage: '113 %',
+  productionMethod: 'Méthode de test.',
+  productionMonths: [
+    { monthLabel: 'Janvier', globInc: '90,1', eGrid: '250', pr: '80,0' },
+    { monthLabel: 'Février', globInc: '110,2', eGrid: '300', pr: '81,0' },
+  ],
+  productionTotalGlobInc: '200,3',
+  productionTotalEGrid: '550',
   inverters: [
     {
       inverterLabel: 'Onduleur 1',
@@ -238,5 +257,17 @@ describe('fillDossierTemplate', () => {
     expect(documentXml).toContain('620');
     expect(documentXml).toContain('46,5');
     expect(documentXml).toContain('1,11');
+  });
+
+  it('renders the dimensioning and production section with its monthly rows', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, baseData));
+
+    expect(text).toContain('III. Dimensionnement et productible');
+    expect(text).toContain('Production annuelle estimée');
+    expect(text).toContain('Janvier');
+    expect(text).toContain('Février');
+    expect(text).toContain('Total');
+    expect(text).toContain('550');
+    expect(text).not.toContain('undefined');
   });
 });

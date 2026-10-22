@@ -218,6 +218,10 @@ export async function processJob(jobId: string): Promise<void> {
         inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
       },
       companyInfo: { name: company.name, address: company.address, phone: company.phone, email: company.email },
+      production,
+      consumption: snapshot.consumption,
+      subscribedPowerKVA: snapshot.client?.subscribedPowerKVA ?? null,
+      phases: snapshot.engineInput.site.phases,
     });
     const templateBuffer = await readFile(TEMPLATE_PATH);
     docxBuffer = fillDossierTemplate(templateBuffer, templateData);
@@ -409,7 +413,7 @@ export async function processJob(jobId: string): Promise<void> {
     // and could point an earlier section at a later page.
     const BODY_START_PAGE = 3; // 1 = cover, 2 = TOC
     const inBodySectionCount =
-      5 + // I-V always present
+      6 + // I-VI always present (incl. Dimensionnement et productible)
       1 + // VI Structure et lestage
       (dcFuseRequired ? 1 : 0) + // VII
       (acIsolatorRequired ? 1 : 0) + // VIII
@@ -432,6 +436,7 @@ export async function processJob(jobId: string): Promise<void> {
     const tocEntries = [
       { title: `${sectionNumbers.sectionNumberPreambule} Préambule`, pageNumber: pageForSection(sectionIndex++) },
       { title: `${sectionNumbers.sectionNumberPresentation} Présentation du projet`, pageNumber: pageForSection(sectionIndex++) },
+      { title: `${sectionNumbers.sectionNumberDimensionnement} Dimensionnement et productible`, pageNumber: pageForSection(sectionIndex++) },
       { title: `${sectionNumbers.sectionNumberSolution} Description de la solution technique`, pageNumber: pageForSection(sectionIndex++) },
       { title: `${sectionNumbers.sectionNumberCablage} Câblage`, pageNumber: pageForSection(sectionIndex++) },
       { title: `${sectionNumbers.sectionNumberTerre} Mise à la terre`, pageNumber: pageForSection(sectionIndex++) },

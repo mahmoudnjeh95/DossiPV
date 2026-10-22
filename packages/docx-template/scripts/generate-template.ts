@@ -36,6 +36,36 @@ const doc = new Document({
         new Paragraph({ text: '{sectionNumberPresentation} Présentation du projet', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{introduction}'),
 
+        new Paragraph({ text: '{sectionNumberDimensionnement} Dimensionnement et productible', heading: HeadingLevel.HEADING_1 }),
+        specTable([
+          ['Type de branchement', '{sizingBranchement}'],
+          ['Puissance souscrite', '{sizingSubscribedPower}'],
+          ['Consommation de référence', '{sizingConsumption}'],
+          ['Puissance crête installée (kWc)', '{sizingInstalledKWp}'],
+          ["Puissance AC de l'onduleur (kW)", '{sizingInverterPac}'],
+          ['Rapport DC/AC', '{sizingDcAcRatio}'],
+          ['Règle de dimensionnement', '{sizingRule}'],
+          ['Production annuelle estimée (kWh/an)', '{productionAnnual}'],
+          ['Productible spécifique (kWh/kWc/an)', '{productionSpecificYield}'],
+          ['Indice de performance (PR)', '{productionPr}'],
+          ['Taux de couverture de la consommation', '{productionCoverage}'],
+          ['Méthode', '{productionMethod}'],
+        ]),
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({
+              children: [cell('Mois'), cell('Irradiation dans le plan (kWh/m²)'), cell('Production (kWh)'), cell('PR (%)')],
+            }),
+            new TableRow({
+              children: [cell('{#productionMonths}{monthLabel}'), cell('{globInc}'), cell('{eGrid}'), cell('{pr}{/productionMonths}')],
+            }),
+            new TableRow({
+              children: [cell('Total'), cell('{productionTotalGlobInc}'), cell('{productionTotalEGrid}'), cell('')],
+            }),
+          ],
+        }),
+
         new Paragraph({ text: '{sectionNumberSolution} Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{solution}'),
         new Paragraph({ text: "III.1 Caractéristiques du module", heading: HeadingLevel.HEADING_2 }),

@@ -2,7 +2,7 @@ import { db } from '@dossipv/db';
 import { fetchPvgisSpecificYield } from '@dossipv/pvgis-client';
 
 const DEFAULT_SPECIFIC_YIELD_KWH_PER_KWP = 1600;
-const FALLBACK_WARNING = 'PVGIS indisponible : rendement par défaut de 1 600 kWh/kWc utilisé.';
+const FALLBACK_WARNING = 'Estimation rapide : PVGIS momentanément indisponible, moyenne de 1 600 kWh/kWc utilisée. Le dossier utilisera la simulation PVGIS au point exact.';
 
 function roundToCents(value: number): number {
   return Math.round(value * 100) / 100;

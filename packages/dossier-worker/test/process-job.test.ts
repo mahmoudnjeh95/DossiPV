@@ -94,6 +94,7 @@ const validSnapshot = {
     acIsolator: null,
     module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 },
     dcRun: { sectionMm2: 6, lengthM: 20 },
+    site: { phases: 1 },
     acRun: { sectionMm2: 10, lengthM: 15 },
   },
   projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
@@ -488,7 +489,7 @@ describe('processJob — fragment assembly details', () => {
     // Conclusion is "VII." here (not a hardcoded "IX.") — with no DC fuse and no AC isolator,
     // VI is directly followed by VII, exactly matching computeSectionNumbers()'s own output
     // (see build-template-data.test.ts's identical no-gap assertion for the body side).
-    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Description de la solution technique', 'IV. Câblage', 'V. Mise à la terre', 'VI. Structure et lestage', 'VII. Conclusion'];
+    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Dimensionnement et productible', 'IV. Description de la solution technique', 'V. Câblage', 'VI. Mise à la terre', 'VII. Structure et lestage', 'VIII. Conclusion'];
     const bodyEntries = bodyTitles.map((title) => entries.find((e) => e.title === title)!);
 
     for (const entry of bodyEntries) {
@@ -500,8 +501,17 @@ describe('processJob — fragment assembly details', () => {
     for (let i = 1; i < bodyEntries.length; i += 1) {
       expect(bodyEntries[i]!.pageNumber).toBeGreaterThanOrEqual(bodyEntries[i - 1]!.pageNumber);
     }
-    expect(entries.find((e) => e.title === 'VII. Protection DC — fusible')).toBeUndefined();
-    expect(entries.find((e) => e.title === 'VIII. Protection AC — sectionneur')).toBeUndefined();
+    expect(entries.find((e) => e.title === 'VIII. Protection DC — fusible')).toBeUndefined();
+    expect(entries.find((e) => e.title === 'IX. Protection AC — sectionneur')).toBeUndefined();
+  });
+
+  it('lists the dimensioning and production section right after the project presentation in the TOC', async () => {
+    await processJob('job-1');
+
+    const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string }[];
+    const titles = entries.map((e) => e.title);
+    expect(titles).toContain('III. Dimensionnement et productible');
+    expect(titles.indexOf('III. Dimensionnement et productible')).toBe(titles.indexOf('II. Présentation du projet') + 1);
   });
 
   it('includes VII and VIII, correctly ordered with the rest, when the engine input requires a DC fuse and an AC isolator (C3)', async () => {
@@ -515,12 +525,12 @@ describe('processJob — fragment assembly details', () => {
 
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
     const titles = entries.map((e) => e.title);
-    expect(titles).toContain('VII. Protection DC — fusible');
-    expect(titles).toContain('VIII. Protection AC — sectionneur');
-    const viIndex = titles.indexOf('VI. Structure et lestage');
-    const viiIndex = titles.indexOf('VII. Protection DC — fusible');
-    const viiiIndex = titles.indexOf('VIII. Protection AC — sectionneur');
-    const ixIndex = titles.indexOf('IX. Conclusion');
+    expect(titles).toContain('VIII. Protection DC — fusible');
+    expect(titles).toContain('IX. Protection AC — sectionneur');
+    const viIndex = titles.indexOf('VII. Structure et lestage');
+    const viiIndex = titles.indexOf('VIII. Protection DC — fusible');
+    const viiiIndex = titles.indexOf('IX. Protection AC — sectionneur');
+    const ixIndex = titles.indexOf('X. Conclusion');
     expect(viIndex).toBeLessThan(viiIndex);
     expect(viiIndex).toBeLessThan(viiiIndex);
     expect(viiiIndex).toBeLessThan(ixIndex);
@@ -554,6 +564,7 @@ describe('processJob — fragment assembly details', () => {
       expect.arrayContaining([
         `${n.sectionNumberPreambule} Préambule`,
         `${n.sectionNumberPresentation} Présentation du projet`,
+        `${n.sectionNumberDimensionnement} Dimensionnement et productible`,
         `${n.sectionNumberSolution} Description de la solution technique`,
         `${n.sectionNumberCablage} Câblage`,
         `${n.sectionNumberTerre} Mise à la terre`,

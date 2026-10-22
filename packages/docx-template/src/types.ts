@@ -49,6 +49,7 @@ export interface DossierTemplateData {
   // absent. Each already includes the trailing ".", e.g. "VI.".
   sectionNumberPreambule: string;
   sectionNumberPresentation: string;
+  sectionNumberDimensionnement: string;
   sectionNumberSolution: string;
   sectionNumberCablage: string;
   sectionNumberTerre: string;
@@ -56,6 +57,22 @@ export interface DossierTemplateData {
   sectionNumberFusible: string;
   sectionNumberSectionneur: string;
   sectionNumberConclusion: string;
+  // "Dimensionnement et productible" section: all pre-formatted French strings (decimal comma).
+  sizingBranchement: string;
+  sizingSubscribedPower: string;
+  sizingConsumption: string;
+  sizingInstalledKWp: string;
+  sizingInverterPac: string;
+  sizingDcAcRatio: string;
+  sizingRule: string;
+  productionAnnual: string;
+  productionSpecificYield: string;
+  productionPr: string;
+  productionCoverage: string;
+  productionMethod: string;
+  productionMonths: { monthLabel: string; globInc: string; eGrid: string; pr: string }[];
+  productionTotalGlobInc: string;
+  productionTotalEGrid: string;
   inverters: {
     inverterLabel: string;
     // Each inverter's own brand/model (not projectMeta.inverterBrandModel, which is only the

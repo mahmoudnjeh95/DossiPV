@@ -138,4 +138,11 @@ describe('parseJobSnapshot', () => {
     expect(parsed!.cablingConfig).toBeNull();
     expect(parsed!.tier).toBe('STANDARD');
   });
+
+  it('defaults the consumption to null and parses a stored one', () => {
+    expect(parseJobSnapshot(validSnapshot)!.consumption).toBeNull();
+
+    const consumption = { annualConsumptionKWh: 4800, source: 'BILL', billedKWh: 2400, monthsBilled: 6, periodStart: '2026-01-05', periodEnd: '2026-07-04' };
+    expect(parseJobSnapshot({ ...validSnapshot, consumption })!.consumption).toEqual(consumption);
+  });
 });

@@ -24,6 +24,7 @@ function fixtureSnapshot(): DossierJobSnapshotV1 {
     dossierDate: (project.dossierDate ?? FIXTURE_NOW).toISOString(),
     capturedAt: FIXTURE_NOW.toISOString(),
     client: project.client,
+    consumption: null,
     site: project.site,
     arrayConfig: project.arrayConfig,
     protections: project.protections,

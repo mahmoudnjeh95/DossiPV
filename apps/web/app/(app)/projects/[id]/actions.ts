@@ -10,6 +10,7 @@ import {
   buildEngineInput,
   type ProjectMetaForWorker,
 } from '../../../../lib/project-engine-input';
+import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
 
 export interface GenerateDossierActionState {
@@ -45,6 +46,8 @@ export interface DossierJobSnapshotV1 {
   cableRuns: ProjectForSnapshot['cableRuns'];
   structure: ProjectForSnapshot['structure'];
   earthing: ProjectForSnapshot['earthing'];
+  /** What the dossier states as the client's consumption; null when the client has none. */
+  consumption: SnapshotConsumption | null;
   engineInput: RunEngineInput;
   projectMeta: ProjectMetaForWorker;
 }
@@ -128,6 +131,7 @@ export async function generateDossierAction(
     cableRuns: project.cableRuns,
     structure: project.structure,
     earthing: project.earthing,
+    consumption: buildSnapshotConsumption(project.client, project.billImport),
     engineInput: engineInput.input,
     projectMeta: engineInput.meta,
   };

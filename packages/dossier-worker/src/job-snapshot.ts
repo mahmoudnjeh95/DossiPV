@@ -28,6 +28,16 @@ export interface SnapshotClient {
   subscribedPowerKVA: number | null;
 }
 
+/** The consumption the dossier states; BILL figures are only set when the bill is the source. */
+export interface SnapshotConsumption {
+  annualConsumptionKWh: number;
+  source: 'BILL' | 'MANUAL';
+  billedKWh: number | null;
+  monthsBilled: number | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+}
+
 export interface SnapshotEquipmentRef {
   brand: string;
   model: string;
@@ -80,6 +90,7 @@ export interface WorkerJobSnapshot {
   engineInput: RunEngineInput;
   projectMeta: ProjectMeta;
   client: SnapshotClient | null;
+  consumption: SnapshotConsumption | null;
   cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string; cable?: SnapshotEquipmentRef & Record<string, unknown> }[];
   site: SnapshotSite | null;
   arrayConfig: SnapshotArrayConfig | null;
@@ -115,6 +126,20 @@ function parseClient(value: unknown): SnapshotClient | null {
     cin: optionalString(value.cin),
     annualConsumptionKWh: optionalNumber(value.annualConsumptionKWh),
     subscribedPowerKVA: optionalNumber(value.subscribedPowerKVA),
+  };
+}
+
+function parseConsumption(value: unknown): SnapshotConsumption | null {
+  if (!isRecord(value)) return null;
+  const annual = optionalNumber(value.annualConsumptionKWh);
+  if (annual === null) return null;
+  return {
+    annualConsumptionKWh: annual,
+    source: value.source === 'BILL' ? 'BILL' : 'MANUAL',
+    billedKWh: optionalNumber(value.billedKWh),
+    monthsBilled: optionalNumber(value.monthsBilled),
+    periodStart: optionalString(value.periodStart),
+    periodEnd: optionalString(value.periodEnd),
   };
 }
 
@@ -167,6 +192,7 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     engineInput: value.engineInput as unknown as RunEngineInput,
     projectMeta: value.projectMeta as unknown as ProjectMeta,
     client: parseClient(value.client),
+    consumption: parseConsumption(value.consumption),
     cableRuns: value.cableRuns as WorkerJobSnapshot['cableRuns'],
     site: parseSite(value.site),
     arrayConfig: optionalRecord(value.arrayConfig) as unknown as SnapshotArrayConfig | null,

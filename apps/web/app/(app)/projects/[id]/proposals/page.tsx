@@ -127,6 +127,12 @@ export default async function ProposalsPage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {computed.ok && proposals.length > 0 && (
+        <p className="muted">
+          Production estimée à partir de la position approximative ; le dossier utilisera la simulation PVGIS au point exact du champ PV.
+        </p>
+      )}
+
       {computed.ok && proposals.length === 0 && (
         <section className="card">
           <h2>Aucune installation possible</h2>

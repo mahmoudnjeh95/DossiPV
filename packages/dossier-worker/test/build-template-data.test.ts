@@ -3,6 +3,43 @@ import { buildTemplateData } from '../src/build-template-data';
 import type { DossierWorkerResult } from '../src/generate-dossier-document';
 import type { RunEngineInput } from '@dossipv/engine';
 import type { ProjectMeta } from '../src/placeholder-map';
+import type { ProductionSimulation } from '../src/run-simulation';
+import type { SnapshotConsumption } from '../src/job-snapshot';
+
+const NNBSP = '\u202f';
+
+const production: ProductionSimulation = {
+  lat: 36.8,
+  lon: 10.2,
+  tiltDeg: 30,
+  azimuthDeg: 0,
+  weatherYear: 2020,
+  installedKWp: 3.1,
+  annualProductionKWh: 5400,
+  annualArrayKWh: 5900,
+  specificYieldKWhPerKWp: 5400 / 3.1,
+  performanceRatioPct: 81.55,
+  monthly: Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    globHorKWhM2: 150,
+    globIncKWhM2: 170.25,
+    ambientTempC: 20,
+    eArrayKWh: 490,
+    eGridKWh: 450,
+    prPct: 81.5,
+  })),
+};
+
+const billConsumption: SnapshotConsumption = {
+  annualConsumptionKWh: 4800,
+  source: 'BILL',
+  billedKWh: 2400,
+  monthsBilled: 6,
+  periodStart: '2026-01-05',
+  periodEnd: '2026-07-04',
+};
+
+const sizingInputs = { production, consumption: billConsumption, subscribedPowerKVA: 6, phases: 1 as const };
 
 const workerResult: DossierWorkerResult = {
   sections: {
@@ -54,7 +91,7 @@ describe('buildTemplateData', () => {
         cableRuns: [{ label: 'DC-1', sectionMm2: 6, lengthM: 20, installMethod: '13' }],
         inverterBrandModels: ['Sofar 1-4KTL2-G3'],
       },
-      companyInfo: { name: 'SolarPro Tunisie', address: '12 Rue de la République, Tunis', phone: '+216 71 000 000', email: 'contact@solarpro.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: '12 Rue de la République, Tunis', phone: '+216 71 000 000', email: 'contact@solarpro.tn' }, ...sizingInputs,
     });
 
     expect(data.companyName).toBe('SolarPro Tunisie');
@@ -113,7 +150,7 @@ describe('buildTemplateData', () => {
       },
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(result.moduleSpecPmaxW).toEqual(expect.any(String));
@@ -145,7 +182,7 @@ describe('buildTemplateData', () => {
       engineInput,
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(result.stabilityComputed).toBe(false);
@@ -158,7 +195,7 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(data.clientFullName).toBe('');
@@ -167,51 +204,52 @@ describe('buildTemplateData', () => {
     expect(data.cableRuns).toEqual([]);
   });
 
-  it('computes section numbers I-VI, IX with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
+  it('computes section numbers I-VII, VIII with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(data.sectionNumberPreambule).toBe('I.');
     expect(data.sectionNumberPresentation).toBe('II.');
-    expect(data.sectionNumberSolution).toBe('III.');
-    expect(data.sectionNumberCablage).toBe('IV.');
-    expect(data.sectionNumberTerre).toBe('V.');
-    expect(data.sectionNumberStructure).toBe('VI.');
+    expect(data.sectionNumberDimensionnement).toBe('III.');
+    expect(data.sectionNumberSolution).toBe('IV.');
+    expect(data.sectionNumberCablage).toBe('V.');
+    expect(data.sectionNumberTerre).toBe('VI.');
+    expect(data.sectionNumberStructure).toBe('VII.');
     expect(data.sectionNumberFusible).toBe('');
     expect(data.sectionNumberSectionneur).toBe('');
     // The regression this fix closes: VI must be followed directly by VII (not a hardcoded "IX"
     // left over from when the DC fuse/AC isolator sections existed) when both are absent.
-    expect(data.sectionNumberConclusion).toBe('VII.');
-  });
-
-  it('renumbers VII, VIII, IX correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
-    const data = buildTemplateData({
-      workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
-      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
-    });
-
-    expect(data.sectionNumberStructure).toBe('VI.');
-    expect(data.sectionNumberFusible).toBe('VII.');
-    expect(data.sectionNumberSectionneur).toBe('');
     expect(data.sectionNumberConclusion).toBe('VIII.');
   });
 
-  it('numbers all nine sections I-IX when both the DC fuse and the AC isolator sections are required (I4)', () => {
+  it('renumbers VIII, IX correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
+    const data = buildTemplateData({
+      workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
+    });
+
+    expect(data.sectionNumberStructure).toBe('VII.');
+    expect(data.sectionNumberFusible).toBe('VIII.');
+    expect(data.sectionNumberSectionneur).toBe('');
+    expect(data.sectionNumberConclusion).toBe('IX.');
+  });
+
+  it('numbers all ten sections I-X when both the DC fuse and the AC isolator sections are required (I4)', () => {
     const data = buildTemplateData({
       workerResult,
       engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
       projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
-    expect(data.sectionNumberFusible).toBe('VII.');
-    expect(data.sectionNumberSectionneur).toBe('VIII.');
-    expect(data.sectionNumberConclusion).toBe('IX.');
+    expect(data.sectionNumberFusible).toBe('VIII.');
+    expect(data.sectionNumberSectionneur).toBe('IX.');
+    expect(data.sectionNumberConclusion).toBe('X.');
   });
 
   it("uses each inverter's OWN brand/model from the snapshot, not projectMeta's first-inverter-only string, for a mixed-model array (I7)", () => {
@@ -228,7 +266,7 @@ describe('buildTemplateData', () => {
       engineInput: mixedEngineInput,
       projectMeta, // projectMeta.inverterBrandModel is 'Sofar 1-4KTL2-G3' — the FIRST inverter only
       snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3', 'Huawei SUN2000-5KTL'] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(data.inverters).toHaveLength(2);
@@ -242,9 +280,82 @@ describe('buildTemplateData', () => {
     const data = buildTemplateData({
       workerResult, engineInput, projectMeta,
       snapshot: { client: null, cableRuns: [], inverterBrandModels: [] },
-      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' }, ...sizingInputs,
     });
 
     expect(data.inverters[0]!.inverterBrandModel).toBe(projectMeta.inverterBrandModel);
+  });
+
+  describe('dimensioning and production section', () => {
+    const base = {
+      workerResult, engineInput, projectMeta,
+      snapshot: { client: null, cableRuns: [], inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      companyInfo: { name: 'SolarPro Tunisie', address: 'Tunis', phone: '71000000', email: 'a@b.tn' },
+    };
+
+    it('fills the sizing and production section from a bill', () => {
+      const data = buildTemplateData({ ...base, ...sizingInputs });
+
+      expect(data.sectionNumberDimensionnement).toBe('III.');
+      expect(data.sectionNumberSolution).toBe('IV.');
+      expect(data.sizingBranchement).toBe('Monophasé BT');
+      expect(data.sizingSubscribedPower).toBe('6 kVA');
+      expect(data.sizingConsumption).toBe(
+        `2${NNBSP}400 kWh facturés sur 6 mois (du 05/01/2026 au 04/07/2026) → environ 4${NNBSP}800 kWh/an (estimation à partir de 6 mois de facture)`,
+      );
+      expect(data.sizingInstalledKWp).toBe('3,10');
+      expect(data.sizingInverterPac).toBe('3,00');
+      expect(data.sizingDcAcRatio).toBe('1,03');
+      expect(data.sizingRule).toBe(
+        "Puissance AC de l'onduleur (3,00 kW) inférieure ou égale à la puissance souscrite (6 kVA) ; rapport DC/AC limité à 1,3.",
+      );
+      expect(data.productionAnnual).toBe(`5${NNBSP}400`);
+      expect(data.productionSpecificYield).toBe(`1${NNBSP}742`);
+      expect(data.productionPr).toBe('81,6 %');
+      expect(data.productionCoverage).toBe('113 %');
+      expect(data.productionMethod).toContain('Simulation PVGIS v5.3');
+      expect(data.productionMethod).toContain('au point GPS 36,8, 10,2');
+      expect(data.productionMethod).toContain("l'année 2020 ; inclinaison 30°, azimut 0° (0° = plein sud)");
+      expect(data.productionMethod).toContain('Rapport détaillé en annexe N°2.');
+      expect(data.productionMonths).toHaveLength(12);
+      expect(data.productionMonths[0]).toEqual({ monthLabel: 'Janvier', globInc: '170,3', eGrid: '450', pr: '81,5' });
+      expect(data.productionMonths[11]!.monthLabel).toBe('Décembre');
+      expect(data.productionTotalGlobInc).toBe(`2${NNBSP}043,0`);
+      expect(data.productionTotalEGrid).toBe(`5${NNBSP}400`);
+    });
+
+    it('describes a bill without dates and a typed consumption', () => {
+      const noDates = buildTemplateData({ ...base, ...sizingInputs, consumption: { ...billConsumption, periodStart: null, periodEnd: null } });
+      expect(noDates.sizingConsumption).toBe(`2${NNBSP}400 kWh facturés sur 6 mois → environ 4${NNBSP}800 kWh/an (estimation)`);
+
+      const manual = buildTemplateData({
+        ...base, ...sizingInputs,
+        consumption: { annualConsumptionKWh: 3000, source: 'MANUAL', billedKWh: null, monthsBilled: null, periodStart: null, periodEnd: null },
+      });
+      expect(manual.sizingConsumption).toBe(`3${NNBSP}000 kWh/an (valeur saisie par l'installateur)`);
+    });
+
+    it('handles a project without consumption', () => {
+      const data = buildTemplateData({ ...base, ...sizingInputs, consumption: null, subscribedPowerKVA: null });
+
+      expect(data.sizingConsumption).toBe('Non renseignée');
+      expect(data.sizingSubscribedPower).toBe('Non renseignée');
+      expect(data.productionCoverage).toBe('—');
+      const section = Object.fromEntries(
+        Object.entries(data).filter(([key]) => key.startsWith('sizing') || key.startsWith('production')),
+      );
+      const serialized = JSON.stringify(section);
+      expect(serialized).not.toContain('NaN');
+      expect(serialized).not.toContain('undefined');
+    });
+
+    it('uses a decimal comma', () => {
+      const data = buildTemplateData({ ...base, ...sizingInputs });
+
+      for (const value of [data.sizingInstalledKWp, data.sizingInverterPac, data.sizingDcAcRatio, data.productionPr, data.productionMonths[0]!.globInc]) {
+        expect(value).toContain(',');
+        expect(value).not.toContain('.');
+      }
+    });
   });
 });

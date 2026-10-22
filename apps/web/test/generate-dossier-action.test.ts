@@ -193,4 +193,54 @@ describe('generateDossierAction', () => {
     });
     expect(mocks.mockRedirect).toHaveBeenCalledWith('/projects/project-1');
   });
+
+  it('snapshots the consumption from the bill import', async () => {
+    const project = buildFullProject();
+    project.client!.annualConsumptionKWh = 2400;
+    project.billImport = {
+      annualConsumptionKWh: 2400,
+      reading: {
+        lines: [],
+        totalElectricityKWh: 1200,
+        monthsBilled: null,
+        periodStart: '2026-01-01',
+        periodEnd: '2026-06-30',
+      },
+    } as unknown as typeof project.billImport;
+    mocks.projectFindFirst.mockResolvedValue(project);
+
+    await generateDossierAction('project-1', undefined);
+
+    const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
+    expect(data.data.inputSnapshot.consumption).toEqual({
+      annualConsumptionKWh: 2400,
+      source: 'BILL',
+      billedKWh: 1200,
+      monthsBilled: 6,
+      periodStart: '2026-01-01',
+      periodEnd: '2026-06-30',
+    });
+  });
+
+  it('marks a typed consumption as MANUAL', async () => {
+    const project = buildFullProject();
+    project.client!.annualConsumptionKWh = 3000;
+    project.billImport = {
+      annualConsumptionKWh: 2400,
+      reading: { lines: [], totalElectricityKWh: 1200, monthsBilled: 6, periodStart: null, periodEnd: null },
+    } as unknown as typeof project.billImport;
+    mocks.projectFindFirst.mockResolvedValue(project);
+
+    await generateDossierAction('project-1', undefined);
+
+    const data = mocks.jobCreate.mock.calls[0]?.[0] as { data: { inputSnapshot: Record<string, unknown> } };
+    expect(data.data.inputSnapshot.consumption).toEqual({
+      annualConsumptionKWh: 3000,
+      source: 'MANUAL',
+      billedKWh: null,
+      monthsBilled: null,
+      periodStart: null,
+      periodEnd: null,
+    });
+  });
 });

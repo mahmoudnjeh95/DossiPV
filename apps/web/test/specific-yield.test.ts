@@ -47,7 +47,7 @@ describe('getSpecificYield', () => {
 
     expect(result).toEqual({
       value: 1600,
-      warning: 'PVGIS indisponible : rendement par défaut de 1 600 kWh/kWc utilisé.',
+      warning: 'Estimation rapide : PVGIS momentanément indisponible, moyenne de 1 600 kWh/kWc utilisée. Le dossier utilisera la simulation PVGIS au point exact.',
     });
     expect(create).not.toHaveBeenCalled();
   });
@@ -60,7 +60,7 @@ describe('getSpecificYield', () => {
 
     expect(result).toEqual({
       value: 1600,
-      warning: 'PVGIS indisponible : rendement par défaut de 1 600 kWh/kWc utilisé.',
+      warning: 'Estimation rapide : PVGIS momentanément indisponible, moyenne de 1 600 kWh/kWc utilisée. Le dossier utilisera la simulation PVGIS au point exact.',
     });
     expect(create).not.toHaveBeenCalled();
   });

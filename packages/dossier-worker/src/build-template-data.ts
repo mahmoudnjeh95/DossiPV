@@ -2,6 +2,8 @@ import type { RunEngineInput } from '@dossipv/engine';
 import { PLACEHOLDER_DEFINITIONS, type ProjectMeta } from './placeholder-map';
 import type { DossierWorkerResult } from './generate-dossier-document';
 import type { DossierTemplateData } from '@dossipv/docx-template';
+import type { ProductionSimulation } from './run-simulation';
+import type { SnapshotConsumption } from './job-snapshot';
 
 export interface BuildTemplateDataInput {
   workerResult: DossierWorkerResult;
@@ -16,6 +18,84 @@ export interface BuildTemplateDataInput {
     inverterBrandModels: string[];
   };
   companyInfo: { name: string; address: string; phone: string; email: string };
+  production: ProductionSimulation;
+  consumption: SnapshotConsumption | null;
+  subscribedPowerKVA: number | null;
+  phases: 1 | 3;
+}
+
+const MONTH_LABELS = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+] as const;
+const MAX_DC_AC_RATIO = 1.3;
+
+/** Number with at most `maxDecimals` decimals, decimal comma (fr-FR). */
+function fmtUpTo(value: number, maxDecimals: number): string {
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: maxDecimals }).format(value);
+}
+
+/** `2026-01-31` to `31/01/2026`. */
+function formatIsoDate(iso: string): string {
+  const [year, month, day] = iso.slice(0, 10).split('-');
+  return `${day}/${month}/${year}`;
+}
+
+function formatConsumption(consumption: SnapshotConsumption | null): string {
+  if (!consumption) return 'Non renseignée';
+  const annual = fmt(consumption.annualConsumptionKWh, 0);
+  if (consumption.source === 'MANUAL' || consumption.billedKWh === null || consumption.monthsBilled === null) {
+    return `${annual} kWh/an (valeur saisie par l'installateur)`;
+  }
+  const billed = fmt(consumption.billedKWh, 0);
+  const months = fmt(consumption.monthsBilled, 0);
+  if (consumption.periodStart && consumption.periodEnd) {
+    return `${billed} kWh facturés sur ${months} mois (du ${formatIsoDate(consumption.periodStart)} au ${formatIsoDate(consumption.periodEnd)}) → environ ${annual} kWh/an (estimation à partir de ${months} mois de facture)`;
+  }
+  return `${billed} kWh facturés sur ${months} mois → environ ${annual} kWh/an (estimation)`;
+}
+
+function buildSizingAndProduction(input: BuildTemplateDataInput): Pick<
+  DossierTemplateData,
+  | 'sizingBranchement' | 'sizingSubscribedPower' | 'sizingConsumption' | 'sizingInstalledKWp'
+  | 'sizingInverterPac' | 'sizingDcAcRatio' | 'sizingRule' | 'productionAnnual'
+  | 'productionSpecificYield' | 'productionPr' | 'productionCoverage' | 'productionMethod'
+  | 'productionMonths' | 'productionTotalGlobInc' | 'productionTotalEGrid'
+> {
+  const { production, consumption, subscribedPowerKVA, phases, engineInput } = input;
+  const pacKW = engineInput.array.reduce((sum, entry) => sum + entry.inverter.pacW, 0) / 1000;
+  const kva = subscribedPowerKVA === null ? null : `${fmtUpTo(subscribedPowerKVA, 1)} kVA`;
+  const pac = fmt(pacKW, 2);
+  const limits = `rapport DC/AC limité à ${fmtUpTo(MAX_DC_AC_RATIO, 1)}.`;
+  const coverage =
+    consumption && consumption.annualConsumptionKWh > 0
+      ? `${fmt((production.annualProductionKWh / consumption.annualConsumptionKWh) * 100, 0)} %`
+      : '—';
+
+  return {
+    sizingBranchement: phases === 3 ? 'Triphasé BT' : 'Monophasé BT',
+    sizingSubscribedPower: kva ?? 'Non renseignée',
+    sizingConsumption: formatConsumption(consumption),
+    sizingInstalledKWp: fmt(production.installedKWp, 2),
+    sizingInverterPac: pac,
+    sizingDcAcRatio: pacKW > 0 ? fmt(production.installedKWp / pacKW, 2) : '—',
+    sizingRule: kva
+      ? `Puissance AC de l'onduleur (${pac} kW) inférieure ou égale à la puissance souscrite (${kva}) ; ${limits}`
+      : `Puissance AC de l'onduleur (${pac} kW) ; ${limits}`,
+    productionAnnual: fmt(production.annualProductionKWh, 0),
+    productionSpecificYield: fmt(production.specificYieldKWhPerKWp, 0),
+    productionPr: `${fmt(production.performanceRatioPct, 1)} %`,
+    productionCoverage: coverage,
+    productionMethod: `Simulation PVGIS v5.3 (Centre commun de recherche de la Commission européenne, JRC) au point GPS ${fmtUpTo(production.lat, 5)}, ${fmtUpTo(production.lon, 5)} ; irradiation horaire de l'année ${production.weatherYear} ; inclinaison ${fmtUpTo(production.tiltDeg, 1)}°, azimut ${fmtUpTo(production.azimuthDeg, 1)}° (0° = plein sud) ; pertes de câblage DC et AC calculées, écrêtage à la puissance de l'onduleur. Rapport détaillé en annexe N°2.`,
+    productionMonths: production.monthly.map((row, index) => ({
+      monthLabel: MONTH_LABELS[index] ?? `Mois ${index + 1}`,
+      globInc: fmt(row.globIncKWhM2, 1),
+      eGrid: fmt(row.eGridKWh, 0),
+      pr: fmt(row.prPct, 1),
+    })),
+    productionTotalGlobInc: fmt(production.monthly.reduce((sum, row) => sum + row.globIncKWhM2, 0), 1),
+    productionTotalEGrid: fmt(production.annualProductionKWh, 0),
+  };
 }
 
 // PLACEHOLDER_DEFINITIONS['P_DC_W']/['MODULE_COUNT'] only read ctx.derived (confirmed directly
@@ -49,6 +129,7 @@ const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 
 export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
   sectionNumberPreambule: string;
   sectionNumberPresentation: string;
+  sectionNumberDimensionnement: string;
   sectionNumberSolution: string;
   sectionNumberCablage: string;
   sectionNumberTerre: string;
@@ -61,6 +142,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
   const next = (): string => `${ROMAN_NUMERALS[n++]!}.`;
   const sectionNumberPreambule = next();
   const sectionNumberPresentation = next();
+  const sectionNumberDimensionnement = next();
   const sectionNumberSolution = next();
   const sectionNumberCablage = next();
   const sectionNumberTerre = next();
@@ -71,6 +153,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
   return {
     sectionNumberPreambule,
     sectionNumberPresentation,
+    sectionNumberDimensionnement,
     sectionNumberSolution,
     sectionNumberCablage,
     sectionNumberTerre,
@@ -133,6 +216,7 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     dcFuseRequired,
     acIsolatorRequired,
     ...computeSectionNumbers(dcFuseRequired, acIsolatorRequired),
+    ...buildSizingAndProduction(input),
     moduleSpecPmaxW: fmt(engineInput.module.pmaxW, 0),
     moduleSpecVmpV: fmt(engineInput.module.vmpV),
     moduleSpecImpA: fmt(engineInput.module.impA),
