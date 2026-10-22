@@ -178,8 +178,6 @@ async function loadAnnexFiles(documents: AnnexDocument[], projectFileIds: Set<st
   return { files, warnings };
 }
 
-type DatasheetHighlighter = (pdf: Buffer) => Promise<{ pdf: Buffer; highlighted: boolean }>;
-
 /**
  * Replaces the module and inverter datasheets in `files` with copies whose used values are
  * highlighted, as the reference dossier does. A datasheet that cannot be highlighted (a scan
@@ -187,23 +185,23 @@ type DatasheetHighlighter = (pdf: Buffer) => Promise<{ pdf: Buffer; highlighted:
  * the job records a warning; it never fails the job.
  */
 async function highlightDatasheets(files: Map<AnnexDocument, AnnexFile>, snapshot: WorkerJobSnapshot): Promise<string[]> {
-  const highlighters = new Map<string, DatasheetHighlighter>();
   const module = snapshot.arrayConfig?.module;
-  if (module?.datasheetFileId) {
-    const { pmaxW, vocV, iscA, vmpV, impA } = snapshot.engineInput.module;
-    highlighters.set(`MODULE:${module.datasheetFileId}`, (pdf) => highlightModuleDatasheet(pdf, { model: module.model, pmaxW, vocV, iscA, vmpV, impA }));
-  }
-  for (const { inverter } of snapshot.arrayConfig?.inverters ?? []) {
-    if (inverter.datasheetFileId) highlighters.set(`INVERTER:${inverter.datasheetFileId}`, (pdf) => highlightInverterDatasheet(pdf, inverter.model));
-  }
-
+  const inverters = (snapshot.arrayConfig?.inverters ?? []).map(({ inverter }) => inverter);
   const warnings: string[] = [];
   for (const [document, file] of files) {
     if (document.source.kind !== 'file') continue;
-    const highlight = highlighters.get(`${document.slot}:${document.source.fileId}`);
-    if (!highlight) continue;
+    const { fileId } = document.source;
+    const isModule = document.slot === 'MODULE' && module?.datasheetFileId === fileId;
+    const inverter = document.slot === 'INVERTER' ? inverters.find((i) => i.datasheetFileId === fileId) : undefined;
+    if (!isModule && !inverter) continue;
     try {
-      const result = file.mimeType === 'pdf' ? await highlight(file.buffer) : { highlighted: false, pdf: file.buffer };
+      let result = { pdf: file.buffer, highlighted: false };
+      if (file.mimeType === 'pdf' && isModule) {
+        const { pmaxW, vocV, iscA, vmpV, impA } = snapshot.engineInput.module;
+        result = await highlightModuleDatasheet(file.buffer, { model: module.model, pmaxW, vocV, iscA, vmpV, impA });
+      } else if (file.mimeType === 'pdf' && inverter) {
+        result = await highlightInverterDatasheet(file.buffer, inverter.model);
+      }
       if (result.highlighted) {
         files.set(document, { ...file, buffer: result.pdf });
         continue;

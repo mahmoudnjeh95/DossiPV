@@ -1092,7 +1092,7 @@ describe('processJob — annex plan', () => {
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue(annexJob('Y'));
   });
 
-  function annexJob(inverterModel: string): unknown {
+  function annexJob(inverterModel: string, inverterFileId = 'file-inverter'): unknown {
     return {
       id: 'job-1',
       projectId: 'project-1',
@@ -1100,7 +1100,7 @@ describe('processJob — annex plan', () => {
         ...validSnapshot,
         arrayConfig: {
           module: { brand: 'LONGi', model: 'X', datasheetFileId: 'file-module' },
-          inverters: [{ inverter: { brand: 'Sofar', model: inverterModel, datasheetFileId: 'file-inverter' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+          inverters: [{ inverter: { brand: 'Sofar', model: inverterModel, datasheetFileId: inverterFileId }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
         },
         protections: {
           acBreaker: { brand: 'Hager', model: 'RCBO', residualCurrentMA: 30, datasheetFileId: 'file-rcd' },
@@ -1133,6 +1133,21 @@ describe('processJob — annex plan', () => {
       'Page de la liste ANME introuvable pour X.',
       NO_HIGHLIGHT_WARNINGS[0],
     ]);
+  });
+
+  it('keeps the original datasheet with a warning, and still succeeds, when the highlighter throws', async () => {
+    // file-broken is not a PDF: the text extraction throws inside the inverter highlighter.
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue(annexJob('Y', 'file-broken'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(findSucceededUpdate()).toBeDefined();
+    const annexes = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string; buffer: Buffer }[]])[1];
+    expect(annexes.find((a) => a.label === 'Annexe N°12 — Fiche technique Sofar Y')!.buffer.toString()).toBe('not a pdf');
+    expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toContain(NO_HIGHLIGHT_WARNINGS[1]);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('could not be highlighted'), expect.anything());
+    warn.mockRestore();
   });
 
   it('merges the annex documents in physical order, the drawings and plans after the administrative papers', async () => {

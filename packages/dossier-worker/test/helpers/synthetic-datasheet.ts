@@ -45,11 +45,24 @@ function drawCentred(page: PDFPage, font: PDFFont, text: string, centreX: number
  * - `stacked`: each model header printed on two lines (`SUN-3K-G04` / `P1-EU`, as DEYE does), the
  *   first `MERGED_ROWS` rows holding one value centred across the table (a merged cell).
  */
-export async function syntheticInverterDatasheet(layout: 'columns' | 'single' | 'stacked'): Promise<Buffer> {
+export async function syntheticInverterDatasheet(
+  layout: 'columns' | 'single' | 'stacked',
+  options: { models?: readonly string[]; unrelatedPage?: boolean } = {},
+): Promise<Buffer> {
+  const models = options.models ?? INVERTER_MODELS;
   const { doc, page, font, bold } = await newPage();
+  if (options.unrelatedPage) {
+    // A second page (an accessory's table) whose labels read like the used rows; no model on it.
+    const other = doc.addPage([595, 842]);
+    other.drawText('Accessory: string combiner box', { x: 50, y: 780, size: 14, font: bold });
+    for (const [r, row] of INVERTER_ROWS.entries()) {
+      other.drawText(row.label, { x: 50, y: inverterRowY(r), size: SIZE, font });
+      other.drawText(row.values[2], { x: 300, y: inverterRowY(r), size: SIZE, font });
+    }
+  }
   page.drawText('Technical Data', { x: 50, y: 780, size: 14, font: bold });
   if (layout === 'single') {
-    page.drawText(INVERTER_MODELS[1], { x: 50, y: 750, size: 16, font: bold });
+    page.drawText(models[1]!, { x: 50, y: 750, size: 16, font: bold });
     for (const [r, row] of INVERTER_ROWS.entries()) {
       page.drawText(row.label, { x: 50, y: inverterRowY(r), size: SIZE, font });
       page.drawText(row.values[1], { x: 300, y: inverterRowY(r), size: SIZE, font });
@@ -58,7 +71,7 @@ export async function syntheticInverterDatasheet(layout: 'columns' | 'single' | 
   }
 
   page.drawText('Model', { x: 50, y: HEADER_Y, size: SIZE, font: bold });
-  for (const [c, model] of INVERTER_MODELS.entries()) {
+  for (const [c, model] of models.entries()) {
     if (layout === 'stacked') {
       drawCentred(page, bold, model, COLUMN_X[c]!, HEADER_Y + 7);
       drawCentred(page, bold, 'P1-EU', COLUMN_X[c]!, HEADER_Y);
@@ -91,7 +104,7 @@ const MODULE_COLUMN_X = [180, 240, 300];
 /**
  * A synthetic module datasheet: the STC table's first row (« Nominal max. power (Wp) ») heads
  * the power classes; the 450 W column prints its values with a comma or a dot. The 445 W column
- * holds a decoy equal to the 450 W module's Imp.
+ * holds a decoy equal to the 450 W module's Imp, and two rows print 50 and 450 as dimensions.
  */
 export async function syntheticModuleDatasheet(): Promise<Buffer> {
   const { doc, page, font, bold } = await newPage();
@@ -103,6 +116,9 @@ export async function syntheticModuleDatasheet(): Promise<Buffer> {
     ['Open-circuit voltage (V)', ['49.60', '49.80', '50.00']],
     ['Short-circuit current (A)', ['11.33', '11.46', '11.54']],
     ['Module efficiency (%)', ['20.24', '20.47', '20.70']],
+    // Decoys: the same integers as the 450 W module's Voc and Pmax, in rows that are neither.
+    ['Frame height (mm)', ['50', '50', '50']],
+    ['Rear load (N)', ['450', '450', '450']],
   ];
   for (const [r, [label, values]] of rows.entries()) {
     const y = 500 - 18 * r;

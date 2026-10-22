@@ -175,10 +175,17 @@ function modelHeaders(page: TextBox[], model: string): TextBox[][] {
   return [];
 }
 
-/** Other models' headers next to `header`: header-line items sharing the model's first three characters. */
-function siblingHeaders(page: TextBox[], header: TextBox[], model: string): TextBox[] {
-  const prefix = normalizeModel(model).slice(0, 3);
-  return page.filter((box) => !header.includes(box) && onLineOf(box, header) && normalizeModel(box.text).startsWith(prefix));
+/**
+ * Other models' headers next to `header`: header-line items that read like a model reference
+ * (letters and digits, at least four characters once normalized), so « Model », « Type » or
+ * « Hybrid Inverter » beside a title are not taken for another model.
+ */
+function siblingHeaders(page: TextBox[], header: TextBox[]): TextBox[] {
+  return page.filter((box) => {
+    if (header.includes(box) || !onLineOf(box, header)) return false;
+    const text = normalizeModel(box.text);
+    return text.length >= 4 && /[A-Z]/.test(text) && /\d/.test(text);
+  });
 }
 
 /**
@@ -236,28 +243,28 @@ const USED_INVERTER_ROW =
  * The inverter datasheet with the chosen model's values highlighted, as the reference dossier
  * does. On a table with one column per model, the model's column (and the merged cells it
  * shares with the other models); on a sheet for this model alone, the rows of the values the
- * dossier uses. `highlighted: false`, with the PDF unchanged, when the datasheet has no text
- * layer or does not name the model.
+ * dossier uses, on the page(s) naming the model only. `highlighted: false`, with the PDF
+ * unchanged, when the datasheet has no text layer or does not name the model.
  */
 export async function highlightInverterDatasheet(pdf: Buffer, model: string): Promise<{ pdf: Buffer; highlighted: boolean }> {
   const pages = await extractTextBoxes(pdf);
-  let named = false;
+  const namingPages = new Set<number>();
   for (const [index, page] of pages.entries()) {
     for (const header of modelHeaders(page, model)) {
-      named = true;
-      const siblings = siblingHeaders(page, header, model);
+      namingPages.add(index);
+      const siblings = siblingHeaders(page, header);
       if (siblings.length === 0) continue;
       const column = columnItems(page, header);
       const cells = [...column, ...mergedCells(page, header, siblings, column)];
       return { pdf: await drawHighlights(pdf, index, cells.map(boxRect)), highlighted: true };
     }
   }
-  if (!named) return { pdf, highlighted: false };
 
-  // One model per sheet: no column to follow, the used rows instead.
+  // One model per sheet: no column to follow, the used rows of the pages naming the model.
   let out = pdf;
   let highlighted = false;
-  for (const [index, page] of pages.entries()) {
+  for (const index of namingPages) {
+    const page = pages[index]!;
     const labels = page.filter((box) => USED_INVERTER_ROW.test(box.text));
     if (labels.length === 0) continue;
     out = await drawHighlights(out, index, labels.map((label) => rowRect(page, [label])));
@@ -276,23 +283,51 @@ function sameValue(printed: number | null, value: number): boolean {
   return printed !== null && Math.abs(printed - value) < 1e-6;
 }
 
+/** Row labels of the module's five values, as STC tables word them. */
+const MODULE_LABELS = {
+  pmax: /max(imum)?\.? *power|p *max|p *mpp|(nominal|rated|peak) *power|power *output/i,
+  voc: /open.?circuit|\bv *oc\b/i,
+  isc: /short.?circuit|\bi *sc\b/i,
+  vmp: /(max(imum)?|optimum|operating|rated)\.?.*voltage|\bv *mpp?\b/i,
+  imp: /(max(imum)?|optimum|operating|rated)\.?.*current|\bi *mpp?\b/i,
+};
+
+/** The text left of `box` on its line (the row's label, subscripts included). */
+function rowLabel(page: TextBox[], box: TextBox): string {
+  return page
+    .filter((other) => other !== box && Math.abs(other.y - box.y) <= LINE_TOLERANCE && other.x + other.width <= box.x + 1 && /[a-z]/i.test(other.text))
+    .sort((a, b) => a.x - b.x)
+    .map((other) => other.text)
+    .join(' ');
+}
+
 /**
  * The module datasheet with the module's Pmax, Voc, Isc, Vmp and Imp highlighted in its column:
- * the column headed by the model, or by its power (`450`, `450 W`, `450Wc`) when the table lists
- * power classes. Only items that print one of those values (with a comma or a dot) are marked.
- * `highlighted: false`, with the PDF unchanged, when no column holds at least two of them.
+ * the column headed by the model, or by its power (`450 W`, `450Wc`, or a bare `450` on the
+ * Pmax row) when the table lists power classes. An item is marked only when it prints one of
+ * those values (with a comma or a dot) on a row labelled with that quantity, so a 50 in a
+ * dimension row is not taken for a Voc of 50 V. `highlighted: false`, with the PDF unchanged,
+ * when no column holds at least two of them.
  */
 export async function highlightModuleDatasheet(
   pdf: Buffer,
   module: { model: string; pmaxW: number; vocV: number; iscA: number; vmpV: number; impA: number },
 ): Promise<{ pdf: Buffer; highlighted: boolean }> {
-  const values = [module.vocV, module.iscA, module.vmpV, module.impA];
-  const isUsedValue = (box: TextBox): boolean =>
-    sameValue(printedNumber(box.text, true), module.pmaxW) || values.some((value) => sameValue(printedNumber(box.text, false), value));
+  const quantities: { value: number; label: RegExp; watts: boolean }[] = [
+    { value: module.pmaxW, label: MODULE_LABELS.pmax, watts: true },
+    { value: module.vocV, label: MODULE_LABELS.voc, watts: false },
+    { value: module.iscA, label: MODULE_LABELS.isc, watts: false },
+    { value: module.vmpV, label: MODULE_LABELS.vmp, watts: false },
+    { value: module.impA, label: MODULE_LABELS.imp, watts: false },
+  ];
   const pages = await extractTextBoxes(pdf);
   let best: { index: number; items: TextBox[] } | null = null;
   for (const [index, page] of pages.entries()) {
-    const powerHeaders = page.filter((box) => sameValue(printedNumber(box.text, true), module.pmaxW)).map((box) => [box]);
+    const isUsedValue = (box: TextBox): boolean =>
+      quantities.some(({ value, label, watts }) => sameValue(printedNumber(box.text, watts), value) && label.test(rowLabel(page, box)));
+    const isPowerHeader = (box: TextBox): boolean =>
+      sameValue(printedNumber(box.text, true), module.pmaxW) && (/\d *(w|wc|wp)$/i.test(box.text.trim()) || MODULE_LABELS.pmax.test(rowLabel(page, box)));
+    const powerHeaders = page.filter(isPowerHeader).map((box) => [box]);
     for (const header of [...modelHeaders(page, module.model), ...powerHeaders]) {
       const items = columnItems(page, header).filter(isUsedValue);
       if (items.length >= 2 && (best === null || items.length > best.items.length)) best = { index, items };

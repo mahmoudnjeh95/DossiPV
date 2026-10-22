@@ -176,6 +176,34 @@ describe('highlightInverterDatasheet', () => {
     expect(module).toEqual({ pdf: scan, highlighted: false });
   });
 
+  it("highlights a table of dissimilar model names in the model's column only, not on another page", async () => {
+    const models = ['GW3000-NS', 'SG5.0RS', 'X1-6.0K'];
+    const pdf = await syntheticInverterDatasheet('columns', { models, unrelatedPage: true });
+    const boxes = (await extractTextBoxes(pdf))[0]!;
+    const [a, b, c] = models.map((model) => boxes.find((box) => box.text === model)!);
+    const bBand = band(a, b!, c);
+
+    const result = await highlightInverterDatasheet(pdf, 'SG5.0RS');
+
+    expect(result.highlighted).toBe(true);
+    const [first, second] = await extractPdfContent(result.pdf);
+    const amber = amberPaths(first!.paths);
+    expect(amber).toHaveLength(1 + INVERTER_ROWS.length);
+    for (const path of amber) {
+      expect(centre(path).x).toBeGreaterThan(bBand.min);
+      expect(centre(path).x).toBeLessThan(bBand.max);
+    }
+    expect(amberPaths(second!.paths)).toHaveLength(0);
+  });
+
+  it('highlights the used rows only on the page naming a single model', async () => {
+    const result = await highlightInverterDatasheet(await syntheticInverterDatasheet('single', { unrelatedPage: true }), INVERTER_MODELS[1]);
+
+    const [first, second] = await extractPdfContent(result.pdf);
+    expect(amberPaths(first!.paths)).toHaveLength(6);
+    expect(amberPaths(second!.paths)).toHaveLength(0);
+  });
+
   it('leaves a datasheet that does not name the model unchanged', async () => {
     const pdf = await syntheticInverterDatasheet('columns');
     expect(await highlightInverterDatasheet(pdf, 'SUN-12K-SG04LP3')).toEqual({ pdf, highlighted: false });
@@ -194,7 +222,8 @@ describe('highlightModuleDatasheet', () => {
     expect(result.highlighted).toBe(true);
     expect(p440).toBeDefined();
     const amber = amberPaths((await extractPdfContent(result.pdf))[0]!.paths);
-    // 450, 41,40, 10.87, 50.00, 11.54 — not the efficiency, not the 445 W decoy.
+    // 450, 41,40, 10.87, 50.00, 11.54 — not the efficiency, not the 445 W decoy, not the 50 mm
+    // frame height or the 450 N load in the same column.
     expect(amber).toHaveLength(5);
     for (const path of amber) {
       expect(centre(path).x).toBeGreaterThan(column.min);
