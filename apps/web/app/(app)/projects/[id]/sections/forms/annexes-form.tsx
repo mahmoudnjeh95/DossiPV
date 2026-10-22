@@ -7,6 +7,7 @@ export interface AnnexesFormValues {
   hasCommercialRegister: boolean;
   hasStegContract: boolean;
   hasLastPaidBill: boolean;
+  hasModuleAcceptance: boolean;
   extraFileCount: number;
 }
 
@@ -28,6 +29,11 @@ export function AnnexesForm({ projectId, annexes }: { projectId: string; annexes
         <FileField name="commercialRegister" label="Registre de commerce" hasExisting={annexes.hasCommercialRegister} />
         <FileField name="stegContract" label="Contrat STEG" hasExisting={annexes.hasStegContract} />
         <FileField name="lastPaidBill" label="Dernière facture payée" hasExisting={annexes.hasLastPaidBill} />
+        <FileField
+          name="moduleAcceptance"
+          label="Lettre d'acceptation ANME du module (fournie par le distributeur)"
+          hasExisting={annexes.hasModuleAcceptance}
+        />
       </div>
       <ExtraFilesField />
       {annexes.extraFileCount > 0 && (

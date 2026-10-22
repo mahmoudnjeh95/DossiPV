@@ -43,6 +43,7 @@ model File {
   annexCommercialRegisterFor ProjectAnnexes[] @relation("AnnexCommercialRegister")
   annexStegContractFor      ProjectAnnexes[] @relation("AnnexStegContract")
   annexLastPaidBillFor      ProjectAnnexes[] @relation("AnnexLastPaidBill")
+  annexModuleAcceptanceFor  ProjectAnnexes[] @relation("AnnexModuleAcceptance")
   projectAnnexExtraFiles    ProjectAnnexExtraFile[] @relation("ProjectAnnexExtraFile")
   projectBillImportFor    ProjectBillImport[] @relation("ProjectBillImportFile")
   dossierJobDocxFor       DossierJob[] @relation("DossierJobDocx")
@@ -903,6 +904,9 @@ model ProjectAnnexes {
   stegContract              File?   @relation("AnnexStegContract", fields: [stegContractFileId], references: [id])
   lastPaidBillFileId        String?
   lastPaidBill              File?   @relation("AnnexLastPaidBill", fields: [lastPaidBillFileId], references: [id])
+  /// The distributor's ANME acceptance letter for the module (annex N°11).
+  moduleAcceptanceFileId    String?
+  moduleAcceptance          File?   @relation("AnnexModuleAcceptance", fields: [moduleAcceptanceFileId], references: [id])
 
   extraFiles                ProjectAnnexExtraFile[]
 
@@ -936,6 +940,8 @@ model DossierJob {
   pdf              File?    @relation("DossierJobPdf", fields: [pdfFileId], references: [id])
   annexesPdfFileId String?
   annexesPdf       File?    @relation("DossierJobAnnexesPdf", fields: [annexesPdfFileId], references: [id])
+  /// French warnings of a finished job (e.g. an unreadable annex left out): a string[].
+  warnings         Json     @default("[]")
 
   checkResults    DossierCheckResult[]
   usageLogs       ClaudeUsageLog[]

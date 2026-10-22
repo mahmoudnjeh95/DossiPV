@@ -222,10 +222,11 @@ describe('computeSectionStatuses', () => {
       buildFullProject({
         annexes: {
           id: 'annexes-1', projectId: 'project-1', cinFileId: 'file-1', commercialRegisterFileId: null,
-          stegContractFileId: 'file-2', lastPaidBillFileId: null, extraFiles: [{ id: 'extra-1', annexesId: 'annexes-1', fileId: 'file-3' }],
+          stegContractFileId: 'file-2', lastPaidBillFileId: null, moduleAcceptanceFileId: 'file-4',
+          extraFiles: [{ id: 'extra-1', annexesId: 'annexes-1', fileId: 'file-3' }],
         },
       }),
     );
-    expect(withAnnexes.find((s) => s.key === 'annexes')?.summary).toBe('3 fichier(s)');
+    expect(withAnnexes.find((s) => s.key === 'annexes')?.summary).toBe('4 fichier(s)');
   });
 });

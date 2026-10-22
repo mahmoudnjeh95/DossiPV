@@ -597,12 +597,13 @@ export async function saveSimulationAction(
 // Annexes
 // ---------------------------------------------------------------------------------------------
 
-const ANNEX_FIELDS = ['cin', 'commercialRegister', 'stegContract', 'lastPaidBill'] as const;
+const ANNEX_FIELDS = ['cin', 'commercialRegister', 'stegContract', 'lastPaidBill', 'moduleAcceptance'] as const;
 const ANNEX_FILE_ID_KEYS = {
   cin: 'cinFileId',
   commercialRegister: 'commercialRegisterFileId',
   stegContract: 'stegContractFileId',
   lastPaidBill: 'lastPaidBillFileId',
+  moduleAcceptance: 'moduleAcceptanceFileId',
 } as const;
 
 export async function saveAnnexesAction(
@@ -624,6 +625,7 @@ export async function saveAnnexesAction(
     commercialRegister: null,
     stegContract: null,
     lastPaidBill: null,
+    moduleAcceptance: null,
   };
   for (const field of ANNEX_FIELDS) {
     const result = await validateFileField(formData, field);

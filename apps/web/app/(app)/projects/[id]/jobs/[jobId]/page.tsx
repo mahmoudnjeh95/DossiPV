@@ -6,6 +6,7 @@ import { requireAuthenticatedCompanyUser } from '../../../../layout';
 import { ChecksPanel, type CheckLike } from '../../../../../../components/checks-panel';
 import {
   derivePipelineSteps,
+  jobWarnings,
   parseJobSnapshot,
   summarizeSnapshot,
   CANCELLED_BY_INSTALLER_REASON,
@@ -95,6 +96,7 @@ export default async function DossierJobPage({
         ? 'badge badge-danger'
         : 'badge badge-warn';
   const duration = formatDuration(job.startedAt, job.completedAt);
+  const warnings = jobWarnings(job.warnings);
   const isCancelled = job.failureReason === CANCELLED_BY_INSTALLER_REASON;
 
   return (
@@ -197,6 +199,17 @@ export default async function DossierJobPage({
           )}
         </section>
       </div>
+
+      {warnings.length > 0 && (
+        <section className="card">
+          <h2>Avertissements</h2>
+          <ul>
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="card">
         <h2>Contrôles</h2>

@@ -56,7 +56,11 @@ vi.mock('../src/run-simulation', async () => ({
 vi.mock('../src/generate-dossier-document', () => ({ generateDossierDocument: mocks.generateDossierDocument, DossierGenerationBlockedError: class extends Error {} }));
 vi.mock('@dossipv/docx-template', () => ({ fillDossierTemplate: mocks.fillDossierTemplate }));
 vi.mock('../src/convert-to-pdf', () => ({ convertDocxToPdf: mocks.convertDocxToPdf }));
-vi.mock('../src/merge-annexes', () => ({ mergeAnnexes: mocks.mergeAnnexes, mergeDocumentFragments: mocks.mergeDocumentFragments }));
+vi.mock('../src/merge-annexes', async () => ({
+  ...(await vi.importActual<typeof import('../src/merge-annexes')>('../src/merge-annexes')),
+  mergeAnnexes: mocks.mergeAnnexes,
+  mergeDocumentFragments: mocks.mergeDocumentFragments,
+}));
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
@@ -84,6 +88,7 @@ import type { ProductionSimulation } from '../src/run-simulation';
 import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
+import { extractPdfContent, pageText } from './helpers/pdf-content';
 
 const validSnapshot = {
   version: 1,
@@ -203,7 +208,7 @@ beforeEach(async () => {
   mocks.fillDossierTemplate.mockReturnValue(Buffer.from('fake docx'));
   mocks.convertDocxToPdf.mockResolvedValue(bodyPdf);
   mocks.mergeAnnexes.mockResolvedValue(Buffer.from('%PDF-merged'));
-  mocks.mergeDocumentFragments.mockResolvedValue(ASSEMBLED_PDF);
+  mocks.mergeDocumentFragments.mockResolvedValue({ pdf: ASSEMBLED_PDF, skipped: [] });
   mocks.renderCoverPage.mockResolvedValue(COVER_PDF);
   mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
@@ -326,10 +331,13 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
 
     await processJob('job-1');
 
-    // dossier.pdf is cover+TOC+body+drawings+sitePlan with annexes merged in (master spec §5
-    // step 8); annexes.pdf is annexes-only. With zero annex files, both calls pass [].
-    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], unknown[]][];
-    expect(mergeCalls.some(([, annexes]) => Array.isArray(annexes) && annexes.length === 0)).toBe(true);
+    // With no uploaded file, the only annexes are the rendered drawings and plans (N°4-6).
+    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { label: string }[]][];
+    expect(mergeCalls[0]![1].map((a) => a.label)).toEqual([
+      'Annexe N°4 — Schémas électriques',
+      "Annexe N°5 — Plan d'implantation et de connexion",
+      'Annexe N°6 — Plan de situation',
+    ]);
     const finalUpdateCall = mocks.dossierJobUpdate.mock.calls.find(
       (call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED',
     );
@@ -433,9 +441,14 @@ describe('processJob — missing annex bytes on disk', () => {
     await processJob('job-1');
 
     expect(findSucceededUpdate()).toBeDefined();
-    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { buffer: Buffer }[]][];
-    expect(mergeCalls[0]![1].map((a) => a.buffer)).toEqual([billBytes]);
+    const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { buffer: Buffer; label: string }[]][];
+    const annexes = mergeCalls[0]![1];
+    expect(annexes[0]!.buffer).toBe(billBytes);
+    expect(annexes.map((a) => a.label)).not.toContain('Annexe N°11 — Fiche technique LONGi X');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('file-module-datasheet'));
+    expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
+      'Annexe N°11 — Fiche technique LONGi X : fichier introuvable, non joint au dossier.',
+    ]);
     warn.mockRestore();
   });
 
@@ -584,28 +597,37 @@ describe('processJob — site plans (pages 37-38)', () => {
 });
 
 describe('processJob — fragment assembly details', () => {
-  it('merges cover → TOC → body → drawings → map pages (with annexes) into dossier.pdf, and a separate annexes-only PDF', async () => {
+  it('merges cover → TOC → body → divider into dossier.pdf, then the drawings and plans as annexes, and the divider + annexes into annexes.pdf', async () => {
     await processJob('job-1');
 
-    // Master spec §5 step 8: dossier.pdf carries the annexes merged in; annexes.pdf is
-    // annexes-only (no cover/body/drawings/map-page fragments).
-    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([COVER_PDF, TOC_PDF, bodyPdf, drawingsPdf, sitePlanPdf], []);
-    expect(mocks.mergeDocumentFragments).toHaveBeenCalledWith([], []);
+    const [dossierCall, annexesCall] = mocks.mergeDocumentFragments.mock.calls as [Buffer[], { buffer: Buffer; label: string }[]][];
+    expect(dossierCall![0].slice(0, 3)).toEqual([COVER_PDF, TOC_PDF, bodyPdf]);
+    expect(dossierCall![0]).toHaveLength(4);
+    const dividerText = (await extractPdfContent(dossierCall![0][3]!)).map(pageText).join('\n');
+    expect(dividerText).toContain('ANNEXES');
+    expect(dividerText).toContain('Bordereau des annexes');
+    // The drawings and plans now follow the divider, as annexes N°4-6.
+    const annexes = dossierCall![1];
+    expect(annexes[0]!.buffer).toBe(drawingsPdf);
+    expect((await PDFDocument.load(annexes[1]!.buffer)).getPageCount()).toBe(1);
+    expect((await PDFDocument.load(annexes[2]!.buffer)).getPageCount()).toBe(1);
+    expect(annexesCall![1]).toEqual(annexes);
+    expect(annexesCall![0]).toHaveLength(1);
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'annexes.pdf', 'application/pdf');
     expect(findSucceededUpdate()).toBeDefined();
   });
 
-  it('gives the TOC exact fragment-level page numbers from the real body, drawings, and site-plan page counts (C3)', async () => {
+  it('points the TOC Annexes entry at the divider, right after the body (C3)', async () => {
     mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
 
     await processJob('job-1');
 
-    // Cover = page 1, TOC = page 2, body = pages 3-7, drawings = pages 8-9, map pages = pages 10-11.
+    // Cover = page 1, TOC = page 2, body = pages 3-7, divider = page 8.
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
-    expect(entries.find((e) => e.title === 'Schémas électriques')?.pageNumber).toBe(8);
-    expect(entries.find((e) => e.title === 'Plans de situation')?.pageNumber).toBe(10);
-    expect(entries.find((e) => e.title === 'Annexes')?.pageNumber).toBe(12);
+    expect(entries.find((e) => e.title === 'Annexes')?.pageNumber).toBe(8);
+    expect(entries.find((e) => e.title === 'Schémas électriques')).toBeUndefined();
+    expect(entries.find((e) => e.title === 'Plans de situation')).toBeUndefined();
   });
 
   it('lists every in-body section (I-VI, IX, and the conditional VII/VIII), each within the body page range and in increasing order — never pointing at the TOC itself or out of order (C3)', async () => {
@@ -872,6 +894,7 @@ describe('processJob — failure paths of the fragment-assembly steps', () => {
     { failedStep: 'page-37-layout', tier: 'PREMIUM', arrange: () => mocks.generatePage37Layout.mockRejectedValue(new Error('page-37 layout boom')) },
     { failedStep: 'toc', tier: 'STANDARD', arrange: () => mocks.renderTableOfContents.mockRejectedValue(new Error('toc boom')) },
     { failedStep: 'assembly', tier: 'STANDARD', arrange: () => mocks.mergeDocumentFragments.mockRejectedValue(new Error('assembly boom')) },
+    { failedStep: 'map-pages', tier: 'STANDARD', arrange: () => mocks.renderSitePlanPages.mockResolvedValue(Buffer.from('not a pdf')) },
   ];
 
   it.each(failureCases)('fails with failedStep $failedStep ($tier) and a step-specific generic message', async ({ failedStep, tier, arrange }) => {
@@ -992,6 +1015,119 @@ describe('processJob — PVGIS production simulation (mandatory, first step)', (
     expect(mocks.simulateProduction).not.toHaveBeenCalled();
     expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
     expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
+describe('processJob — annex plan', () => {
+  async function onePagePdf(width: number): Promise<Buffer> {
+    const doc = await PDFDocument.create();
+    doc.addPage([width, 300]);
+    return Buffer.from(await doc.save());
+  }
+
+  const files: Record<string, { mimeType: string; storageKey: string }> = {
+    'file-anme': { mimeType: 'pdf', storageKey: 'anme.pdf' },
+    'file-bill': { mimeType: 'pdf', storageKey: 'bill.pdf' },
+    'file-structure': { mimeType: 'pdf', storageKey: 'structure.pdf' },
+    'file-module': { mimeType: 'pdf', storageKey: 'module.pdf' },
+    'file-inverter': { mimeType: 'pdf', storageKey: 'inverter.pdf' },
+    'file-rcd': { mimeType: 'pdf', storageKey: 'rcd.pdf' },
+    'file-broken': { mimeType: 'pdf', storageKey: 'broken.pdf' },
+  };
+
+  beforeEach(async () => {
+    const bytes: Record<string, Buffer> = {};
+    for (const [i, id] of Object.keys(files).entries()) {
+      bytes[`/storage/${files[id]!.storageKey}`] = id === 'file-broken' ? Buffer.from('not a pdf') : await onePagePdf(100 + i);
+    }
+    mocks.getFilePath.mockImplementation((storageKey: string) => `/storage/${storageKey}`);
+    mocks.readFile.mockImplementation((path: string) => Promise.resolve(bytes[path] ?? Buffer.from('template bytes')));
+    mocks.fileFindMany.mockImplementation(({ where }: { where: { id: { in: string[] } } }) =>
+      Promise.resolve(where.id.in.map((id) => ({ id, ...files[id]! }))),
+    );
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: 'file-anme' });
+    mocks.projectFindUnique.mockResolvedValue({
+      annexes: { cinFileId: null, commercialRegisterFileId: null, stegContractFileId: null, lastPaidBillFileId: 'file-bill', moduleAcceptanceFileId: null, extraFiles: [] },
+      structure: { structureAttestationFileId: 'file-structure' },
+    });
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: {
+        ...validSnapshot,
+        arrayConfig: {
+          module: { brand: 'LONGi', model: 'X', datasheetFileId: 'file-module' },
+          inverters: [{ inverter: { brand: 'Sofar', model: 'Y', datasheetFileId: 'file-inverter' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+        },
+        protections: {
+          acBreaker: { brand: 'Hager', model: 'RCBO', residualCurrentMA: 30, datasheetFileId: 'file-rcd' },
+          dcSpd: { brand: 'Citel', model: 'DS', datasheetFileId: 'file-broken' },
+        },
+      },
+    });
+  });
+
+  it('merges the annex documents in physical order, the drawings and plans after the administrative papers', async () => {
+    await processJob('job-1');
+
+    const annexes = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1];
+    expect(annexes.map((a) => a.label)).toEqual([
+      "Annexe N°1 — Agrément ANME de l'installateur",
+      'Annexe N°1 — Dernière facture STEG',
+      'Annexe N°3 — Attestation de conformité de la structure',
+      'Annexe N°4 — Schémas électriques',
+      "Annexe N°5 — Plan d'implantation et de connexion",
+      'Annexe N°6 — Plan de situation',
+      'Annexe N°11 — Fiche technique LONGi X',
+      'Annexe N°12 — Fiche technique Sofar Y',
+      'Annexe N°14 — Fiche technique Citel DS',
+      'Annexe N°18 — Fiche technique Hager RCBO',
+    ]);
+  });
+
+  it('prints each annex start page in the bordereau, with a dash for the empty and unreadable ones, an unreadable one marked as not attached', async () => {
+    mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
+
+    await processJob('job-1');
+
+    // Body = pages 3-7, divider = pages 8-9; ADMIN 10-11, STRUCTURE 12, drawings 13-14,
+    // implantation 15, situation 16, module 17, inverter 18, (DC SPD unreadable), RCD 19.
+    const divider = (await extractPdfContent((mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[]])[0][3]!))[1]!;
+    const pageOf = (title: string): string | undefined => {
+      const row = divider.texts.find((t) => t.text === title);
+      return row ? divider.texts.find((t) => t !== row && Math.abs(t.y - row.y) < 1 && t.x > row.x)?.text : undefined;
+    };
+    expect(pageOf('Dossier administratif')).toBe('10');
+    expect(pageOf('Attestation de conformité de la structure')).toBe('12');
+    expect(pageOf('Schéma unifilaire')).toBe('13');
+    expect(pageOf('Plan de situation')).toBe('16');
+    expect(pageOf('Fiche technique du module')).toBe('17');
+    expect(pageOf('Disjoncteur différentiel')).toBe('19');
+    expect(pageOf('Parafoudre DC (document non joint)')).toBe('—');
+    expect(pageOf('Chemin de câbles (sans objet)')).toBe('—');
+  });
+
+  it('saves the skipped annexes as DossierJob.warnings', async () => {
+    mocks.mergeDocumentFragments.mockResolvedValue({ pdf: ASSEMBLED_PDF, skipped: ['Annexe N°14 — Fiche technique Citel DS'] });
+
+    await processJob('job-1');
+
+    const update = findSucceededUpdate() as [{ data: { warnings: string[] } }];
+    expect(update[0].data.warnings).toEqual(['Annexe N°14 — Fiche technique Citel DS : document illisible, non joint au dossier.']);
+  });
+
+  it('fails at "annexes" when the uploaded structure attestation is missing on disk', async () => {
+    const actualRead = mocks.readFile.getMockImplementation() as (path: string) => Promise<Buffer>;
+    mocks.readFile.mockImplementation((path: string) =>
+      path === '/storage/structure.pdf' ? Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })) : actualRead(path),
+    );
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls.find((call) => (call[0] as { data: { status?: string } }).data.status === 'FAILED');
+    expect((failCall![0] as { data: { failedStep: string } }).data.failedStep).toBe('annexes');
     error.mockRestore();
   });
 });

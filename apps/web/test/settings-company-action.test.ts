@@ -149,6 +149,24 @@ describe('saveCompanyAction — logo and ANME certificate uploads', () => {
     expect(updateCallArg.data.anmeCertificateFileId).toBe('file-anme-1');
   });
 
+  it('accepts a scanned (JPEG) ANME agreement, since it is now mandatory and often only a scan', async () => {
+    const actual = await vi.importActual<typeof import('@dossipv/file-storage')>('@dossipv/file-storage');
+    mockValidateUploadedFile.mockImplementation(actual.validateUploadedFile);
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockSaveFile.mockResolvedValue({ storageKey: 'company/anme.jpg' });
+    mockFileCreate.mockResolvedValue({ id: 'file-anme-jpg' });
+    mockCompanyUpdate.mockResolvedValue({ id: 'company-1' });
+    const formData = buildFormData();
+    formData.set('anmeCertificate', new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0x10])], 'agrement.jpg', { type: 'image/jpeg' }));
+
+    const result = await saveCompanyAction(undefined, formData);
+
+    expect(result).toBeUndefined();
+    expect(mockFileCreate).toHaveBeenCalledWith({ data: { fileName: 'agrement.jpg', mimeType: 'jpeg', storageKey: 'company/anme.jpg' } });
+    const updateCallArg = mockCompanyUpdate.mock.calls[0]?.[0] as { data: { anmeCertificateFileId?: string } };
+    expect(updateCallArg.data.anmeCertificateFileId).toBe('file-anme-jpg');
+  });
+
   it('does not write a file to disk when a non-file field fails validation (no orphaned upload)', async () => {
     mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
     mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'png' });

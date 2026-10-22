@@ -51,7 +51,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       anmeCategory: 'BT',
       anmeValidFrom: new Date('2024-01-01'),
       anmeValidTo: new Date('2027-01-01'),
-      anmeCertificateFileId: null,
+      anmeCertificateFileId: 'file-anme',
       defaultTMinC: -10,
       defaultTMaxC: 85,
       defaultMaxVoltageDropPct: 3,

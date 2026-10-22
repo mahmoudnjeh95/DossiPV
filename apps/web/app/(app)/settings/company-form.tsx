@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { saveCompanyAction, type SaveCompanyActionState } from './actions';
+import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../lib/labels';
 
 export interface CompanyFormValues {
   name: string;
@@ -117,11 +118,15 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
             <span className="hint">Une accréditation expirée bloque la génération (contrôle C22).</span>
           </label>
           <label>
-            Attestation d&apos;accréditation (PDF)
-            <input type="file" name="anmeCertificate" accept="application/pdf" />
-            <span className="hint">
-              {company.hasAnmeCertificate ? 'Une attestation est déjà enregistrée ; choisir un fichier la remplace.' : 'Jointe en annexe du dossier généré.'}
-            </span>
+            Attestation d&apos;agrément ANME (PDF ou image) <span className="badge badge-danger">obligatoire</span>
+            <input type="file" name="anmeCertificate" accept="application/pdf,image/png,image/jpeg" />
+            {company.hasAnmeCertificate ? (
+              <span className="hint">Une attestation est déjà enregistrée ; choisir un fichier la remplace. Elle ouvre l&apos;annexe N°1 du dossier.</span>
+            ) : (
+              <span className="hint" role="alert">
+                {ANME_AGREEMENT_REQUIRED_MESSAGE}
+              </span>
+            )}
           </label>
         </div>
       </fieldset>

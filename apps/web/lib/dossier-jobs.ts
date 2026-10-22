@@ -74,6 +74,11 @@ export function derivePipelineSteps(job: JobLike): PipelineStepView[] {
   }));
 }
 
+/** `DossierJob.warnings` (a JSON string[] the worker writes) as strings; anything else is dropped. */
+export function jobWarnings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((warning): warning is string => typeof warning === 'string' && warning !== '') : [];
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -140,3 +140,6 @@ export const RCD_TYPE_OPTIONS: Option[] = [
   { value: 'B', label: 'Type B' },
   { value: 'AC', label: 'Type AC (insuffisant pour le PV)' },
 ];
+
+/** No dossier without the company's uploaded ANME agreement (product owner, 2026-10-22). */
+export const ANME_AGREEMENT_REQUIRED_MESSAGE = "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.";

@@ -9,7 +9,17 @@ import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData, computeSectionNumbers } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
-import { mergeDocumentFragments, type AnnexFile } from './merge-annexes';
+import { annexPageCount, mergeDocumentFragments, type AnnexFile } from './merge-annexes';
+import {
+  ANNEX_NUMBERS,
+  annexDocumentsFromSnapshot,
+  annexStartPages,
+  buildAnnexPlan,
+  physicalAnnexDocuments,
+  type AnnexDocument,
+  type AnnexEntry,
+} from './annex-plan';
+import { renderAnnexDivider, type AnnexDividerEntry } from './render-annex-divider';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
 import { simulateProduction, type ProductionSimulation, type ProductionSimulationInput } from './run-simulation';
 import { withRetry, isRetryableError } from './retry';
@@ -87,79 +97,80 @@ async function fail(jobId: string, failedStep: string, internalError: unknown): 
   });
 }
 
-async function collectAnnexFiles(projectId: string, companyId: string, snapshot: WorkerJobSnapshot): Promise<AnnexFile[]> {
-  const [company, project] = await Promise.all([
-    db.company.findUnique({ where: { id: companyId } }),
-    db.project.findUnique({ where: { id: projectId }, include: { annexes: { include: { extraFiles: true } } } }),
-  ]);
+/** File.mimeType as stored (short form since upload validation; full MIME in older rows). */
+const ANNEX_MIME_TYPES: Record<string, AnnexFile['mimeType']> = {
+  pdf: 'pdf',
+  'application/pdf': 'pdf',
+  png: 'png',
+  'image/png': 'png',
+  jpeg: 'jpeg',
+  jpg: 'jpeg',
+  'image/jpeg': 'jpeg',
+  webp: 'webp',
+  'image/webp': 'webp',
+};
 
-  const equipmentFileIds: (string | null | undefined)[] = [];
-  if (snapshot.arrayConfig) {
-    equipmentFileIds.push(snapshot.arrayConfig.module.datasheetFileId, snapshot.arrayConfig.module.homologationFileId);
-    for (const inv of snapshot.arrayConfig.inverters) {
-      equipmentFileIds.push(inv.inverter.datasheetFileId, inv.inverter.homologationFileId);
-    }
-  }
-  if (snapshot.protections) {
-    for (const device of [snapshot.protections.dcSwitch, snapshot.protections.dcSpd, snapshot.protections.dcFuse, snapshot.protections.acBreaker, snapshot.protections.acSpd, snapshot.protections.acIsolator]) {
-      if (device) equipmentFileIds.push(device.datasheetFileId, device.homologationFileId);
-    }
-  }
-  if (snapshot.earthing?.earthCable) {
-    equipmentFileIds.push(snapshot.earthing.earthCable.datasheetFileId, snapshot.earthing.earthCable.homologationFileId);
-  }
-  if (snapshot.earthing?.distributionBlock) {
-    equipmentFileIds.push(snapshot.earthing.distributionBlock.datasheetFileId, snapshot.earthing.distributionBlock.homologationFileId);
-  }
-  if (snapshot.cablingConfig?.connector) {
-    equipmentFileIds.push(snapshot.cablingConfig.connector.datasheetFileId, snapshot.cablingConfig.connector.homologationFileId);
-  }
-  if (snapshot.cablingConfig?.cableTray) {
-    equipmentFileIds.push(snapshot.cablingConfig.cableTray.datasheetFileId, snapshot.cablingConfig.cableTray.homologationFileId);
-  }
-  // cableRuns[].cable — a cable catalog row referenced by multiple runs (e.g. the same DC cable
-  // used for two parallel strings) must contribute its datasheet once, not once per run; the
-  // Set below (built from ALL equipmentFileIds together) already de-duplicates this correctly.
-  for (const run of snapshot.cableRuns) {
-    if (run.cable) {
-      equipmentFileIds.push(run.cable.datasheetFileId, run.cable.homologationFileId);
-    }
-  }
+/** How an annex document is named in the job warnings. */
+function annexLabel(document: AnnexDocument): string {
+  return `Annexe N°${ANNEX_NUMBERS[document.slot]} — ${document.label}`;
+}
 
-  const projectFileIds = new Set([
-    company?.anmeCertificateFileId,
-    project?.annexes?.cinFileId,
-    project?.annexes?.commercialRegisterFileId,
-    project?.annexes?.stegContractFileId,
-    project?.annexes?.lastPaidBillFileId,
-    ...(project?.annexes?.extraFiles.map((f) => f.fileId) ?? []),
-  ].filter((id): id is string => typeof id === 'string'));
-  const fileIds = new Set([...projectFileIds, ...equipmentFileIds.filter((id): id is string => typeof id === 'string')]);
-
-  if (fileIds.size === 0) {
-    return [];
+/** Pages `indices` of `pdf` as a standalone PDF. */
+async function extractPages(pdf: Buffer, indices: number[]): Promise<Buffer> {
+  const source = await PDFDocument.load(pdf);
+  const target = await PDFDocument.create();
+  for (const page of await target.copyPages(source, indices)) {
+    target.addPage(page);
   }
+  return Buffer.from(await target.save());
+}
 
-  const files = await db.file.findMany({ where: { id: { in: [...fileIds] } } });
+interface LoadedAnnexes {
+  files: Map<AnnexDocument, AnnexFile>;
+  warnings: string[];
+}
+
+/**
+ * Reads every annex document's bytes. A catalog file whose bytes are missing from this server's
+ * storage (e.g. a catalog imported elsewhere and not yet copied over) must not sink the whole
+ * dossier: it is left out with a job warning. A missing project upload (agreement, CIN, bill,
+ * contract, attestation…) still fails the job.
+ */
+async function loadAnnexFiles(documents: AnnexDocument[], projectFileIds: Set<string>): Promise<LoadedAnnexes> {
+  const files = new Map<AnnexDocument, AnnexFile>();
+  const warnings: string[] = [];
+  const fileIds = [...new Set(documents.flatMap((d) => (d.source.kind === 'file' ? [d.source.fileId] : [])))];
+  const rows = fileIds.length > 0 ? await db.file.findMany({ where: { id: { in: fileIds } } }) : [];
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
   const { getFilePath } = await import('@dossipv/file-storage');
-  const annexFiles: AnnexFile[] = [];
-  for (const file of files) {
+
+  for (const document of documents) {
+    const label = annexLabel(document);
+    if (document.source.kind === 'fragment') {
+      files.set(document, { buffer: document.source.buffer, mimeType: 'pdf', label });
+      continue;
+    }
+    const { fileId } = document.source;
+    const row = rowsById.get(fileId);
+    if (!row) {
+      if (projectFileIds.has(fileId)) throw new Error(`Annex file ${fileId} not found`);
+      warnings.push(`${label} : fichier introuvable, non joint au dossier.`);
+      continue;
+    }
     let buffer: Buffer;
     try {
-      buffer = await readFile(getFilePath(file.storageKey));
+      buffer = await readFile(getFilePath(row.storageKey));
     } catch (error) {
-      // A catalog datasheet whose bytes are missing from this server's storage (e.g. a catalog
-      // imported elsewhere and not yet copied over) must not sink the whole dossier: it is left
-      // out with an operator warning. A missing project annex (CIN, bill, contract…) still fails.
-      if (!projectFileIds.has(file.id) && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-        console.warn(`collectAnnexFiles: equipment file ${file.id} (${file.storageKey}) is missing on disk; skipped.`);
+      if (!projectFileIds.has(fileId) && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+        console.warn(`loadAnnexFiles: equipment file ${fileId} (${row.storageKey}) is missing on disk; skipped.`);
+        warnings.push(`${label} : fichier introuvable, non joint au dossier.`);
         continue;
       }
       throw error;
     }
-    annexFiles.push({ buffer, mimeType: file.mimeType as AnnexFile['mimeType'] });
+    files.set(document, { buffer, mimeType: ANNEX_MIME_TYPES[row.mimeType] ?? 'pdf', label });
   }
-  return annexFiles;
+  return { files, warnings };
 }
 
 /**
@@ -248,9 +259,8 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'docx', error);
   }
 
-  // Fragment assembly. Final page order: cover → TOC → body → drawings (pages 35-36) → map pages
-  // (37-38) → annexes. The TOC is rendered last because it needs the other fragments' real page
-  // counts.
+  // Fragment assembly. Final page order: cover → TOC → body → annex divider + bordereau → the
+  // annexes in ANNEX_PHYSICAL_ORDER (the drawings and plans are annexes N°4-6).
   // Each fragment's page count is read inside the step that produced it, so an unreadable
   // fragment fails at the step responsible for it rather than at the TOC.
   let bodyPdfBuffer: Buffer;
@@ -294,7 +304,6 @@ export async function processJob(jobId: string): Promise<void> {
   }
 
   let drawingsBuffer: Buffer;
-  let drawingsPageCount: number;
   try {
     const protections = snapshot.protections;
     const equipmentLabel = (device: { brand: string; model: string } | null | undefined): string =>
@@ -320,12 +329,12 @@ export async function processJob(jobId: string): Promise<void> {
       acRun: { sectionMm2: snapshot.engineInput.acRun.sectionMm2, lengthM: snapshot.engineInput.acRun.lengthM },
       earthRodCount: snapshot.projectMeta.earthRodCount,
     });
-    drawingsPageCount = (await PDFDocument.load(drawingsBuffer)).getPageCount();
+    await PDFDocument.load(drawingsBuffer); // an unreadable drawing fails here, at its own step
   } catch (error) {
     return fail(jobId, 'drawings', error);
   }
 
-  // Pages 37-38, every tier: satellite imagery with the installer's points, cable legs and
+  // Annexes N°5-6, every tier: satellite imagery with the installer's points, cable legs and
   // lengths. A failed tile fetch only drops the photo; Premium adds the AI-reasoned layout.
   let sitePlanData: SitePlanData | null = null;
   const site = snapshot.site;
@@ -408,10 +417,11 @@ export async function processJob(jobId: string): Promise<void> {
     };
   }
 
-  let sitePlanBuffer: Buffer;
-  let sitePlanPageCount: number;
+  // The renderer draws the implantation plan then the situation plan; each is its own annex.
+  let implantationPlanBuffer: Buffer;
+  let situationPlanBuffer: Buffer | null;
   try {
-    sitePlanBuffer = await renderSitePlanPages({
+    const sitePlanBuffer = await renderSitePlanPages({
       clientFullName: snapshot.client?.fullName ?? '',
       clientAddress: snapshot.client?.address ?? '',
       gps: snapshot.site ? { lat: snapshot.site.gpsLat, lon: snapshot.site.gpsLon } : { lat: 0, lon: 0 },
@@ -422,7 +432,9 @@ export async function processJob(jobId: string): Promise<void> {
       dossierNumber: snapshot.dossierNumber,
       planData: sitePlanData,
     });
-    sitePlanPageCount = (await PDFDocument.load(sitePlanBuffer)).getPageCount();
+    const sitePlanPageCount = (await PDFDocument.load(sitePlanBuffer)).getPageCount();
+    implantationPlanBuffer = sitePlanPageCount >= 2 ? await extractPages(sitePlanBuffer, [0]) : sitePlanBuffer;
+    situationPlanBuffer = sitePlanPageCount >= 2 ? await extractPages(sitePlanBuffer, Array.from({ length: sitePlanPageCount - 1 }, (_, i) => i + 1)) : null;
   } catch (error) {
     return fail(jobId, 'map-pages', error);
   }
@@ -430,6 +442,7 @@ export async function processJob(jobId: string): Promise<void> {
   const dcFuseRequired = snapshot.engineInput.dcFuse !== null;
   const acIsolatorRequired = snapshot.engineInput.acIsolator !== null;
 
+  const BODY_START_PAGE = 3; // 1 = cover, 2 = TOC
   let tocBuffer: Buffer;
   try {
     // pdf-lib exposes no API to read the body PDF's real heading/outline destinations (the
@@ -438,7 +451,6 @@ export async function processJob(jobId: string): Promise<void> {
     // (bodyStartPage..bodyStartPage+bodyPageCount-1) so no entry can point outside the body or
     // out of order — unlike the previous formula, which mixed absolute and body-relative numbers
     // and could point an earlier section at a later page.
-    const BODY_START_PAGE = 3; // 1 = cover, 2 = TOC
     const inBodySectionCount =
       6 + // I-VI always present (incl. Dimensionnement et productible)
       1 + // VI Structure et lestage
@@ -471,34 +483,108 @@ export async function processJob(jobId: string): Promise<void> {
       ...(dcFuseRequired ? [{ title: `${sectionNumbers.sectionNumberFusible} Protection DC — fusible`, pageNumber: pageForSection(sectionIndex++) }] : []),
       ...(acIsolatorRequired ? [{ title: `${sectionNumbers.sectionNumberSectionneur} Protection AC — sectionneur`, pageNumber: pageForSection(sectionIndex++) }] : []),
       { title: `${sectionNumbers.sectionNumberConclusion} Conclusion`, pageNumber: pageForSection(sectionIndex++) },
-      { title: 'Schémas électriques', pageNumber: BODY_START_PAGE + bodyPageCount },
-      { title: 'Plans de situation', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount },
-      { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount + drawingsPageCount + sitePlanPageCount },
+      // The divider (« ANNEXES » + bordereau) follows the body; the drawings and plans are annexes.
+      { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount },
     ];
     tocBuffer = await renderTableOfContents(tocEntries);
   } catch (error) {
     return fail(jobId, 'toc', error);
   }
 
+  // The annex plan: every annex numbered like the reference, the bordereau's page numbers from
+  // each document's real page count, documents appended in the reference's physical order.
+  const dividerStartPage = BODY_START_PAGE + bodyPageCount;
   let annexFiles: AnnexFile[];
+  let dividerBuffer: Buffer;
+  let annexesOnlyDividerBuffer: Buffer;
+  const warnings: string[] = [];
   try {
-    annexFiles = await collectAnnexFiles(snapshot.projectId, snapshot.companyId, snapshot);
+    const project = await db.project.findUnique({
+      where: { id: snapshot.projectId },
+      include: { annexes: { include: { extraFiles: true } }, structure: { select: { structureAttestationFileId: true } } },
+    });
+    const annexes = project?.annexes ?? null;
+    const fileDocuments = annexDocumentsFromSnapshot(
+      snapshot,
+      { anmeCertificateFileId: company.anmeCertificateFileId },
+      annexes
+        ? {
+            cinFileId: annexes.cinFileId,
+            commercialRegisterFileId: annexes.commercialRegisterFileId,
+            stegContractFileId: annexes.stegContractFileId,
+            lastPaidBillFileId: annexes.lastPaidBillFileId,
+            moduleAcceptanceFileId: annexes.moduleAcceptanceFileId ?? null,
+            extraFileIds: annexes.extraFiles.map((f) => f.fileId),
+          }
+        : null,
+      project?.structure?.structureAttestationFileId ?? null,
+    );
+    const fragmentDocuments: AnnexDocument[] = [
+      { slot: 'SINGLE_LINE', label: 'Schémas électriques', source: { kind: 'fragment', buffer: drawingsBuffer } },
+      { slot: 'IMPLANTATION', label: "Plan d'implantation et de connexion", source: { kind: 'fragment', buffer: implantationPlanBuffer } },
+      ...(situationPlanBuffer ? [{ slot: 'SITUATION', label: 'Plan de situation', source: { kind: 'fragment', buffer: situationPlanBuffer } } satisfies AnnexDocument] : []),
+    ];
+    const plan = buildAnnexPlan([...fragmentDocuments, ...fileDocuments]);
+    const ordered = physicalAnnexDocuments(plan);
+
+    // Uploads are required (a missing one fails the job); catalog files are optional.
+    const projectFileIds = new Set(
+      [
+        company.anmeCertificateFileId,
+        annexes?.cinFileId,
+        annexes?.commercialRegisterFileId,
+        annexes?.stegContractFileId,
+        annexes?.lastPaidBillFileId,
+        annexes?.moduleAcceptanceFileId,
+        ...(annexes?.extraFiles.map((f) => f.fileId) ?? []),
+        project?.structure?.structureAttestationFileId,
+      ].filter((id): id is string => typeof id === 'string'),
+    );
+    const loaded = await loadAnnexFiles(ordered, projectFileIds);
+    warnings.push(...loaded.warnings);
+    annexFiles = ordered.flatMap((document) => {
+      const file = loaded.files.get(document);
+      return file ? [file] : [];
+    });
+    const pageCounts = new Map<AnnexDocument, number | null>();
+    for (const document of ordered) {
+      const file = loaded.files.get(document);
+      pageCounts.set(document, file ? await annexPageCount(file) : null);
+    }
+
+    const dividerEntries = (firstAnnexPage: number): AnnexDividerEntry[] => {
+      const starts = annexStartPages(plan, pageCounts, firstAnnexPage);
+      return plan.map((entry: AnnexEntry) => ({
+        number: entry.number,
+        title: entry.title,
+        pageNumber: starts.get(entry.slot) ?? null,
+        // An annex that has documents, none of them readable, is not « sans objet ».
+        ...(entry.documents.length > 0 ? { note: 'document non joint' } : {}),
+      }));
+    };
+    // The divider's own length is fixed by the number of rows, never by the page numbers in them.
+    const dividerPageCount = (await PDFDocument.load(await renderAnnexDivider(dividerEntries(0)))).getPageCount();
+    dividerBuffer = await renderAnnexDivider(dividerEntries(dividerStartPage + dividerPageCount));
+    // annexes.pdf opens on its own divider, so its bordereau counts from its own page 1.
+    annexesOnlyDividerBuffer = await renderAnnexDivider(dividerEntries(1 + dividerPageCount));
   } catch (error) {
     return fail(jobId, 'annexes', error);
   }
 
-  // Master spec §5 step 8: dossier.pdf is the full document WITH the annexes merged in;
-  // annexes.pdf is the annexes alone (a valid 0-page PDF when the project has none).
+  // dossier.pdf is the full document WITH the annexes merged in; annexes.pdf is the divider and
+  // the annexes alone.
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await mergeDocumentFragments([coverPageBuffer, tocBuffer, bodyPdfBuffer, drawingsBuffer, sitePlanBuffer], annexFiles);
+    const merged = await mergeDocumentFragments([coverPageBuffer, tocBuffer, bodyPdfBuffer, dividerBuffer], annexFiles);
+    pdfBuffer = merged.pdf;
+    warnings.push(...merged.skipped.map((label) => `${label} : document illisible, non joint au dossier.`));
   } catch (error) {
     return fail(jobId, 'assembly', error);
   }
 
   let annexesPdfBuffer: Buffer;
   try {
-    annexesPdfBuffer = await mergeDocumentFragments([], annexFiles);
+    annexesPdfBuffer = (await mergeDocumentFragments([annexesOnlyDividerBuffer], annexFiles)).pdf;
   } catch (error) {
     return fail(jobId, 'annexes', error);
   }
@@ -545,6 +631,7 @@ export async function processJob(jobId: string): Promise<void> {
         docxFileId: docxFile.id,
         pdfFileId: pdfFile.id,
         annexesPdfFileId: annexesFile.id,
+        warnings,
       },
     });
   } catch (error) {

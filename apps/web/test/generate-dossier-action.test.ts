@@ -93,6 +93,16 @@ describe('generateDossierAction', () => {
     expect(mocks.jobCreate).not.toHaveBeenCalled();
   });
 
+  it('refuses to generate without the ANME agreement', async () => {
+    const project = buildFullProject();
+    mocks.projectFindFirst.mockResolvedValue({ ...project, company: { ...project.company, anmeCertificateFileId: null } });
+
+    expect(await generateDossierAction('project-1', undefined)).toEqual({
+      error: "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.",
+    });
+    expect(mocks.jobCreate).not.toHaveBeenCalled();
+  });
+
   it('refuses when the subscription is expired', async () => {
     mocks.subscriptionFindUnique.mockResolvedValue({
       ...activeSubscription,
@@ -133,6 +143,7 @@ describe('generateDossierAction', () => {
             docxFileId: null,
             pdfFileId: null,
             annexesPdfFileId: null,
+            warnings: [],
           },
         ],
       }),

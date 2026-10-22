@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { summarizeSubscription } from '../../../lib/subscription';
-import { TIER_LABELS } from '../../../lib/labels';
+import { ANME_AGREEMENT_REQUIRED_MESSAGE, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
 
@@ -26,6 +26,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <main>
       <h1>Société</h1>
       {saved && <div className="banner banner-ok">Informations enregistrées.</div>}
+      {company.anmeCertificateFileId === null && <div className="banner banner-danger">{ANME_AGREEMENT_REQUIRED_MESSAGE}</div>}
       <SubscriptionBanner subscription={subscription} />
 
       <section className="card">

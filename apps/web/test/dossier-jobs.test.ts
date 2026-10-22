@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   derivePipelineSteps,
+  jobWarnings,
   parseJobSnapshot,
   summarizeSnapshot,
   PIPELINE_STEPS,
@@ -84,6 +85,16 @@ describe('derivePipelineSteps', () => {
     const steps = derivePipelineSteps({ status: 'FAILED', failedStep: 'quelque chose' });
     expect(steps.every((s) => s.state === 'pending')).toBe(true);
     expect(steps).toHaveLength(PIPELINE_STEPS.length);
+  });
+});
+
+describe('jobWarnings', () => {
+  it('reads the worker warnings and drops anything that is not a string', () => {
+    expect(jobWarnings(['Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.', 3, null, ''])).toEqual([
+      'Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.',
+    ]);
+    expect(jobWarnings(null)).toEqual([]);
+    expect(jobWarnings({ a: 1 })).toEqual([]);
   });
 });
 

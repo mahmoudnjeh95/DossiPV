@@ -91,7 +91,15 @@ export interface WorkerJobSnapshot {
   projectMeta: ProjectMeta;
   client: SnapshotClient | null;
   consumption: SnapshotConsumption | null;
-  cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string; cable?: SnapshotEquipmentRef & Record<string, unknown> }[];
+  cableRuns: {
+    label: string;
+    sectionMm2: number;
+    lengthM: number;
+    installMethod: string;
+    /** 'DC' | 'AC' (ProjectCableRun.circuitType); absent from older test snapshots. */
+    circuitType?: string;
+    cable?: SnapshotEquipmentRef & Record<string, unknown>;
+  }[];
   site: SnapshotSite | null;
   arrayConfig: SnapshotArrayConfig | null;
   protections: SnapshotProtections | null;

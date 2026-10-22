@@ -227,6 +227,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
             hasCommercialRegister: project.annexes?.commercialRegisterFileId != null,
             hasStegContract: project.annexes?.stegContractFileId != null,
             hasLastPaidBill: project.annexes?.lastPaidBillFileId != null,
+            hasModuleAcceptance: project.annexes?.moduleAcceptanceFileId != null,
             extraFileCount: project.annexes?.extraFiles.length ?? 0,
           }}
         />

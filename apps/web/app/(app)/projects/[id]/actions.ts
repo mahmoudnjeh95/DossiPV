@@ -11,6 +11,7 @@ import {
   type ProjectMetaForWorker,
 } from '../../../../lib/project-engine-input';
 import { unsourcedEquipment } from '../../../../lib/project-access';
+import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../../lib/labels';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
 
@@ -73,6 +74,11 @@ export async function generateDossierAction(
   });
   if (!project) {
     return { error: 'Projet introuvable.' };
+  }
+
+  // The ANME agreement opens the administrative annex: no dossier without it.
+  if (!project.company.anmeCertificateFileId) {
+    return { error: ANME_AGREEMENT_REQUIRED_MESSAGE };
   }
 
   const unsourced = unsourcedEquipment(project);

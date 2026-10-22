@@ -119,6 +119,26 @@ describe('saveAnnexesAction', () => {
     expect(upsertCallArg.create.cinFileId).toBe('file-cin-1');
   });
 
+  it('stores the module acceptance letter', async () => {
+    mockAnnexesFindUnique.mockResolvedValue({ id: 'annexes-1', moduleAcceptanceFileId: 'old-letter' });
+    mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
+    mockSaveFile.mockResolvedValue({ storageKey: 'annexes/letter.pdf' });
+    mockFileCreate.mockResolvedValue({ id: 'file-letter' });
+    mockFileFindUnique.mockResolvedValue({ id: 'old-letter', storageKey: 'annexes/old-letter.pdf' });
+    mockAnnexesUpsert.mockResolvedValue({ id: 'annexes-1' });
+    const formData = buildFormData();
+    formData.set('moduleAcceptance', new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], 'acceptation.pdf', { type: 'application/pdf' }));
+
+    const result = await saveAnnexesAction('project-1', undefined, formData);
+
+    const upsertCallArg = mockAnnexesUpsert.mock.calls[0]?.[0] as { create: { moduleAcceptanceFileId?: string }; update: { moduleAcceptanceFileId?: string } };
+    expect(upsertCallArg.create.moduleAcceptanceFileId).toBe('file-letter');
+    expect(upsertCallArg.update.moduleAcceptanceFileId).toBe('file-letter');
+    expect(mockFileCreate).toHaveBeenCalledWith({ data: { fileName: 'acceptation.pdf', mimeType: 'pdf', storageKey: 'annexes/letter.pdf' } });
+    expect(mockDeleteFile).toHaveBeenCalledWith('annexes/old-letter.pdf');
+    expect(result?.error).toBeUndefined();
+  });
+
   it('rejects the action with a French error when an uploaded file fails validation', async () => {
     mockAnnexesFindUnique.mockResolvedValue(null);
     mockValidateUploadedFile.mockReturnValue({ valid: false, error: 'Type de fichier non autorisé.' });

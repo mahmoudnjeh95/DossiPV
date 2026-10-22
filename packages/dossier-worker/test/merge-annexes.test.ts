@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { PNG } from 'pngjs';
-import { mergeAnnexes, mergeDocumentFragments } from '../src/merge-annexes';
+import { annexPageCount, mergeAnnexes, mergeDocumentFragments } from '../src/merge-annexes';
 
 async function makeOnePagePdf(size: [number, number] = [200, 200]): Promise<Buffer> {
   const doc = await PDFDocument.create();
@@ -85,8 +85,9 @@ describe('mergeDocumentFragments', () => {
     const fragment2 = await makeOnePagePdf([200, 200]);
     const annex = await makeOnePagePdf([300, 300]);
 
-    const merged = await mergeDocumentFragments([fragment1, fragment2], [{ buffer: annex, mimeType: 'pdf' }]);
+    const { pdf: merged, skipped } = await mergeDocumentFragments([fragment1, fragment2], [{ buffer: annex, mimeType: 'pdf' }]);
 
+    expect(skipped).toEqual([]);
     const doc = await PDFDocument.load(merged);
     expect(doc.getPageCount()).toBe(3);
     expect(doc.getPages().map((page) => page.getWidth())).toEqual([100, 200, 300]);
@@ -96,5 +97,36 @@ describe('mergeDocumentFragments', () => {
     const valid = await makeOnePagePdf();
 
     await expect(mergeDocumentFragments([valid, Buffer.from('not a real pdf')], [])).rejects.toThrow();
+  });
+
+  it('names a corrupt annex in skipped instead of dropping it silently', async () => {
+    const fragment = await makeOnePagePdf();
+    const valid = await makeOnePagePdf([300, 300]);
+
+    const { pdf, skipped } = await mergeDocumentFragments(
+      [fragment],
+      [
+        { buffer: Buffer.from('not a real pdf'), mimeType: 'pdf', label: 'N°13 — Fiche technique Fusible X' },
+        { buffer: valid, mimeType: 'pdf', label: 'N°14 — Fiche technique Parafoudre Y' },
+        { buffer: Buffer.from('RIFF0000WEBP'), mimeType: 'webp', label: 'N°1 — Dernière facture STEG' },
+      ],
+    );
+
+    expect(skipped).toEqual(['N°13 — Fiche technique Fusible X', 'N°1 — Dernière facture STEG']);
+    expect(await countPages(pdf)).toBe(2);
+  });
+});
+
+describe('annexPageCount', () => {
+  it('counts a PDF annex’s pages, one page for an image, and null for an unreadable annex', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage();
+    doc.addPage();
+    const twoPages = Buffer.from(await doc.save());
+
+    expect(await annexPageCount({ buffer: twoPages, mimeType: 'pdf' })).toBe(2);
+    expect(await annexPageCount({ buffer: await makeOnePagePng(), mimeType: 'png' })).toBe(1);
+    expect(await annexPageCount({ buffer: Buffer.from('garbage'), mimeType: 'pdf' })).toBeNull();
+    expect(await annexPageCount({ buffer: Buffer.from('garbage'), mimeType: 'webp' })).toBeNull();
   });
 });
