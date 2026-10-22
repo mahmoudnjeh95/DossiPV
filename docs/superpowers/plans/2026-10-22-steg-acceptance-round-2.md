@@ -33,10 +33,10 @@ The installer gets only two additions, each shown only when needed:
 
 **Runs after:** `docs/superpowers/plans/2026-10-21-steg-bill-to-dossier.md` (all tasks, rulings R1–R12, F1–F9).
 
-**Execution order:** Tasks 1 → 27 in number order, which is the STEG-impact order, adjusted only where a task consumes an earlier one's interface.
-- Tasks 1–4: the product owner's decisions and the empty plans (B3, B7).
+**Execution order:** Tasks 1 → 29 in number order, which is the STEG-impact order, adjusted only where a task consumes an earlier one's interface. Two tasks were added after the product-owner answers of 2026-10-22 and run out of number order: **Task 28** (separate DC/AC voltage-drop limits) runs right after Task 1, before Task 2; **Task 29** (STEG logo asset) runs right before Task 14.
+- Tasks 1–4 (+ Task 28 after Task 1): the product owner's decisions and the empty plans (B3, B7).
 - Tasks 5–12: equipment truth and annex completeness (B5, B6, B8; product-owner priority 1), then highlighting (priority 2).
-- Tasks 13–16: identity and STEG papers (B1, B2).
+- Tasks 13–16 (+ Task 29 before Task 14): identity and STEG papers (B1, B2).
 - Tasks 17–24: format and calculation notes (priority 3).
 - Tasks 25–27: real drawings (B4).
 
@@ -56,6 +56,9 @@ The installer gets only two additions, each shown only when needed:
 - Single-phase BT only; one inverter per project; three-phase and multi-inverter stay out of scope.
 - **No AC isolator (user, 2026-10-22):** `acIsolatorId` stays `null` in every proposal; no task adds one. The dossier states that the differential AC breaker is the AC disconnecting device (Tasks 8, 20).
 - **Sizing rule (user, 2026-10-22):** no production/consumption ceiling. The limits are inverter AC power ≤ subscribed power (C23) and DC/AC ≤ 1.3. The cheap pre-filter keeps only coverage ≥ 50 %.
+- **Voltage-drop limits (product owner, 2026-10-22):** DC ≤ 3 %, AC ≤ 1 % (UTE C15-712-1). Two separate limits everywhere (Task 28); AC sections are enlarged automatically to stay within 1 %.
+- **Dossier number (product owner, 2026-10-22):** the installer's own numbering, a per-company prefix plus a running counter (like the reference's `434 - 303`), set on the company settings page. The counter increments atomically on a project's first successful generation; regeneration keeps the number (Task 14). There is no auto-generated `DPV-…` format.
+- **STEG logo (product owner, 2026-10-22):** shown on the cover and in the page header as in the reference. It is a static image file committed under the worker template assets (Task 29).
 - **PVGIS is mandatory (user, 2026-10-22):** the dossier always carries the PVGIS simulation at the installation's exact GPS point. If PVGIS fails, the job fails with `PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.` and produces no file.
 - **ANME agreement is mandatory (product owner, 2026-10-22):** no dossier is generated without the company's uploaded ANME agreement (Task 9).
 - **Template changes:** the docx template is generated. Edit `packages/docx-template/scripts/generate-template.ts`, run `npm run generate-template -w @dossipv/docx-template`, and commit the regenerated `template/dossier-template.docx` with the script. docxtemplater tags are flat top-level keys (no dotted paths). From Task 17 on, new template content uses the style helpers that task defines.
@@ -98,6 +101,7 @@ packages/engine/src/
   cabling.ts                        # T21 izCorrectionFactors + derived K1..K4
   check-labels.ts                   # T18 neutral French label per check
   constants.ts                      # T25 STEG_SINGLE_PHASE_BRANCHEMENT_A
+  checks.ts, build-candidate.ts, run-engine.ts   # T28 separate DC/AC voltage-drop limits (C17)
 packages/pvgis-client/src/index.ts  # T2 timeout
 packages/catalog-import/src/
   run-import.ts, cli.ts             # T5 datasheet download; T10 store source lists
@@ -117,6 +121,8 @@ packages/dossier-worker/src/
   steg-list-annex.ts                # T10 (new)
   clean-pdf-annex.ts                # T12 (new) drop blank trailing pages
   render-cover-page.ts              # T14
+  assets/steg-logo.png              # T29 (new) static STEG logo
+  steg-logo.ts                      # T29 (new) loader
   draft-watermark.ts                # T16 (new)
   stamp-study-pages.ts              # T17 (new) frame, header, footer
   render-production-report.ts       # T23 (new)
@@ -131,7 +137,7 @@ apps/web/lib/
   project-access.ts, sizing-catalog.ts    # T6 provenance; T7 differential mapping
   project-engine-input.ts                 # T7 rcd; T8 protection refs; T15 meta
   client-identity.ts, annex-upload.ts     # T13 (new)
-  dossier-number.ts                       # T14 (new)
+  dossier-number.ts                       # T14 (new) company prefix + atomic counter
   building-type.ts                        # T15 (new)
   steg-completeness.ts                    # T16 (new)
   specific-yield.ts                       # T3 wording
@@ -143,7 +149,7 @@ apps/web/app/(app)/projects/
   [id]/summary/…                          # T16 (new)
   [id]/jobs/[jobId]/page.tsx              # T9 job warnings
 apps/web/app/(app)/library/…              # T6
-apps/web/app/(app)/settings/…             # T9 ANME agreement required
+apps/web/app/(app)/settings/…             # T9 ANME agreement required; T14 dossier prefix/counter; T28 AC drop default
 apps/web/app/admin/(protected)/equipment/ac-breakers/…   # T7
 ```
 
@@ -447,7 +453,7 @@ The worker already annexes every chosen item's `datasheetFileId` (protections, c
 
 ### Task 7: 30 mA differential protection as data (differential AC breaker)
 
-**Decision (cost if wrong):** the RCD is modelled as a property of the AC breaker: a 2P or 1P+N `disjoncteur différentiel`, 30 mA, type A minimum. There is no new equipment kind. If wrong, an installer who fits an MCB plus a separate RCCB must instead pick a differential breaker in the catalog; a separate RCCB kind can come later.
+**Decision (confirmed by the product owner, 2026-10-22: the 30 mA protection is a differential breaker, one device, not an MCB plus a separate RCCB):** the RCD is modelled as a property of the AC breaker: a 2P or 1P+N `disjoncteur différentiel`, 30 mA, type A minimum. There is no new equipment kind. An installer who fits an MCB plus a separate RCCB must pick a differential breaker in the catalog instead; no separate RCCB kind is planned.
 
 **Files:**
 - Modify: `packages/db/prisma/schema.prisma`; Create: `migrations/20261022120000_ac_breaker_residual_current/migration.sql`
@@ -758,24 +764,29 @@ Screen: on the proposals page, above "Lu sur la facture", the card **Identité d
 
 ---
 
-### Task 14: Cover, installer and client identity, signatures, dossier number
+### Task 14: Cover, installer and client identity, signatures, installer-numbered dossier
 
 **Files:**
+- Modify: `packages/db/prisma/schema.prisma`; Create: `migrations/20261022145000_company_dossier_numbering/migration.sql`
 - Create: `apps/web/lib/dossier-number.ts`
+- Modify: `apps/web/app/(app)/settings/{page.tsx,actions.ts}`
 - Modify: `apps/web/app/(app)/projects/[id]/actions.ts`
 - Modify: `packages/dossier-worker/src/{render-cover-page.ts,build-template-data.ts,process-job.ts,render-site-plan-pages.ts}`
 - Modify: the docx template (script, types, docx, test)
-- Test: `apps/web/test/{dossier-number,generate-dossier-action}.test.ts`, `packages/dossier-worker/test/{render-cover-page,build-template-data,render-site-plan-pages}.test.ts`
+- Test: `apps/web/test/{dossier-number,generate-dossier-action,settings-company-action}.test.ts`, `packages/dossier-worker/test/{render-cover-page,build-template-data,render-site-plan-pages}.test.ts`
 
 **Interfaces:**
-- Produces: `formatDossierNumber(projectId: string, date: Date): string` → `DPV-${YYYY}-${first 8 hex of the id, upper-case}`.
-  - `generateDossierAction` stores it when `project.dossierNumber` is null, inside its existing transaction, and snapshots it.
-  - An existing number never changes.
+- Prisma: `Company.dossierPrefix String?` (e.g. `434`) and `Company.dossierCounter Int @default(0)` (the last number used). `Project.dossierNumber String?` already exists and stays the stored value.
+- Produces (`dossier-number.ts`):
+  - `formatDossierNumber(prefix: string | null, counter: number): string` → `${prefix} - ${counter}` (e.g. `434 - 303`), or just `${counter}` when the prefix is empty;
+  - `assignDossierNumber(tx: Prisma.TransactionClient, companyId: string, projectId: string): Promise<string>`: if `project.dossierNumber` is set, returns it unchanged. Otherwise it runs an atomic `UPDATE "Company" SET "dossierCounter" = "dossierCounter" + 1 WHERE id = … RETURNING "dossierPrefix", "dossierCounter"` (one statement, no read-then-write), formats the result and stores it on the project.
+- Settings page: the company form gains `Préfixe de numérotation des dossiers` (free text, ≤ 20 characters, optional) and `Prochain numéro de dossier` (integer ≥ 1, default 1; saving sets `dossierCounter = value − 1`). Help text: `Exemple : préfixe 434 et prochain numéro 303 donnent « 434 - 303 ».`
+- `generateDossierAction` calls `assignDossierNumber` inside its existing transaction, on a project's first generation only, and snapshots the number. A regeneration keeps the stored number and never touches the counter. The counter moves only while `project.dossierNumber` is null, so a retry after a failed job (e.g. PVGIS down) does not consume a second number.
 - Produces: `InstallerIdentity = { name; address; phone; email; anmeCode; anmeCategory; anmeValidTo /* ISO */; taxId: string | null; legalRepFullName; legalRepRole; commercialRegister: string | null }`. It is built once in `process-job.ts` from `Company`.
 - `CoverPageInput` becomes `{ installer; companyLogoBuffer; dossierNumber; dossierDate; client: { fullName; cin: string | null; address: string | null; stegReference: string | null }; gps: { lat; lon } | null; installedKWp: number }`.
-- Cover layout (reference p1, without the STEG logo; see open questions), top to bottom:
+- Cover layout (reference p1, with the STEG logo from Task 29), top to bottom:
   - a double-line page frame (outer 1 pt at 20 pt inset, inner 0.5 pt at 24 pt inset);
-  - the installer logo top-left;
+  - the installer logo top-left and the STEG logo top-right (`loadStegLogo()`, Task 29);
   - the title `Dossier technique d'une installation photovoltaïque raccordée au réseau Basse Tension de la STEG`;
   - labelled fields, label colour `rgb(0.12,0.31,0.6)`, label then value:
     - `Client BT :`
@@ -786,7 +797,7 @@ Screen: on the proposals page, above "Lu sur la facture", the card **Identité d
     - `Puissance installée :` — `${kWc} kWc`
     - `Installateur :` — name
     - `Agrément ANME n° :` — `${code} (catégorie ${cat}), valable jusqu'au ${date}`
-    - `N° dossier :`
+    - `N° dossier :` — the installer's number, e.g. `434 - 303`
     - `Date :`
 - `DossierTemplateData` gains `dossierNumber`, `dossierDateText`, `installerAnmeLine`, `installerTaxIdLine`, `installerLegalRepLine`, `clientCinLine`:
   - `Installateur agréé ANME n° ${code} (catégorie ${cat}), agrément valable jusqu'au ${dd/MM/yyyy}`;
@@ -802,13 +813,16 @@ Screen: on the proposals page, above "Lu sur la facture", the card **Identité d
 - Site-plan title blocks add `Agrément ANME n° ${code}`.
 
 - [ ] **Step 1: Write the failing tests**
-  - `formatDossierNumber('019f6642-…', 2026-10-22) === 'DPV-2026-019F6642'`;
-  - number assigned once, existing number kept;
-  - cover text contains `Référence STEG :`, `34.74210`, `kWc`, `Agrément ANME n° ANME-TEST-01`, `CIN : 01234567`, and two nested frame rectangles;
+  - `formatDossierNumber('434', 303) === '434 - 303'`; without a prefix → `'303'`;
+  - `assignDossierNumber` increments the counter exactly once on a project's first generation and returns `434 - 303`;
+  - `a regeneration keeps the number and does not increment the counter`;
+  - `two concurrent first generations get different numbers` (against the dev database);
+  - settings action: saves prefix and next number (`dossierCounter = next − 1`); rejects a next number < 1;
+  - cover text contains `N° dossier : 434 - 303`, the STEG logo as an embedded image, `Référence STEG :`, `34.74210`, `kWc`, `Agrément ANME n° ANME-TEST-01`, `CIN : 01234567`, and two nested frame rectangles;
   - template lines, including the `non renseigné` case; the signature table texts; the title is no longer the company name;
   - title block contains `Agrément ANME n°`.
 - [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS.**
-- [ ] **Step 5: Commit** — `feat(dossier): reference-style cover, installer accreditation, client identity, signatures, dossier number`
+- [ ] **Step 5: Commit** — `feat(dossier): reference-style cover with STEG logo, installer accreditation, client identity, signatures, installer-numbered dossier`
 
 ---
 
@@ -953,9 +967,9 @@ Summary screen (`/projects/[id]/summary`, title `Récapitulatif avant générati
   - no blue theme colours.
 - Existing tables (module, inverter, cables, voltage drop, stability, dimensioning) switch to `styledTable`, and their value tags to `valueRun`.
 - pdf-lib fragments (cover, TOC, plans, drawings, divider, watermark page) use `StandardFonts.TimesRoman` / `TimesRomanBold` instead of Helvetica.
-- Produces: `stampStudyPages(pdf: Buffer, options: { studyPageCount: number; logo: Buffer | null; installerName: string; dossierNumber: string | null }): Promise<Buffer>`. It applies to pages 1..studyPageCount (cover + TOC + body):
+- Produces: `stampStudyPages(pdf: Buffer, options: { studyPageCount: number; logo: Buffer | null; stegLogo: Buffer; installerName: string; dossierNumber: string | null }): Promise<Buffer>`. It applies to pages 1..studyPageCount (cover + TOC + body):
   - a double-line frame (as on the cover);
-  - a header with the logo (max 60 × 30 pt) or the installer name on the left and `Dossier n° ${number}` on the right;
+  - a header with the installer logo (max 60 × 30 pt) or the installer name on the left, and on the right the STEG logo (`loadStegLogo()`, Task 29; max 60 × 30 pt, as in the reference) with `Dossier n° ${number}` (the installer's own number, Task 14) to its left. Page 1 (the cover) draws its own logos, so the STEG logo is not stamped there;
   - the footer `Page ${n} sur ${studyPageCount}`, right-aligned, on pages 2..studyPageCount.
 
   Drawings and plans carry their own cartouche, and annex pages are not stamped (the reference practice).
@@ -968,7 +982,8 @@ Summary screen (`/projects/[id]/summary`, title `Récapitulatif avant générati
     - a module value run has colour `1F4E9A`.
   - stamp-study-pages:
     - a 5-page PDF with `studyPageCount 3` → pages 2–3 contain `Page 2 sur 3` / `Page 3 sur 3`; pages 4–5 are unchanged;
-    - the frame rectangles are present on pages 1–3.
+    - the frame rectangles are present on pages 1–3;
+    - pages 2–3 carry the STEG logo image and `Dossier n° 434 - 303`; page 1 gets no second STEG logo.
   - Renderer tests are updated to expect the Times fonts; texts are unchanged.
 - [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS.**
 - [ ] **Step 5: Visual check.** Generate one dev dossier, view pages 1–4 as images, and confirm a single font family, the frames and the footer.
@@ -1101,14 +1116,17 @@ Summary screen (`/projects/[id]/summary`, title `Récapitulatif avant générati
   - the line `Iz' = Iz × K1 × K2 × K3 × K4` with the factor definitions;
   - the cable table;
   - for each run: `anLabel()` + application + `conclusionRun(...)`;
-  - then `Chute de tension` with the per-run table (replacing table IV.1) and `La chute de tension est calculée pour chaque tronçon ; limite ${limit} %.`
+  - then `Chute de tension` with the per-run table (replacing table IV.1) and `La chute de tension est calculée pour chaque tronçon ; limites : DC ${dcLimit} %, AC ${acLimit} % (Task 28).` Each row's `limitPct` is its own run's limit (DC 3, AC 1 by default).
+
+- Consumes: `maxVoltageDropPct` (DC limit) and `maxAcVoltageDropPct` (Task 28).
 
 - [ ] **Step 1: Write the failing tests**
   - engine: `izCorrectionFactors` for `'13'`, method C, 1 circuit, 1 layer, 80 °C, PR equals the product used by `izCorrected` (same result to 1e-12); derived keys present.
   - template data:
     - DC row `izCorrected` equals `DC_RUN_IZ_CORRECTED` formatted;
     - the method text for `'13'`;
-    - the AC drop row `dropPct` equals `DU_AC_PCT` formatted.
+    - the AC drop row `dropPct` equals `DU_AC_PCT` formatted;
+    - the AC row's `limitPct` is `1` and the DC row's is `3`.
 - [ ] **Step 2: Run, expect FAIL.** **Step 3: Implement.** **Step 4: Run, expect PASS** (engine fixtures unchanged).
 - [ ] **Step 5: Commit** — `feat: cable sizing and voltage drop notes with correction factors and inputs`
 
@@ -1329,7 +1347,65 @@ export function renderSingleLineDiagram(input: SingleLineInput): Promise<Buffer>
 
 ---
 
-## Acceptance (orchestrator, after Task 27)
+### Task 28: Separate DC (3 %) and AC (1 %) voltage-drop limits
+
+Runs right after Task 1 (engine work), before Task 2. Product-owner answer 2026-10-22: the AC voltage-drop limit is **1 %** (UTE C15-712-1); the DC limit stays **3 %**. Task 21 prints each run's own limit.
+
+**Files:**
+- Modify: `packages/db/prisma/schema.prisma`; Create: `migrations/20261022115000_ac_voltage_drop_limit/migration.sql`
+- Modify: `packages/engine/src/{checks.ts,run-engine.ts,sizing-types.ts,build-candidate.ts}`
+- Modify: `apps/web/lib/{project-engine-input.ts,project-proposals.ts}`, `apps/web/app/(app)/projects/[id]/locations/actions.ts`, `apps/web/app/(app)/projects/[id]/proposals/actions.ts`, `apps/web/app/(app)/projects/[id]/sections/{actions.ts,forms/cabling-form.tsx}`, `apps/web/app/(app)/settings/{page.tsx,actions.ts,company-form.tsx}`
+- Test: `packages/engine/test/{checks,build-candidate,run-engine}.test.ts` (+ fixtures), `apps/web/test/{locations-action,settings-company-action,section-actions,apply-proposal-action,project-engine-input}.test.ts`
+
+**Interfaces:**
+- Prisma: `Company.defaultMaxAcVoltageDropPct Float @default(1)` and `ProjectCablingConfig.maxAcVoltageDropPct Float @default(1)`. The existing `defaultMaxVoltageDropPct` / `maxVoltageDropPct` columns keep their names and now mean the **DC** limit (default 3). The migration sets the new column to 1 on existing rows.
+- Engine:
+  - `RunEngineInput.maxVoltageDropPct` stays as the DC limit; new optional `RunEngineInput.maxAcVoltageDropPct?: number`. When absent it falls back to `maxVoltageDropPct`, so legacy fixtures are unchanged (the same pattern as C23 and C24);
+  - `checkC17(duDcPctSum, duAcPctSum, maxDcPct, maxAcPct)`: `pass = duDcPctSum <= maxDcPct && duAcPctSum <= maxAcPct` (BLOCK). The message names the failing side: `Chute de tension DC ${x} % > ${maxDc} %` / `Chute de tension AC ${x} % > ${maxAc} %`;
+  - `ChecksContext` gains `maxAcVoltageDropPct`;
+  - `SizingContext` (`sizing-types.ts`) gains `maxAcVoltageDropPct: number`; `maxVoltageDropPct` stays as the DC limit.
+- `buildCandidate`: the DC section search uses `maxVoltageDropPct`, the AC section search uses `maxAcVoltageDropPct`. AC sections are therefore enlarged automatically to stay ≤ 1 %. When no section satisfies the AC limit the reason is `Aucune section de câble AC ne respecte la chute de tension de ${maxAc} % sur ${L} m.` The C13 pairing with a breaker is unchanged. It sets `engineInput.maxAcVoltageDropPct`.
+- Locations action (`projects/[id]/locations/actions.ts`): the loop that bumps a run to the next larger section checks the DC circuit against the DC limit and the AC circuit against the AC limit (`circuitFits` receives the per-circuit limit). The error text keeps naming the circuit.
+- `buildEngineInput` and `project-proposals.ts` pass both limits from the cabling config and `Company` defaults. New projects copy `defaultMaxAcVoltageDropPct` into their cabling config.
+- Settings and cabling form: `Chute de tension maximale DC (%)` (default 3) and `Chute de tension maximale AC (%)` (default 1), each validated `0 < x ≤ 10`.
+- The PVGIS inputs of Task 2 are unchanged: they read the realised `DU_DC_PCT` / `DU_AC_PCT`.
+
+- [ ] **Step 1: Write the failing tests**
+  - checks: `C17 passes DC 2.5 % and AC 0.9 %`; `C17 fails AC 1.5 % with a 1 % AC limit even though DC allows 3 %` (message names AC); `C17 fails DC 3.5 %`; the legacy single-limit call shape is covered by the `run-engine` fallback test below.
+  - run-engine: `falls back to maxVoltageDropPct for AC when maxAcVoltageDropPct is absent` (reference fixture unchanged).
+  - build-candidate:
+    - `enlarges the AC section until the AC drop is within 1 %` (a 40 m AC run where 6 mm² would pass 3 % but not 1 %: the chosen section is the smaller one that reaches ≤ 1 %, and `DU_AC_PCT <= 1`);
+    - `keeps the DC section chosen against 3 %`;
+    - `returns the AC voltage-drop reason when no section reaches 1 %`.
+  - locations-action: `bumps the AC run to a larger section for the 1 % limit but keeps the DC run at 3 %`; `reports the AC circuit when no section fits`.
+  - settings-company-action: saves both defaults; rejects AC `0` and `11`.
+  - section-actions and project-engine-input: both limits are saved and passed to the engine input.
+  - apply-proposal-action: the created cabling config carries `maxAcVoltageDropPct` from the company default.
+- [ ] **Step 2: Run, expect FAIL.** **Step 3: Migration + implement.** **Step 4: Run, expect PASS**, then `npx vitest run packages/engine apps/web/test`.
+- [ ] **Step 5: Commit** — `feat(engine): separate DC (3 %) and AC (1 %) voltage-drop limits, AC sections enlarged to stay within 1 %`
+
+---
+
+### Task 29: STEG logo asset
+
+Runs right before Task 14, which draws it on the cover; Task 17 draws it in the page header.
+
+**Files:**
+- Create: `packages/dossier-worker/src/assets/steg-logo.png` (static binary), `packages/dossier-worker/src/steg-logo.ts`
+- Test: `packages/dossier-worker/test/steg-logo.test.ts`
+
+**Interfaces:**
+- Produces: `loadStegLogo(): Promise<Buffer>` reads `assets/steg-logo.png` (resolved relative to the module with `import.meta.url`, so it works from `src` and from `dist`; the build copies `src/assets` into `dist`). Throws if the file is missing. The image is committed, never fetched at generation time.
+- The file is a PNG, at most 300 px wide, with a transparent or white background.
+
+- [ ] **Step 1: Fetch the official logo.** Download the logo from `https://www.steg.com.tn` (the site header image) into the scratchpad, convert or resize it to a PNG ≤ 300 px wide, and save it as `steg-logo.png`. Open it as an image and confirm it is the STEG logo (not a placeholder or an error page). Record the **exact source URL** for the commit message. If the logo cannot be fetched or its licence/terms forbid reuse, stop and report **NEEDS_CONTEXT** so the owner can supply the file; do not draw or invent a substitute.
+- [ ] **Step 2: Write the failing tests:** `loadStegLogo returns a PNG buffer` (first bytes `89 50 4E 47`, width ≤ 300 px read from the IHDR chunk); `the logo embeds in a pdf-lib document` (`pdf.embedPng` succeeds).
+- [ ] **Step 3: Run, expect FAIL. Step 4: Implement the loader and the build copy. Step 5: Run, expect PASS** (`npx tsc -b --noEmit` and a `dist` build resolve the file).
+- [ ] **Step 6: Commit** — `feat(worker): add the STEG logo asset (source: <exact URL fetched>)`
+
+---
+
+## Acceptance (orchestrator, after all 29 tasks)
 
 Not a coding task. Run the dev server and the worker on `dossipv_dev`, with PVGIS reachable (re-run Task 2 Step 5 first), the source lists stored (Task 10) and curated datasheets attached (Task 5).
 
@@ -1357,11 +1433,9 @@ Production steps wait for the user's explicit go-ahead: migrations, `purge-test-
 - **Wind and ballast calculation always shown.** This needs required structure inputs (frame count, H, D, ballast) and a figure. Task 22 shows it only when inputs exist.
 - **Highlighting for scanned datasheets** via Claude vision bounding boxes, and highlighting of protection and cable datasheets (beyond the reference practice).
 - **Equipment conformity table** (list version, certificate numbers, validity vs commissioning, decoupling standards and grid code) — facilitator 11.
-- **AC voltage-drop target of 1 %** (UTE C15-712-1) — facilitator 13, a product decision.
 - **Map usability:** "Ma position", address search, centring on the bill address, phone layout — facilitator 14.
 - **Proposal cards:** price, payback, surplus explanation — facilitator 15, 16.
 - **Better consumption estimate:** second bill, seasonal warning — facilitator 17.
 - **Full .docx export:** cover, drawings, plans — facilitator 18.
-- **Separate RCCB equipment kind.**
 - **Multi-year PVGIS average** instead of the single 2020 series.
 - **Larger product scope:** three-phase, multi-inverter, lightning-rod sites — facilitator 19.
