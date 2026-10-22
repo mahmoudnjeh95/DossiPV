@@ -191,7 +191,7 @@ export function redactSecrets(text: string): string {
 
 function tileUrl(provider: ImageryProvider, zoom: number, x: number, y: number): string {
   if (provider === 'mapbox') {
-    // 256 "@2x": a 512 px bitmap covering the same ground as a 256 px tile at this zoom; ".jpg90" asks for JPEG explicitly (the extension-less form leaves the format to Mapbox).
+    // 256 "@2x": a 512 px bitmap covering the same ground as a 256 px tile at this zoom; the format is left to Mapbox and sniffed on decode.
     return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/${zoom}/${x}/${y}@2x?access_token=${encodeURIComponent(mapboxToken() ?? '')}`;
   }
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${y}/${x}`;
