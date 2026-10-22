@@ -262,7 +262,7 @@ describe('buildTemplateData', () => {
     expect(data.cableRuns).toEqual([]);
   });
 
-  it('computes section numbers I-VII, VIII with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
+  it('computes section numbers I-VIII, IX with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
@@ -273,30 +273,31 @@ describe('buildTemplateData', () => {
     expect(data.sectionNumberPresentation).toBe('II.');
     expect(data.sectionNumberDimensionnement).toBe('III.');
     expect(data.sectionNumberSolution).toBe('IV.');
-    expect(data.sectionNumberCablage).toBe('V.');
-    expect(data.sectionNumberTerre).toBe('VI.');
-    expect(data.sectionNumberStructure).toBe('VII.');
+    expect(data.sectionNumberProtections).toBe('V.');
+    expect(data.sectionNumberCablage).toBe('VI.');
+    expect(data.sectionNumberTerre).toBe('VII.');
+    expect(data.sectionNumberStructure).toBe('VIII.');
     expect(data.sectionNumberFusible).toBe('');
     expect(data.sectionNumberSectionneur).toBe('');
-    // The regression this fix closes: VI must be followed directly by VII (not a hardcoded "IX"
-    // left over from when the DC fuse/AC isolator sections existed) when both are absent.
-    expect(data.sectionNumberConclusion).toBe('VIII.');
+    // The regression this fix closes: Structure must be followed directly by the Conclusion (no
+    // number left over for the DC fuse/AC isolator sections) when both are absent.
+    expect(data.sectionNumberConclusion).toBe('IX.');
   });
 
-  it('renumbers VIII, IX correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
+  it('renumbers IX, X correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
       ...installerInputs, ...sizingInputs,
     });
 
-    expect(data.sectionNumberStructure).toBe('VII.');
-    expect(data.sectionNumberFusible).toBe('VIII.');
+    expect(data.sectionNumberStructure).toBe('VIII.');
+    expect(data.sectionNumberFusible).toBe('IX.');
     expect(data.sectionNumberSectionneur).toBe('');
-    expect(data.sectionNumberConclusion).toBe('IX.');
+    expect(data.sectionNumberConclusion).toBe('X.');
   });
 
-  it('numbers all ten sections I-X when both the DC fuse and the AC isolator sections are required (I4)', () => {
+  it('numbers all eleven sections I-XI when both the DC fuse and the AC isolator sections are required (I4)', () => {
     const data = buildTemplateData({
       workerResult,
       engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
@@ -305,9 +306,9 @@ describe('buildTemplateData', () => {
       ...installerInputs, ...sizingInputs,
     });
 
-    expect(data.sectionNumberFusible).toBe('VIII.');
-    expect(data.sectionNumberSectionneur).toBe('IX.');
-    expect(data.sectionNumberConclusion).toBe('X.');
+    expect(data.sectionNumberFusible).toBe('IX.');
+    expect(data.sectionNumberSectionneur).toBe('X.');
+    expect(data.sectionNumberConclusion).toBe('XI.');
   });
 
   it("uses each inverter's OWN brand/model from the snapshot, not projectMeta's first-inverter-only string, for a mixed-model array (I7)", () => {
@@ -833,5 +834,148 @@ describe('string sizing notes (Task 19)', () => {
     expect(fuseNote.conclusion).toBe(
       `Fusible DC TEST gPV-20 : ${two(lower)} A ≤ In = 20 A ≤ 25 A et Un = 1${NNBSP}000 V ≥ ${two(engineResult.derived.STRING_VOC_TMIN!)} V : condition vérifiée.`,
     );
+  });
+});
+
+/** The reference fixture with its 30 mA type A differential breaker (Task 7's C24 input). */
+const referenceWithRcd: RunEngineInput = { ...habibKhedhiraFixture, rcd: { residualCurrentMA: 30, rcdType: 'A' } };
+
+function protectionNotesOf(engineInput: RunEngineInput, acSpdInKA: number | null = 20): ReturnType<typeof buildTemplateData>['protectionNotes'] {
+  const { input } = notesInput(engineInput);
+  return buildTemplateData({ ...input, snapshot: { ...input.snapshot, acSpdInKA } }).protectionNotes;
+}
+
+describe('protection sizing notes (Task 20)', () => {
+  it('lists the five protections in the reference order, each conforming to its engine checks', () => {
+    const notes = protectionNotesOf(referenceWithRcd);
+
+    expect(notes.map((note) => note.title)).toEqual(['Interrupteur-sectionneur DC', 'Parafoudre DC', 'Disjoncteur différentiel AC', 'Parafoudre AC', 'Sectionnement AC']);
+    expect(notes.map((note) => note.conclusion)).toEqual([
+      "L'interrupteur-sectionneur DC choisi est conforme.",
+      'Le parafoudre DC choisi est conforme.',
+      'Le disjoncteur différentiel AC choisi est conforme.',
+      'Le parafoudre AC choisi est conforme.',
+      "Un seul onduleur : pas d'interrupteur-sectionneur AC dédié ; le sectionnement côté AC est assuré par le disjoncteur différentiel Generic AC-BRK-16.",
+    ]);
+    for (const note of notes) expect(Object.values(note).join('\n')).not.toMatch(/\d\.\d|NaN|undefined/);
+  });
+
+  it.each([...NOTE_FIXTURES, ['reference with differential breaker', referenceWithRcd] as [string, RunEngineInput]])(
+    'prints the DC switch numbers as the engine STRING_VOC_TMIN and ISC_FIELD_DESIGN (%s)',
+    (_name, fixture) => {
+      const { engineResult } = notesInput(fixture);
+      const d = engineResult.derived;
+      const dcSwitch = protectionNotesOf(fixture)[0]!;
+      const [voltageLine, currentLine] = dcSwitch.application.split('\n');
+
+      expect(expectApplicationConsistent(voltageLine!)).toBeCloseTo(d.STRING_VOC_TMIN!, 2);
+      expect(voltageLine).toMatch(new RegExp(`= ${two(d.STRING_VOC_TMIN!)} V$`));
+      expect(expectApplicationConsistent(currentLine!)).toBeCloseTo(d.ISC_FIELD_DESIGN!, 2);
+      expect(currentLine).toMatch(new RegExp(`= ${two(d.ISC_FIELD_DESIGN!)} A$`));
+      expect(dcSwitch.result).toBe(
+        `Ue = ${fixture.dcSwitch.ratedVoltageV.toLocaleString('fr-FR')} V ≥ ${two(d.STRING_VOC_TMIN!)} V ; In = ${fixture.dcSwitch.ratedCurrentA} A ≥ ${two(d.ISC_FIELD_DESIGN!)} A`,
+      );
+    },
+  );
+
+  it('writes the reference DC notes with the requirements of checks C09 to C12', () => {
+    const [dcSwitch, dcSpd] = protectionNotesOf(referenceWithRcd);
+
+    expect(dcSwitch).toEqual({
+      title: 'Interrupteur-sectionneur DC',
+      formula: 'Ue ≥ Voc(Tmin) de la chaîne = Ns × Voc(Tmin)\nIn ≥ courant de conception du champ = 1,25 × Isc × Np (UTE C15-712-1)',
+      application: 'Ns × Voc(Tmin) = 5 × 60,79 = 303,96 V\n1,25 × Isc × Np = 1,25 × 13,92 × 1 = 17,40 A',
+      result: 'Ue = 600 V ≥ 303,96 V ; In = 25 A ≥ 17,40 A',
+      chosen: 'ZJ BENY BB1H-63 — 600 V, 25 A',
+      conclusion: "L'interrupteur-sectionneur DC choisi est conforme.",
+    });
+    expect(dcSpd!.formula.split('\n')).toEqual([
+      "Type 1 si le bâtiment est équipé d'un paratonnerre, sinon type 2",
+      'Ucpv ≥ 1,2 × Ns × Voc (Voc du module aux STC)',
+      "Up < 0,8 × Uw (0,5 × Uw si le parafoudre est à plus de 10 m de l'équipement protégé) ; Uw : tenue aux chocs des équipements",
+      'In ≥ 5 kA',
+      'Iscpv ≥ courant de conception du champ = 1,25 × Isc × Np (UTE C15-712-1)',
+    ]);
+    expect(dcSpd!.application.split('\n')).toEqual([
+      'Pas de paratonnerre : type 2',
+      '1,2 × Ns × Voc = 1,2 × 5 × 55,9 = 335,40 V',
+      'Up < 0,8 × tenue aux chocs (4 kV) = 3,20 kV',
+      '1,25 × Isc × Np = 1,25 × 13,92 × 1 = 17,40 A',
+    ]);
+    expect(dcSpd!.result.split('\n')).toEqual(['Type 2', 'Ucpv = 700 V ≥ 335,40 V', 'Up = 2 kV < 3,20 kV', 'In = 10 kA ≥ 5 kA', 'Iscpv = 20 A ≥ 17,40 A']);
+    expect(dcSpd!.chosen).toBe('Generic DC-SPD-1 — type 2, Ucpv 700 V, Up 2 kV, In 10 kA, Iscpv 20 A');
+  });
+
+  it('writes the reference AC notes: breaker within [Iac max, Iz\'] with 30 mA type A, Uc rule, single-inverter disconnection', () => {
+    const { engineResult } = notesInput(referenceWithRcd);
+    const [, , breaker, acSpd, disconnection] = protectionNotesOf(referenceWithRcd);
+    const iz = two(engineResult.derived.AC_RUN_IZ_CORRECTED!);
+
+    expect(breaker!.formula).toContain("Iac max onduleur ≤ In ≤ Iz' câble AC");
+    expect(breaker!.formula).toContain('30 mA type A');
+    expect(breaker!.application).toBe(`Iac max onduleur = 16 A ; Iz' câble AC (4 mm²) = ${iz} A\n16 A ≤ In ≤ ${iz} A`);
+    expect(breaker!.result).toBe('In = 20 A ; IΔn = 30 mA type A');
+    expect(breaker!.chosen).toBe('Generic AC-BRK-16 — 20 A, 30 mA type A');
+    expect(acSpd!.application.split('\n')).toEqual(['Pas de paratonnerre : type 2', '1,1 × Un = 1,1 × 230 = 253,00 V', 'Up < 0,8 × tenue aux chocs (4 kV) = 3,20 kV']);
+    expect(acSpd!.result.split('\n')).toEqual(['Type 2', 'Uc = 275 V ≥ 253,00 V', 'Up = 1,5 kV < 3,20 kV', 'In = 20 kA ≥ 5 kA']);
+    expect(acSpd!.chosen).toBe('Generic AC-SPD-1 — type 2, Uc 275 V, Up 1,5 kV, In 20 kA');
+    expect(disconnection).toMatchObject({ application: "Nombre d'onduleurs = 1", result: "Pas d'interrupteur-sectionneur AC dédié", chosen: 'Generic AC-BRK-16 — 20 A, 30 mA type A' });
+  });
+
+  it('halves the Up limit beyond 10 m and carries the bifacial gain into the design current', () => {
+    const [dcSwitch, dcSpd] = protectionNotesOf(twoStringBifacialFixture);
+
+    expect(dcSwitch!.application.split('\n')[1]).toBe('1,25 × Isc × Np × (1 + Gbif/100) = 1,25 × 13,92 × 2 × (1 + 10/100) = 38,28 A');
+    expect(dcSpd!.application).toContain('Up < 0,5 × tenue aux chocs (8 kV) = 4,00 kV');
+    expect(dcSpd!.result).toContain('Iscpv = 40 kA ≥ 38,28 A');
+  });
+
+  it('requires type 1 surge arresters under a lightning rod', () => {
+    const fixture: RunEngineInput = {
+      ...referenceWithRcd,
+      site: { ...referenceWithRcd.site, lightningRod: true },
+      dcSpd: { ...referenceWithRcd.dcSpd, type: 1 },
+      acSpd: { ...referenceWithRcd.acSpd, type: 1 },
+    };
+    const notes = protectionNotesOf(fixture);
+
+    expect(notes[1]!.application.split('\n')[0]).toBe("Bâtiment équipé d'un paratonnerre : type 1");
+    expect(notes[1]!.conclusion).toBe('Le parafoudre DC choisi est conforme.');
+    expect(notes[3]!.application.split('\n')[0]).toBe("Bâtiment équipé d'un paratonnerre : type 1");
+  });
+
+  it('never claims conformity the checks do not support', () => {
+    const plainBreaker = protectionNotesOf({ ...habibKhedhiraFixture, rcd: { residualCurrentMA: null, rcdType: null } });
+    expect(plainBreaker[2]!.result).toBe('In = 20 A ; pas de fonction différentielle');
+    expect(plainBreaker[2]!.conclusion).toBe(
+      "Le disjoncteur différentiel AC choisi n'est pas conforme : Aucune protection différentielle 30 mA de type A (ou F, B) côté AC.",
+    );
+
+    // The engine checks Up on the DC arrester only: the AC one is checked here with checkC11.
+    const highUp = protectionNotesOf({ ...referenceWithRcd, acSpd: { ...referenceWithRcd.acSpd, upKV: 3.5 } });
+    expect(highUp[3]!.conclusion).toBe("Le parafoudre AC choisi n'est pas conforme : Niveau de protection du parafoudre insuffisant pour la tenue aux chocs.");
+
+    const unknownIn = protectionNotesOf(referenceWithRcd, null);
+    expect(unknownIn[3]!.result).toContain('In non renseigné');
+    expect(unknownIn[3]!.conclusion).toBe("Le parafoudre AC choisi n'est pas conforme : courant nominal de décharge In non renseigné.");
+  });
+
+  it('fills the protections section of the real Word template after the string sizing notes', () => {
+    const { input } = notesInput(referenceWithRcd);
+    const data = buildTemplateData({ ...input, snapshot: { ...input.snapshot, acSpdInKA: 20 } });
+    const text = filledTemplateText(data);
+    const heading = 'V. Dimensionnement des protections';
+
+    expect(text.indexOf(heading)).toBeGreaterThan(text.indexOf('Pas de fusible : 1 chaîne(s) par MPPT'));
+    expect(text.indexOf(heading)).toBeLessThan(text.indexOf('VI. Câblage'));
+    let cursor = text.indexOf(heading);
+    for (const note of data.protectionNotes) {
+      for (const part of [note.title, `Exigences : ${note.formula.split('\n')[0]!}`, note.result.split('\n')[0]!, `Matériel retenu : ${note.chosen}`, note.conclusion!]) {
+        const at = text.indexOf(part, cursor);
+        expect(at, part).toBeGreaterThanOrEqual(cursor);
+        cursor = at;
+      }
+    }
+    expect(text).not.toMatch(/undefined|NaN/);
   });
 });

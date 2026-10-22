@@ -1,13 +1,16 @@
 import {
+  checkC11,
   dcFuseCheckInput,
   impAtTmax,
+  iscFieldDesign,
   resolveVmpTempCoeff,
   stringVocTmin,
   type CheckResult,
   type EngineResult,
+  type MpptConfig,
   type RunEngineInput,
 } from '@dossipv/engine';
-import type { CalculationNote } from '@dossipv/docx-template';
+import type { CalculationNote, ProtectionNote } from '@dossipv/docx-template';
 
 /**
  * The dossier's calculation notes: every formula is the engine's own (module-electrical.ts,
@@ -50,7 +53,7 @@ export function conformity(checks: CheckResult[], ids: string[]): { pass: boolea
   const failures: string[] = [];
   for (const id of ids) {
     const results = checks.filter((check) => check.id === id);
-    if (results.length === 0) failures.push(`contrôle ${id} non effectué`);
+    if (results.length === 0) failures.push('règle non vérifiée par le calcul');
     for (const result of results) if (!result.pass) failures.push(result.message);
   }
   return { pass: failures.length === 0, failures: [...new Set(failures)] };
@@ -282,5 +285,225 @@ function dcFuseNote(engineInput: RunEngineInput, engineResult: EngineResult, dcF
     application,
     result: `In fusible = ${fr(ratedCurrentA)} A ; Un fusible = ${fr(ratedVoltageV)} V`,
     conclusion: pass ? `${fuseName} : ${rule} : condition vérifiée.` : `${fuseName} : condition non vérifiée (${failures.join(' ; ')}).`,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Protection sizing notes (Task 20): the requirements of checks C09–C15 and C24, the numbers they
+// are checked with, and the device fitted.
+// ---------------------------------------------------------------------------------------------
+
+/** Check C14: the AC SPD's Uc against 1.1 × 230 V (checks.ts). */
+const AC_SPD_UC_FACTOR = 1.1;
+const AC_NOMINAL_VOLTAGE_V = 230;
+/** The minimum nominal discharge current of a surge arrester (check C10, DC side). */
+const SPD_MIN_IN_KA = 5;
+/** Check C11: Up < 0.8 × Uw, or 0.5 × Uw when the SPD is more than 10 m from the equipment. */
+const SPD_DISTANCE_LIMIT_M = 10;
+
+export interface ProtectionNotesInput {
+  engineInput: RunEngineInput;
+  engineResult: EngineResult;
+  /** Each fitted protection as `brand model` (projectMeta.protections). */
+  labels: { dcSwitch: string; dcSpd: string; acBreaker: string; acSpd: string };
+  /** The AC SPD's nominal discharge current (kA) from its catalog row; null when unknown. */
+  acSpdInKA: number | null;
+}
+
+/** `Le parafoudre DC choisi est conforme.`, or the failed rules. */
+function conformityConclusion(device: string, result: { pass: boolean; failures: string[] }): string {
+  return result.pass ? `${device} choisi est conforme.` : `${device} choisi n'est pas conforme : ${result.failures.join(' ; ')}.`;
+}
+
+/** An SPD current in kA, or in A below 1 kA (Iscpv is often a few tens of amperes). */
+function kiloAmperes(valueKA: number): string {
+  return valueKA < 1 ? `${fr(valueKA * 1000)} A` : `${fr(valueKA)} kA`;
+}
+
+/** The surge arrester type rule of check C12. */
+function spdTypeRequirement(lightningRod: boolean): string {
+  return lightningRod ? "Bâtiment équipé d'un paratonnerre : type 1" : 'Pas de paratonnerre : type 2';
+}
+
+/** The MPPT with the most modules in series (highest string voltage) and the one with the most strings in parallel (highest current). */
+function worstMppts(engineInput: RunEngineInput): { longest: MpptConfig; widest: MpptConfig } {
+  const mppts = engineInput.array.flatMap((entry) => entry.mppts);
+  return {
+    longest: mppts.reduce((worst, mppt) => (mppt.modulesPerString > worst.modulesPerString ? mppt : worst)),
+    widest: mppts.reduce((worst, mppt) => (mppt.stringsInParallel > worst.stringsInParallel ? mppt : worst)),
+  };
+}
+
+/** The Up rule of check C11, with the factor that applies to this project's SPD distance. */
+function upLimit(engineInput: RunEngineInput): { limitKV: number; application: string } {
+  const withstandKV = engineInput.equipmentImpulseWithstandKV;
+  const factor = engineInput.spdToEquipmentDistanceM > SPD_DISTANCE_LIMIT_M ? 0.5 : 0.8;
+  const limitKV = factor * withstandKV;
+  return { limitKV, application: `Up < ${fr(factor)} × tenue aux chocs (${fr(withstandKV)} kV) = ${fr2(limitKV)} kV` };
+}
+
+const UP_RULE = `Up < 0,8 × Uw (0,5 × Uw si le parafoudre est à plus de ${SPD_DISTANCE_LIMIT_M} m de l'équipement protégé) ; Uw : tenue aux chocs des équipements`;
+
+/** The field design current 1,25 × Isc × Np (× the bifacial gain): protections.ts iscFieldDesign (ISC_FIELD_DESIGN). */
+function designCurrent(engineInput: RunEngineInput, np: number): { formula: string; application: string; valueA: number } {
+  const { module } = engineInput;
+  const bifacial = bifacialFactor(module.bifacialGainPct ?? 0);
+  const valueA = iscFieldDesign(module, np);
+  return {
+    formula: `1,25 × Isc × Np${bifacial.formula}`,
+    application: `1,25 × Isc × Np${bifacial.formula} = 1,25 × ${fr(module.iscA)} × ${fr(np)}${bifacial.application} = ${fr2(valueA)} A`,
+    valueA,
+  };
+}
+
+/** The 5 protection sizing notes, in the order of the reference dossier. */
+export function buildProtectionNotes(input: ProtectionNotesInput): ProtectionNote[] {
+  return [dcSwitchNote(input), dcSpdNote(input), acBreakerNote(input), acSpdNote(input), acDisconnectionNote(input)];
+}
+
+/** Check C09: dcSwitch.ratedVoltageV >= STRING_VOC_TMIN and dcSwitch.ratedCurrentA >= ISC_FIELD_DESIGN. */
+function dcSwitchNote({ engineInput, engineResult, labels }: ProtectionNotesInput): ProtectionNote {
+  const { longest, widest } = worstMppts(engineInput);
+  const vocTmin = engineResult.derived.VOC_TMIN!;
+  const stringVoc = stringVocTmin(engineInput.module, longest.modulesPerString, engineInput.tMinC);
+  const current = designCurrent(engineInput, widest.stringsInParallel);
+  const { ratedVoltageV, ratedCurrentA } = engineInput.dcSwitch;
+  return {
+    title: 'Interrupteur-sectionneur DC',
+    formula: `Ue ≥ Voc(Tmin) de la chaîne = Ns × Voc(Tmin)\nIn ≥ courant de conception du champ = ${current.formula} (UTE C15-712-1)`,
+    application: [`Ns × Voc(Tmin) = ${fr(longest.modulesPerString)} × ${fr2(vocTmin)} = ${fr2(stringVoc)} V`, current.application].join('\n'),
+    result: `Ue = ${fr(ratedVoltageV)} V ≥ ${fr2(stringVoc)} V ; In = ${fr(ratedCurrentA)} A ≥ ${fr2(current.valueA)} A`,
+    chosen: `${labels.dcSwitch} — ${fr(ratedVoltageV)} V, ${fr(ratedCurrentA)} A`,
+    conclusion: conformityConclusion("L'interrupteur-sectionneur DC", conformity(engineResult.checks, ['C09'])),
+  };
+}
+
+/** Checks C10 (Ucpv, In, Iscpv), C11 (Up) and C12 (type). */
+function dcSpdNote({ engineInput, engineResult, labels }: ProtectionNotesInput): ProtectionNote {
+  const { module } = engineInput;
+  const { longest, widest } = worstMppts(engineInput);
+  const spd = engineInput.dcSpd;
+  const ucMin = 1.2 * longest.modulesPerString * module.vocV;
+  const current = designCurrent(engineInput, widest.stringsInParallel);
+  const up = upLimit(engineInput);
+  return {
+    title: 'Parafoudre DC',
+    formula: [
+      'Type 1 si le bâtiment est équipé d\'un paratonnerre, sinon type 2',
+      'Ucpv ≥ 1,2 × Ns × Voc (Voc du module aux STC)',
+      UP_RULE,
+      `In ≥ ${SPD_MIN_IN_KA} kA`,
+      `Iscpv ≥ courant de conception du champ = ${current.formula} (UTE C15-712-1)`,
+    ].join('\n'),
+    application: [
+      spdTypeRequirement(engineInput.site.lightningRod),
+      `1,2 × Ns × Voc = 1,2 × ${fr(longest.modulesPerString)} × ${fr(module.vocV)} = ${fr2(ucMin)} V`,
+      up.application,
+      current.application,
+    ].join('\n'),
+    result: [
+      `Type ${fr(spd.type)}`,
+      `Ucpv = ${fr(spd.ucV)} V ≥ ${fr2(ucMin)} V`,
+      `Up = ${fr(spd.upKV)} kV < ${fr2(up.limitKV)} kV`,
+      `In = ${fr(spd.inKA)} kA ≥ ${SPD_MIN_IN_KA} kA`,
+      `Iscpv = ${kiloAmperes(spd.iscpvKA)} ≥ ${fr2(current.valueA)} A`,
+    ].join('\n'),
+    chosen: `${labels.dcSpd} — type ${fr(spd.type)}, Ucpv ${fr(spd.ucV)} V, Up ${fr(spd.upKV)} kV, In ${fr(spd.inKA)} kA, Iscpv ${kiloAmperes(spd.iscpvKA)}`,
+    conclusion: conformityConclusion('Le parafoudre DC', conformity(engineResult.checks, ['C10', 'C11', 'C12'])),
+  };
+}
+
+/** `30 mA type A`, or a plain breaker. */
+function residualText(engineInput: RunEngineInput): string | null {
+  const rcd = engineInput.rcd;
+  return rcd && rcd.residualCurrentMA !== null && rcd.rcdType !== null ? `${fr(rcd.residualCurrentMA)} mA type ${rcd.rcdType}` : null;
+}
+
+/** Check C13 (Iac max <= In <= Iz' of the AC run) and C24 (30 mA type A or F, B). */
+function acBreakerNote({ engineInput, engineResult, labels }: ProtectionNotesInput): ProtectionNote {
+  const iacMaxA = Math.max(...engineInput.array.map((entry) => entry.inverter.iacMaxA));
+  const izA = engineResult.derived.AC_RUN_IZ_CORRECTED!;
+  const ratedA = engineInput.acBreaker.ratedCurrentA;
+  const residual = residualText(engineInput);
+  return {
+    title: 'Disjoncteur différentiel AC',
+    formula: [
+      "Iac max onduleur ≤ In ≤ Iz' câble AC (NF C 15-100)",
+      "Iz' : courant admissible du câble AC après facteurs de correction",
+      'Protection différentielle : 30 mA type A (ou F, B)',
+    ].join('\n'),
+    application: `Iac max onduleur = ${fr(iacMaxA)} A ; Iz' câble AC (${fr(engineInput.acRun.sectionMm2)} mm²) = ${fr2(izA)} A\n${fr(iacMaxA)} A ≤ In ≤ ${fr2(izA)} A`,
+    result: `In = ${fr(ratedA)} A ; ${residual ? `IΔn = ${residual}` : 'pas de fonction différentielle'}`,
+    chosen: `${labels.acBreaker} — ${fr(ratedA)} A${residual ? `, ${residual}` : ''}`,
+    conclusion: conformityConclusion('Le disjoncteur différentiel AC', conformity(engineResult.checks, ['C13', 'C24'])),
+  };
+}
+
+/**
+ * Checks C14 (Uc) and C12 (type). The engine checks Up (C11) on the DC SPD only, and In ≥ 5 kA on
+ * the DC SPD only (C10): the AC SPD's Up is checked here with the same engine function (checkC11)
+ * and its In with the same 5 kA threshold.
+ */
+function acSpdNote({ engineInput, engineResult, labels, acSpdInKA }: ProtectionNotesInput): ProtectionNote {
+  const spd = engineInput.acSpd;
+  const ucMin = AC_SPD_UC_FACTOR * AC_NOMINAL_VOLTAGE_V;
+  const up = upLimit(engineInput);
+  const engineChecks = conformity(engineResult.checks, ['C14', 'C12']);
+  const upCheck = checkC11(spd.upKV, engineInput.equipmentImpulseWithstandKV, engineInput.spdToEquipmentDistanceM);
+  const failures = [...engineChecks.failures];
+  if (!upCheck.pass) failures.push(upCheck.message);
+  if (acSpdInKA === null) failures.push('courant nominal de décharge In non renseigné');
+  else if (acSpdInKA < SPD_MIN_IN_KA) failures.push(`courant nominal de décharge In inférieur à ${SPD_MIN_IN_KA} kA`);
+  const inText = acSpdInKA === null ? 'In non renseigné' : `In = ${fr(acSpdInKA)} kA ≥ ${SPD_MIN_IN_KA} kA`;
+  return {
+    title: 'Parafoudre AC',
+    formula: [
+      "Type 1 si le bâtiment est équipé d'un paratonnerre, sinon type 2",
+      `Uc ≥ ${fr(AC_SPD_UC_FACTOR)} × Un, Un = ${AC_NOMINAL_VOLTAGE_V} V (NF C 15-100)`,
+      UP_RULE,
+      `In ≥ ${SPD_MIN_IN_KA} kA`,
+    ].join('\n'),
+    application: [
+      spdTypeRequirement(engineInput.site.lightningRod),
+      `${fr(AC_SPD_UC_FACTOR)} × Un = ${fr(AC_SPD_UC_FACTOR)} × ${AC_NOMINAL_VOLTAGE_V} = ${fr2(ucMin)} V`,
+      up.application,
+    ].join('\n'),
+    result: [`Type ${fr(spd.type)}`, `Uc = ${fr(spd.ucV)} V ≥ ${fr2(ucMin)} V`, `Up = ${fr(spd.upKV)} kV < ${fr2(up.limitKV)} kV`, inText].join('\n'),
+    chosen: `${labels.acSpd} — type ${fr(spd.type)}, Uc ${fr(spd.ucV)} V, Up ${fr(spd.upKV)} kV${acSpdInKA === null ? '' : `, In ${fr(acSpdInKA)} kA`}`,
+    conclusion: conformityConclusion('Le parafoudre AC', { pass: failures.length === 0, failures }),
+  };
+}
+
+/**
+ * Check C15: more than one inverter needs a general AC isolator rated above the sum of the
+ * inverters' Iac max; with one inverter the differential breaker is the AC disconnecting device
+ * (no AC isolator, user ruling 2026-10-22).
+ */
+function acDisconnectionNote({ engineInput, engineResult, labels }: ProtectionNotesInput): ProtectionNote {
+  const inverterCount = engineInput.array.length;
+  const formula = [
+    'Plusieurs onduleurs : interrupteur-sectionneur général AC, In > Σ Iac max des onduleurs',
+    'Un seul onduleur : le sectionnement côté AC est assuré par le disjoncteur différentiel',
+  ].join('\n');
+  const breaker = `${labels.acBreaker} — ${fr(engineInput.acBreaker.ratedCurrentA)} A${residualText(engineInput) ? `, ${residualText(engineInput)}` : ''}`;
+  if (inverterCount <= 1) {
+    return {
+      title: 'Sectionnement AC',
+      formula,
+      application: "Nombre d'onduleurs = 1",
+      result: "Pas d'interrupteur-sectionneur AC dédié",
+      chosen: breaker,
+      conclusion: `Un seul onduleur : pas d'interrupteur-sectionneur AC dédié ; le sectionnement côté AC est assuré par le disjoncteur différentiel ${labels.acBreaker}.`,
+    };
+  }
+  const sumIacA = engineInput.array.reduce((sum, entry) => sum + entry.inverter.iacMaxA, 0);
+  const isolatorA = engineInput.acIsolator?.ratedCurrentA ?? null;
+  return {
+    title: 'Sectionnement AC',
+    formula,
+    application: `Nombre d'onduleurs = ${fr(inverterCount)} ; Σ Iac max = ${engineInput.array.map((entry) => fr(entry.inverter.iacMaxA)).join(' + ')} = ${fr(sumIacA)} A`,
+    result: isolatorA === null ? "Aucun interrupteur-sectionneur AC" : `In = ${fr(isolatorA)} A > ${fr(sumIacA)} A`,
+    chosen: isolatorA === null ? '—' : `Interrupteur-sectionneur AC — ${fr(isolatorA)} A`,
+    conclusion: conformityConclusion("L'interrupteur-sectionneur AC", conformity(engineResult.checks, ['C15'])),
   };
 }

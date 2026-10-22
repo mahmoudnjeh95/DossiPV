@@ -385,6 +385,7 @@ export async function processJob(jobId: string): Promise<void> {
         cableRuns: snapshot.cableRuns,
         earthing: earthingRow(snapshot.earthing),
         inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
+        acSpdInKA: typeof snapshot.protections?.acSpd?.inKA === 'number' ? snapshot.protections.acSpd.inKA : null,
       },
       installer,
       dossierNumber: snapshot.dossierNumber,
@@ -662,12 +663,28 @@ export async function processJob(jobId: string): Promise<void> {
     // (bodyStartPage..bodyStartPage+bodyPageCount-1) so no entry can point outside the body or
     // out of order — unlike the previous formula, which mixed absolute and body-relative numbers
     // and could point an earlier section at a later page.
-    const inBodySectionCount =
-      6 + // I-VI always present (incl. Dimensionnement et productible)
-      1 + // VI Structure et lestage
-      (dcFuseRequired ? 1 : 0) + // VII
-      (acIsolatorRequired ? 1 : 0) + // VIII
-      1; // IX Conclusion
+    // Built from the SAME computeSectionNumbers() the body template itself uses (via
+    // buildTemplateData, below) — never a second, separately hardcoded set of roman numerals,
+    // which previously drifted out of sync with the body whenever the conditional sections were
+    // absent (a real regression the scoped re-review caught: the body said "VII. Conclusion" while
+    // the TOC still said "IX. Conclusion" for the same no-fuse/no-isolator project).
+    const sectionNumbers = computeSectionNumbers(dcFuseRequired, acIsolatorRequired);
+    const bodyTitles = [
+      `${sectionNumbers.sectionNumberPreambule} Préambule`,
+      `${sectionNumbers.sectionNumberPresentation} Présentation du projet`,
+      `${sectionNumbers.sectionNumberDimensionnement} Dimensionnement et productible`,
+      `${sectionNumbers.sectionNumberSolution} Description de la solution technique`,
+      `${sectionNumbers.sectionNumberProtections} Dimensionnement des protections`,
+      `${sectionNumbers.sectionNumberCablage} Câblage`,
+      `${sectionNumbers.sectionNumberTerre} Mise à la terre`,
+      `${sectionNumbers.sectionNumberStructure} Structure et lestage`,
+      ...(dcFuseRequired ? [`${sectionNumbers.sectionNumberFusible} Protection DC — fusible`] : []),
+      ...(acIsolatorRequired ? [`${sectionNumbers.sectionNumberSectionneur} Protection AC — sectionneur`] : []),
+      `${sectionNumbers.sectionNumberConclusion} Conclusion`,
+    ];
+    // At most 11 body entries + « Annexes »: well within one TOC page (renderTableOfContents fits
+    // 32 rows per page), so the one-page TOC assumed by STUDY_PAGE_COUNT_BEFORE_BODY still holds.
+    const inBodySectionCount = bodyTitles.length;
     const pageForSection = (index: number): number => {
       // index is 0-based among inBodySectionCount sections, spread evenly across the body's
       // real page count so order and range are both guaranteed, never guessed per-section.
@@ -676,24 +693,8 @@ export async function processJob(jobId: string): Promise<void> {
       return BODY_START_PAGE + Math.min(offset, bodyPageCount - 1);
     };
 
-    // Built from the SAME computeSectionNumbers() the body template itself uses (via
-    // buildTemplateData, below) — never a second, separately hardcoded set of roman numerals,
-    // which previously drifted out of sync with the body whenever VII/VIII were absent (a real
-    // regression the scoped re-review caught: the body said "VII. Conclusion" while the TOC still
-    // said "IX. Conclusion" for the same no-fuse/no-isolator project).
-    const sectionNumbers = computeSectionNumbers(dcFuseRequired, acIsolatorRequired);
-    let sectionIndex = 0;
     const tocEntries = [
-      { title: `${sectionNumbers.sectionNumberPreambule} Préambule`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberPresentation} Présentation du projet`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberDimensionnement} Dimensionnement et productible`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberSolution} Description de la solution technique`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberCablage} Câblage`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberTerre} Mise à la terre`, pageNumber: pageForSection(sectionIndex++) },
-      { title: `${sectionNumbers.sectionNumberStructure} Structure et lestage`, pageNumber: pageForSection(sectionIndex++) },
-      ...(dcFuseRequired ? [{ title: `${sectionNumbers.sectionNumberFusible} Protection DC — fusible`, pageNumber: pageForSection(sectionIndex++) }] : []),
-      ...(acIsolatorRequired ? [{ title: `${sectionNumbers.sectionNumberSectionneur} Protection AC — sectionneur`, pageNumber: pageForSection(sectionIndex++) }] : []),
-      { title: `${sectionNumbers.sectionNumberConclusion} Conclusion`, pageNumber: pageForSection(sectionIndex++) },
+      ...bodyTitles.map((title, index) => ({ title, pageNumber: pageForSection(index) })),
       // The divider (« ANNEXES » + bordereau) follows the body; the drawings and plans are annexes.
       { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount },
     ];

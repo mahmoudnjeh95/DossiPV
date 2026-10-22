@@ -5,7 +5,7 @@ import type { DossierTemplateData } from '@dossipv/docx-template';
 import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
-import { buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
+import { buildProtectionNotes, buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
 
 export interface EarthingRow {
   rodCount: number;
@@ -29,6 +29,8 @@ export interface BuildTemplateDataInput {
     // is only the FIRST inverter's model (see I7: a mixed-model array must not show the wrong
     // model on every other inverter's row).
     inverterBrandModels: string[];
+    /** The AC surge arrester's nominal discharge current In (kA), from the catalog row; null when unknown. */
+    acSpdInKA?: number | null;
   };
   installer: InstallerIdentity;
   /** The installer's own dossier number (e.g. `434 - 303`); empty only for a legacy snapshot. */
@@ -185,20 +187,21 @@ function fmt(value: number, decimals = 1): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
 }
 
-const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'] as const;
+const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'] as const;
 
 /**
  * Computes each section's roman numeral in code instead of hardcoding it as literal template
- * text, so the VII (DC fuse) and VIII (AC isolator) sections — each only present when their own
+ * text, so the DC fuse and AC isolator sections — each only present when their own
  * {#dcFuseRequired}/{#acIsolatorRequired} condition is true — never leave a gap in the sequence
- * (e.g. "VI. Structure" directly followed by literal "IX. Conclusion" when both are absent, the
- * most common single-inverter/no-fuse configuration).
+ * (e.g. "VIII. Structure" directly followed by "IX. Conclusion" when both are absent, the most
+ * common single-inverter/no-fuse configuration). Up to XI sections with both present.
  */
 export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
   sectionNumberPreambule: string;
   sectionNumberPresentation: string;
   sectionNumberDimensionnement: string;
   sectionNumberSolution: string;
+  sectionNumberProtections: string;
   sectionNumberCablage: string;
   sectionNumberTerre: string;
   sectionNumberStructure: string;
@@ -212,6 +215,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
   const sectionNumberPresentation = next();
   const sectionNumberDimensionnement = next();
   const sectionNumberSolution = next();
+  const sectionNumberProtections = next();
   const sectionNumberCablage = next();
   const sectionNumberTerre = next();
   const sectionNumberStructure = next();
@@ -223,6 +227,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
     sectionNumberPresentation,
     sectionNumberDimensionnement,
     sectionNumberSolution,
+    sectionNumberProtections,
     sectionNumberCablage,
     sectionNumberTerre,
     sectionNumberStructure,
@@ -301,6 +306,12 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     inverterSpecMpptMaxV: fmt(engineInput.array[0]!.inverter.mpptMaxV),
     temperatureAssumptions: buildTemperatureAssumptions(engineInput),
     stringSizingNotes: buildStringSizingNotes({ engineInput, engineResult: workerResult.engineResult, dcFuseLabel: projectMeta.protections.dcFuse }),
+    protectionNotes: buildProtectionNotes({
+      engineInput,
+      engineResult: workerResult.engineResult,
+      labels: projectMeta.protections,
+      acSpdInKA: snapshot.acSpdInKA ?? null,
+    }),
     voltageDropDuDcV: fmt(workerResult.engineResult.derived.DU_DC_V!),
     voltageDropDuDcPct: fmt(workerResult.engineResult.derived.DU_DC_PCT!, 2),
     voltageDropDuAcV: fmt(workerResult.engineResult.derived.DU_AC_V!),

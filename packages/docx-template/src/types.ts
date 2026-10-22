@@ -13,6 +13,12 @@ export interface CalculationNote {
   conclusion: string | null;
 }
 
+/** A protection sizing note: the requirements, their numbers, and the device fitted. */
+export interface ProtectionNote extends CalculationNote {
+  /** `brand model — ratings` of the device fitted. */
+  chosen: string;
+}
+
 export interface DossierTemplateData {
   /** True when STEG pieces are missing: the title is followed by the draft notice. */
   isDraft: boolean;
@@ -69,6 +75,8 @@ export interface DossierTemplateData {
   temperatureAssumptions: string;
   /** The string sizing calculation notes (Voc(Tmin) … Fusible DC), in dossier order. */
   stringSizingNotes: CalculationNote[];
+  /** The protection sizing notes (DC switch, DC SPD, differential breaker, AC SPD, AC disconnection). */
+  protectionNotes: ProtectionNote[];
   voltageDropDuDcV: string;
   voltageDropDuDcPct: string;
   voltageDropDuAcV: string;
@@ -87,6 +95,7 @@ export interface DossierTemplateData {
   sectionNumberPresentation: string;
   sectionNumberDimensionnement: string;
   sectionNumberSolution: string;
+  sectionNumberProtections: string;
   sectionNumberCablage: string;
   sectionNumberTerre: string;
   sectionNumberStructure: string;

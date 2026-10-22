@@ -129,6 +129,13 @@ const validSnapshot = {
     dcRun: { sectionMm2: 6, lengthM: 20 },
     site: { phases: 1 },
     acRun: { sectionMm2: 10, lengthM: 15 },
+    // The protection devices every real engine input carries (read by the protection notes).
+    dcSwitch: { ratedVoltageV: 600, ratedCurrentA: 25 },
+    dcSpd: { ucV: 700, inKA: 10, iscpvKA: 0.02, upKV: 2, type: 2 },
+    acBreaker: { ratedCurrentA: 20 },
+    acSpd: { ucV: 275, upKV: 1.5, type: 2 },
+    equipmentImpulseWithstandKV: 4,
+    spdToEquipmentDistanceM: 1,
   },
   projectMeta: {
     moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1, earthingMode: 'DEDICATED_ROD', buildingType: 'HOUSE', floors: 1,
@@ -729,7 +736,7 @@ describe('processJob — fragment assembly details', () => {
     // Conclusion is "VII." here (not a hardcoded "IX.") — with no DC fuse and no AC isolator,
     // VI is directly followed by VII, exactly matching computeSectionNumbers()'s own output
     // (see build-template-data.test.ts's identical no-gap assertion for the body side).
-    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Dimensionnement et productible', 'IV. Description de la solution technique', 'V. Câblage', 'VI. Mise à la terre', 'VII. Structure et lestage', 'VIII. Conclusion'];
+    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Dimensionnement et productible', 'IV. Description de la solution technique', 'V. Dimensionnement des protections', 'VI. Câblage', 'VII. Mise à la terre', 'VIII. Structure et lestage', 'IX. Conclusion'];
     const bodyEntries = bodyTitles.map((title) => entries.find((e) => e.title === title)!);
 
     for (const entry of bodyEntries) {
@@ -741,8 +748,8 @@ describe('processJob — fragment assembly details', () => {
     for (let i = 1; i < bodyEntries.length; i += 1) {
       expect(bodyEntries[i]!.pageNumber).toBeGreaterThanOrEqual(bodyEntries[i - 1]!.pageNumber);
     }
-    expect(entries.find((e) => e.title === 'VIII. Protection DC — fusible')).toBeUndefined();
-    expect(entries.find((e) => e.title === 'IX. Protection AC — sectionneur')).toBeUndefined();
+    expect(entries.find((e) => e.title.endsWith('Protection DC — fusible'))).toBeUndefined();
+    expect(entries.find((e) => e.title.endsWith('Protection AC — sectionneur'))).toBeUndefined();
   });
 
   it('lists the dimensioning and production section right after the project presentation in the TOC', async () => {
@@ -765,12 +772,13 @@ describe('processJob — fragment assembly details', () => {
 
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
     const titles = entries.map((e) => e.title);
-    expect(titles).toContain('VIII. Protection DC — fusible');
-    expect(titles).toContain('IX. Protection AC — sectionneur');
-    const viIndex = titles.indexOf('VII. Structure et lestage');
-    const viiIndex = titles.indexOf('VIII. Protection DC — fusible');
-    const viiiIndex = titles.indexOf('IX. Protection AC — sectionneur');
-    const ixIndex = titles.indexOf('X. Conclusion');
+    expect(titles).toContain('IX. Protection DC — fusible');
+    expect(titles).toContain('X. Protection AC — sectionneur');
+    const viIndex = titles.indexOf('VIII. Structure et lestage');
+    const viiIndex = titles.indexOf('IX. Protection DC — fusible');
+    const viiiIndex = titles.indexOf('X. Protection AC — sectionneur');
+    const ixIndex = titles.indexOf('XI. Conclusion');
+    expect(viIndex).toBeGreaterThan(-1);
     expect(viIndex).toBeLessThan(viiIndex);
     expect(viiIndex).toBeLessThan(viiiIndex);
     expect(viiiIndex).toBeLessThan(ixIndex);
@@ -806,6 +814,7 @@ describe('processJob — fragment assembly details', () => {
         `${n.sectionNumberPresentation} Présentation du projet`,
         `${n.sectionNumberDimensionnement} Dimensionnement et productible`,
         `${n.sectionNumberSolution} Description de la solution technique`,
+        `${n.sectionNumberProtections} Dimensionnement des protections`,
         `${n.sectionNumberCablage} Câblage`,
         `${n.sectionNumberTerre} Mise à la terre`,
         `${n.sectionNumberStructure} Structure et lestage`,
@@ -814,6 +823,18 @@ describe('processJob — fragment assembly details', () => {
         ...(acIsolatorRequired ? [`${n.sectionNumberSectionneur} Protection AC — sectionneur`] : []),
       ]),
     );
+    // 9 body sections always present, the conditional ones, and « Annexes ».
+    expect(entries).toHaveLength(9 + (dcFuseRequired ? 1 : 0) + (acIsolatorRequired ? 1 : 0) + 1);
+  });
+
+  it("hands the AC surge arrester's In from the frozen catalog row to the protection notes", async () => {
+    const snapshot = { ...validSnapshot, protections: { acSpd: { id: 'spd-ac', brand: 'TEST', model: 'AC-40', inKA: 20 } } };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshot });
+
+    await processJob('job-1');
+
+    const data = mocks.fillDossierTemplate.mock.calls[0]![1] as { protectionNotes: { title: string; result: string }[] };
+    expect(data.protectionNotes.find((note) => note.title === 'Parafoudre AC')!.result).toContain('In = 20 kA ≥ 5 kA');
   });
 
   it('builds the cover page and the drawings from the company and the frozen snapshot', async () => {

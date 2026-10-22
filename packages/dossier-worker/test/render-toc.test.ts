@@ -21,6 +21,12 @@ describe('renderTableOfContents', () => {
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
   });
 
+  it('fits the longest dossier TOC (11 body sections I-XI + Annexes) on one page, as the page numbering assumes', async () => {
+    const entries = Array.from({ length: 12 }, (_, i) => ({ title: `Section ${i + 1}`, pageNumber: i + 3 }));
+
+    expect((await PDFDocument.load(await renderTableOfContents(entries))).getPageCount()).toBe(1);
+  });
+
   it('does not throw on a title outside WinAnsi', async () => {
     const buffer = await renderTableOfContents([{ title: `Annexe — حبيب ${String.fromCodePoint(0xfb01)}che`, pageNumber: 3 }]);
 

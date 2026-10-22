@@ -82,6 +82,16 @@ const baseData: DossierTemplateData = {
       conclusion: 'Ns retenu = 5 ≤ min(Ns max, Ns optimal max) = 9 et ≥ Ns min = 3 : condition vérifiée.',
     },
   ],
+  protectionNotes: [
+    {
+      title: 'Interrupteur-sectionneur DC',
+      formula: 'Ue ≥ Voc(Tmin) de la chaîne = Ns × Voc(Tmin)\nIn ≥ courant de conception du champ = 1,25 × Isc × Np (UTE C15-712-1)',
+      application: 'Ns × Voc(Tmin) = 5 × 60,79 = 303,96 V\n1,25 × Isc × Np = 1,25 × 13,92 × 1 = 17,40 A',
+      result: 'Ue = 600 V ≥ 303,96 V ; In = 25 A ≥ 17,40 A',
+      chosen: 'ZJ BENY BB1H-63 — 600 V, 25 A',
+      conclusion: "L'interrupteur-sectionneur DC choisi est conforme.",
+    },
+  ],
   voltageDropDuDcV: '2,3',
   voltageDropDuDcPct: '0,74',
   voltageDropDuAcV: '1,1',
@@ -94,12 +104,13 @@ const baseData: DossierTemplateData = {
   sectionNumberPresentation: 'II.',
   sectionNumberDimensionnement: 'III.',
   sectionNumberSolution: 'IV.',
-  sectionNumberCablage: 'V.',
-  sectionNumberTerre: 'VI.',
-  sectionNumberStructure: 'VII.',
+  sectionNumberProtections: 'V.',
+  sectionNumberCablage: 'VI.',
+  sectionNumberTerre: 'VII.',
+  sectionNumberStructure: 'VIII.',
   sectionNumberFusible: '',
   sectionNumberSectionneur: '',
-  sectionNumberConclusion: 'VIII.',
+  sectionNumberConclusion: 'IX.',
   sizingBranchement: 'Monophasé BT',
   sizingSubscribedPower: '6 kVA',
   sizingConsumption: "4 800 kWh/an (valeur saisie par l'installateur)",
@@ -339,6 +350,29 @@ describe('fillDossierTemplate', () => {
       const tables = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) ?? [];
       for (const table of tables) expect(table.replace(/<[^>]+>/g, '')).not.toContain('Ns optimal max');
     });
+  });
+
+  it('prints the protection sizing notes in their own section, between the solution and the cabling (Task 20)', () => {
+    const filled = fillDossierTemplate(templateBuffer, baseData);
+    const xml = new PizZip(filled).file('word/document.xml')!.asText();
+    const lines = (xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? [])
+      .map((p) => p.replace(/<w:br\/>/g, '|').replace(/<[^>]+>/g, '').replace(/&apos;/g, "'"))
+      .filter((line) => line !== '');
+    const start = lines.indexOf('V. Dimensionnement des protections');
+
+    expect(paragraphsWithStyle(filled, 'Heading1')).toContain('V. Dimensionnement des protections');
+    expect(start).toBeGreaterThan(lines.indexOf('IV.4 Dimensionnement du champ PV'));
+    expect(lines.slice(start + 1, start + 8)).toEqual([
+      'Interrupteur-sectionneur DC',
+      'Exigences : Ue ≥ Voc(Tmin) de la chaîne = Ns × Voc(Tmin)|In ≥ courant de conception du champ = 1,25 × Isc × Np (UTE C15-712-1)',
+      'Application numérique : Ns × Voc(Tmin) = 5 × 60,79 = 303,96 V|1,25 × Isc × Np = 1,25 × 13,92 × 1 = 17,40 A',
+      'Résultat : Ue = 600 V ≥ 303,96 V ; In = 25 A ≥ 17,40 A',
+      'Matériel retenu : ZJ BENY BB1H-63 — 600 V, 25 A',
+      "L'interrupteur-sectionneur DC choisi est conforme.",
+      'VI. Câblage',
+    ]);
+    const chosenRun = (xml.match(/<w:r>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g) ?? []).find((run) => run.includes('ZJ BENY BB1H-63'))!;
+    expect(chosenRun).toContain('<w:color w:val="1F4E9A"/>');
   });
 
   it('titles the dossier with its subject and number, no longer with the company name', () => {

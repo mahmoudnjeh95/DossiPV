@@ -19,16 +19,17 @@ function labelledValue(label: string, tag: string): Paragraph {
 /**
  * A loop over calculation notes (`{#loop}` … `{/loop}`), each in the reference layout: the bold
  * title, `requirementLabel` + the formula, « Application numérique : » + the numbers, the
- * result in blue and, when the note has one, its conclusion in red underlined. A `\n` in a
- * value becomes a line break (fill-template's `linebreaks: true`).
+ * result in blue, the device fitted (`withChosen`) and, when the note has one, its conclusion in
+ * red underlined. A `\n` in a value becomes a line break (fill-template's `linebreaks: true`).
  */
-function calculationNotes(loop: string, requirementLabel: string): Paragraph[] {
+function calculationNotes(loop: string, requirementLabel: string, withChosen = false): Paragraph[] {
   return [
     new Paragraph(`{#${loop}}`),
     new Paragraph({ spacing: { before: 200 }, keepNext: true, children: [new TextRun({ text: '{title}', bold: true })] }),
     new Paragraph({ keepNext: true, children: [new TextRun(requirementLabel), new TextRun('{formula}')] }),
     new Paragraph({ keepNext: true, children: [anLabel(), new TextRun(' {application}')] }),
-    new Paragraph({ children: [new TextRun('Résultat : '), valueRun('{result}')] }),
+    new Paragraph({ keepNext: withChosen, children: [new TextRun('Résultat : '), valueRun('{result}')] }),
+    ...(withChosen ? [new Paragraph({ children: [new TextRun('Matériel retenu : '), valueRun('{chosen}')] })] : []),
     new Paragraph('{#conclusion}'),
     new Paragraph({ children: [conclusionRun('{conclusion}')] }),
     new Paragraph('{/conclusion}'),
@@ -140,6 +141,10 @@ const doc = new Document({
         labelledValue('Nombre de modules : ', '{moduleCount}'),
         labelledValue('Températures de calcul : ', '{temperatureAssumptions}'),
         ...calculationNotes('stringSizingNotes', 'Formule : '),
+
+        // Protection sizing notes (Task 20): the requirements of checks C09–C15 and C24.
+        new Paragraph({ text: '{sectionNumberProtections} Dimensionnement des protections', heading: HeadingLevel.HEADING_1 }),
+        ...calculationNotes('protectionNotes', 'Exigences : ', true),
 
         new Paragraph({ text: '{sectionNumberCablage} Câblage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{cabling}'),
