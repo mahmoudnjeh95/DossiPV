@@ -6,6 +6,7 @@ import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
 import { buildProtectionNotes, buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
+import { buildStabilityNotes, buildStructureRows } from './structure-notes';
 import { buildCableSizingRows, buildVoltageDropLimitsText, buildVoltageDropRows, installMethodText } from './cable-notes';
 
 export interface EarthingRow {
@@ -33,6 +34,10 @@ export interface BuildTemplateDataInput {
     inverterBrandModels: string[];
     /** The AC surge arrester's nominal discharge current In (kA), from the catalog row; null when unknown. */
     acSpdInKA?: number | null;
+    /** The site's PVGIS-convention azimuth (0 = south); null/absent when unknown. */
+    azimuthDeg?: number | null;
+    /** True when the project holds the structure conformity attestation (annex N°3). */
+    hasStructureAttestation?: boolean;
   };
   installer: InstallerIdentity;
   /** The installer's own dossier number (e.g. `434 - 303`); empty only for a legacy snapshot. */
@@ -270,6 +275,14 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     siteBuildingLine: buildSiteBuildingLine(projectMeta),
     earthingDetails: buildEarthingDetails(snapshot.earthing, projectMeta.earthingMode),
     structure: workerResult.sections.structure,
+    structureRows: buildStructureRows({
+      engineInput,
+      engineResult: workerResult.engineResult,
+      material: projectMeta.structureMaterial,
+      azimuthDeg: snapshot.azimuthDeg ?? null,
+      hasAttestation: snapshot.hasStructureAttestation ?? false,
+    }),
+    stabilityNotes: buildStabilityNotes({ engineInput, engineResult: workerResult.engineResult }),
     conclusionText: workerResult.sections.conclusion,
     moduleBrandModel: projectMeta.moduleBrandModel,
     inverterBrandModel: projectMeta.inverterBrandModel,

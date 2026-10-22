@@ -387,6 +387,8 @@ export async function processJob(jobId: string): Promise<void> {
         earthing: earthingRow(snapshot.earthing),
         inverterBrandModels: (snapshot.arrayConfig?.inverters ?? []).map((inv) => `${inv.inverter.brand} ${inv.inverter.model}`),
         acSpdInKA: typeof snapshot.protections?.acSpd?.inKA === 'number' ? snapshot.protections.acSpd.inKA : null,
+        azimuthDeg: snapshot.site?.azimuthDeg ?? null,
+        hasStructureAttestation: typeof snapshot.structure?.structureAttestationFileId === 'string',
       },
       installer,
       dossierNumber: snapshot.dossierNumber,

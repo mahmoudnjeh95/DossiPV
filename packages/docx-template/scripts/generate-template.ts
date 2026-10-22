@@ -239,6 +239,14 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberStructure} Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),
+        styledTable(
+          [
+            ['Désignation', 'Valeur'],
+            ['{#structureRows}{label}', [valueRun('{value}{/structureRows}')]],
+          ],
+          { header: true, labelColumn: true },
+        ),
+        ...calculationNotes('stabilityNotes', 'Formule : '),
         new Paragraph('{#stabilityComputed}'),
         specTable([
           ['Poids total (N)', '{stabilityWeightN}'],

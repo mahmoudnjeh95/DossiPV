@@ -102,6 +102,10 @@ export interface DossierTemplateData {
   /** Rows of the earthing table. */
   earthingDetails: { label: string; value: string }[];
   structure: string;
+  /** Rows of the structure table (material, modules, tilt, orientation, wind, ballast, attestation). */
+  structureRows: { label: string; value: string }[];
+  /** The wind stability note (check C18); empty when the project supplied no stability inputs. */
+  stabilityNotes: CalculationNote[];
   // Not `conclusion`: docxtemplater resolves a null tag inside a loop from the enclosing scope, so
   // a calculation note's null `conclusion` would print the dossier's conclusion section.
   conclusionText: string;

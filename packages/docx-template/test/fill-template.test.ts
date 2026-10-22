@@ -34,6 +34,13 @@ const baseData: DossierTemplateData = {
   draftMissingText: '',
   siteBuildingLine: 'Bâtiment : maison individuelle, toiture au niveau R+1',
   earthingDetails: [{ label: 'Schéma de liaison à la terre', value: 'TT' }],
+  structureRows: [
+    { label: 'Matériau', value: 'ALUMINIUM' },
+    { label: 'Lestage', value: '2 × 25 kg par cadre' },
+  ],
+  stabilityNotes: [
+    { title: 'Stabilité au vent', formula: '(P − Cp × S) × D > 2 × Ct × S × H', application: '(1 200 − 10 × 2) × 1 > 2 × 5 × 2 × 1', result: '1 180 > 20', conclusion: 'condition vérifiée' },
+  ],
   companyName: 'SolarPro Tunisie',
   companyAddress: '12 Rue de la République, Tunis',
   companyPhone: '+216 71 000 000',
@@ -294,6 +301,16 @@ describe('fillDossierTemplate', () => {
     expect(withStability).toContain('Poids total (N)');
     expect(withoutStability).not.toContain('Poids total (N)');
     expect(withoutStability).not.toContain('Stabilité — membre gauche');
+  });
+
+  it('renders the structure rows and the wind stability note', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, baseData));
+
+    expect(text).toContain('2 × 25 kg par cadre');
+    expect(text).toContain('Stabilité au vent');
+    expect(text).toContain('condition vérifiée');
+    const without = extractText(fillDossierTemplate(templateBuffer, { ...baseData, stabilityNotes: [] }));
+    expect(without).not.toContain('Stabilité au vent');
   });
 
   it('fills the module and inverter spec tables and the calculation-result tables', () => {

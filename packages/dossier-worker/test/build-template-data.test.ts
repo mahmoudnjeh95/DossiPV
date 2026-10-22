@@ -1210,3 +1210,57 @@ describe('cable sizing and voltage drop notes (Task 21)', () => {
     expect(cursor).toBeLessThan(text.indexOf('VII. Mise à la terre'));
   });
 });
+
+describe('structure section (Task 22)', () => {
+  const withSnapshot = (extra: Partial<BuildTemplateDataInput['snapshot']>): DossierTemplateData => {
+    const { input } = notesInput(habibKhedhiraFixture);
+    return buildTemplateData({ ...input, snapshot: { ...input.snapshot, ...extra } });
+  };
+
+  it('lists the structure rows of the reference fixture from the project data', () => {
+    const rows = withSnapshot({ azimuthDeg: 0, hasStructureAttestation: true }).structureRows;
+    const byLabel = Object.fromEntries(rows.map((row) => [row.label, row.value]));
+
+    expect(byLabel['Matériau']).toBe('ALUMINUM');
+    expect(byLabel['Nombre de modules']).toBe('5');
+    expect(byLabel['Masse des modules']).toMatch(/^5 × .+ kg$/);
+    expect(byLabel['Inclinaison']).toBe('30 °');
+    expect(byLabel['Orientation']).toBe('azimut 0° (0° = plein sud)');
+    expect(byLabel['Vitesse de vent de calcul']).toBe('120 km/h');
+    expect(byLabel['Lestage']).toBe('2 × 75 kg par cadre');
+    expect(byLabel['Attestation de conformité']).toBe('annexe N°3');
+  });
+
+  it('says à fournir without the attestation and defers the ballast when none is set', () => {
+    const { input } = notesInput({ ...habibKhedhiraFixture, structure: { ...habibKhedhiraFixture.structure, ballastPerFrame: 0, ballastMassKg: 0 } });
+    const byLabel = Object.fromEntries(buildTemplateData(input).structureRows.map((row) => [row.label, row.value]));
+
+    expect(byLabel['Attestation de conformité']).toBe('à fournir');
+    expect(byLabel['Lestage']).toBe("à définir sur site selon l'étude de stabilité");
+    expect(byLabel['Orientation']).toBe('à définir');
+  });
+
+  it("prints the stability formula with the engine's own numbers when it is computed", () => {
+    const { engineResult, input } = notesInput(habibKhedhiraFixture);
+    const [note] = buildTemplateData(input).stabilityNotes;
+    const d = engineResult.derived;
+
+    expect(note!.formula).toContain('(P − Cp × S) × D > 2 × Ct × S × H');
+    const two = (value: number): string => value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    expect(note!.result).toBe(`${two(d.STABILITY_LHS!)} > ${two(d.STABILITY_RHS!)}`);
+    expect(note!.conclusion).toBe('condition vérifiée');
+    expect(note!.application).not.toMatch(/NaN|undefined|d.d/);
+  });
+
+  it('prints no stability note when the project supplied no stability inputs', () => {
+    const { input } = notesInput({ ...habibKhedhiraFixture, structure: NO_STABILITY_STRUCTURE });
+    expect(buildTemplateData(input).stabilityNotes).toEqual([]);
+  });
+
+  it('fills the structure table and the stability note into the real Word template', () => {
+    const text = filledTemplateText(withSnapshot({ azimuthDeg: 0, hasStructureAttestation: true }));
+    expect(text).toContain('Vitesse de vent de calcul');
+    expect(text).toContain('Stabilité au vent');
+    expect(text).toContain('condition vérifiée');
+  });
+});
