@@ -41,6 +41,7 @@ const inverterEntry = {
 };
 
 beforeEach(() => {
+  process.env.FILE_STORAGE_ROOT = '/tmp/test-storage';
   vi.clearAllMocks();
   mocks.readFile.mockImplementation((path: string) => {
     const name = String(path).replace(/\\/g, '/').split('/').pop();

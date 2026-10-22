@@ -13,7 +13,7 @@ import { pdfToText } from './pdf-text';
 import { parseStegList } from './parse-steg-list';
 import { parseAnmeList } from './parse-anme-list';
 import { DATA_DIR, SOURCE_LISTS } from './sources';
-import { runImport, uploadDatasheet } from './run-import';
+import { assertStorageConfigured, runImport, uploadDatasheet } from './run-import';
 import { runAttachCuratedDatasheets } from './attach-curated-datasheets';
 import { db } from '@dossipv/db';
 import { runPurge } from './purge-test-items';
@@ -91,6 +91,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
     await runPurge(db, { apply: args.includes('--apply'), log: console.log });
   },
   'attach-curated-datasheets': async (args) => {
+    if (args.includes('--apply')) assertStorageConfigured();
     await runAttachCuratedDatasheets(db, { apply: args.includes('--apply'), log: console.log, fetchPdf: uploadDatasheet });
     await db.$disconnect();
   },

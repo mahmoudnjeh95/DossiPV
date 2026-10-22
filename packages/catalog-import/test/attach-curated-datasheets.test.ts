@@ -53,3 +53,13 @@ describe('runAttachCuratedDatasheets', () => {
     expect((spdFindMany.mock.calls[0]![0] as { where: unknown }).where).toMatchObject({ ownerCompanyId: null, datasheetFileId: null, datasheetSourceUrl: { not: null } });
   });
 });
+
+describe('runAttachCuratedDatasheets — failure cause', () => {
+  it('logs the exact failure line and the error message beside it', async () => {
+    const { db } = fakeDb([row('a', 'https://x/a.pdf')]);
+    const log = vi.fn();
+    await run(db, true, vi.fn().mockRejectedValue(new Error('FILE_STORAGE_ROOT is not set.')), log);
+    expect(log).toHaveBeenCalledWith('fiche non téléchargée : https://x/a.pdf');
+    expect(log).toHaveBeenCalledWith('  cause : FILE_STORAGE_ROOT is not set.');
+  });
+});

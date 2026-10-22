@@ -31,11 +31,17 @@ export async function uploadDatasheet(url: string, model: string): Promise<strin
   return file.id;
 }
 
+/** Saving datasheets needs a storage folder; without one nothing can be stored, so non-dry commands stop before touching the database. */
+export function assertStorageConfigured(env: NodeJS.ProcessEnv = process.env): void {
+  if (!env.FILE_STORAGE_ROOT) throw new Error("FILE_STORAGE_ROOT n'est pas défini : les fiches techniques ne peuvent pas être enregistrées. Définissez-le (dossier de stockage) puis relancez.");
+}
+
 /** A datasheet that cannot be downloaded or saved never stops the run: the item is imported without it, with a note. */
 async function datasheetOrNote(url: string, model: string): Promise<{ datasheetFileId: string | null; notes: string[] }> {
   try {
     return { datasheetFileId: await uploadDatasheet(url, model), notes: [] };
   } catch (error) {
+    if ((error as Error).message.includes('FILE_STORAGE_ROOT')) throw error;
     console.warn(`Fiche technique non téléchargée pour ${model} : ${(error as Error).message}`);
     return { datasheetFileId: null, notes: [`Fiche technique non téléchargée : ${url}`] };
   }
@@ -104,6 +110,7 @@ export async function importCurated(
 }
 
 export async function runImport({ dryRun }: { dryRun: boolean }): Promise<void> {
+  if (!dryRun) assertStorageConfigured();
   const modules = JSON.parse(await readFile(join(DATA_DIR, 'pv-modules.json'), 'utf8')) as CatalogPvModuleEntry[];
   const inverters = JSON.parse(await readFile(join(DATA_DIR, 'inverters.json'), 'utf8')) as CatalogInverterEntry[];
   const counts: Record<string, number> = {};

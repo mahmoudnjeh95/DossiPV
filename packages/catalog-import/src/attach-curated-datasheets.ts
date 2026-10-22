@@ -33,8 +33,9 @@ export async function runAttachCuratedDatasheets(
         const fileId = await options.fetchPdf(row.datasheetSourceUrl, row.model);
         await delegate.update({ where: { id: row.id }, data: { datasheetFileId: fileId } });
         attached += 1;
-      } catch {
+      } catch (error) {
         options.log(`fiche non téléchargée : ${row.datasheetSourceUrl}`);
+        options.log(`  cause : ${error instanceof Error ? error.message : String(error)}`);
         failed += 1;
       }
     }
