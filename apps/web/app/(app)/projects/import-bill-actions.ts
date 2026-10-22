@@ -133,6 +133,7 @@ export async function importStegBillAction(
     if (error instanceof BillReadingError) {
       return { error: error.message };
     }
+    console.error('Bill reading failed', error);
     return { error: 'Lecture de la facture impossible, réessayez.' };
   }
   const check = checkBillReading(reading);

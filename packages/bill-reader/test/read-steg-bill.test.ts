@@ -72,4 +72,38 @@ describe('readStegBill', () => {
     const client = { messages: { parse } } as unknown as Anthropic;
     await expect(readStegBill({ bytes, mediaType: 'image/png' }, client)).rejects.toThrow('connection reset');
   });
+
+  it('keeps the schema under the API limit of 16 union-typed parameters', async () => {
+    const { client, parse } = clientReturning({ parsed_output: testBill, stop_reason: 'end_turn' });
+    await readStegBill({ bytes, mediaType: 'image/png' }, client);
+    const countUnions = (node: unknown): number => {
+      if (Array.isArray(node)) return node.reduce((n: number, v) => n + countUnions(v), 0);
+      if (node === null || typeof node !== 'object') return 0;
+      const obj = node as Record<string, unknown>;
+      let n = Array.isArray(obj.type) || 'anyOf' in obj ? 1 : 0;
+      for (const v of Object.values(obj)) n += countUnions(v);
+      return n;
+    };
+    const unions = countUnions(firstCall(parse).output_config.format.schema);
+    expect(unions).toBeGreaterThan(0);
+    expect(unions).toBeLessThanOrEqual(16);
+  });
+
+  it('maps empty strings back to null and drops empty notes', async () => {
+    const raw = {
+      ...testBill,
+      clientName: '',
+      civility: '',
+      periodEnd: '',
+      stegReference: 'REF-1',
+      readingNotes: ['', 'flou'],
+    };
+    const { client } = clientReturning({ parsed_output: raw, stop_reason: 'end_turn' });
+    const reading = await readStegBill({ bytes, mediaType: 'image/png' }, client);
+    expect(reading.clientName).toBeNull();
+    expect(reading.civility).toBeNull();
+    expect(reading.periodEnd).toBeNull();
+    expect(reading.stegReference).toBe('REF-1');
+    expect(reading.readingNotes).toEqual(['flou']);
+  });
 });

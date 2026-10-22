@@ -17,7 +17,10 @@ export class BillReadingError extends Error {
   }
 }
 
+// The API caps union-typed parameters at 16 per schema, so only numbers are nullable; text fields
+// are plain strings where "" means unreadable (mapped back to null after parsing).
 const nullable = (type: string): { type: string[] } => ({ type: [type, 'null'] });
+const text = { type: 'string' };
 
 const lineJsonSchema = {
   type: 'object',
@@ -35,21 +38,21 @@ const lineJsonSchema = {
 };
 
 const readingProperties = {
-  clientName: nullable('string'),
-  civility: { enum: ['M', 'Mme', 'Mlle', 'societe', null] },
-  address: nullable('string'),
-  postalCode: nullable('string'),
-  city: nullable('string'),
-  stegDistrict: nullable('string'),
-  governorate: nullable('string'),
+  clientName: text,
+  civility: { type: 'string', enum: ['M', 'Mme', 'Mlle', 'societe', ''] },
+  address: text,
+  postalCode: text,
+  city: text,
+  stegDistrict: text,
+  governorate: text,
   governorateInferred: { type: 'boolean' },
-  stegReference: nullable('string'),
-  meterNumber: nullable('string'),
-  periodStart: nullable('string'),
-  periodEnd: nullable('string'),
+  stegReference: text,
+  meterNumber: text,
+  periodStart: text,
+  periodEnd: text,
   monthsBilled: nullable('number'),
   subscribedPowerKVA: nullable('number'),
-  tariffLabel: nullable('string'),
+  tariffLabel: text,
   lines: { type: 'array', items: lineJsonSchema },
   totalElectricityKWh: nullable('number'),
   electricityAmountTND: nullable('number'),
@@ -69,11 +72,29 @@ const billOutputFormat = {
 
 const SYSTEM_PROMPT = [
   "Tu lis une facture STEG tunisienne (Société Tunisienne de l'Electricité et du Gaz), rédigée en français et en arabe, fournie en photo ou en PDF.",
-  "Recopie chaque valeur exactement comme elle est imprimée. Si une valeur est illisible, absente ou incertaine, renvoie null : ne l'estime jamais et ne la calcule jamais.",
+  "Recopie chaque valeur exactement comme elle est imprimée. Si une valeur est illisible, absente ou incertaine, renvoie une chaîne vide \"\" pour un texte (ou null pour un nombre) : ne l'estime jamais et ne la calcule jamais.",
   "Le gouvernorat peut être déduit de la ville ou du district STEG ; dans ce cas seulement, mets governorateInferred à true (false s'il est imprimé sur la facture).",
   'Les quantités sont en kWh. Les dates sont au format ISO (AAAA-MM-JJ).',
   "Signale dans readingNotes toute difficulté de lecture ou toute incohérence que tu remarques.",
 ].join(' ');
+
+type RawReading = Omit<StegBillReading, 'civility' | 'readingNotes'> & { civility: string; readingNotes: string[] };
+
+const TEXT_FIELDS = [
+  'clientName', 'address', 'postalCode', 'city', 'stegDistrict', 'governorate',
+  'stegReference', 'meterNumber', 'periodStart', 'periodEnd', 'tariffLabel',
+] as const;
+
+/** Maps the "" the model returns for unreadable text back to null, keeping StegBillReading's types. */
+export function normalizeBillReading(raw: RawReading): StegBillReading {
+  const reading = { ...raw } as unknown as StegBillReading & Record<string, unknown>;
+  for (const field of TEXT_FIELDS) {
+    if (raw[field] === '') reading[field] = null;
+  }
+  reading.civility = raw.civility === '' ? null : (raw.civility as StegBillReading['civility']);
+  reading.readingNotes = raw.readingNotes.filter((note) => note !== '');
+  return reading;
+}
 
 const USER_INSTRUCTIONS = 'Lis cette facture STEG et renvoie les champs demandés.';
 
@@ -111,5 +132,5 @@ export async function readStegBill(input: BillInput, client: Anthropic): Promise
   if (response.stop_reason === 'refusal' || response.parsed_output == null) {
     throw new BillReadingError();
   }
-  return response.parsed_output;
+  return normalizeBillReading(response.parsed_output);
 }
