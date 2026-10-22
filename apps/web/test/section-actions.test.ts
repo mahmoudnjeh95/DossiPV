@@ -388,6 +388,21 @@ describe('saveArrayAction', () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
+  it('accepts a single-phase site connection and no longer offers three-phase', async () => {
+    mocks.moduleFindFirst.mockResolvedValue({ id: 'module-1' });
+    mocks.inverterFindMany.mockResolvedValue([{ id: 'inverter-1', mpptCount: 2 }]);
+    mocks.transaction.mockResolvedValue(undefined);
+    const withPhase = (phaseConnection: string): ArrayPayload => ({
+      ...payload,
+      inverters: [{ ...payload.inverters[0]!, phaseConnection }],
+    });
+
+    expect(await saveArrayAction('project-1', withPhase('MONO'))).toBeUndefined();
+    expect(await saveArrayAction('project-1', withPhase('3PH'))).toEqual({
+      error: 'Raccordement de phase invalide.',
+    });
+  });
+
   it('rejects non-integer or out-of-range string counts before any lookup', async () => {
     const bad: ArrayPayload = {
       ...payload,

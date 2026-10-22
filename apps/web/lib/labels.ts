@@ -50,11 +50,12 @@ export const EQUIPMENT_LOCATION_OPTIONS: Option[] = [
   { value: 'OUTDOOR_SUN', label: 'Extérieur au soleil' },
 ];
 
+/** A single-phase site is "Monophasé"; on a three-phase site the PV inverter goes on one phase. */
 export const PHASE_CONNECTION_OPTIONS: Option[] = [
+  { value: 'MONO', label: 'Monophasé' },
   { value: 'L1', label: 'L1' },
   { value: 'L2', label: 'L2' },
   { value: 'L3', label: 'L3' },
-  { value: '3PH', label: 'Triphasé' },
 ];
 
 export const CABLE_SECTION_OPTIONS: number[] = [1.5, 2.5, 4, 6, 10, 16, 25, 35, 50, 70, 95, 120];

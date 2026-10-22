@@ -389,7 +389,7 @@
             "required": ["inverterId", "mppts"],
             "properties": {
               "inverterId": { "type": "string", "x-ref": "equipmentLibrary.inverters[].id" },
-              "phaseConnection": { "type": "string", "enum": ["L1", "L2", "L3", "3PH"] },
+              "phaseConnection": { "type": "string", "enum": ["MONO", "L1", "L2", "L3"] },
               "mppts": {
                 "type": "array",
                 "minItems": 1,

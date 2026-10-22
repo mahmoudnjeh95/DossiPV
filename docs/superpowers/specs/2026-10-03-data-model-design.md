@@ -675,7 +675,7 @@ model ProjectArrayInverter {
   arrayConfig       ProjectArrayConfig @relation(fields: [arrayConfigId], references: [id])
   inverterId        String
   inverter          Inverter           @relation(fields: [inverterId], references: [id])
-  phaseConnection   String?            // "L1" | "L2" | "L3" | "3PH"
+  phaseConnection   String?            // "MONO" | "L1" | "L2" | "L3"
 
   mppts             ProjectArrayMppt[]
 
