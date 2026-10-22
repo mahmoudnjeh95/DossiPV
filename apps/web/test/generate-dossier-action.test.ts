@@ -79,6 +79,20 @@ describe('generateDossierAction', () => {
     expect(mocks.jobCreate).not.toHaveBeenCalled();
   });
 
+  it('refuses to generate with generic equipment', async () => {
+    const project = buildFullProject();
+    const protections = project.protections!;
+    mocks.projectFindFirst.mockResolvedValue({
+      ...project,
+      protections: { ...protections, acSpd: { ...protections.acSpd, brand: 'Generic', model: 'AC-SPD-1', datasheetSourceUrl: null, ownerCompanyId: null } },
+    });
+    expect(await generateDossierAction('project-1', undefined)).toEqual({
+      error: 'Équipement sans fiche technique : Generic AC-SPD-1. Remplacez-le avant de générer.',
+    });
+    expect(mocks.jobFindMany).not.toHaveBeenCalled();
+    expect(mocks.jobCreate).not.toHaveBeenCalled();
+  });
+
   it('refuses when the subscription is expired', async () => {
     mocks.subscriptionFindUnique.mockResolvedValue({
       ...activeSubscription,

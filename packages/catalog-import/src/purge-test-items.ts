@@ -20,6 +20,19 @@ export function selectTestItems(items: SharedItemRow[]): { deletable: SharedItem
   };
 }
 
+/** The `LibraryItem` foreign key that points at each equipment table. */
+const LIBRARY_FK: Record<EquipmentTable, string> = {
+  pvModule: 'pvModuleId',
+  inverter: 'inverterId',
+  spd: 'spdId',
+  dcSwitch: 'dcSwitchId',
+  dcFuse: 'dcFuseId',
+  acBreaker: 'acBreakerId',
+  acIsolator: 'acIsolatorId',
+  cable: 'cableId',
+  accessory: 'accessoryId',
+};
+
 interface ProjectRef { projectId: string }
 interface TableSpec {
   table: EquipmentTable;
@@ -106,7 +119,8 @@ export async function runPurge(
     const used = item.referencingProjectIds.length > 0
       ? `utilisé par ${item.referencingProjectIds.length} projet(s): ${item.referencingProjectIds.join(', ')}`
       : 'supprimable';
-    return `[${item.table}] ${item.brand} ${item.model} — sans source (test ou saisie manuelle) — ${used} — dans ${libraries} bibliothèque(s)`;
+    const removal = item.referencingProjectIds.length > 0 && libraries > 0 ? ` — sera retiré de ${libraries} bibliothèque(s)` : '';
+    return `[${item.table}] ${item.brand} ${item.model} — sans source (test ou saisie manuelle) — ${used} — dans ${libraries} bibliothèque(s)${removal}`;
   };
   for (const item of [...deletable, ...referenced]) options.log(describe(item));
 
@@ -115,6 +129,10 @@ export async function runPurge(
       for (const item of deletable) {
         if (item.table === 'cable') await tx.cableSection.deleteMany({ where: { cableId: item.id } });
         await (tx as unknown as Record<string, Delegate>)[item.table]!.deleteMany({ where: { id: item.id } });
+      }
+      // Referenced unsourced items stay for their projects but leave every library.
+      for (const item of referenced) {
+        await tx.libraryItem.deleteMany({ where: { [LIBRARY_FK[item.table]]: item.id } });
       }
     });
   }

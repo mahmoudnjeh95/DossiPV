@@ -86,6 +86,24 @@ describe('library actions', () => {
     expect(m.mockRevalidatePath).toHaveBeenCalledWith('/library');
   });
 
+  it('refuses an unsourced shared item', async () => {
+    m.inverterFindFirst.mockResolvedValueOnce({ id: 'inv-1' }).mockResolvedValueOnce(null);
+    const result = await addToLibraryAction('INVERTER', 'inv-1');
+    expect(result).toEqual({ error: 'Équipement sans fiche technique source : non disponible.' });
+    const check = m.inverterFindFirst.mock.calls[1]?.[0] as { where: unknown };
+    expect(check.where).toEqual({
+      id: 'inv-1',
+      OR: [{ datasheetSourceUrl: { not: null } }, { ownerCompanyId: 'company-1' }],
+    });
+    expect(m.upsert).not.toHaveBeenCalled();
+  });
+
+  it("allows the company's own item without a source", async () => {
+    m.inverterFindFirst.mockResolvedValue({ id: 'inv-own' });
+    expect(await addToLibraryAction('INVERTER', 'inv-own')).toBeUndefined();
+    expect(m.upsert).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses a draft or another company's private item", async () => {
     m.inverterFindFirst.mockResolvedValue(null);
     const result = await addToLibraryAction('INVERTER', 'inv-x');
@@ -101,6 +119,7 @@ describe('library actions', () => {
     expect(query.where).toEqual({
       ownerCompanyId: null,
       catalogStatus: 'PUBLISHED',
+      datasheetSourceUrl: { not: null },
       libraryItems: { none: { companyId: 'company-1' } },
     });
     expect(m.createMany).toHaveBeenCalledWith({

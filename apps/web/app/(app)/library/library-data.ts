@@ -1,5 +1,6 @@
 import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
+import { provenanceScope } from '../../../lib/project-access';
 
 export interface LibraryRow {
   itemId: string;
@@ -67,7 +68,7 @@ export async function loadSections(companyId: string, mode: 'library' | 'catalog
   const base: Record<string, unknown> =
     mode === 'library'
       ? { libraryItems: { some: { companyId } } }
-      : { OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: companyId }] };
+      : { AND: [{ OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: companyId }] }, provenanceScope(companyId)] };
   const query = (numeric: 'pmaxW' | 'pacW' | null = null): { where: never; orderBy: typeof order } => {
     const search = searchWhere(q.trim(), numeric);
     return { where: (Object.keys(search).length > 0 ? { AND: [base, search] } : base) as never, orderBy: order };

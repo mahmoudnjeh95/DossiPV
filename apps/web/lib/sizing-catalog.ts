@@ -8,7 +8,7 @@ import type {
   ReferenceMethod,
   SizingCatalog,
 } from '@dossipv/engine';
-import { catalogScope, libraryScope } from './project-access';
+import { catalogScope, libraryScope, provenanceScope } from './project-access';
 import { toIsoDate } from './project-engine-input';
 
 const CONDUCTORS: readonly string[] = ['Cu', 'Al'] satisfies ConductorType[];
@@ -38,7 +38,7 @@ function isoOrNull(date: Date | null): string | null {
  * other than 1 or 3, an unknown conductor, insulation or reference method) are left out.
  */
 export async function loadSizingCatalog(companyId: string): Promise<SizingCatalog> {
-  const query = { where: { AND: [libraryScope(companyId), catalogScope(companyId)] }, orderBy: { id: 'asc' as const } };
+  const query = { where: { AND: [libraryScope(companyId), catalogScope(companyId), provenanceScope(companyId)] }, orderBy: { id: 'asc' as const } };
   const [modules, inverters, dcSwitches, dcFuses, spds, acBreakers, cables] = await Promise.all([
     db.pvModule.findMany(query),
     db.inverter.findMany(query),

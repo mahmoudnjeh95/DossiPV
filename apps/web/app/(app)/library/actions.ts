@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { catalogScope } from '../../../lib/project-access';
+import { catalogScope, provenanceScope } from '../../../lib/project-access';
 
 export type LibraryActionState = { error: string } | undefined;
 
@@ -29,6 +29,7 @@ const KINDS: Record<EquipmentKind, { fk: string; catalog: () => CatalogDelegate 
 };
 
 const BULK_KINDS: readonly string[] = ['SPD', 'DC_SWITCH', 'DC_FUSE', 'AC_BREAKER', 'AC_ISOLATOR', 'CABLE'];
+const UNSOURCED_ERROR = 'Équipement sans fiche technique source : non disponible.';
 const MAX_PRICE_TND = 1_000_000;
 
 export async function addToLibraryAction(kind: EquipmentKind, itemId: string): Promise<LibraryActionState> {
@@ -42,6 +43,12 @@ export async function addToLibraryAction(kind: EquipmentKind, itemId: string): P
     .findFirst({ where: { id: itemId, ...catalogScope(user.companyId) }, select: { id: true } });
   if (!found) {
     return { error: 'Équipement introuvable dans le catalogue.' };
+  }
+  const sourced = await entry
+    .catalog()
+    .findFirst({ where: { id: itemId, ...provenanceScope(user.companyId) }, select: { id: true } });
+  if (!sourced) {
+    return { error: UNSOURCED_ERROR };
   }
   await db.libraryItem.upsert({
     where: { [`companyId_${entry.fk}`]: { companyId: user.companyId, [entry.fk]: itemId } } as never,
@@ -59,7 +66,12 @@ export async function addAllOfKindAction(kind: BulkKind): Promise<LibraryActionS
   }
   const entry = KINDS[kind];
   const missing = await entry.catalog().findMany({
-    where: { ownerCompanyId: null, catalogStatus: 'PUBLISHED', libraryItems: { none: { companyId: user.companyId } } },
+    where: {
+      ownerCompanyId: null,
+      catalogStatus: 'PUBLISHED',
+      datasheetSourceUrl: { not: null },
+      libraryItems: { none: { companyId: user.companyId } },
+    },
     select: { id: true },
   });
   if (missing.length > 0) {

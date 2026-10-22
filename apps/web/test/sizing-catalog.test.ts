@@ -28,6 +28,7 @@ vi.mock('@dossipv/db', async () => {
   };
 });
 
+import { provenanceScope } from '../lib/project-access';
 import { loadSizingCatalog, missingLibraryKinds } from '../lib/sizing-catalog';
 
 const HOMOLOGATED = new Date('2027-12-31T00:00:00Z');
@@ -129,6 +130,7 @@ describe('loadSizingCatalog', () => {
       AND: [
         { libraryItems: { some: { companyId: 'company-1' } } },
         { OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: 'company-1' }] },
+        provenanceScope('company-1'),
       ],
     };
     for (const findMany of [m.pvModule, m.inverter, m.dcSwitch, m.dcFuse, m.spd, m.acBreaker, m.cable]) {

@@ -1,5 +1,6 @@
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../app/(app)/layout';
+import type { ProjectForEngine } from './project-engine-input';
 
 /**
  * Loads a project by id *scoped to the caller's company* — every project query in the
@@ -30,6 +31,47 @@ export function catalogScope(companyId: string): {
 } {
   // Shared items are visible once a super-admin has published them; private items always.
   return { OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: companyId }] };
+}
+
+/**
+ * Only equipment with a traceable datasheet source reaches a dossier: a shared item must carry its
+ * `datasheetSourceUrl`; a company's own item is its responsibility. Combine with `catalogScope`.
+ */
+export function provenanceScope(companyId: string): {
+  OR: [{ datasheetSourceUrl: { not: null } }, { ownerCompanyId: string }];
+} {
+  return { OR: [{ datasheetSourceUrl: { not: null } }, { ownerCompanyId: companyId }] };
+}
+
+interface EquipmentLike {
+  brand: string;
+  model: string;
+  ownerCompanyId: string | null;
+  datasheetSourceUrl: string | null;
+}
+
+/** `brand model` of every chosen item that is shared (no owner) and has no datasheet source. */
+export function unsourcedEquipment(project: ProjectForEngine): string[] {
+  const protections = project.protections;
+  const items: (EquipmentLike | null | undefined)[] = [
+    project.arrayConfig?.module,
+    ...(project.arrayConfig?.inverters.map((entry) => entry.inverter) ?? []),
+    protections?.dcSpd,
+    protections?.dcSwitch,
+    protections?.dcFuse,
+    protections?.acBreaker,
+    protections?.acSpd,
+    protections?.acIsolator,
+    ...project.cableRuns.map((run) => run.cable),
+    project.earthing?.earthCable,
+    project.cablingConfig?.connector,
+    project.cablingConfig?.cableTray,
+    project.earthing?.distributionBlock,
+  ];
+  const names = items.flatMap((item) =>
+    item && item.ownerCompanyId === null && item.datasheetSourceUrl === null ? [`${item.brand} ${item.model}`] : [],
+  );
+  return [...new Set(names)];
 }
 
 /**

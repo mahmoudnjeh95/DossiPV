@@ -10,6 +10,7 @@ import {
   buildEngineInput,
   type ProjectMetaForWorker,
 } from '../../../../lib/project-engine-input';
+import { unsourcedEquipment } from '../../../../lib/project-access';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
 import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
 
@@ -72,6 +73,11 @@ export async function generateDossierAction(
   });
   if (!project) {
     return { error: 'Projet introuvable.' };
+  }
+
+  const unsourced = unsourcedEquipment(project);
+  if (unsourced.length > 0) {
+    return { error: `Équipement sans fiche technique : ${unsourced.join(', ')}. Remplacez-le avant de générer.` };
   }
 
   const subscriptionRow = await db.subscription.findUnique({

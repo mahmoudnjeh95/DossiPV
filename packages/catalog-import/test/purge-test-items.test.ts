@@ -34,6 +34,7 @@ describe('runPurge', () => {
       cableSection: { deleteMany: vi.fn().mockResolvedValue({ count: 2 }) },
       cable: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
       spd: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      libraryItem: { deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
     };
     const db = {
       cable: { findMany: vi.fn().mockResolvedValue([{ ...base, id: 'c1', model: 'C', cableRuns: [], earthingCableFor: [] }]), deleteMany: vi.fn() },
@@ -70,6 +71,23 @@ describe('runPurge', () => {
     expect(tx.spd.deleteMany).toHaveBeenCalledTimes(1);
     expect(tx.spd.deleteMany).toHaveBeenCalledWith({ where: { id: 's2' } });
     expect(tx.cable.deleteMany).toHaveBeenCalledWith({ where: { id: 'c1' } });
+  });
+
+  it('apply removes library entries of referenced unsourced items', async () => {
+    const { db, tx } = fakeDb();
+    await run(db, true);
+    expect(tx.libraryItem.deleteMany).toHaveBeenCalledTimes(1);
+    expect(tx.libraryItem.deleteMany).toHaveBeenCalledWith({ where: { spdId: 's1' } });
+  });
+
+  it('dry run says which libraries a referenced item will leave', async () => {
+    const { db } = fakeDb();
+    const lines: string[] = [];
+    db.spd.findMany.mockResolvedValue([
+      { brand: 'Generic', datasheetSourceUrl: null, id: 's1', model: 'S1', protectionsDc: [{ projectId: 'p1' }], protectionsAc: [], libraryItems: [{ companyId: 'a' }, { companyId: 'b' }] },
+    ]);
+    await runPurge(db as never, { apply: false, log: (line) => lines.push(line) });
+    expect(lines.some((line) => line.includes('— sera retiré de 2 bibliothèque(s)'))).toBe(true);
   });
 
   it('apply deletes cable sections before the cable, inside the transaction', async () => {
