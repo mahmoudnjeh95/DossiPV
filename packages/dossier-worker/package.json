@@ -13,7 +13,8 @@
     "dossipv-dossier-worker": "./src/run-worker.ts"
   },
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "tsc -b && node -e \"require('fs').cpSync('src/assets','dist/src/assets',{recursive:true})\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
