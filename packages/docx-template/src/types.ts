@@ -1,3 +1,18 @@
+/**
+ * One calculation note in the reference dossier's layout: the formula, its « Application
+ * numérique » with the project's own numbers, the result and, when the note checks a rule, its
+ * conclusion (printed red and underlined). All pre-formatted French text (decimal comma); a
+ * multi-line value uses `\n` (the template fills with `linebreaks: true`).
+ */
+export interface CalculationNote {
+  title: string;
+  formula: string;
+  application: string;
+  result: string;
+  /** Null when the note only computes a value and checks no rule. */
+  conclusion: string | null;
+}
+
 export interface DossierTemplateData {
   /** True when STEG pieces are missing: the title is followed by the draft notice. */
   isDraft: boolean;
@@ -31,7 +46,9 @@ export interface DossierTemplateData {
   /** Rows of the earthing table. */
   earthingDetails: { label: string; value: string }[];
   structure: string;
-  conclusion: string;
+  // Not `conclusion`: docxtemplater resolves a null tag inside a loop from the enclosing scope, so
+  // a calculation note's null `conclusion` would print the dossier's conclusion section.
+  conclusionText: string;
   moduleBrandModel: string;
   inverterBrandModel: string;
   pDcW: string;
@@ -48,11 +65,10 @@ export interface DossierTemplateData {
   inverterSpecVdcMaxV: string;
   inverterSpecMpptMinV: string;
   inverterSpecMpptMaxV: string;
-  stringSizingNsMin: string;
-  stringSizingNsMax: string;
-  stringSizingNsOptMax: string;
-  stringSizingNpMax: string;
-  stringSizingNpOpt: string;
+  /** `Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)`, printed above the string sizing notes. */
+  temperatureAssumptions: string;
+  /** The string sizing calculation notes (Voc(Tmin) … Fusible DC), in dossier order. */
+  stringSizingNotes: CalculationNote[];
   voltageDropDuDcV: string;
   voltageDropDuDcPct: string;
   voltageDropDuAcV: string;

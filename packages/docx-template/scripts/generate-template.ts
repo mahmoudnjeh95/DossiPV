@@ -1,7 +1,7 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType, BorderStyle } from 'docx';
-import { DOCUMENT_STYLES, styledTable, valueRun } from './template-styles';
+import { DOCUMENT_STYLES, anLabel, conclusionRun, styledTable, valueRun } from './template-styles';
 
 /** A label / value table: salmon labels, the values (template tags) in blue. */
 function specTable(rows: [string, string][]): Table {
@@ -14,6 +14,26 @@ function specTable(rows: [string, string][]): Table {
 /** `label` in black followed by a blue value tag, as one paragraph. */
 function labelledValue(label: string, tag: string): Paragraph {
   return new Paragraph({ children: [new TextRun(label), valueRun(tag)] });
+}
+
+/**
+ * A loop over calculation notes (`{#loop}` … `{/loop}`), each in the reference layout: the bold
+ * title, `requirementLabel` + the formula, « Application numérique : » + the numbers, the
+ * result in blue and, when the note has one, its conclusion in red underlined. A `\n` in a
+ * value becomes a line break (fill-template's `linebreaks: true`).
+ */
+function calculationNotes(loop: string, requirementLabel: string): Paragraph[] {
+  return [
+    new Paragraph(`{#${loop}}`),
+    new Paragraph({ spacing: { before: 200 }, keepNext: true, children: [new TextRun({ text: '{title}', bold: true })] }),
+    new Paragraph({ keepNext: true, children: [new TextRun(requirementLabel), new TextRun('{formula}')] }),
+    new Paragraph({ keepNext: true, children: [anLabel(), new TextRun(' {application}')] }),
+    new Paragraph({ children: [new TextRun('Résultat : '), valueRun('{result}')] }),
+    new Paragraph('{#conclusion}'),
+    new Paragraph({ children: [conclusionRun('{conclusion}')] }),
+    new Paragraph('{/conclusion}'),
+    new Paragraph(`{/${loop}}`),
+  ];
 }
 
 /** One side of the closing signature table: a heading, the signer, then room to sign. */
@@ -80,7 +100,8 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberSolution} Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{solution}'),
-        new Paragraph({ text: "III.1 Caractéristiques du module", heading: HeadingLevel.HEADING_2 }),
+        // Sub-section numbers follow the section's own computed numeral (e.g. `IV.` + `1`).
+        new Paragraph({ text: '{sectionNumberSolution}1 Caractéristiques du module', heading: HeadingLevel.HEADING_2 }),
         labelledValue('Module : ', '{moduleBrandModel}'),
         specTable([
           ['Puissance crête (Wc)', '{moduleSpecPmaxW}'],
@@ -89,7 +110,7 @@ const doc = new Document({
           ['Tension Voc (V)', '{moduleSpecVocV}'],
           ['Courant Isc (A)', '{moduleSpecIscA}'],
         ]),
-        new Paragraph({ text: "III.2 Caractéristiques de l'onduleur", heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: "{sectionNumberSolution}2 Caractéristiques de l'onduleur", heading: HeadingLevel.HEADING_2 }),
         // A mixed-model array lists every inverter's own brand/model and power here (I7) — the
         // DC-side voltage/MPPT range fields below stay single-value since this slice doesn't
         // carry them per entry, and in practice every inverter on one array shares a compatible
@@ -100,18 +121,7 @@ const doc = new Document({
           ['Plage MPPT min (V)', '{inverterSpecMpptMinV}'],
           ['Plage MPPT max (V)', '{inverterSpecMpptMaxV}'],
         ]),
-        new Paragraph({ text: 'III.3 Dimensionnement du champ PV', heading: HeadingLevel.HEADING_2 }),
-        labelledValue('Puissance totale : ', '{pDcW}'),
-        labelledValue('Nombre de modules : ', '{moduleCount}'),
-        specTable([
-          ['Ns min', '{stringSizingNsMin}'],
-          ['Ns max', '{stringSizingNsMax}'],
-          ['Ns optimal max', '{stringSizingNsOptMax}'],
-          ['Np max', '{stringSizingNpMax}'],
-          ['Np optimal', '{stringSizingNpOpt}'],
-        ]),
-
-        new Paragraph({ text: 'III.4 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: '{sectionNumberSolution}3 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
         new Paragraph('{#inverters}'),
         new Paragraph('{inverterLabel} ({inverterBrandModel})'),
         styledTable(
@@ -123,6 +133,14 @@ const doc = new Document({
         ),
         new Paragraph('{/inverters}'),
 
+        // The string sizing calculation notes justify the configuration above (Task 19); they
+        // replace the bare Ns/Np results table STEG rejected (remark 6).
+        new Paragraph({ text: '{sectionNumberSolution}4 Dimensionnement du champ PV', heading: HeadingLevel.HEADING_2 }),
+        labelledValue('Puissance totale : ', '{pDcW}'),
+        labelledValue('Nombre de modules : ', '{moduleCount}'),
+        labelledValue('Températures de calcul : ', '{temperatureAssumptions}'),
+        ...calculationNotes('stringSizingNotes', 'Formule : '),
+
         new Paragraph({ text: '{sectionNumberCablage} Câblage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{cabling}'),
         styledTable(
@@ -132,7 +150,7 @@ const doc = new Document({
           ],
           { header: true, labelColumn: true },
         ),
-        new Paragraph({ text: 'IV.1 Chute de tension', heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: '{sectionNumberCablage}1 Chute de tension', heading: HeadingLevel.HEADING_2 }),
         specTable([
           ['Chute de tension DC (V)', '{voltageDropDuDcV}'],
           ['Chute de tension DC (%)', '{voltageDropDuDcPct}'],
@@ -171,7 +189,7 @@ const doc = new Document({
         new Paragraph('{/acIsolatorRequired}'),
 
         new Paragraph({ text: '{sectionNumberConclusion} Conclusion', heading: HeadingLevel.HEADING_1 }),
-        new Paragraph('{conclusion}'),
+        new Paragraph('{conclusionText}'),
 
         new Paragraph(''),
         new Table({

@@ -5,6 +5,7 @@ import type { DossierTemplateData } from '@dossipv/docx-template';
 import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
+import { buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
 
 export interface EarthingRow {
   rodCount: number;
@@ -261,7 +262,7 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     siteBuildingLine: buildSiteBuildingLine(projectMeta),
     earthingDetails: buildEarthingDetails(snapshot.earthing, projectMeta.earthingMode),
     structure: workerResult.sections.structure,
-    conclusion: workerResult.sections.conclusion,
+    conclusionText: workerResult.sections.conclusion,
     moduleBrandModel: projectMeta.moduleBrandModel,
     inverterBrandModel: projectMeta.inverterBrandModel,
     pDcW: formatPlaceholder('P_DC_W', workerResult.engineResult.derived),
@@ -298,11 +299,8 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     inverterSpecVdcMaxV: fmt(engineInput.array[0]!.inverter.vdcMaxV),
     inverterSpecMpptMinV: fmt(engineInput.array[0]!.inverter.mpptMinV),
     inverterSpecMpptMaxV: fmt(engineInput.array[0]!.inverter.mpptMaxV),
-    stringSizingNsMin: fmt(workerResult.engineResult.derived.NS_MIN!, 0),
-    stringSizingNsMax: fmt(workerResult.engineResult.derived.NS_MAX!, 0),
-    stringSizingNsOptMax: fmt(workerResult.engineResult.derived.NS_OPT_MAX!, 0),
-    stringSizingNpMax: fmt(workerResult.engineResult.derived.NP_MAX!, 0),
-    stringSizingNpOpt: fmt(workerResult.engineResult.derived.NP_OPT!, 0),
+    temperatureAssumptions: buildTemperatureAssumptions(engineInput),
+    stringSizingNotes: buildStringSizingNotes({ engineInput, engineResult: workerResult.engineResult, dcFuseLabel: projectMeta.protections.dcFuse }),
     voltageDropDuDcV: fmt(workerResult.engineResult.derived.DU_DC_V!),
     voltageDropDuDcPct: fmt(workerResult.engineResult.derived.DU_DC_PCT!, 2),
     voltageDropDuAcV: fmt(workerResult.engineResult.derived.DU_AC_V!),

@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { buildTemplateData } from '../src/build-template-data';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import PizZip from 'pizzip';
+import { fillDossierTemplate, type DossierTemplateData } from '@dossipv/docx-template';
+import { buildTemplateData, type BuildTemplateDataInput } from '../src/build-template-data';
 import type { DossierWorkerResult } from '../src/generate-dossier-document';
-import type { RunEngineInput } from '@dossipv/engine';
+import { runEngine, type EngineResult, type RunEngineInput } from '@dossipv/engine';
+import { habibKhedhiraFixture } from './fixtures/habib-khedhira';
 import type { ProjectMeta } from '../src/placeholder-map';
 import type { ProductionSimulation } from '../src/run-simulation';
 import type { SnapshotConsumption } from '../src/job-snapshot';
@@ -200,11 +205,6 @@ describe('buildTemplateData', () => {
     expect(result.inverterSpecVdcMaxV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMinV).toEqual(expect.any(String));
     expect(result.inverterSpecMpptMaxV).toEqual(expect.any(String));
-    expect(result.stringSizingNsMin).toEqual(expect.any(String));
-    expect(result.stringSizingNsMax).toEqual(expect.any(String));
-    expect(result.stringSizingNsOptMax).toEqual(expect.any(String));
-    expect(result.stringSizingNpMax).toEqual(expect.any(String));
-    expect(result.stringSizingNpOpt).toEqual(expect.any(String));
     expect(result.voltageDropDuDcV).toEqual(expect.any(String));
     expect(result.voltageDropDuDcPct).toEqual(expect.any(String));
     expect(result.voltageDropDuAcV).toEqual(expect.any(String));
@@ -500,5 +500,338 @@ describe('building and earthing lines', () => {
 
   it('leaves the building line empty when the type is unknown', () => {
     expect(buildTemplateData({ ...base, projectMeta: { ...projectMeta, buildingType: null } }).siteBuildingLine).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// Calculation notes (Tasks 19-20): every printed number is checked against the engine, on the
+// reference fixture and on fixtures that take other branches (2 strings + bifacial + a Vmp
+// coefficient; 3 strings needing a DC fuse), so the notes cannot be hard-coded to one case.
+// ---------------------------------------------------------------------------------------------
+
+/** Material and wind only (no ballast stability inputs), so check C18 is not run. */
+const NO_STABILITY_STRUCTURE: RunEngineInput['structure'] = { ballastPerFrame: 2, ballastMassKg: 75, windSpeedKmh: 120, tiltDeg: 30 };
+
+/** 2 strings of 4 bifacial modules (+10 %) with their own Vmp coefficient: no fuse (Np = Ncmax). */
+const twoStringBifacialFixture: RunEngineInput = {
+  ...habibKhedhiraFixture,
+  module: { ...habibKhedhiraFixture.module, bifacial: true, bifacialGainPct: 10, tempCoeffVmpPct: -0.3 },
+  array: [
+    {
+      inverter: { ...habibKhedhiraFixture.array[0]!.inverter, pacW: 5000, sacVA: 5000, iscMaxPerMpptA: 40, idcMaxPerMpptA: 32, iacMaxA: 22 },
+      mppts: [{ stringsInParallel: 2, modulesPerString: 4 }],
+    },
+  ],
+  dcSwitch: { ratedVoltageV: 1000, ratedCurrentA: 63 },
+  dcSpd: { ucV: 1000, inKA: 20, iscpvKA: 40, upKV: 3.5, type: 2 },
+  acBreaker: { ratedCurrentA: 25 },
+  acRun: { ...habibKhedhiraFixture.acRun, sectionMm2: 6, izBaseA: 41 },
+  spdToEquipmentDistanceM: 12,
+  equipmentImpulseWithstandKV: 8,
+  structure: NO_STABILITY_STRUCTURE,
+};
+
+/** 3 strings of 6 modules on one MPPT: Np = 3 > Ncmax = 2, a 20 A / 1 000 V string fuse is fitted. */
+const fusedFixture: RunEngineInput = {
+  ...habibKhedhiraFixture,
+  array: [
+    {
+      inverter: { ...habibKhedhiraFixture.array[0]!.inverter, pacW: 10000, sacVA: 10000, iscMaxPerMpptA: 50, idcMaxPerMpptA: 45 },
+      mppts: [{ stringsInParallel: 3, modulesPerString: 6 }],
+    },
+  ],
+  dcSwitch: { ratedVoltageV: 1000, ratedCurrentA: 63 },
+  dcFuse: { ratedCurrentA: 20, ratedVoltageV: 1000 },
+  dcSpd: { ucV: 1000, inKA: 20, iscpvKA: 40, upKV: 2.5, type: 2 },
+  dcRun: { ...habibKhedhiraFixture.dcRun, sectionMm2: 10, izBaseA: 75 },
+  structure: NO_STABILITY_STRUCTURE,
+};
+
+const NOTE_FIXTURES: [string, RunEngineInput][] = [
+  ['reference fixture', habibKhedhiraFixture],
+  ['2 bifacial strings', twoStringBifacialFixture],
+  ['3 fused strings', fusedFixture],
+];
+
+function notesInput(engineInput: RunEngineInput, meta: ProjectMeta = projectMeta): { engineResult: EngineResult; input: BuildTemplateDataInput } {
+  const engineResult = runEngine(engineInput);
+  return {
+    engineResult,
+    input: {
+      workerResult: { sections: workerResult.sections, engineResult },
+      engineInput,
+      projectMeta: meta,
+      snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
+      ...installerInputs,
+      ...sizingInputs,
+    },
+  };
+}
+
+const TEMPLATE = readFileSync(join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx'));
+
+/** The text of the real Word template filled with `data`, paragraphs separated by newlines. */
+function filledTemplateText(data: DossierTemplateData): string {
+  const xml = new PizZip(fillDossierTemplate(TEMPLATE, data)).file('word/document.xml')!.asText();
+  return xml
+    .replace(/<w:br\/>/g, '\n')
+    .replace(/<\/w:p>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/** Independent of the code under test: 2 decimals, decimal comma. */
+function two(value: number): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
+function frNumber(text: string): number {
+  return Number(text.replace(/[  ]/g, '').replace(',', '.'));
+}
+
+/**
+ * Evaluates a printed « Application numérique » expression (e.g. `partie entière de (550 / 60,79)`)
+ * with a tiny recursive-descent parser: numbers with a decimal comma, + - × /, brackets,
+ * `max(a ; b)`, `partie entière de` (floor) and `partie entière supérieure de` (ceil).
+ */
+function evaluatePrinted(expression: string): number {
+  const source = expression
+    .replace(/partie entière supérieure de/g, 'C')
+    .replace(/partie entière de/g, 'F')
+    .replace(/max\(/g, 'M(')
+    .replace(/[  ](?=\d)/g, '')
+    .replace(/\[/g, '(')
+    .replace(/\]/g, ')')
+    .replace(/\s+/g, '');
+  let index = 0;
+  const peek = (): string => source[index] ?? '';
+  const consume = (char: string): void => {
+    if (source[index] !== char) throw new Error(`expected ${char} at ${index} in ${source}`);
+    index += 1;
+  };
+  const parseFactor = (): number => {
+    const char = peek();
+    if (char === '-') {
+      index += 1;
+      return -parseFactor();
+    }
+    if (char === '(') {
+      index += 1;
+      const value = parseExpression();
+      consume(')');
+      return value;
+    }
+    if (char === 'F' || char === 'C') {
+      index += 1;
+      const value = parseFactor();
+      return char === 'F' ? Math.floor(value) : Math.ceil(value);
+    }
+    if (char === 'M') {
+      index += 1;
+      consume('(');
+      const a = parseExpression();
+      consume(';');
+      const b = parseExpression();
+      consume(')');
+      return Math.max(a, b);
+    }
+    const match = /^\d+(,\d+)?/.exec(source.slice(index));
+    if (!match) throw new Error(`unexpected ${char} at ${index} in ${source}`);
+    index += match[0].length;
+    return frNumber(match[0]);
+  };
+  const parseTerm = (): number => {
+    let value = parseFactor();
+    while (peek() === '×' || peek() === '/') {
+      const op = source[index++];
+      const right = parseFactor();
+      value = op === '×' ? value * right : value / right;
+    }
+    return value;
+  };
+  function parseExpression(): number {
+    let value = parseTerm();
+    while (peek() === '+' || peek() === '-') {
+      const op = source[index++];
+      const right = parseTerm();
+      value = op === '+' ? value + right : value - right;
+    }
+    return value;
+  }
+  const value = parseExpression();
+  if (index !== source.length) throw new Error(`trailing input at ${index} in ${source}`);
+  return value;
+}
+
+/**
+ * Every line of a computed note reads `Symbol = expression = … = value [unit]`: the printed
+ * expression, evaluated, must give the printed value (within the 2-decimal display rounding).
+ * Returns the last line's printed value.
+ */
+function expectApplicationConsistent(application: string): number {
+  let last = Number.NaN;
+  for (const line of application.split('\n')) {
+    const segments = line.split(' = ');
+    expect(segments.length, line).toBeGreaterThanOrEqual(3);
+    const printed = frNumber(segments[segments.length - 1]!.replace(/ (V|A|kV)$/, ''));
+    const evaluated = evaluatePrinted(segments[1]!);
+    expect(Math.abs(evaluated - printed), line).toBeLessThanOrEqual(0.006 + 1e-3 * Math.abs(printed));
+    last = printed;
+  }
+  return last;
+}
+
+const STRING_NOTE_TITLES = [
+  'Tension de circuit ouvert du module à Tmin : Voc(Tmin)',
+  'Tension au point de puissance maximale à Tmin : Vmp(Tmin)',
+  'Tension au point de puissance maximale à Tmax : Vmp(Tmax)',
+  'Courant de court-circuit du module à Tmax : Isc(Tmax)',
+  'Nombre maximal de modules en série : Ns max',
+  'Nombre minimal de modules en série : Ns min',
+  'Nombre optimal maximal de modules en série : Ns optimal max',
+  'Nombre maximal de chaînes en parallèle : Np max',
+  'Nombre optimal de chaînes en parallèle : Np optimal',
+  'Ns retenu',
+  'Rapport de puissance DC/AC',
+  'Nombre maximal de chaînes sans protection (Ncmax)',
+  'Fusible DC',
+];
+
+describe('string sizing notes (Task 19)', () => {
+  it.each(NOTE_FIXTURES)('lists the 13 notes in order, each result equal to the engine derived value (%s)', (_name, fixture) => {
+    const { engineResult, input } = notesInput(fixture);
+    const d = engineResult.derived;
+    const notes = buildTemplateData(input).stringSizingNotes;
+    const count = (n: number, one: string, many: string): string => `${n} ${n > 1 ? many : one}`;
+
+    expect(engineResult.hasBlockingFailure).toBe(false);
+    expect(notes.map((note) => note.title)).toEqual(STRING_NOTE_TITLES);
+    expect(notes.slice(0, 9).map((note) => note.result)).toEqual([
+      `Voc(Tmin) = ${two(d.VOC_TMIN!)} V`,
+      `Vmp(Tmin) = ${two(d.VMP_TMIN!)} V`,
+      `Vmp(Tmax) = ${two(d.VMP_TMAX!)} V`,
+      `Isc(Tmax) = ${two(d.ISC_TMAX!)} A`,
+      `Ns max = ${count(d.NS_MAX!, 'module', 'modules')}`,
+      `Ns min = ${count(d.NS_MIN!, 'module', 'modules')}`,
+      `Ns optimal max = ${count(d.NS_OPT_MAX!, 'module', 'modules')}`,
+      `Np max = ${count(d.NP_MAX!, 'chaîne', 'chaînes')}`,
+      `Np optimal = ${count(d.NP_OPT!, 'chaîne', 'chaînes')}`,
+    ]);
+    expect(notes[10]!.result).toBe(`Rapport DC/AC = ${two(d.POWER_RATIO!)}`);
+    expect(notes[11]!.result).toBe(`Ncmax = ${count(d.NC_MAX_NO_FUSE!, 'chaîne', 'chaînes')}`);
+    expect(notes[9]!.conclusion).toContain('condition vérifiée');
+    expect(notes[10]!.conclusion).toContain('condition vérifiée');
+    expect(notes[12]!.conclusion).not.toContain('non vérifiée');
+  });
+
+  it.each(NOTE_FIXTURES)('prints applications whose own numbers compute the engine value (%s)', (_name, fixture) => {
+    const { engineResult, input } = notesInput(fixture);
+    const d = engineResult.derived;
+    const notes = buildTemplateData(input).stringSizingNotes;
+    const derivedByNote = [d.VOC_TMIN, d.VMP_TMIN, d.VMP_TMAX, d.ISC_TMAX, d.NS_MAX, d.NS_MIN, d.NS_OPT_MAX, d.NP_MAX, d.NP_OPT];
+
+    derivedByNote.forEach((value, i) => {
+      const printed = expectApplicationConsistent(notes[i]!.application);
+      expect(printed, notes[i]!.title).toBeCloseTo(value!, 2);
+    });
+    expect(expectApplicationConsistent(notes[10]!.application)).toBeCloseTo(d.POWER_RATIO!, 2);
+    expect(expectApplicationConsistent(notes[11]!.application)).toBe(d.NC_MAX_NO_FUSE);
+    // Every number carries a decimal comma, never a point.
+    for (const note of notes) expect(`${note.formula}${note.application}${note.result}${note.conclusion ?? ''}`).not.toMatch(/\d\.\d|NaN|undefined/);
+  });
+
+  it('states the temperature assumptions and drops the bare results table (STEG remark 6)', () => {
+    const data = buildTemplateData(notesInput(habibKhedhiraFixture).input);
+
+    expect(data.temperatureAssumptions).toBe('Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)');
+    for (const key of ['stringSizingNsMin', 'stringSizingNsMax', 'stringSizingNsOptMax', 'stringSizingNpMax', 'stringSizingNpOpt']) {
+      expect(data).not.toHaveProperty(key);
+    }
+  });
+
+  it('writes the reference fixture notes with the formulas and numbers of the engine', () => {
+    const notes = buildTemplateData(notesInput(habibKhedhiraFixture).input).stringSizingNotes;
+
+    expect(notes[0]).toEqual({
+      title: 'Tension de circuit ouvert du module à Tmin : Voc(Tmin)',
+      formula: 'Voc(Tmin) = Voc × [1 + βVoc/100 × (Tmin - 25)]\nVoc : tension de circuit ouvert du module aux STC ; βVoc : coefficient de température de Voc (%/°C)',
+      application: 'Voc(Tmin) = 55,9 × [1 + (-0,25)/100 × (-10 - 25)] = 60,79 V',
+      result: 'Voc(Tmin) = 60,79 V',
+      conclusion: null,
+    });
+    // No Vmp coefficient on the datasheet: the engine uses the Pmax one, and the note says so.
+    expect(notes[1]!.formula).toContain('pris égal à celui de Pmax');
+    expect(notes[1]!.application).toBe('Vmp(Tmin) = 46,5 × [1 + (-0,28)/100 × (-10 - 25)] = 51,06 V');
+    expect(notes[4]!.application).toBe('Ns max = partie entière de (550 / 60,79) = partie entière de 9,04 = 9');
+    expect(notes[5]!.application).toBe('Ns min = partie entière supérieure de (max(90 ; 100) / 38,69) = partie entière supérieure de 2,59 = 3');
+    expect(notes[8]!.application).toBe(
+      'Imp(Tmax) = 13,33 × [1 + 0,045/100 × (85 - 25)] = 13,69 A\nNp optimal = partie entière de (16 / 13,69) = partie entière de 1,16 = 1',
+    );
+    expect(notes[3]!.formula).not.toContain('Gbif');
+    expect(notes[9]).toMatchObject({
+      application: '3 ≤ 5 ≤ min(9 ; 10) = 9',
+      conclusion: 'Ns retenu = 5 ≤ min(Ns max, Ns optimal max) = 9 et ≥ Ns min = 3 : condition vérifiée.',
+    });
+    expect(notes[10]).toMatchObject({
+      formula: 'Rapport DC/AC = P DC / Pac = (N modules × Pmax) / Pac onduleur\nPlage admise : 0,9 ≤ Rapport DC/AC ≤ 1,3',
+      application: `Rapport DC/AC = (5 × 620) / 3${NNBSP}000 = 1,03`,
+      conclusion: '0,9 ≤ 1,03 ≤ 1,3 : condition vérifiée.',
+    });
+    expect(notes[11]!.formula).toContain('UTE C15-712-1');
+    expect(notes[12]).toMatchObject({
+      application: 'Np = 1 ≤ Ncmax = 2',
+      result: 'Aucun fusible DC requis',
+      conclusion: 'Pas de fusible : 1 chaîne(s) par MPPT ≤ Ncmax = 2.',
+    });
+    for (const note of notes.slice(0, 9)) expect(note.conclusion).toBeNull();
+  });
+
+  it('carries the bifacial gain and the datasheet Vmp coefficient into the formulas', () => {
+    const notes = buildTemplateData(notesInput(twoStringBifacialFixture).input).stringSizingNotes;
+
+    expect(notes[1]!.formula).not.toContain('Pmax');
+    expect(notes[1]!.application).toContain('× [1 + (-0,3)/100 × (-10 - 25)]');
+    expect(notes[3]!.formula).toContain('× (1 + Gbif/100)');
+    expect(notes[3]!.application).toContain('× (1 + 10/100)');
+    expect(notes[8]!.application).toContain('× (1 + 10/100)');
+    expect(notes[12]!.conclusion).toBe('Pas de fusible : 2 chaîne(s) par MPPT ≤ Ncmax = 2.');
+  });
+
+  it('fills the real Word template with every note of the reference fixture', () => {
+    const data = buildTemplateData(notesInput(habibKhedhiraFixture).input);
+    const text = filledTemplateText(data);
+
+    expect(text).toContain(data.temperatureAssumptions);
+    let cursor = 0;
+    for (const note of data.stringSizingNotes) {
+      for (const part of [note.title, note.application.split('\n')[0]!, note.result, note.conclusion ?? note.result]) {
+        const at = text.indexOf(part, cursor);
+        expect(at, part).toBeGreaterThanOrEqual(cursor);
+        cursor = at;
+      }
+    }
+    expect(text).not.toMatch(/undefined|NaN/);
+  });
+
+  it('sizes the string fuse with the engine bounds when Np > Ncmax', () => {
+    const { engineResult, input } = notesInput(fusedFixture, { ...projectMeta, protections: { ...projectMeta.protections, dcFuse: 'TEST gPV-20' } });
+    const fuseNote = buildTemplateData(input).stringSizingNotes[12]!;
+    const lower = 1.1 * 1.25 * fusedFixture.module.iscA;
+
+    expect(fuseNote.application).toBe(
+      [
+        'Np = 3 > Ncmax = 2 : fusible requis',
+        `1,1 × 1,25 × Isc = 1,1 × 1,25 × 13,92 = ${two(lower)} A ≤ In fusible ≤ IRM = 25 A`,
+        `Un fusible ≥ Ns × Voc(Tmin) = 6 × 60,79 = ${two(engineResult.derived.STRING_VOC_TMIN!)} V`,
+      ].join('\n'),
+    );
+    expect(fuseNote.result).toBe(`In fusible = 20 A ; Un fusible = 1${NNBSP}000 V`);
+    expect(fuseNote.conclusion).toBe(
+      `Fusible DC TEST gPV-20 : ${two(lower)} A ≤ In = 20 A ≤ 25 A et Un = 1${NNBSP}000 V ≥ ${two(engineResult.derived.STRING_VOC_TMIN!)} V : condition vérifiée.`,
+    );
   });
 });

@@ -52,7 +52,7 @@ const baseData: DossierTemplateData = {
   cabling: 'Le câblage respecte la norme NF C 15-100.',
   earthing: 'La mise à la terre est assurée par un piquet de terre conforme.',
   structure: 'La structure est dimensionnée pour une vitesse de vent de 120 km/h.',
-  conclusion: "L'installation est conforme aux exigences réglementaires en vigueur.",
+  conclusionText: "L'installation est conforme aux exigences réglementaires en vigueur.",
   moduleBrandModel: 'LONGi LR7-72HGD-620M',
   inverterBrandModel: 'Sofar 1-4KTL2-G3',
   pDcW: '3 100',
@@ -65,11 +65,23 @@ const baseData: DossierTemplateData = {
   inverterSpecVdcMaxV: '1000',
   inverterSpecMpptMinV: '80',
   inverterSpecMpptMaxV: '550',
-  stringSizingNsMin: '10',
-  stringSizingNsMax: '14',
-  stringSizingNsOptMax: '13',
-  stringSizingNpMax: '2',
-  stringSizingNpOpt: '2',
+  temperatureAssumptions: 'Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)',
+  stringSizingNotes: [
+    {
+      title: 'Tension de circuit ouvert du module à Tmin : Voc(Tmin)',
+      formula: 'Voc(Tmin) = Voc × [1 + βVoc/100 × (Tmin - 25)]\nVoc : tension de circuit ouvert du module aux STC',
+      application: 'Voc(Tmin) = 55,9 × [1 + (-0,25)/100 × (-10 - 25)] = 60,79 V',
+      result: 'Voc(Tmin) = 60,79 V',
+      conclusion: null,
+    },
+    {
+      title: 'Ns retenu',
+      formula: 'Ns min ≤ Ns ≤ min(Ns max ; Ns optimal max)',
+      application: '3 ≤ 5 ≤ min(9 ; 10) = 9',
+      result: 'Ns = 5 modules en série par chaîne',
+      conclusion: 'Ns retenu = 5 ≤ min(Ns max, Ns optimal max) = 9 et ≥ Ns min = 3 : condition vérifiée.',
+    },
+  ],
   voltageDropDuDcV: '2,3',
   voltageDropDuDcPct: '0,74',
   voltageDropDuAcV: '1,1',
@@ -254,11 +266,6 @@ describe('fillDossierTemplate', () => {
       inverterSpecVdcMaxV: '550',
       inverterSpecMpptMinV: '90',
       inverterSpecMpptMaxV: '550',
-      stringSizingNsMin: '3',
-      stringSizingNsMax: '9',
-      stringSizingNsOptMax: '8',
-      stringSizingNpMax: '2',
-      stringSizingNpOpt: '1',
       voltageDropDuDcV: '2,1',
       voltageDropDuDcPct: '1,11',
       voltageDropDuAcV: '3,4',
@@ -287,6 +294,51 @@ describe('fillDossierTemplate', () => {
     expect(text).toContain('Total');
     expect(text).toContain('550');
     expect(text).not.toContain('undefined');
+  });
+
+  describe('string sizing calculation notes (Task 19)', () => {
+    const filled = fillDossierTemplate(templateBuffer, baseData);
+    const xml = new PizZip(filled).file('word/document.xml')!.asText();
+    const text = extractText(filled);
+    const paragraphs = xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) ?? [];
+    const paragraphText = (p: string): string => p.replace(/<[^>]+>/g, '').replace(/&apos;/g, "'");
+
+    it('prints the temperatures, then each note: bold title, formula, application numérique, result and conclusion', () => {
+      const lines = paragraphs.map(paragraphText).filter((line) => line !== '');
+      const start = lines.indexOf('IV.4 Dimensionnement du champ PV');
+      expect(start).toBeGreaterThan(lines.indexOf('IV.3 Onduleurs et chaînes'));
+      expect(lines.slice(start + 3, start + 13)).toEqual([
+        'Températures de calcul : Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)',
+        'Tension de circuit ouvert du module à Tmin : Voc(Tmin)',
+        'Formule : Voc(Tmin) = Voc × [1 + βVoc/100 × (Tmin - 25)]Voc : tension de circuit ouvert du module aux STC',
+        'Application numérique : Voc(Tmin) = 55,9 × [1 + (-0,25)/100 × (-10 - 25)] = 60,79 V',
+        'Résultat : Voc(Tmin) = 60,79 V',
+        'Ns retenu',
+        'Formule : Ns min ≤ Ns ≤ min(Ns max ; Ns optimal max)',
+        'Application numérique : 3 ≤ 5 ≤ min(9 ; 10) = 9',
+        'Résultat : Ns = 5 modules en série par chaîne',
+        'Ns retenu = 5 ≤ min(Ns max, Ns optimal max) = 9 et ≥ Ns min = 3 : condition vérifiée.',
+      ]);
+      expect(text).not.toContain('undefined');
+      expect(text).not.toContain('null');
+    });
+
+    it('styles the title bold, the label and the conclusion red underlined, the result blue, and breaks multi-line values', () => {
+      const runOf = (needle: string): string => /<w:r>(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/g[Symbol.match](xml)!.find((run) => run.includes(needle))!;
+      expect(runOf('Ns retenu</w:t>')).toContain('<w:b/>');
+      for (const red of ['Application numérique :', 'condition vérifiée.']) {
+        expect(runOf(red)).toContain('<w:color w:val="C00000"/>');
+        expect(runOf(red)).toMatch(/<w:u w:val="single"\/>/);
+      }
+      expect(runOf('Voc(Tmin) = 60,79 V</w:t>')).toContain('<w:color w:val="1F4E9A"/>');
+      const formula = paragraphs.find((p) => p.includes('Formule : '))!;
+      expect(formula).toContain('<w:br/>');
+    });
+
+    it('has no bare Ns/Np results table left (STEG remark 6)', () => {
+      const tables = xml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) ?? [];
+      for (const table of tables) expect(table.replace(/<[^>]+>/g, '')).not.toContain('Ns optimal max');
+    });
   });
 
   it('titles the dossier with its subject and number, no longer with the company name', () => {
@@ -400,7 +452,7 @@ describe('fillDossierTemplate', () => {
     const text = extractText(result);
     const signatureTable = xml.slice(xml.lastIndexOf('<w:tbl>'));
 
-    expect(text.indexOf("Établi par l'installateur")).toBeGreaterThan(text.indexOf(baseData.conclusion));
+    expect(text.indexOf("Établi par l'installateur")).toBeGreaterThan(text.indexOf(baseData.conclusionText));
     for (const expected of ["Établi par l'installateur", 'Représentant légal : MR TEST GERANT, Gérant', 'Signature et cachet :', 'Lu et approuvé — le titulaire du contrat', 'Ahmed Ben Ali', 'Signature :']) {
       expect(signatureTable.replace(/<[^>]+>/g, '').replace(/&apos;/g, "'")).toContain(expected);
     }
