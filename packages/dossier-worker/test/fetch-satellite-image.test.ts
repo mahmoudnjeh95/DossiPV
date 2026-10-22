@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, afterEach, type MockInstance } from 'vitest';
 import { decode as decodeJpeg, encode as encodeJpeg } from 'jpeg-js';
+import { PNG } from 'pngjs';
 import {
   fetchSatelliteImage,
   activeImageryProvider,
   redactSecrets,
   MapboxAuthError,
+  TileHttpError,
+  TileNetworkError,
+  isRetryableTileError,
   MAX_NATIVE_ZOOM,
   IMAGERY_ATTRIBUTION,
   latLonToWorldPixel,
@@ -155,7 +159,7 @@ describe('fetchSatelliteImage', () => {
   it('throws when Esri returns something that is not a JPEG', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) } as Response);
 
-    await expect(fetchSatelliteImage({ zoom: 19, originX: 0, originY: 0, widthPx: 256, heightPx: 256 })).rejects.toThrow(/not a decodable JPEG/);
+    await expect(fetchSatelliteImage({ zoom: 19, originX: 0, originY: 0, widthPx: 256, heightPx: 256 })).rejects.toThrow(/not a decodable JPEG or PNG/);
   });
 });
 
@@ -218,7 +222,7 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
     const urls = fetchSpy.mock.calls.map((call) => requestUrl(call[0])).sort();
     expect(urls).toEqual(
       [[10, 20], [11, 20], [10, 21], [11, 21]]
-        .map(([x, y]) => `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/20/${x}/${y}@2x?access_token=${TOKEN}`)
+        .map(([x, y]) => `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/20/${x}/${y}@2x.jpg90?access_token=${TOKEN}`)
         .sort(),
     );
     const decoded = decodeJpeg(jpeg, { useTArray: true, formatAsRGBA: true });
@@ -258,7 +262,7 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
 
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer) } as Response);
     const bad = await fetchSatelliteImage(view).catch((e: Error) => e);
-    expect((bad as Error).message).toMatch(/not a decodable JPEG/);
+    expect((bad as Error).message).toMatch(/not a decodable JPEG or PNG/);
     expect((bad as Error).message).not.toContain(TOKEN);
     expect(redactSecrets(`a?access_token=${TOKEN}&b=1`)).toBe('a?access_token=REDACTED&b=1');
   });
@@ -271,6 +275,85 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
 
     expect(error).toBeInstanceOf(MapboxAuthError);
     expect((error as MapboxAuthError).status).toBe(status);
+    expect((error as Error).message).not.toContain(TOKEN);
+  });
+
+  const respond = (bytes: Uint8Array): Response =>
+    ({ ok: true, arrayBuffer: () => Promise.resolve(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)) }) as Response;
+  const oneTile: SatelliteView = { zoom: 20, originX: 0, originY: 0, widthPx: 256, heightPx: 256 };
+
+  it('decodes a PNG tile too (sniffed by magic bytes, not trusted from the URL)', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const png = new PNG({ width: TILE_SIZE * 2, height: TILE_SIZE * 2 });
+    for (let y = 0; y < png.height; y += 1) {
+      for (let x = 0; x < png.width; x += 1) {
+        const i = (y * png.width + x) * 4;
+        png.data[i] = x < TILE_SIZE ? 40 : 200;
+        png.data[i + 1] = 90;
+        png.data[i + 2] = 90;
+        png.data[i + 3] = 255;
+      }
+    }
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(respond(new Uint8Array(PNG.sync.write(png)))));
+
+    const decoded = decodeJpeg(await fetchSatelliteImage(oneTile), { useTArray: true, formatAsRGBA: true });
+
+    expect(decoded.width).toBe(256);
+    expect(Math.abs(decoded.data[(10 * 256 + 10) * 4]! - 40)).toBeLessThan(12);
+    expect(Math.abs(decoded.data[(10 * 256 + 200) * 4]! - 200)).toBeLessThan(12);
+  });
+
+  it('names WebP and unknown formats clearly, without the token', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const webp = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50, 1, 2]);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(respond(webp));
+    const w = await fetchSatelliteImage(oneTile).catch((e: Error) => e);
+    expect((w as Error).message).toMatch(/WebP is not supported/);
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(respond(new Uint8Array([0x47, 0x49, 0x46, 0x38])));
+    const g = await fetchSatelliteImage(oneTile).catch((e: Error) => e);
+    expect((g as Error).message).toMatch(/unknown image format/);
+    expect((g as Error).message).not.toContain(TOKEN);
+    expect(isRetryableTileError(g)).toBe(false);
+  });
+
+  it('passes a timeout signal to every tile request and redacts a timeout error', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const spy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(Object.assign(new Error(`aborted access_token=${TOKEN}`), { name: 'TimeoutError' }));
+
+    const error = await fetchSatelliteImage(oneTile).catch((e: Error) => e);
+
+    expect((spy.mock.calls[0]![1] as RequestInit).signal).toBeInstanceOf(AbortSignal);
+    expect(error).toBeInstanceOf(TileNetworkError);
+    expect((error as Error).message).toMatch(/timeout after 15 s/);
+    expect((error as Error).message).not.toContain(TOKEN);
+    expect(isRetryableTileError(error)).toBe(true);
+  });
+
+  it('classifies retries by HTTP status, not by digits in the URL', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    const retryable: [number, boolean][] = [];
+    for (const status of [404, 429, 500, 503]) {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: false, status } as Response);
+      // Tile coordinates 512/513 would match a /\b5\d\d\b/ message scan.
+      const error = await fetchSatelliteImage({ zoom: 20, originX: 512 * TILE_SIZE, originY: 513 * TILE_SIZE, widthPx: 256, heightPx: 256 }).catch((e: Error) => e);
+      expect(error).toBeInstanceOf(TileHttpError);
+      retryable.push([status, isRetryableTileError(error)]);
+    }
+    expect(retryable).toEqual([[404, false], [429, true], [500, true], [503, true]]);
+  });
+
+  it('fails the whole plan when one of several tiles fails (no half-stitched image)', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = TOKEN;
+    let n = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+      n += 1;
+      return Promise.resolve(n === 3 ? ({ ok: false, status: 404 } as Response) : respond(retinaTile()));
+    });
+
+    const error = await fetchSatelliteImage({ zoom: 20, originX: 10 * TILE_SIZE + 100, originY: 20 * TILE_SIZE + 150, widthPx: 300, heightPx: 200 }).catch((e: Error) => e);
+
+    expect(error).toBeInstanceOf(TileHttpError);
     expect((error as Error).message).not.toContain(TOKEN);
   });
 

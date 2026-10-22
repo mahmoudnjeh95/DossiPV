@@ -1,4 +1,6 @@
 import { decode as decodeJpeg, encode as encodeJpeg } from 'jpeg-js';
+import { PNG } from 'pngjs';
+import { isRetryableError } from './retry';
 
 /**
  * Satellite views for pages 37-38 — Mapbox satellite-v9 when MAPBOX_ACCESS_TOKEN (or
@@ -141,6 +143,44 @@ export class MapboxAuthError extends Error {
   }
 }
 
+/** A tile request answered with a non-2xx status; only 429 and 5xx are worth retrying. */
+export class TileHttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'TileHttpError';
+  }
+}
+
+/** The tile request never got an answer (network error or timeout): transient. */
+export class TileNetworkError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TileNetworkError';
+  }
+}
+
+/** The tile came back in a format we cannot decode: retrying would give the same bytes. */
+export class TileFormatError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TileFormatError';
+  }
+}
+
+/** Retry policy for tile fetches, by error type/HTTP status (never by scanning message text, which holds tile coordinates). */
+export function isRetryableTileError(error: unknown): boolean {
+  if (error instanceof TileHttpError) return error.status === 429 || error.status >= 500;
+  if (error instanceof TileNetworkError) return true;
+  if (error instanceof TileFormatError) return false;
+  return isRetryableError(error); // anything untyped (e.g. a bare `fetch failed`) keeps the shared policy
+}
+
+/** Per-tile network timeout. */
+export const TILE_FETCH_TIMEOUT_MS = 15_000;
+
 /** Removes the access token from any text that may be logged or thrown. */
 export function redactSecrets(text: string): string {
   let out = text.replace(/access_token=[^&\s"'<>]*/gi, 'access_token=REDACTED');
@@ -151,8 +191,8 @@ export function redactSecrets(text: string): string {
 
 function tileUrl(provider: ImageryProvider, zoom: number, x: number, y: number): string {
   if (provider === 'mapbox') {
-    // 256 "@2x": a 512 px bitmap covering the same ground as a 256 px tile at this zoom.
-    return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/${zoom}/${x}/${y}@2x?access_token=${encodeURIComponent(mapboxToken() ?? '')}`;
+    // 256 "@2x": a 512 px bitmap covering the same ground as a 256 px tile at this zoom; ".jpg90" asks for JPEG explicitly (the extension-less form leaves the format to Mapbox).
+    return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/256/${zoom}/${x}/${y}@2x.jpg90?access_token=${encodeURIComponent(mapboxToken() ?? '')}`;
   }
   return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${y}/${x}`;
 }
@@ -179,27 +219,41 @@ function downscale(tile: Bitmap, factor: number): Bitmap {
   return { width, height, data };
 }
 
+const startsWith = (bytes: Uint8Array, signature: number[], offset = 0): boolean => signature.every((byte, i) => bytes[offset + i] === byte);
+
+/** Decodes a tile by its magic bytes: JPEG and PNG are supported; anything else fails with a clear, token-free message. */
+function decodeTile(bytes: Uint8Array, label: string, url: string): Bitmap {
+  try {
+    if (startsWith(bytes, [0xff, 0xd8, 0xff])) return decodeJpeg(bytes, { useTArray: true, formatAsRGBA: true, maxResolutionInMP: 4 });
+    if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
+      const png = PNG.sync.read(Buffer.from(bytes));
+      return { width: png.width, height: png.height, data: new Uint8Array(png.data.buffer, png.data.byteOffset, png.data.byteLength) };
+    }
+  } catch (error) {
+    throw new TileFormatError(redactSecrets(`${label} tile ${url} could not be decoded: ${error instanceof Error ? error.message : String(error)}`));
+  }
+  const isWebp = startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8);
+  throw new TileFormatError(redactSecrets(`${label} tile ${url} is not a decodable JPEG or PNG (${isWebp ? 'WebP is not supported' : 'unknown image format'}).`));
+}
+
 async function fetchTile(provider: ImageryProvider, zoom: number, x: number, y: number): Promise<Bitmap> {
   const url = tileUrl(provider, zoom, x, y);
   const label = provider === 'mapbox' ? 'Mapbox' : 'Esri';
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, { signal: AbortSignal.timeout(TILE_FETCH_TIMEOUT_MS) });
   } catch (error) {
     // The token may sit in the URL or the message: rethrow a redacted error without the cause.
-    throw new Error(redactSecrets(`${label} tile fetch failed for ${url}: ${error instanceof Error ? error.message : String(error)}`));
+    const timedOut = error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError');
+    const reason = timedOut ? `timeout after ${TILE_FETCH_TIMEOUT_MS / 1000} s` : error instanceof Error ? error.message : String(error);
+    throw new TileNetworkError(redactSecrets(`${label} tile fetch failed for ${url}: ${reason}`));
   }
   if (!response.ok) {
     if (provider === 'mapbox' && (response.status === 401 || response.status === 403)) throw new MapboxAuthError(response.status);
-    throw new Error(redactSecrets(`${label} tile fetch failed with status ${response.status} for ${url}`));
+    throw new TileHttpError(response.status, redactSecrets(`${label} tile fetch failed with status ${response.status} for ${url}`));
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
-  let tile: Bitmap;
-  try {
-    tile = decodeJpeg(bytes, { useTArray: true, formatAsRGBA: true, maxResolutionInMP: 4 });
-  } catch (error) {
-    throw new Error(redactSecrets(`${label} tile ${url} is not a decodable JPEG: ${error instanceof Error ? error.message : String(error)}`));
-  }
+  const tile = decodeTile(bytes, label, url);
   // Bring a retina tile back onto the 256 px grid so view maths and metersPerPixel stay unchanged.
   const factor = tile.width >= 2 * TILE_SIZE && tile.width % TILE_SIZE === 0 ? tile.width / TILE_SIZE : 1;
   return factor > 1 ? downscale(tile, factor) : tile;

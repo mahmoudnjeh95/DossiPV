@@ -25,12 +25,12 @@
     "@dossipv/pvgis-client": "*",
     "jpeg-js": "^0.4.4",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.4.299"
+    "pdfjs-dist": "^6.4.299",
+    "pngjs": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
     "@types/pngjs": "^6.0.5",
-    "pizzip": "^3.3.0",
-    "pngjs": "^7.0.0"
+    "pizzip": "^3.3.0"
   }
 }

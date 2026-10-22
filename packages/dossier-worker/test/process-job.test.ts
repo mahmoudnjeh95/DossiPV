@@ -109,7 +109,7 @@ import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM } from '@dossipv/engine';
 import { processJob, IMPLANTATION_VIEW_OPTIONS } from '../src/process-job';
 import type { ProductionSimulation } from '../src/run-simulation';
-import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, type SatelliteView } from '../src/fetch-satellite-image';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 import { DRAFT_INSERTED_PAGE_COUNT } from '../src/draft-watermark';
@@ -1754,6 +1754,41 @@ describe('processJob — Mapbox imagery', () => {
     warn.mockRestore();
   });
 
+  it('warns once for the one plan whose imagery failed (partial failure); the other keeps its photo', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-secret-token';
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockRejectedValueOnce(new TileHttpError(404, 'Mapbox tile fetch failed with status 404 for https://x/?access_token=REDACTED'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const planData = sitePlanInput().planData!;
+    expect(planData.page37.image.buffer).toBeNull();
+    expect(planData.page38.image.buffer).toBe(SATELLITE_TILE);
+    const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+    expect(warnings.filter((w) => w.startsWith('Fond satellite indisponible'))).toEqual(["Fond satellite indisponible pour le plan d'implantation : plan dessiné sans fond."]);
+    warn.mockRestore();
+  });
+
+  it('on a 401 for the second plan only, warns once and redoes both plans on Esri', async () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-secret-token';
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
+    mocks.fetchSatelliteImage.mockResolvedValueOnce(SATELLITE_TILE).mockRejectedValueOnce(new MapboxAuthError(401));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const calls = mocks.fetchSatelliteImage.mock.calls;
+    expect(calls).toHaveLength(4);
+    expect(calls[2]![1]).toBe('esri');
+    expect(calls[3]![1]).toBe('esri');
+    const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+    expect(warnings.filter((w) => w.startsWith('Imagerie Mapbox refusée'))).toHaveLength(1);
+    expect(warnings.some((w) => w.startsWith('Fond satellite indisponible'))).toBe(false);
+    expect(JSON.stringify([warnings, warn.mock.calls])).not.toContain('pk.test-secret-token');
+    warn.mockRestore();
+  });
+
   it('degrades to a plain background (no failure) when the Mapbox fetch fails otherwise', async () => {
     process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-secret-token';
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
@@ -1764,6 +1799,10 @@ describe('processJob — Mapbox imagery', () => {
 
     expect(sitePlanInput().planData!.page37.image.buffer).toBeNull();
     expect(findSucceededUpdate()).toBeDefined();
+    const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+    expect(warnings).toContain("Fond satellite indisponible pour le plan d'implantation : plan dessiné sans fond.");
+    expect(warnings).toContain('Fond satellite indisponible pour le plan de situation : plan dessiné sans fond.');
+    expect(JSON.stringify([warnings, warn.mock.calls])).not.toContain('pk.test-secret-token');
     warn.mockRestore();
   });
 });

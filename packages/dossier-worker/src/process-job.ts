@@ -33,6 +33,7 @@ import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, 
 import {
   activeImageryProvider,
   fetchSatelliteImage,
+  isRetryableTileError,
   MapboxAuthError,
   MAPBOX_REFUSED_WARNING,
   MAX_NATIVE_ZOOM,
@@ -68,17 +69,19 @@ export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: MAX
 /** Page 37's options for a provider: only the zoom ceiling differs. Page 38 stays at zoom 17 on both. */
 const implantationViewOptions = (provider: ImageryProvider): ImplantationViewOptions => ({ ...IMPLANTATION_VIEW_OPTIONS, maxZoom: MAX_NATIVE_ZOOM[provider] });
 
-/** A plan's satellite photo, or null (with an operator warning) when the tiles cannot be had. */
+/** A plan's satellite photo, or null (the caller records the warning) when the tiles cannot be had. */
 async function fetchPlanImage(jobId: string, view: SatelliteView, plan: string, provider?: ImageryProvider): Promise<Buffer | null> {
   try {
     // A refused Mapbox token is not transient: no retry, the caller decides about the fallback.
-    return await withRetry(() => (provider ? fetchSatelliteImage(view, provider) : fetchSatelliteImage(view)), { isRetryable: (error) => !(error instanceof MapboxAuthError) && isRetryableError(error) });
+    return await withRetry(() => (provider ? fetchSatelliteImage(view, provider) : fetchSatelliteImage(view)), { isRetryable: isRetryableTileError });
   } catch (error) {
     if (error instanceof MapboxAuthError) throw error;
     console.warn(`processJob: job ${jobId}: the ${plan} plan's satellite image is unavailable; drawn without it.`, error);
     return null;
   }
 }
+
+const missingImageryWarning = (plan: string): string => `Fond satellite indisponible pour le plan ${plan} : plan dessiné sans fond.`;
 
 // Reads ANTHROPIC_API_KEY from the environment automatically (the SDK's own default
 // behavior) — no new env var convention needed for this worker specifically.
@@ -557,6 +560,8 @@ export async function processJob(jobId: string): Promise<void> {
       page37Image = await fetchPlanImage(jobId, implantationView, 'implantation', provider);
       page38Image = await fetchPlanImage(jobId, situationView, 'situation', provider);
     }
+    if (!page37Image) warnings.push(missingImageryWarning("d'implantation"));
+    if (!page38Image) warnings.push(missingImageryWarning('de situation'));
 
     const providerCredit = provider === 'mapbox' ? { provider } : {}; // Esri is the default credit
     const toPixels = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(implantationView, p) : null);
