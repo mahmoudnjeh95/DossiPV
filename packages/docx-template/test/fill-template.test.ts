@@ -325,6 +325,75 @@ describe('fillDossierTemplate', () => {
     expect(text.indexOf('CIN : 01234567')).toBeLessThan(text.indexOf('Présentation du projet'));
   });
 
+  describe('reference document style (Task 17)', () => {
+    const filled = fillDossierTemplate(templateBuffer, baseData);
+    const zip = new PizZip(filled);
+    const documentXml = zip.file('word/document.xml')!.asText();
+    const stylesXml = zip.file('word/styles.xml')!.asText();
+    const tables = documentXml.match(/<w:tbl>[\s\S]*?<\/w:tbl>/g) ?? [];
+    const rowsOf = (table: string): string[] => table.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) ?? [];
+    const cellsOf = (row: string): string[] => row.match(/<w:tc>[\s\S]*?<\/w:tc>/g) ?? [];
+    const textOf = (xml: string): string => xml.replace(/<[^>]+>/g, '');
+    const tableContaining = (needle: string): string => tables.find((t) => textOf(t).includes(needle))!;
+
+    it('shades a header row in amber FFC000 and a label cell in FBE4D5', () => {
+      const cableTable = tableContaining('Mode de pose');
+      const headerCells = cellsOf(rowsOf(cableTable)[0]!);
+      expect(headerCells.length).toBeGreaterThan(0);
+      for (const headerCell of headerCells) {
+        expect(headerCell).toMatch(/<w:shd [^>]*w:fill="FFC000"/);
+        expect(headerCell).toContain('<w:b/>');
+      }
+
+      const moduleTable = tableContaining('Puissance crête (Wc)');
+      const [labelCell, valueCell] = cellsOf(rowsOf(moduleTable)[0]!);
+      expect(textOf(labelCell!)).toBe('Puissance crête (Wc)');
+      expect(labelCell).toMatch(/<w:shd [^>]*w:fill="FBE4D5"/);
+      expect(valueCell).not.toContain('<w:shd');
+    });
+
+    it('draws every table border single, size 4', () => {
+      const moduleTable = tableContaining('Puissance crête (Wc)');
+      for (const side of ['top', 'bottom', 'left', 'right', 'insideH', 'insideV']) {
+        expect(moduleTable).toMatch(new RegExp(`<w:${side} w:val="single" w:color="[0-9A-Fa-f]{6}" w:sz="4"/>|<w:${side} w:val="single" w:sz="4"[^>]*/>`));
+      }
+    });
+
+    it('sets Times New Roman 11 pt as the default run font', () => {
+      const rPrDefault = /<w:rPrDefault>[\s\S]*?<\/w:rPrDefault>/.exec(stylesXml)?.[0] ?? '';
+      expect(rPrDefault).toMatch(/<w:rFonts [^>]*w:ascii="Times New Roman"/);
+      expect(rPrDefault).toMatch(/<w:rFonts [^>]*w:hAnsi="Times New Roman"/);
+      expect(rPrDefault).toContain('<w:sz w:val="22"/>');
+    });
+
+    it('prints the module values in blue 1F4E9A', () => {
+      const moduleTable = tableContaining('Puissance crête (Wc)');
+      const valueCell = cellsOf(rowsOf(moduleTable)[0]!)[1]!;
+      const run = /<w:r>(?:(?!<\/w:r>)[\s\S])*?620(?:(?!<\/w:r>)[\s\S])*?<\/w:r>/.exec(valueCell)?.[0] ?? '';
+      expect(run).toContain('<w:color w:val="1F4E9A"/>');
+    });
+
+    it('styles the headings bold and black (13 pt, then 11 pt underlined), with no blue theme colour anywhere', () => {
+      const style = (id: string): string => new RegExp(`<w:style [^>]*w:styleId="${id}"[\\s\\S]*?</w:style>`).exec(stylesXml)?.[0] ?? '';
+      const heading1 = style('Heading1');
+      expect(heading1).toContain('<w:b/>');
+      expect(heading1).toContain('<w:color w:val="000000"/>');
+      expect(heading1).toContain('<w:sz w:val="26"/>');
+      const heading2 = style('Heading2');
+      expect(heading2).toContain('<w:b/>');
+      expect(heading2).toMatch(/<w:u w:val="single"\/>/);
+      expect(heading2).toContain('<w:color w:val="000000"/>');
+      expect(heading2).toContain('<w:sz w:val="22"/>');
+      for (const blue of ['2E74B5', '1F4D78', '0563C1']) expect(stylesXml).not.toContain(blue);
+      expect(stylesXml).not.toContain('w:themeColor');
+      expect(documentXml).not.toContain('w:themeColor');
+    });
+
+    it('keeps the section numbers as the roman numerals of the Heading 1 titles', () => {
+      expect(paragraphsWithStyle(filled, 'Heading1')).toContain('I. Préambule');
+    });
+  });
+
   it('ends with the two-column signature table after the conclusion', () => {
     const result = fillDossierTemplate(templateBuffer, baseData);
     const xml = new PizZip(result).file('word/document.xml')!.asText();

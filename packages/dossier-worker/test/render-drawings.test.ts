@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderDrawingPages, type DrawingsInput } from '../src/render-drawings';
-import { extractPdfContent, findText, pageText, everythingOnPage, type PageContent, type DrawnText } from './helpers/pdf-content';
+import { extractPdfContent, findText, pageText, everythingOnPage, pdfFontNames, TIMES_FONTS, type PageContent, type DrawnText } from './helpers/pdf-content';
 
 const singleInverterInput: DrawingsInput = {
   moduleLabel: 'LONGi LR7-72HGD-620M',
@@ -56,6 +56,12 @@ function insideSomeBox(page: PageContent, text: DrawnText): boolean {
 }
 
 describe('renderDrawingPages', () => {
+  it('uses only the Times fonts (one font family across the dossier)', async () => {
+    const fonts = await pdfFontNames(await renderDrawingPages(threeInverterInput));
+    expect(fonts.size).toBeGreaterThan(0);
+    for (const font of fonts) expect(TIMES_FONTS).toContain(font);
+  });
+
   it('words the earthing line from earthingMode, not from the rod count', async () => {
     const textOf = async (input: DrawingsInput): Promise<string> =>
       (await extractPdfContent(await renderDrawingPages(input))).map((page) => pageText(page)).join(' ');

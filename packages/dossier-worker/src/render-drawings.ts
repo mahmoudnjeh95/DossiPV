@@ -246,8 +246,8 @@ export async function renderDrawingPages(rawInput: DrawingsInput): Promise<Buffe
     rawInput.inverters.length > 0 ? rawInput : { ...rawInput, inverters: [{ inverterLabel: '—', pacW: 0, mppts: [] }] };
   const doc = await PDFDocument.create();
   const fonts: Fonts = {
-    regular: await doc.embedFont(StandardFonts.Helvetica),
-    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+    regular: await doc.embedFont(StandardFonts.TimesRoman),
+    bold: await doc.embedFont(StandardFonts.TimesRomanBold),
   };
 
   drawSingleLine(doc, input, fonts);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderAnnexDivider } from '../src/render-annex-divider';
 import { ANNEX_TITLES, buildAnnexPlan } from '../src/annex-plan';
-import { extractPdfContent, findText, pageText } from './helpers/pdf-content';
+import { extractPdfContent, findText, pageText, pdfFontNames, TIMES_FONTS } from './helpers/pdf-content';
 
 function entries(): { number: number; title: string; pageNumber: number | null }[] {
   return buildAnnexPlan([]).map((entry) => ({
@@ -12,6 +12,12 @@ function entries(): { number: number; title: string; pageNumber: number | null }
 }
 
 describe('renderAnnexDivider', () => {
+  it('uses only the Times fonts (one font family across the dossier)', async () => {
+    const fonts = await pdfFontNames(await renderAnnexDivider(entries()));
+    expect(fonts.size).toBeGreaterThan(0);
+    for (const font of fonts) expect(TIMES_FONTS).toContain(font);
+  });
+
   it('draws a large ANNEXES page, then the bordereau with every annex number, title and page', async () => {
     const pages = await extractPdfContent(await renderAnnexDivider(entries()));
 

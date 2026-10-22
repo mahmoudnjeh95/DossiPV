@@ -33,6 +33,7 @@ const mocks = vi.hoisted(() => ({
   dropBlankTrailingPages: vi.fn(),
   tryLoadStegLogo: vi.fn(),
   applyDraftWatermark: vi.fn(),
+  stampStudyPages: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -72,7 +73,11 @@ vi.mock('../src/clean-pdf-annex', async () => {
   mocks.dropBlankTrailingPages.mockImplementation(actual.dropBlankTrailingPages);
   return { ...actual, dropBlankTrailingPages: mocks.dropBlankTrailingPages };
 });
-vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
+vi.mock('../src/render-cover-page', async () => ({
+  ...(await vi.importActual<typeof import('../src/render-cover-page')>('../src/render-cover-page')),
+  renderCoverPage: mocks.renderCoverPage,
+}));
+vi.mock('../src/stamp-study-pages', () => ({ stampStudyPages: mocks.stampStudyPages }));
 vi.mock('../src/steg-logo', () => ({ tryLoadStegLogo: mocks.tryLoadStegLogo }));
 vi.mock('../src/draft-watermark', async () => ({
   ...(await vi.importActual<typeof import('../src/draft-watermark')>('../src/draft-watermark')),
@@ -105,6 +110,7 @@ import type { ProductionSimulation } from '../src/run-simulation';
 import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
+import { DRAFT_INSERTED_PAGE_COUNT } from '../src/draft-watermark';
 import { extractPdfContent, pageText } from './helpers/pdf-content';
 import { INVERTER_MODELS, syntheticInverterDatasheet } from './helpers/synthetic-datasheet';
 
@@ -260,6 +266,8 @@ beforeEach(async () => {
   mocks.catalogSourceDocumentFindUnique.mockResolvedValue(null);
   mocks.buildListPageAnnex.mockResolvedValue(null);
   mocks.tryLoadStegLogo.mockResolvedValue(STEG_LOGO);
+  // Stamping is checked on its own (stamp-study-pages.test.ts); here it hands the PDF on unchanged.
+  mocks.stampStudyPages.mockImplementation((pdf: Buffer) => Promise.resolve(pdf));
 });
 
 describe('processJob — success path', () => {
@@ -1084,10 +1092,16 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
     expect(await annexesDivider(3)).toBe(await annexesDivider(1));
   });
 
-  it('keeps every TOC and bordereau target on the right page once the real watermark is applied', async () => {
+  /**
+   * Runs processJob with the real merge, stamp and watermark on labelled synthetic fragments
+   * (cover, TOC, a 3-page body, drawings, plans) and returns dossier.pdf's page texts and the TOC.
+   */
+  async function assembleForReal(draftMissing: string[]): Promise<{ pages: string[]; toc: { title: string; pageNumber: number }[]; saved: Buffer }> {
     const actualWatermark = await vi.importActual<typeof import('../src/draft-watermark')>('../src/draft-watermark');
     const actualMerge = await vi.importActual<typeof import('../src/merge-annexes')>('../src/merge-annexes');
     mocks.applyDraftWatermark.mockImplementation(actualWatermark.applyDraftWatermark);
+    const actualStamp = await vi.importActual<typeof import('../src/stamp-study-pages')>('../src/stamp-study-pages');
+    mocks.stampStudyPages.mockImplementation(actualStamp.stampStudyPages);
     mocks.mergeDocumentFragments.mockReset().mockImplementation(actualMerge.mergeDocumentFragments);
     const labelled = async (labels: string[]): Promise<Buffer> => {
       const doc = await PDFDocument.create();
@@ -1100,7 +1114,7 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
     mocks.convertDocxToPdf.mockResolvedValue(await labelled(['MARQUE CORPS 1', 'MARQUE CORPS 2', 'MARQUE CORPS 3']));
     mocks.renderDrawingPages.mockResolvedValue(await labelled(['MARQUE SCHEMA 1', 'MARQUE SCHEMA 2']));
     mocks.renderSitePlanPages.mockResolvedValue(await labelled(['MARQUE IMPLANTATION', 'MARQUE SITUATION']));
-    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing: MISSING } });
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing } });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     await processJob('job-1');
@@ -1108,12 +1122,17 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
 
     const saved = mocks.saveFile.mock.calls.find((call) => call[1] === 'dossier.pdf')![0] as Buffer;
     const pages = (await extractPdfContent(saved)).map((page) => pageText(page));
+    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
+    return { pages, toc, saved };
+  }
+
+  it('keeps every TOC and bordereau target on the right page once the real watermark is applied', async () => {
+    const { pages, toc, saved } = await assembleForReal(MISSING);
     const onPage = (pageNumber: number): string => pages[pageNumber - 1] ?? '';
     expect(onPage(1)).toContain('MARQUE COUVERTURE');
     expect(onPage(2)).toContain('Pièces manquantes');
     expect(onPage(3)).toContain('MARQUE SOMMAIRE');
 
-    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
     expect(onPage(toc[0]!.pageNumber)).toContain('MARQUE CORPS 1');
     expect(onPage(toc.at(-2)!.pageNumber)).toContain('MARQUE CORPS 3');
     expect(onPage(toc.find((entry) => entry.title === 'Annexes')!.pageNumber)).toContain('ANNEXES');
@@ -1127,6 +1146,79 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
     expect(onPage(pageOf("Plan d'implantation et de connexion"))).toContain('MARQUE IMPLANTATION');
     expect(onPage(pageOf('Plan de situation'))).toContain('MARQUE SITUATION');
     for (const page of pages) expect(page).toContain('BROUILLON –');
+  });
+
+  /** The « Page n sur N » footer printed on a page, if any. */
+  const footerOf = (page: string): string | undefined => /Page \d+ sur \d+/.exec(page)?.[0];
+
+  it.each([
+    ['a complete dossier', [] as string[], 0],
+    ['a draft', MISSING, DRAFT_INSERTED_PAGE_COUNT],
+  ])('prints, in %s, the footer « Page n sur N » that matches the TOC on every study page', async (_label, draftMissing, inserted) => {
+    const { pages, toc } = await assembleForReal(draftMissing);
+    const onPage = (pageNumber: number): string => pages[pageNumber - 1] ?? '';
+    // Cover + TOC + 3 body pages, plus the draft's missing-pieces page.
+    const studyPages = 5 + inserted;
+
+    expect(footerOf(onPage(1))).toBeUndefined();
+    for (let physical = 2 + inserted; physical <= studyPages; physical += 1) {
+      expect(footerOf(onPage(physical)), `page ${physical}`).toBe(`Page ${physical} sur ${studyPages}`);
+    }
+    for (const entry of toc.filter((e) => e.title !== 'Annexes')) {
+      expect(footerOf(onPage(entry.pageNumber)), entry.title).toBe(`Page ${entry.pageNumber} sur ${studyPages}`);
+    }
+    // The annex divider and the annexes keep their own pages, unnumbered.
+    for (let physical = studyPages + 1; physical <= pages.length; physical += 1) {
+      expect(footerOf(onPage(physical)), `page ${physical}`).toBeUndefined();
+    }
+  });
+
+  it('stamps the study pages before the watermark, shifted by the missing-pieces page, and leaves annexes.pdf unstamped', async () => {
+    const STAMPED_PDF = Buffer.from('%PDF-fake-stamped');
+    mocks.stampStudyPages.mockResolvedValue(STAMPED_PDF);
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...validSnapshot, draftMissing: MISSING, dossierNumber: '434 - 303' },
+    });
+
+    await processJob('job-1');
+
+    expect(mocks.stampStudyPages).toHaveBeenCalledTimes(1);
+    expect(mocks.stampStudyPages).toHaveBeenCalledWith(DOSSIER_PDF, {
+      studyPageCount: 5, // cover + TOC + the 3-page body
+      logo: null,
+      stegLogo: STEG_LOGO,
+      installerName: 'SolarPro',
+      dossierNumber: '434 - 303',
+      pagesInsertedAfterCover: DRAFT_INSERTED_PAGE_COUNT,
+    });
+    expect(mocks.applyDraftWatermark).toHaveBeenCalledWith(STAMPED_PDF, MISSING);
+    expect(mocks.saveFile).toHaveBeenCalledWith(ANNEXES_PDF, 'annexes.pdf', 'application/pdf');
+  });
+
+  it('stamps a complete dossier without shift, passing a missing STEG logo on as null', async () => {
+    const STAMPED_PDF = Buffer.from('%PDF-fake-stamped');
+    mocks.stampStudyPages.mockResolvedValue(STAMPED_PDF);
+    mocks.tryLoadStegLogo.mockResolvedValue(null);
+
+    await processJob('job-1');
+
+    expect(mocks.stampStudyPages).toHaveBeenCalledWith(DOSSIER_PDF, expect.objectContaining({ studyPageCount: 5, stegLogo: null, pagesInsertedAfterCover: 0 }));
+    expect(mocks.saveFile).toHaveBeenCalledWith(STAMPED_PDF, 'dossier.pdf', 'application/pdf');
+  });
+
+  it('fails the job at the assembly step when the study pages cannot be stamped', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mocks.stampStudyPages.mockRejectedValue(new Error('corrupt'));
+
+    await processJob('job-1');
+
+    expect(mocks.dossierJobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED', failedStep: 'assembly' }) as object }),
+    );
+    expect(mocks.saveFile).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 
   it('fails the job at the assembly step when the watermark cannot be applied', async () => {

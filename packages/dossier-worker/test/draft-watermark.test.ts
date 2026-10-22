@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
 import { applyDraftWatermark, DRAFT_WATERMARK_LINES, DRAFT_WATERMARK_TEXT, MISSING_PIECES_TITLE } from '../src/draft-watermark';
-import { extractPdfContent, findText, pageText, rawPageStreams } from './helpers/pdf-content';
+import { extractPdfContent, findText, pageText, pdfFontNames, rawPageStreams } from './helpers/pdf-content';
 
 /** A synthetic dossier: page 1 the cover, page 2 the body. */
 async function twoPageDossier(): Promise<Buffer> {
@@ -14,6 +14,12 @@ async function twoPageDossier(): Promise<Buffer> {
 }
 
 describe('applyDraftWatermark', () => {
+  it('draws the mark and the missing-pieces page in the Times fonts (one font family across the dossier)', async () => {
+    // The synthetic input brings its own Helvetica; the watermark adds only the Times faces.
+    const fonts = await pdfFontNames(await applyDraftWatermark(await twoPageDossier(), ['Copie de la CIN du titulaire']));
+    expect(fonts).toEqual(new Set(['Helvetica', 'Times-Roman', 'Times-Bold']));
+  });
+
   it('inserts the missing-pieces page after the cover and marks every page as a draft', async () => {
     const out = await applyDraftWatermark(await twoPageDossier(), ['Copie de la CIN du titulaire', 'Autorisation du syndic ou des copropriétaires']);
 
@@ -51,7 +57,7 @@ describe('applyDraftWatermark', () => {
 
     // Both lines stay on the page whole: their ends, along the 45° baseline, fall inside the media box.
     const content = (await extractPdfContent(out))[0]!;
-    const font = await (await PDFDocument.create()).embedFont(StandardFonts.HelveticaBold);
+    const font = await (await PDFDocument.create()).embedFont(StandardFonts.TimesRomanBold);
     for (const line of DRAFT_WATERMARK_LINES) {
       const start = findText(content, line)!;
       const length = font.widthOfTextAtSize(line, 60);

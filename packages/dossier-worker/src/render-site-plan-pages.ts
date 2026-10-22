@@ -586,7 +586,7 @@ function drawEmptyFrame(doc: PDFDocument, title: string, fonts: Fonts): void {
 
 export async function renderSitePlanPages(input: SitePlanPagesInput): Promise<Buffer> {
   const doc = await PDFDocument.create();
-  const fonts: Fonts = { regular: await doc.embedFont(StandardFonts.Helvetica), bold: await doc.embedFont(StandardFonts.HelveticaBold) };
+  const fonts: Fonts = { regular: await doc.embedFont(StandardFonts.TimesRoman), bold: await doc.embedFont(StandardFonts.TimesRomanBold) };
 
   if (!input.planData) {
     drawEmptyFrame(doc, IMPLANTATION_TITLE, fonts);

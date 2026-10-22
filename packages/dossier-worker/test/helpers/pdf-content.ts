@@ -312,3 +312,18 @@ export function everythingOnPage(page: PageContent, tolerance = 0.5): boolean {
     page.images.every((img) => inside(img.x, img.y) && inside(img.x + img.width, img.y + img.height))
   );
 }
+
+/** The BaseFont name of every font the PDF embeds (e.g. `Times-Roman`), deduplicated. */
+export async function pdfFontNames(buffer: Buffer | Uint8Array): Promise<Set<string>> {
+  const doc = await PDFDocument.load(buffer);
+  return new Set(
+    doc.context
+      .enumerateIndirectObjects()
+      .map(([, object]) => object.toString())
+      .filter((text) => text.includes('/Type /Font'))
+      .map((text) => /\/BaseFont \/(\S+)/.exec(text)?.[1] ?? '?'),
+  );
+}
+
+/** The two Times faces every pdf-lib fragment of the dossier uses (one font family, Task 17). */
+export const TIMES_FONTS = new Set(['Times-Roman', 'Times-Bold']);

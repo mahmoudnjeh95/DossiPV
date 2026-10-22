@@ -79,7 +79,7 @@ function drawRow(page: PDFPage, rowTop: number, entry: AnnexDividerEntry, fonts:
  */
 export async function renderAnnexDivider(entries: AnnexDividerEntry[]): Promise<Buffer> {
   const doc = await PDFDocument.create();
-  const fonts: Fonts = { regular: await doc.embedFont(StandardFonts.Helvetica), bold: await doc.embedFont(StandardFonts.HelveticaBold) };
+  const fonts: Fonts = { regular: await doc.embedFont(StandardFonts.TimesRoman), bold: await doc.embedFont(StandardFonts.TimesRomanBold) };
 
   const titlePage = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   drawCentered(titlePage, 'ANNEXES', PAGE_HEIGHT / 2, 54, fonts.bold);

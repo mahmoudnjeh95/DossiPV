@@ -45,8 +45,11 @@ import { buildListPageAnnex } from './steg-list-annex';
 import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
 import { applyDraftWatermark, DRAFT_INSERTED_PAGE_COUNT } from './draft-watermark';
+import { stampStudyPages } from './stamp-study-pages';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
+/** The study pages before the Word body: the cover (1) and the one-page table of contents (2). */
+const STUDY_PAGE_COUNT_BEFORE_BODY = 2;
 
 /**
  * Page 37's view: zoom 18 at most, because Esri World Imagery has no zoom-19 imagery outside the
@@ -587,7 +590,7 @@ export async function processJob(jobId: string): Promise<void> {
   // applyDraftWatermark at the end), so every page number printed in the TOC and the bordereau of
   // dossier.pdf moves by that page. annexes.pdf is never watermarked and keeps its own numbering.
   const draftPageOffset = snapshot.draftMissing.length > 0 ? DRAFT_INSERTED_PAGE_COUNT : 0;
-  const BODY_START_PAGE = 3 + draftPageOffset;
+  const BODY_START_PAGE = STUDY_PAGE_COUNT_BEFORE_BODY + 1 + draftPageOffset;
   let tocBuffer: Buffer;
   try {
     // pdf-lib exposes no API to read the body PDF's real heading/outline destinations (the
@@ -743,6 +746,22 @@ export async function processJob(jobId: string): Promise<void> {
     annexesPdfBuffer = (await mergeDocumentFragments([annexesOnlyDividerBuffer], annexFiles)).pdf;
   } catch (error) {
     return fail(jobId, 'annexes', error);
+  }
+
+  // The study pages (cover, TOC, body) get the reference's frame, running header and « Page n
+  // sur N » footer; the annexes keep their own pages. This runs before the draft watermark, so
+  // the footers shift by the page it will insert after the cover, like the TOC's numbers.
+  try {
+    pdfBuffer = await stampStudyPages(pdfBuffer, {
+      studyPageCount: STUDY_PAGE_COUNT_BEFORE_BODY + bodyPageCount,
+      logo: companyLogoBuffer,
+      stegLogo: stegLogoBuffer,
+      installerName: company.name,
+      dossierNumber: snapshot.dossierNumber,
+      pagesInsertedAfterCover: draftPageOffset,
+    });
+  } catch (error) {
+    return fail(jobId, 'assembly', error);
   }
 
   // A dossier queued with STEG pieces missing is a draft: dossier.pdf says so on every page and

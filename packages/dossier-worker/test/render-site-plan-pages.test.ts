@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { encode as encodeJpeg } from 'jpeg-js';
 import { renderSitePlanPages, type SitePlanData, type SitePlanPagesInput, type SitePlanPoints } from '../src/render-site-plan-pages';
-import { extractPdfContent, findText, pageText, everythingOnPage, type DrawnPath, type PageContent, type DrawnImage } from './helpers/pdf-content';
+import { extractPdfContent, findText, pageText, everythingOnPage, pdfFontNames, TIMES_FONTS, type DrawnPath, type PageContent, type DrawnImage } from './helpers/pdf-content';
 
 const IMAGE_PX = 640;
 
@@ -113,6 +113,14 @@ function markerCentre(page: PageContent, colour: number[]): { x: number; y: numb
 }
 
 const flat = (page: PageContent): string => pageText(page).replace(/\n/g, ' ');
+
+describe('renderSitePlanPages — fonts', () => {
+  it('uses only the Times fonts (one font family across the dossier)', async () => {
+    const fonts = await pdfFontNames(await renderSitePlanPages({ ...baseInput, planData: planData() }));
+    expect(fonts.size).toBeGreaterThan(0);
+    for (const font of fonts) expect(TIMES_FONTS).toContain(font);
+  });
+});
 
 describe('renderSitePlanPages — no located site', () => {
   it('keeps the empty frames when the project has no site', async () => {

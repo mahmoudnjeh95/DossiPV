@@ -3,7 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import { PNG } from 'pngjs';
 import { renderCoverPage, formatFrenchDate, type CoverPageInput } from '../src/render-cover-page';
 import type { InstallerIdentity } from '../src/installer-identity';
-import { extractPdfContent, pageText, everythingOnPage, rawPageStreams, type PageContent } from './helpers/pdf-content';
+import { extractPdfContent, pageText, everythingOnPage, rawPageStreams, pdfFontNames, TIMES_FONTS, type PageContent } from './helpers/pdf-content';
 
 const NARROW_NBSP = String.fromCodePoint(0x202f);
 const FI_LIGATURE = String.fromCodePoint(0xfb01);
@@ -52,6 +52,12 @@ function lines(page: PageContent): string[] {
 }
 
 describe('renderCoverPage', () => {
+  it('uses only the Times fonts (one font family across the dossier)', async () => {
+    const fonts = await pdfFontNames(await renderCoverPage({ ...baseInput, companyLogoBuffer: tinyPng(), stegLogoBuffer: tinyPng() }));
+    expect(fonts.size).toBeGreaterThan(0);
+    for (const font of fonts) expect(TIMES_FONTS).toContain(font);
+  });
+
   it('renders the reference-style cover: title, labelled client, site and installer fields', async () => {
     const [page, ...rest] = await extractPdfContent(await renderCoverPage(baseInput));
     expect(rest).toHaveLength(0);

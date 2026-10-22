@@ -81,8 +81,8 @@ function drawMissingPiecesPage(page: PDFPage, missing: string[], regular: PDFFon
  */
 export async function applyDraftWatermark(pdf: Buffer, missing: string[]): Promise<Buffer> {
   const doc = await PDFDocument.load(pdf);
-  const regular = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const regular = await doc.embedFont(StandardFonts.TimesRoman);
+  const bold = await doc.embedFont(StandardFonts.TimesRomanBold);
 
   const listPage = doc.insertPage(Math.min(1, doc.getPageCount()), A4);
   drawMissingPiecesPage(listPage, missing, regular, bold);

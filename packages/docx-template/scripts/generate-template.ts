@@ -1,26 +1,19 @@
 import { writeFileSync } from 'fs';
 import { join } from 'path';
-import {
-  Document,
-  Packer,
-  Paragraph,
-  HeadingLevel,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
-  BorderStyle,
-} from 'docx';
+import { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, TextRun, WidthType, BorderStyle } from 'docx';
+import { DOCUMENT_STYLES, styledTable, valueRun } from './template-styles';
 
-function cell(text: string): TableCell {
-  return new TableCell({ children: [new Paragraph(text)] });
+/** A label / value table: salmon labels, the values (template tags) in blue. */
+function specTable(rows: [string, string][]): Table {
+  return styledTable(
+    rows.map(([label, tag]) => [label, [valueRun(tag)]]),
+    { header: false, labelColumn: true },
+  );
 }
 
-function specTable(rows: [string, string][]): Table {
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: rows.map(([label, tag]) => new TableRow({ children: [cell(label), cell(tag)] })),
-  });
+/** `label` in black followed by a blue value tag, as one paragraph. */
+function labelledValue(label: string, tag: string): Paragraph {
+  return new Paragraph({ children: [new TextRun(label), valueRun(tag)] });
 }
 
 /** One side of the closing signature table: a heading, the signer, then room to sign. */
@@ -34,8 +27,12 @@ function signatureCell(lines: string[]): TableCell {
 const NO_BORDER = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
 
 const doc = new Document({
+  styles: DOCUMENT_STYLES,
   sections: [
     {
+      // A4. The top margin (3 cm) leaves room for the running header the worker stamps on every
+      // study page (logos and dossier number, stamp-study-pages.ts); the bottom one for its footer.
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1701, bottom: 1418, left: 1418, right: 1418 } } },
       children: [
         // The company moves to the running page header (Task 17); the title names the subject.
         new Paragraph({ text: "Dossier technique de raccordement d'une installation photovoltaïque au réseau BT de la STEG", heading: HeadingLevel.TITLE }),
@@ -72,25 +69,19 @@ const doc = new Document({
           ['Taux de couverture de la consommation', '{productionCoverage}'],
           ['Méthode', '{productionMethod}'],
         ]),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            new TableRow({
-              children: [cell('Mois'), cell('Irradiation dans le plan (kWh/m²)'), cell('Production (kWh)'), cell('PR (%)')],
-            }),
-            new TableRow({
-              children: [cell('{#productionMonths}{monthLabel}'), cell('{globInc}'), cell('{eGrid}'), cell('{pr}{/productionMonths}')],
-            }),
-            new TableRow({
-              children: [cell('Total'), cell('{productionTotalGlobInc}'), cell('{productionTotalEGrid}'), cell('')],
-            }),
+        styledTable(
+          [
+            ['Mois', 'Irradiation dans le plan (kWh/m²)', 'Production (kWh)', 'PR (%)'],
+            ['{#productionMonths}{monthLabel}', [valueRun('{globInc}')], [valueRun('{eGrid}')], [valueRun('{pr}{/productionMonths}')]],
+            ['Total', [valueRun('{productionTotalGlobInc}')], [valueRun('{productionTotalEGrid}')], ''],
           ],
-        }),
+          { header: true, labelColumn: true },
+        ),
 
         new Paragraph({ text: '{sectionNumberSolution} Description de la solution technique', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{solution}'),
         new Paragraph({ text: "III.1 Caractéristiques du module", heading: HeadingLevel.HEADING_2 }),
-        new Paragraph('Module : {moduleBrandModel}'),
+        labelledValue('Module : ', '{moduleBrandModel}'),
         specTable([
           ['Puissance crête (Wc)', '{moduleSpecPmaxW}'],
           ['Tension Vmp (V)', '{moduleSpecVmpV}'],
@@ -110,8 +101,8 @@ const doc = new Document({
           ['Plage MPPT max (V)', '{inverterSpecMpptMaxV}'],
         ]),
         new Paragraph({ text: 'III.3 Dimensionnement du champ PV', heading: HeadingLevel.HEADING_2 }),
-        new Paragraph('Puissance totale : {pDcW}'),
-        new Paragraph('Nombre de modules : {moduleCount}'),
+        labelledValue('Puissance totale : ', '{pDcW}'),
+        labelledValue('Nombre de modules : ', '{moduleCount}'),
         specTable([
           ['Ns min', '{stringSizingNsMin}'],
           ['Ns max', '{stringSizingNsMax}'],
@@ -123,31 +114,24 @@ const doc = new Document({
         new Paragraph({ text: 'III.4 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
         new Paragraph('{#inverters}'),
         new Paragraph('{inverterLabel} ({inverterBrandModel})'),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            new TableRow({ children: [cell('MPPT'), cell('Chaînes en parallèle'), cell('Modules par chaîne')] }),
-            new TableRow({ children: [cell('{#mppts}{mpptLabel}'), cell('{stringsInParallel}'), cell('{modulesPerString}{/mppts}')] }),
+        styledTable(
+          [
+            ['MPPT', 'Chaînes en parallèle', 'Modules par chaîne'],
+            ['{#mppts}{mpptLabel}', [valueRun('{stringsInParallel}')], [valueRun('{modulesPerString}{/mppts}')]],
           ],
-        }),
+          { header: true, labelColumn: true },
+        ),
         new Paragraph('{/inverters}'),
 
         new Paragraph({ text: '{sectionNumberCablage} Câblage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{cabling}'),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            new TableRow({ children: [cell('Repère'), cell('Section (mm²)'), cell('Longueur (m)'), cell('Mode de pose')] }),
-            new TableRow({
-              children: [
-                cell('{#cableRuns}{label}'),
-                cell('{sectionMm2}'),
-                cell('{lengthM}'),
-                cell('{installMethod}{/cableRuns}'),
-              ],
-            }),
+        styledTable(
+          [
+            ['Repère', 'Section (mm²)', 'Longueur (m)', 'Mode de pose'],
+            ['{#cableRuns}{label}', [valueRun('{sectionMm2}')], [valueRun('{lengthM}')], [valueRun('{installMethod}{/cableRuns}')]],
           ],
-        }),
+          { header: true, labelColumn: true },
+        ),
         new Paragraph({ text: 'IV.1 Chute de tension', heading: HeadingLevel.HEADING_2 }),
         specTable([
           ['Chute de tension DC (V)', '{voltageDropDuDcV}'],
@@ -158,13 +142,13 @@ const doc = new Document({
 
         new Paragraph({ text: '{sectionNumberTerre} Mise à la terre', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{earthing}'),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            new TableRow({ children: [cell('Désignation'), cell('Valeur')] }),
-            new TableRow({ children: [cell('{#earthingDetails}{label}'), cell('{value}{/earthingDetails}')] }),
+        styledTable(
+          [
+            ['Désignation', 'Valeur'],
+            ['{#earthingDetails}{label}', [valueRun('{value}{/earthingDetails}')]],
           ],
-        }),
+          { header: true, labelColumn: true },
+        ),
 
         new Paragraph({ text: '{sectionNumberStructure} Structure et lestage', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{structure}'),
