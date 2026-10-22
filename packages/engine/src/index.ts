@@ -1,5 +1,6 @@
 export * from './types';
 export * from './constants';
+export * from './check-labels';
 export * from './module-electrical';
 export * from './string-sizing';
 export * from './protections';

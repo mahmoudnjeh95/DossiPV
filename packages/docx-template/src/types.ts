@@ -104,6 +104,16 @@ export interface DossierTemplateData {
   structure: string;
   /** Rows of the structure table (material, modules, tilt, orientation, wind, ballast, attestation). */
   structureRows: { label: string; value: string }[];
+  /** Annexes N°1-N°10 with their number, `—` where the project has no document. */
+  documentationRows: { designation: string; annex: string }[];
+  /** Every piece of equipment with quantity, brand, reference and annex number (`—` when unused). */
+  equipmentRows: { designation: string; quantity: string; brand: string; reference: string; annex: string }[];
+  moduleSpecRows: { label: string; value: string }[];
+  /** One characteristics table per inverter of the array. */
+  inverterSpecTables: { inverterLabel: string; rows: { label: string; value: string }[] }[];
+  deviceRatingRows: { device: string; ratings: string }[];
+  /** The engine checks as `Conforme` / `Non conforme` / `Avertissement`. */
+  complianceRows: { id: string; label: string; result: string }[];
   /** The wind stability note (check C18); empty when the project supplied no stability inputs. */
   stabilityNotes: CalculationNote[];
   // Not `conclusion`: docxtemplater resolves a null tag inside a loop from the enclosing scope, so
@@ -113,18 +123,6 @@ export interface DossierTemplateData {
   inverterBrandModel: string;
   pDcW: string;
   moduleCount: string;
-  // Flat fields, not nested objects — docxtemplater 3.71.0 (the installed version) does not
-  // resolve dotted-path tags like {moduleSpecs.pmaxW} against nested render data (confirmed
-  // empirically before writing this plan); every new tag must be a flat top-level key, same
-  // as the existing pDcW/moduleCount fields.
-  moduleSpecPmaxW: string;
-  moduleSpecVmpV: string;
-  moduleSpecImpA: string;
-  moduleSpecVocV: string;
-  moduleSpecIscA: string;
-  inverterSpecVdcMaxV: string;
-  inverterSpecMpptMinV: string;
-  inverterSpecMpptMaxV: string;
   /** `Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)`, printed above the string sizing notes. */
   temperatureAssumptions: string;
   /** The string sizing calculation notes (Voc(Tmin) … Fusible DC), in dossier order. */
@@ -157,6 +155,7 @@ export interface DossierTemplateData {
   sectionNumberStructure: string;
   sectionNumberFusible: string;
   sectionNumberSectionneur: string;
+  sectionNumberCompliance: string;
   sectionNumberConclusion: string;
   // "Dimensionnement et productible" section: all pre-formatted French strings (decimal comma).
   sizingBranchement: string;

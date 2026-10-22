@@ -64,14 +64,24 @@ const baseData: DossierTemplateData = {
   inverterBrandModel: 'Sofar 1-4KTL2-G3',
   pDcW: '3 100',
   moduleCount: '5',
-  moduleSpecPmaxW: '620',
-  moduleSpecVmpV: '41,2',
-  moduleSpecImpA: '15,05',
-  moduleSpecVocV: '49,3',
-  moduleSpecIscA: '15,85',
-  inverterSpecVdcMaxV: '1000',
-  inverterSpecMpptMinV: '80',
-  inverterSpecMpptMaxV: '550',
+  documentationRows: [
+    { designation: "N°1 — Dossier administratif", annex: '1' },
+    { designation: 'N°3 — Attestation de conformité de la structure', annex: '—' },
+  ],
+  equipmentRows: [
+    { designation: 'Modules photovoltaïques', quantity: '5', brand: 'LONGi', reference: 'LR7-72HGD-620M', annex: '11' },
+    { designation: 'Interrupteur-sectionneur AC', quantity: '—', brand: '—', reference: '—', annex: '—' },
+  ],
+  moduleSpecRows: [
+    { label: 'Puissance crête (Wc)', value: '620' },
+    { label: 'Coefficient de température Voc (β)', value: '-0,26 %/°C' },
+  ],
+  inverterSpecTables: [{ inverterLabel: 'Onduleur 1', rows: [{ label: 'Plage MPPT', value: '80 – 550 V' }] }],
+  deviceRatingRows: [{ device: 'Parafoudre DC', ratings: 'Type 2 · Ucpv 1 000 V' }],
+  complianceRows: [
+    { id: 'C01', label: 'Tension Voc à Tmin inférieure à la tension DC maximale de l’onduleur', result: 'Conforme' },
+    { id: 'C21', label: 'Onduleur présent dans la liste STEG', result: 'Avertissement' },
+  ],
   temperatureAssumptions: 'Tmin = -10 °C, Tmax = 85 °C (hypothèses de calcul)',
   stringSizingNotes: [
     {
@@ -149,7 +159,8 @@ const baseData: DossierTemplateData = {
   sectionNumberStructure: 'VIII.',
   sectionNumberFusible: '',
   sectionNumberSectionneur: '',
-  sectionNumberConclusion: 'IX.',
+  sectionNumberCompliance: 'IX.',
+  sectionNumberConclusion: 'X.',
   sizingBranchement: 'Monophasé BT',
   sizingSubscribedPower: '6 kVA',
   sizingConsumption: "4 800 kWh/an (valeur saisie par l'installateur)",
@@ -252,11 +263,12 @@ describe('fillDossierTemplate', () => {
     expect(withoutFuse).not.toContain('fusible DC est requis');
   });
 
-  it('prints the section numbers the caller computes, never a hardcoded literal (I4) — VI is directly followed by the given Conclusion number when VII/VIII are both absent', () => {
-    const text = extractText(fillDossierTemplate(templateBuffer, { ...baseData, dcFuseRequired: false, acIsolatorRequired: false, sectionNumberStructure: 'VI.', sectionNumberConclusion: 'VII.' }));
+  it('prints the section numbers the caller computes, never a hardcoded literal (I4) — the compliance section is followed by the given Conclusion number when VII/VIII are both absent', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, { ...baseData, dcFuseRequired: false, acIsolatorRequired: false, sectionNumberStructure: 'VI.', sectionNumberCompliance: 'VII.', sectionNumberConclusion: 'VIII.' }));
 
     expect(text).toContain('VI. Structure et lestage');
-    expect(text).toContain('VII. Conclusion');
+    expect(text).toContain('VIII. Conclusion');
+    expect(text).toContain('VII. Vérifications réglementaires');
     // The literal "IX" this fix removed must never appear when both conditional sections are absent.
     expect(text).not.toContain('IX. Conclusion');
   });
@@ -269,13 +281,14 @@ describe('fillDossierTemplate', () => {
         acIsolatorRequired: true,
         sectionNumberFusible: 'VII.',
         sectionNumberSectionneur: 'VIII.',
-        sectionNumberConclusion: 'IX.',
+        sectionNumberCompliance: 'IX.',
+        sectionNumberConclusion: 'X.',
       }),
     );
 
     expect(text).toContain('VII. Protection DC — fusible');
     expect(text).toContain('VIII. Protection AC — sectionneur');
-    expect(text).toContain('IX. Conclusion');
+    expect(text).toContain('X. Conclusion');
   });
 
   it('renders the AC isolator section when acIsolatorRequired is true, omits it when false', () => {
@@ -313,31 +326,21 @@ describe('fillDossierTemplate', () => {
     expect(without).not.toContain('Stabilité au vent');
   });
 
-  it('fills the module and inverter spec tables and the calculation-result tables', () => {
-    // Flat field names (moduleSpecPmaxW, not nested moduleSpecs.pmaxW) — this installed
-    // docxtemplater version does not resolve dotted-path tags; see Task 3's note.
-    const data: DossierTemplateData = {
-      ...baseData, // this file's existing complete fixture object — extend it, don't rebuild it
-      moduleSpecPmaxW: '620',
-      moduleSpecVmpV: '46,5',
-      moduleSpecImpA: '13,33',
-      moduleSpecVocV: '55,9',
-      moduleSpecIscA: '13,92',
-      inverterSpecVdcMaxV: '550',
-      inverterSpecMpptMinV: '90',
-      inverterSpecMpptMaxV: '550',
-      stabilityWeightN: '2450',
-      stabilityLhs: '1200',
-      stabilityRhs: '900',
-    };
+  it('fills the documentation, equipment, characteristics, rating and compliance tables', () => {
+    const text = extractText(fillDossierTemplate(templateBuffer, baseData));
 
-    const filledBuffer = fillDossierTemplate(templateBuffer, data);
-
-    const zip = new PizZip(filledBuffer);
-    const documentXml = zip.file('word/document.xml')!.asText();
-    expect(documentXml).toContain('620');
-    expect(documentXml).toContain('46,5');
-    expect(documentXml).toContain('2450');
+    expect(text).toContain('Documentation de la solution');
+    expect(text).toContain('Équipements de la solution');
+    expect(text).toContain('LR7-72HGD-620M');
+    expect(text).toContain('Coefficient de température Voc (β)');
+    expect(text).toContain('-0,26 %/°C');
+    expect(text).toContain('Onduleur 1');
+    expect(text).toContain('Plage MPPT');
+    expect(text).toContain('Caractéristiques des équipements DC et AC');
+    expect(text).toContain('Ucpv 1 000 V');
+    expect(text).toContain('Vérifications réglementaires');
+    expect(text).toContain('Avertissement');
+    expect(text.indexOf('Vérifications réglementaires')).toBeLessThan(text.indexOf('Conclusion'));
   });
 
   describe('cable sizing and voltage drop notes (Task 21)', () => {

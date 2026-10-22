@@ -29,6 +29,7 @@ import { tryLoadStegLogo } from './steg-logo';
 import { installerIdentityFromCompany } from './installer-identity';
 import { renderAcBoxDiagram, renderDcBoxDiagram, renderPanelWiringDiagram, renderSingleLineDiagram } from './render-drawings';
 import { buildDrawingInputs } from './drawing-inputs';
+import { buildEquipmentTables } from './equipment-tables';
 import { renderProductionReport } from './render-production-report';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
 import {
@@ -391,6 +392,12 @@ export async function processJob(jobId: string): Promise<void> {
         hasStructureAttestation: typeof snapshot.structure?.structureAttestationFileId === 'string',
       },
       installer,
+      equipmentTables: buildEquipmentTables({
+        snapshot,
+        engineInput: snapshot.engineInput,
+        engineResult: workerResult.engineResult,
+        hasStructureAttestation: typeof snapshot.structure?.structureAttestationFileId === 'string',
+      }),
       dossierNumber: snapshot.dossierNumber,
       dossierDate: snapshot.engineInput.dossierDate,
       production,
@@ -664,6 +671,7 @@ export async function processJob(jobId: string): Promise<void> {
       `${sectionNumbers.sectionNumberStructure} Structure et lestage`,
       ...(dcFuseRequired ? [`${sectionNumbers.sectionNumberFusible} Protection DC — fusible`] : []),
       ...(acIsolatorRequired ? [`${sectionNumbers.sectionNumberSectionneur} Protection AC — sectionneur`] : []),
+      `${sectionNumbers.sectionNumberCompliance} Vérifications réglementaires`,
       `${sectionNumbers.sectionNumberConclusion} Conclusion`,
     ];
     // At most 11 body entries + « Annexes »: well within one TOC page (renderTableOfContents fits

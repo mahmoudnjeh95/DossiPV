@@ -74,6 +74,22 @@ const doc = new Document({
         new Paragraph({ text: '{sectionNumberPresentation} Présentation du projet', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{introduction}'),
         new Paragraph('{siteBuildingLine}'),
+        new Paragraph({ text: '{sectionNumberPresentation}1 Documentation de la solution', heading: HeadingLevel.HEADING_2 }),
+        styledTable(
+          [
+            ['Document', 'Annexe N°'],
+            ['{#documentationRows}{designation}', [valueRun('{annex}{/documentationRows}')]],
+          ],
+          { header: true, labelColumn: true },
+        ),
+        new Paragraph({ text: '{sectionNumberPresentation}2 Équipements de la solution', heading: HeadingLevel.HEADING_2 }),
+        styledTable(
+          [
+            ['Désignation', 'Quantité', 'Marque', 'Référence', 'Annexe N°'],
+            ['{#equipmentRows}{designation}', [valueRun('{quantity}')], [valueRun('{brand}')], [valueRun('{reference}')], [valueRun('{annex}{/equipmentRows}')]],
+          ],
+          { header: true, labelColumn: true },
+        ),
 
         new Paragraph({ text: '{sectionNumberDimensionnement} Dimensionnement et productible', heading: HeadingLevel.HEADING_1 }),
         specTable([
@@ -104,24 +120,17 @@ const doc = new Document({
         // Sub-section numbers follow the section's own computed numeral (e.g. `IV.` + `1`).
         new Paragraph({ text: '{sectionNumberSolution}1 Caractéristiques du module', heading: HeadingLevel.HEADING_2 }),
         labelledValue('Module : ', '{moduleBrandModel}'),
-        specTable([
-          ['Puissance crête (Wc)', '{moduleSpecPmaxW}'],
-          ['Tension Vmp (V)', '{moduleSpecVmpV}'],
-          ['Courant Imp (A)', '{moduleSpecImpA}'],
-          ['Tension Voc (V)', '{moduleSpecVocV}'],
-          ['Courant Isc (A)', '{moduleSpecIscA}'],
-        ]),
+        styledTable([['{#moduleSpecRows}{label}', [valueRun('{value}{/moduleSpecRows}')]]], { header: false, labelColumn: true }),
         new Paragraph({ text: "{sectionNumberSolution}2 Caractéristiques de l'onduleur", heading: HeadingLevel.HEADING_2 }),
         // A mixed-model array lists every inverter's own brand/model and power here (I7) — the
         // DC-side voltage/MPPT range fields below stay single-value since this slice doesn't
         // carry them per entry, and in practice every inverter on one array shares a compatible
         // DC input range by design (spec §3.3's own single-inverter wording).
         new Paragraph('{#inverters}{inverterLabel} : {inverterBrandModel} — {pacW} W{/inverters}'),
-        specTable([
-          ['Tension DC max (V)', '{inverterSpecVdcMaxV}'],
-          ['Plage MPPT min (V)', '{inverterSpecMpptMinV}'],
-          ['Plage MPPT max (V)', '{inverterSpecMpptMaxV}'],
-        ]),
+        new Paragraph('{#inverterSpecTables}'),
+        new Paragraph({ keepNext: true, children: [new TextRun({ text: '{inverterLabel}', bold: true })] }),
+        styledTable([['{#rows}{label}', [valueRun('{value}{/rows}')]]], { header: false, labelColumn: true }),
+        new Paragraph('{/inverterSpecTables}'),
         new Paragraph({ text: '{sectionNumberSolution}3 Onduleurs et chaînes', heading: HeadingLevel.HEADING_2 }),
         new Paragraph('{#inverters}'),
         new Paragraph('{inverterLabel} ({inverterBrandModel})'),
@@ -141,6 +150,15 @@ const doc = new Document({
         labelledValue('Nombre de modules : ', '{moduleCount}'),
         labelledValue('Températures de calcul : ', '{temperatureAssumptions}'),
         ...calculationNotes('stringSizingNotes', 'Formule : '),
+
+        new Paragraph({ text: '{sectionNumberSolution}5 Caractéristiques des équipements DC et AC', heading: HeadingLevel.HEADING_2 }),
+        styledTable(
+          [
+            ['Équipement', 'Caractéristiques'],
+            ['{#deviceRatingRows}{device}', [valueRun('{ratings}{/deviceRatingRows}')]],
+          ],
+          { header: true, labelColumn: true },
+        ),
 
         // Protection sizing notes (Task 20): the requirements of checks C09–C15 and C24.
         new Paragraph({ text: '{sectionNumberProtections} Dimensionnement des protections', heading: HeadingLevel.HEADING_1 }),
@@ -264,6 +282,15 @@ const doc = new Document({
         new Paragraph({ text: '{sectionNumberSectionneur} Protection AC — sectionneur', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('Un sectionneur AC est requis (plusieurs onduleurs).'),
         new Paragraph('{/acIsolatorRequired}'),
+
+        new Paragraph({ text: '{sectionNumberCompliance} Vérifications réglementaires', heading: HeadingLevel.HEADING_1 }),
+        styledTable(
+          [
+            ['Réf.', 'Vérification', 'Résultat'],
+            ['{#complianceRows}{id}', '{label}', [valueRun('{result}{/complianceRows}')]],
+          ],
+          { header: true, labelColumn: true },
+        ),
 
         new Paragraph({ text: '{sectionNumberConclusion} Conclusion', heading: HeadingLevel.HEADING_1 }),
         new Paragraph('{conclusionText}'),

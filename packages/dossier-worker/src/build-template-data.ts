@@ -6,6 +6,8 @@ import type { ProductionSimulation } from './run-simulation';
 import type { SnapshotConsumption } from './job-snapshot';
 import { anmeCategoryLabel, type InstallerIdentity } from './installer-identity';
 import { buildProtectionNotes, buildStringSizingNotes, buildTemperatureAssumptions } from './calculation-notes';
+import { CHECK_LABELS } from '@dossipv/engine';
+import type { EquipmentTables } from './equipment-tables';
 import { buildStabilityNotes, buildStructureRows } from './structure-notes';
 import { buildCableSizingRows, buildVoltageDropLimitsText, buildVoltageDropRows, installMethodText } from './cable-notes';
 
@@ -40,6 +42,8 @@ export interface BuildTemplateDataInput {
     hasStructureAttestation?: boolean;
   };
   installer: InstallerIdentity;
+  /** The documentation, equipment, characteristics and rating tables; empty tables when absent (legacy callers). */
+  equipmentTables?: EquipmentTables;
   /** The installer's own dossier number (e.g. `434 - 303`); empty only for a legacy snapshot. */
   dossierNumber: string | null;
   /** ISO date or timestamp of the dossier. */
@@ -194,14 +198,14 @@ function fmt(value: number, decimals = 1): string {
   return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
 }
 
-const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'] as const;
+const ROMAN_NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'] as const;
 
 /**
  * Computes each section's roman numeral in code instead of hardcoding it as literal template
  * text, so the DC fuse and AC isolator sections — each only present when their own
  * {#dcFuseRequired}/{#acIsolatorRequired} condition is true — never leave a gap in the sequence
  * (e.g. "VIII. Structure" directly followed by "IX. Conclusion" when both are absent, the most
- * common single-inverter/no-fuse configuration). Up to XI sections with both present.
+ * common single-inverter/no-fuse configuration). Up to XII sections with both present.
  */
 export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequired: boolean): {
   sectionNumberPreambule: string;
@@ -214,6 +218,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
   sectionNumberStructure: string;
   sectionNumberFusible: string;
   sectionNumberSectionneur: string;
+  sectionNumberCompliance: string;
   sectionNumberConclusion: string;
 } {
   let n = 0;
@@ -228,6 +233,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
   const sectionNumberStructure = next();
   const sectionNumberFusible = dcFuseRequired ? next() : '';
   const sectionNumberSectionneur = acIsolatorRequired ? next() : '';
+  const sectionNumberCompliance = next();
   const sectionNumberConclusion = next();
   return {
     sectionNumberPreambule,
@@ -240,6 +246,7 @@ export function computeSectionNumbers(dcFuseRequired: boolean, acIsolatorRequire
     sectionNumberStructure,
     sectionNumberFusible,
     sectionNumberSectionneur,
+    sectionNumberCompliance,
     sectionNumberConclusion,
   };
 }
@@ -283,6 +290,16 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
       hasAttestation: snapshot.hasStructureAttestation ?? false,
     }),
     stabilityNotes: buildStabilityNotes({ engineInput, engineResult: workerResult.engineResult }),
+    documentationRows: input.equipmentTables?.documentationRows ?? [],
+    equipmentRows: input.equipmentTables?.equipmentRows ?? [],
+    moduleSpecRows: input.equipmentTables?.moduleSpecRows ?? [],
+    inverterSpecTables: input.equipmentTables?.inverterSpecTables ?? [],
+    deviceRatingRows: input.equipmentTables?.deviceRatingRows ?? [],
+    complianceRows: workerResult.engineResult.checks.map((check) => ({
+      id: check.id,
+      label: CHECK_LABELS[check.id] ?? check.message,
+      result: check.pass ? 'Conforme' : check.level === 'WARN' ? 'Avertissement' : 'Non conforme',
+    })),
     conclusionText: workerResult.sections.conclusion,
     moduleBrandModel: projectMeta.moduleBrandModel,
     inverterBrandModel: projectMeta.inverterBrandModel,
@@ -312,14 +329,6 @@ export function buildTemplateData(input: BuildTemplateDataInput): DossierTemplat
     acIsolatorRequired,
     ...computeSectionNumbers(dcFuseRequired, acIsolatorRequired),
     ...buildSizingAndProduction(input),
-    moduleSpecPmaxW: fmt(engineInput.module.pmaxW, 0),
-    moduleSpecVmpV: fmt(engineInput.module.vmpV),
-    moduleSpecImpA: fmt(engineInput.module.impA),
-    moduleSpecVocV: fmt(engineInput.module.vocV),
-    moduleSpecIscA: fmt(engineInput.module.iscA),
-    inverterSpecVdcMaxV: fmt(engineInput.array[0]!.inverter.vdcMaxV),
-    inverterSpecMpptMinV: fmt(engineInput.array[0]!.inverter.mpptMinV),
-    inverterSpecMpptMaxV: fmt(engineInput.array[0]!.inverter.mpptMaxV),
     temperatureAssumptions: buildTemperatureAssumptions(engineInput),
     stringSizingNotes: buildStringSizingNotes({ engineInput, engineResult: workerResult.engineResult, dcFuseLabel: projectMeta.protections.dcFuse }),
     protectionNotes: buildProtectionNotes({

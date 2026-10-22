@@ -155,7 +155,7 @@ describe('buildTemplateData', () => {
     expect(data.acIsolatorRequired).toBe(false);
   });
 
-  it('exposes full module/inverter electrical specs and the engine calculation-result tables as flat string fields', () => {
+  it('exposes the engine calculation-result values as flat string fields', () => {
     // Fields are flat (moduleSpecPmaxW, not a nested moduleSpecs.pmaxW object) — confirmed
     // empirically that this installed docxtemplater version (3.71.0) does NOT resolve
     // dotted-path tags against a nested render-data object; {moduleSpecs.pmaxW} renders as the
@@ -198,14 +198,6 @@ describe('buildTemplateData', () => {
       ...installerInputs, ...sizingInputs,
     });
 
-    expect(result.moduleSpecPmaxW).toEqual(expect.any(String));
-    expect(result.moduleSpecVmpV).toEqual(expect.any(String));
-    expect(result.moduleSpecImpA).toEqual(expect.any(String));
-    expect(result.moduleSpecVocV).toEqual(expect.any(String));
-    expect(result.moduleSpecIscA).toEqual(expect.any(String));
-    expect(result.inverterSpecVdcMaxV).toEqual(expect.any(String));
-    expect(result.inverterSpecMpptMinV).toEqual(expect.any(String));
-    expect(result.inverterSpecMpptMaxV).toEqual(expect.any(String));
     expect(result.stabilityWeightN).toEqual(expect.any(String));
     expect(result.stabilityLhs).toEqual(expect.any(String));
     expect(result.stabilityRhs).toEqual(expect.any(String));
@@ -259,7 +251,7 @@ describe('buildTemplateData', () => {
     expect(data.cableRuns).toEqual([]);
   });
 
-  it('computes section numbers I-VIII, IX with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
+  it('computes section numbers I-VIII, IX, X with no gap when neither DC fuse nor AC isolator is required (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: null, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
@@ -277,11 +269,13 @@ describe('buildTemplateData', () => {
     expect(data.sectionNumberFusible).toBe('');
     expect(data.sectionNumberSectionneur).toBe('');
     // The regression this fix closes: Structure must be followed directly by the Conclusion (no
-    // number left over for the DC fuse/AC isolator sections) when both are absent.
-    expect(data.sectionNumberConclusion).toBe('IX.');
+    // number left over for the DC fuse/AC isolator sections) when both are absent; the
+    // regulatory verifications come right before the Conclusion.
+    expect(data.sectionNumberCompliance).toBe('IX.');
+    expect(data.sectionNumberConclusion).toBe('X.');
   });
 
-  it('renumbers IX, X correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
+  it('renumbers IX, X, XI correctly when the DC fuse section is required but the AC isolator section is not (I4)', () => {
     const data = buildTemplateData({
       workerResult, engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: null }, projectMeta,
       snapshot: { client: null, cableRuns: [], earthing: earthingRow, inverterBrandModels: ['Sofar 1-4KTL2-G3'] },
@@ -291,10 +285,11 @@ describe('buildTemplateData', () => {
     expect(data.sectionNumberStructure).toBe('VIII.');
     expect(data.sectionNumberFusible).toBe('IX.');
     expect(data.sectionNumberSectionneur).toBe('');
-    expect(data.sectionNumberConclusion).toBe('X.');
+    expect(data.sectionNumberCompliance).toBe('X.');
+    expect(data.sectionNumberConclusion).toBe('XI.');
   });
 
-  it('numbers all eleven sections I-XI when both the DC fuse and the AC isolator sections are required (I4)', () => {
+  it('numbers all twelve sections I-XII when both the DC fuse and the AC isolator sections are required (I4)', () => {
     const data = buildTemplateData({
       workerResult,
       engineInput: { ...engineInput, dcFuse: { ratedCurrentA: 16, ratedVoltageV: 1000 }, acIsolator: { ratedCurrentA: 25 } },
@@ -305,7 +300,8 @@ describe('buildTemplateData', () => {
 
     expect(data.sectionNumberFusible).toBe('IX.');
     expect(data.sectionNumberSectionneur).toBe('X.');
-    expect(data.sectionNumberConclusion).toBe('XI.');
+    expect(data.sectionNumberCompliance).toBe('XI.');
+    expect(data.sectionNumberConclusion).toBe('XII.');
   });
 
   it("uses each inverter's OWN brand/model from the snapshot, not projectMeta's first-inverter-only string, for a mixed-model array (I7)", () => {
@@ -1262,5 +1258,28 @@ describe('structure section (Task 22)', () => {
     expect(text).toContain('Vitesse de vent de calcul');
     expect(text).toContain('Stabilité au vent');
     expect(text).toContain('condition vérifiée');
+  });
+});
+
+describe('compliance summary (Task 18)', () => {
+  it('has one row per engine check, worded from the neutral labels', () => {
+    const { engineResult, input } = notesInput({ ...habibKhedhiraFixture, subscribedPowerKVA: 7, rcd: { residualCurrentMA: 30, rcdType: 'A' } });
+    const rows = buildTemplateData(input).complianceRows;
+
+    expect(rows).toHaveLength(engineResult.checks.length);
+    expect(rows.find((row) => row.id === 'C22')!.label).toBe("Agrément ANME de l'installateur valide à la date du dossier");
+    for (const row of rows) expect(['Conforme', 'Non conforme', 'Avertissement']).toContain(row.result);
+  });
+
+  it('marks a failed WARN check as Avertissement and a failed BLOCK check as Non conforme', () => {
+    const { engineResult, input } = notesInput(habibKhedhiraFixture);
+    const checks = [
+      { id: 'C03', level: 'WARN' as const, pass: false, message: 'm' },
+      { id: 'C01', level: 'BLOCK' as const, pass: false, message: 'm' },
+      { id: 'C02', level: 'BLOCK' as const, pass: true, message: 'm' },
+    ];
+    const rows = buildTemplateData({ ...input, workerResult: { ...input.workerResult, engineResult: { ...engineResult, checks } } }).complianceRows;
+
+    expect(rows.map((row) => row.result)).toEqual(['Avertissement', 'Non conforme', 'Conforme']);
   });
 });

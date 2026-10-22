@@ -134,7 +134,8 @@ const validSnapshot = {
     array: [{ inverter: { pacW: 4000, vdcMaxV: 1000, mpptMinV: 80, mpptMaxV: 550 }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
     dcFuse: null,
     acIsolator: null,
-    module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85 },
+    module: { pmaxW: 620, vmpV: 41.2, impA: 15.05, vocV: 49.3, iscA: 15.85, weightKg: 24 },
+    structure: { ballastPerFrame: 0, ballastMassKg: 0, windSpeedKmh: 120, tiltDeg: 30 },
     dcRun: { sectionMm2: 6, lengthM: 20 },
     site: { phases: 1 },
     acRun: { sectionMm2: 10, lengthM: 15 },
@@ -757,10 +758,10 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     const entries = mocks.renderTableOfContents.mock.calls[0]![0] as { title: string; pageNumber: number }[];
-    // Conclusion is "VII." here (not a hardcoded "IX.") — with no DC fuse and no AC isolator,
+    // Conclusion is "X." here (not a hardcoded "IX.") — with no DC fuse and no AC isolator,
     // VI is directly followed by VII, exactly matching computeSectionNumbers()'s own output
     // (see build-template-data.test.ts's identical no-gap assertion for the body side).
-    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Dimensionnement et productible', 'IV. Description de la solution technique', 'V. Dimensionnement des protections', 'VI. Câblage', 'VII. Mise à la terre', 'VIII. Structure et lestage', 'IX. Conclusion'];
+    const bodyTitles = ['I. Préambule', 'II. Présentation du projet', 'III. Dimensionnement et productible', 'IV. Description de la solution technique', 'V. Dimensionnement des protections', 'VI. Câblage', 'VII. Mise à la terre', 'VIII. Structure et lestage', 'IX. Vérifications réglementaires', 'X. Conclusion'];
     const bodyEntries = bodyTitles.map((title) => entries.find((e) => e.title === title)!);
 
     for (const entry of bodyEntries) {
@@ -801,7 +802,8 @@ describe('processJob — fragment assembly details', () => {
     const viIndex = titles.indexOf('VIII. Structure et lestage');
     const viiIndex = titles.indexOf('IX. Protection DC — fusible');
     const viiiIndex = titles.indexOf('X. Protection AC — sectionneur');
-    const ixIndex = titles.indexOf('XI. Conclusion');
+    const ixIndex = titles.indexOf('XII. Conclusion');
+    expect(titles).toContain('XI. Vérifications réglementaires');
     expect(viIndex).toBeGreaterThan(-1);
     expect(viIndex).toBeLessThan(viiIndex);
     expect(viiIndex).toBeLessThan(viiiIndex);
@@ -842,13 +844,14 @@ describe('processJob — fragment assembly details', () => {
         `${n.sectionNumberCablage} Câblage`,
         `${n.sectionNumberTerre} Mise à la terre`,
         `${n.sectionNumberStructure} Structure et lestage`,
+        `${n.sectionNumberCompliance} Vérifications réglementaires`,
         `${n.sectionNumberConclusion} Conclusion`,
         ...(dcFuseRequired ? [`${n.sectionNumberFusible} Protection DC — fusible`] : []),
         ...(acIsolatorRequired ? [`${n.sectionNumberSectionneur} Protection AC — sectionneur`] : []),
       ]),
     );
-    // 9 body sections always present, the conditional ones, and « Annexes ».
-    expect(entries).toHaveLength(9 + (dcFuseRequired ? 1 : 0) + (acIsolatorRequired ? 1 : 0) + 1);
+    // 10 body sections always present, the conditional ones, and « Annexes ».
+    expect(entries).toHaveLength(10 + (dcFuseRequired ? 1 : 0) + (acIsolatorRequired ? 1 : 0) + 1);
   });
 
   it("hands the AC surge arrester's In from the frozen catalog row to the protection notes", async () => {
