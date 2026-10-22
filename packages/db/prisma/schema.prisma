@@ -86,6 +86,7 @@ model Company {
   defaultTMinC             Float     @default(-10)
   defaultTMaxC             Float     @default(85)
   defaultMaxVoltageDropPct Float     @default(3)
+  defaultMaxAcVoltageDropPct Float   @default(1)
   defaultEarthResistanceTargetOhm Float?
   defaultDesignWindSpeedKmh Float    @default(120)
   defaultCosPhi            Float     @default(0.8)
@@ -759,6 +760,7 @@ model ProjectCablingConfig {
   cosPhi             Float      @default(0.8)
   lambdaOhmPerM      Float
   maxVoltageDropPct  Float      @default(3)
+  maxAcVoltageDropPct Float     @default(1)
   connectorId        String?
   connector          Accessory? @relation("Connector", fields: [connectorId], references: [id])
   cableTrayId        String?

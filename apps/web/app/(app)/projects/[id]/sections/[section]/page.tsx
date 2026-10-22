@@ -156,7 +156,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       body = (
         <CablingForm
           projectId={project.id}
-          defaults={{ cosPhi: project.company.defaultCosPhi, maxVoltageDropPct: project.company.defaultMaxVoltageDropPct }}
+          defaults={{ cosPhi: project.company.defaultCosPhi, maxVoltageDropPct: project.company.defaultMaxVoltageDropPct, maxAcVoltageDropPct: project.company.defaultMaxAcVoltageDropPct }}
           cables={cables.map((c) => ({
             id: c.id,
             label: tag(`${c.brand} ${c.model} — ${c.conductor} / ${c.insulation}`, c),
@@ -172,6 +172,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
                   cosPhi: project.cablingConfig.cosPhi,
                   lambdaOhmPerM: project.cablingConfig.lambdaOhmPerM,
                   maxVoltageDropPct: project.cablingConfig.maxVoltageDropPct,
+                  maxAcVoltageDropPct: project.cablingConfig.maxAcVoltageDropPct,
                   connectorId: project.cablingConfig.connectorId,
                   cableTrayId: project.cablingConfig.cableTrayId,
                   runs: project.cableRuns.map((r) => ({

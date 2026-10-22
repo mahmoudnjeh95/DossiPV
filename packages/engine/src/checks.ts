@@ -224,17 +224,24 @@ export function checkC16(dcRunIzCorrected: number, iscFieldDesign: number): Chec
   };
 }
 
-/** x-rules.checks C17: sum(DU_DC_PCT) <= maxVoltageDropPct AND sum(DU_AC_PCT) <= maxVoltageDropPct (BLOCK) */
+/** x-rules.checks C17: sum(DU_DC_PCT) <= maxDcPct AND sum(DU_AC_PCT) <= maxAcPct (BLOCK) */
 export function checkC17(
   duDcPctSum: number,
   duAcPctSum: number,
-  maxVoltageDropPct: number,
+  maxDcPct: number,
+  maxAcPct: number,
 ): CheckResult {
+  const fmt = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 });
+  const dcFails = duDcPctSum > maxDcPct;
+  const acFails = duAcPctSum > maxAcPct;
+  const failures: string[] = [];
+  if (dcFails) failures.push(`Chute de tension DC ${fmt.format(duDcPctSum)} % > ${fmt.format(maxDcPct)} %`);
+  if (acFails) failures.push(`Chute de tension AC ${fmt.format(duAcPctSum)} % > ${fmt.format(maxAcPct)} %`);
   return {
     id: 'C17',
     level: 'BLOCK',
-    pass: duDcPctSum <= maxVoltageDropPct && duAcPctSum <= maxVoltageDropPct,
-    message: 'Chute de tension DC ou AC dépasse la limite autorisée',
+    pass: !dcFails && !acFails,
+    message: failures.length > 0 ? failures.join(' ; ') : 'Chute de tension DC et AC dans les limites autorisées',
   };
 }
 
@@ -345,7 +352,10 @@ export interface ChecksContext {
   dcRunIzCorrected: number;
   duDcPctSum: number;
   duAcPctSum: number;
+  /** DC voltage-drop limit (%). */
   maxVoltageDropPct: number;
+  /** AC voltage-drop limit (%). */
+  maxAcVoltageDropPct: number;
   /** Absent when the project has no stability inputs; C18 is then skipped. */
   stabilityLhs?: number;
   stabilityRhs?: number;
@@ -394,7 +404,7 @@ export function runAllChecks(context: ChecksContext): CheckResult[] {
       context.sumInverterIacMaxA,
     ),
     checkC16(context.dcRunIzCorrected, context.iscFieldDesign),
-    checkC17(context.duDcPctSum, context.duAcPctSum, context.maxVoltageDropPct),
+    checkC17(context.duDcPctSum, context.duAcPctSum, context.maxVoltageDropPct, context.maxAcVoltageDropPct),
     ...(context.stabilityLhs !== undefined && context.stabilityRhs !== undefined
       ? [checkC18(context.stabilityLhs, context.stabilityRhs)]
       : []),

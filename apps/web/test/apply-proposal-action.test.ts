@@ -140,6 +140,7 @@ describe('computeProjectProposals', () => {
       cosPhi: 0.8,
       lambdaOhmPerM: 0.00008,
       maxVoltageDropPct: 3,
+      maxAcVoltageDropPct: 1,
       dcLengthM: 15,
       acLengthM: 10,
       windSpeedKmh: 120,
@@ -250,7 +251,7 @@ describe('applyProposalAction', () => {
       update: appliedProtections,
     });
     expect(m.tx.projectCablingConfig.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ update: { cosPhi: 0.8, lambdaOhmPerM: 0.00008, maxVoltageDropPct: 3 } }),
+      expect.objectContaining({ update: { cosPhi: 0.8, lambdaOhmPerM: 0.00008, maxVoltageDropPct: 3, maxAcVoltageDropPct: 1 } }),
     );
     expect(m.tx.projectCableRun.deleteMany).toHaveBeenCalledWith({ where: { projectId: 'p1' } });
     expect(firstCallData(m.tx.projectCableRun.createMany)).toEqual([

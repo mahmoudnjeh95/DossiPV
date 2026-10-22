@@ -297,6 +297,7 @@ export function buildEngineInput(project: ProjectForEngine, now: Date): EngineIn
     cosPhi: cablingConfig.cosPhi,
     lambdaOhmPerM: cablingConfig.lambdaOhmPerM,
     maxVoltageDropPct: cablingConfig.maxVoltageDropPct,
+    maxAcVoltageDropPct: cablingConfig.maxAcVoltageDropPct,
     structure: {
       // Stability inputs are optional (Tunisian dossiers need only material + wind speed); absent
       // keys make the engine skip the stability check.

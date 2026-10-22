@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCandidate } from '../src';
+import { buildCandidate, runEngine } from '../src';
 import type { BuildCandidateResult, Candidate, CatalogInverter, CatalogModule, SizingCatalog } from '../src';
 import { sizingCatalog, sizingContext } from './fixtures/sizing-catalog';
 
@@ -58,9 +58,41 @@ describe('buildCandidate', () => {
     const far = expectCandidate(
       buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, { ...sizingContext, acLengthM: 60 }),
     );
-    // 60 m at 13.7 A: 2.5 mm² drops 5.3 %, 4 mm² 3.3 %, 6 mm² 2.2 %.
-    expect(far.acCable.sectionMm2).toBeGreaterThan(2.5);
-    expect(far.acCable).toEqual({ cableId: 'cable-ac', sectionMm2: 6, lengthM: 60 });
+    // 60 m at 13.7 A against 1 %: 6 mm² drops 2.2 %, 10 mm² 1.3 %, 16 mm² 0.8 %.
+    expect(far.acCable).toEqual({ cableId: 'cable-ac', sectionMm2: 16, lengthM: 60 });
+  });
+
+  it('enlarges the AC section until the AC drop is within 1 %', () => {
+    // 40 m at 13.7 A: 4 mm² drops 2.2 %, 6 mm² 1.5 % (both pass 3 %, neither 1 %); 10 mm² drops 0.9 %.
+    const context = { ...sizingContext, acLengthM: 40 };
+    const lenient = expectCandidate(
+      buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, { ...context, maxAcVoltageDropPct: 3 }),
+    );
+    expect(lenient.acCable.sectionMm2).toBe(4);
+    const strict = expectCandidate(buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, context));
+    expect(strict.acCable.sectionMm2).toBe(10);
+    expect(strict.engineInput.maxAcVoltageDropPct).toBe(1);
+    expect(runEngine(strict.engineInput).derived.DU_AC_PCT).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps the DC section chosen against 3 %', () => {
+    const context = { ...sizingContext, dcLengthM: 40, acLengthM: 40 };
+    const strictAc = expectCandidate(buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, context));
+    const lenientAc = expectCandidate(
+      buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, { ...context, maxAcVoltageDropPct: 3 }),
+    );
+    expect(strictAc.dcCable).toEqual(lenientAc.dcCable);
+    expect(strictAc.engineInput.maxVoltageDropPct).toBe(3);
+    expect(runEngine(strictAc.engineInput).derived.DU_DC_PCT).toBeLessThanOrEqual(3);
+  });
+
+  it('returns the AC voltage-drop reason when no section reaches 1 %', () => {
+    // 100 m at 13.7 A: even 16 mm² drops about 1.4 %.
+    const result = buildCandidate(module550, inverter3kW, 6, 1, sizingCatalog, { ...sizingContext, acLengthM: 100 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('Aucune section de câble AC ne respecte la chute de tension de 1 % sur 100 m.');
+    }
   });
 
   it('returns a reason when no DC SPD passes', () => {

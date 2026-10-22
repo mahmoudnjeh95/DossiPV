@@ -57,6 +57,7 @@ export async function applyProposalAction(projectId: string, proposalKey: string
     cosPhi: context.cosPhi,
     lambdaOhmPerM: context.lambdaOhmPerM,
     maxVoltageDropPct: context.maxVoltageDropPct,
+    maxAcVoltageDropPct: context.maxAcVoltageDropPct,
   };
   const structure = structureDataFor('ALUMINIUM', context.windSpeedKmh);
   const earthing = {

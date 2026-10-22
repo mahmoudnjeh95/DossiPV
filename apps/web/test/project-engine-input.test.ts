@@ -127,6 +127,17 @@ describe('buildEngineInput', () => {
     expect(runEngine(result.input).checks.find((c) => c.id === 'C23')?.pass).toBe(false);
   });
 
+  it('passes both the DC and the AC voltage-drop limits to the engine input', () => {
+    const project = buildFullProject();
+    project.cablingConfig!.maxVoltageDropPct = 2.5;
+    project.cablingConfig!.maxAcVoltageDropPct = 0.8;
+    const result = buildEngineInput(project, FIXTURE_NOW);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.maxVoltageDropPct).toBe(2.5);
+    expect(result.input.maxAcVoltageDropPct).toBe(0.8);
+  });
+
   it('leaves the subscribed power out when the client has none', () => {
     const result = buildEngineInput(buildFullProject(), FIXTURE_NOW);
     expect(result.ok).toBe(true);

@@ -29,7 +29,7 @@ type Run = CablingPayload['runs'][number];
 
 export interface CablingFormProps {
   projectId: string;
-  defaults: { cosPhi: number; maxVoltageDropPct: number };
+  defaults: { cosPhi: number; maxVoltageDropPct: number; maxAcVoltageDropPct: number };
   cables: CableChoice[];
   connectors: AccessoryChoice[];
   cableTrays: AccessoryChoice[];
@@ -62,6 +62,7 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
   const [cosPhi, setCosPhi] = useState(initial?.cosPhi ?? defaults.cosPhi);
   const [lambdaOhmPerM, setLambda] = useState(initial?.lambdaOhmPerM ?? 0.00008);
   const [maxVoltageDropPct, setMaxDrop] = useState(initial?.maxVoltageDropPct ?? defaults.maxVoltageDropPct);
+  const [maxAcVoltageDropPct, setMaxAcDrop] = useState(initial?.maxAcVoltageDropPct ?? defaults.maxAcVoltageDropPct);
   const [connectorId, setConnectorId] = useState(initial?.connectorId ?? null);
   const [cableTrayId, setCableTrayId] = useState(initial?.cableTrayId ?? null);
   const [runs, setRuns] = useState<Run[]>(initial?.runs && initial.runs.length > 0 ? initial.runs : [defaultRun('DC', cables), defaultRun('AC', cables)]);
@@ -84,7 +85,7 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
     event.preventDefault();
     setError(null);
     setSaving(true);
-    const result = await saveCablingAction(projectId, { cosPhi, lambdaOhmPerM, maxVoltageDropPct, connectorId, cableTrayId, runs });
+    const result = await saveCablingAction(projectId, { cosPhi, lambdaOhmPerM, maxVoltageDropPct, maxAcVoltageDropPct, connectorId, cableTrayId, runs });
     setSaving(false);
     if (result?.error) {
       setError(result.error);
@@ -117,8 +118,13 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
             <span className="hint">0,00008 Ω/m est la valeur usuelle pour les câbles BT.</span>
           </label>
           <label>
-            Chute de tension max (%)
-            <input type="number" step="any" min={0} max={20} value={maxVoltageDropPct} onChange={(e) => setMaxDrop(Number(e.target.value))} required />
+            Chute de tension maximale DC (%)
+            <input type="number" step="any" min={0} max={10} value={maxVoltageDropPct} onChange={(e) => setMaxDrop(Number(e.target.value))} required />
+          </label>
+          <label>
+            Chute de tension maximale AC (%)
+            <input type="number" step="any" min={0} max={10} value={maxAcVoltageDropPct} onChange={(e) => setMaxAcDrop(Number(e.target.value))} required />
+            <span className="hint">1 % selon la norme UTE C15-712-1.</span>
           </label>
           <label>
             Connecteurs

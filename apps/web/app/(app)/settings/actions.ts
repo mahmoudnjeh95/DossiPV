@@ -12,6 +12,13 @@ export interface SaveCompanyActionState {
 
 const ANME_CATEGORIES = ['BT', 'MT', 'BT_MT'] as const;
 
+/** A voltage-drop limit in % : 0 < x <= 10 (FormReader bounds are inclusive, so 0 is rejected here). */
+function positiveDropPct(reader: FormReader, name: string, label: string): number {
+  const value = reader.number(name, label, { max: 10 });
+  if (value <= 0 && !reader.hasErrors) reader.errors.push(`${label} : doit être > 0.`);
+  return value;
+}
+
 interface UploadSuccess {
   storageKey: string;
   mimeType: string;
@@ -69,7 +76,8 @@ export async function saveCompanyAction(
     anmeCategory: reader.oneOf('anmeCategory', 'Catégorie ANME', ANME_CATEGORIES),
     defaultTMinC: reader.number('defaultTMinC', 'Tmin par défaut', { min: -50, max: 50 }),
     defaultTMaxC: reader.number('defaultTMaxC', 'Tmax par défaut', { min: 0, max: 120 }),
-    defaultMaxVoltageDropPct: reader.number('defaultMaxVoltageDropPct', 'Chute de tension max par défaut', { min: 0, max: 20 }),
+    defaultMaxVoltageDropPct: positiveDropPct(reader, 'defaultMaxVoltageDropPct', 'Chute de tension maximale DC par défaut'),
+    defaultMaxAcVoltageDropPct: positiveDropPct(reader, 'defaultMaxAcVoltageDropPct', 'Chute de tension maximale AC par défaut'),
     defaultEarthResistanceTargetOhm: reader.optionalNumber('defaultEarthResistanceTargetOhm', 'Résistance de terre cible', { min: 0 }),
     defaultDesignWindSpeedKmh: reader.number('defaultDesignWindSpeedKmh', 'Vitesse de vent par défaut', { min: 0, max: 400 }),
     defaultCosPhi: reader.number('defaultCosPhi', 'cos φ par défaut', { min: 0.1, max: 1 }),

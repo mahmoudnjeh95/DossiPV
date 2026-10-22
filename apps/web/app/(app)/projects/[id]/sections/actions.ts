@@ -283,7 +283,10 @@ export async function saveProtectionsAction(
 export interface CablingPayload {
   cosPhi: number;
   lambdaOhmPerM: number;
+  /** DC limit (%). */
   maxVoltageDropPct: number;
+  /** AC limit (%). */
+  maxAcVoltageDropPct: number;
   connectorId: string | null;
   cableTrayId: string | null;
   runs: {
@@ -313,8 +316,11 @@ export async function saveCablingAction(projectId: string, payload: CablingPaylo
   if (!Number.isFinite(payload.lambdaOhmPerM) || payload.lambdaOhmPerM < 0) {
     return { error: 'Réactance linéique λ invalide.' };
   }
-  if (!Number.isFinite(payload.maxVoltageDropPct) || payload.maxVoltageDropPct <= 0 || payload.maxVoltageDropPct > 20) {
-    return { error: 'Chute de tension maximale invalide (0–20 %).' };
+  if (!Number.isFinite(payload.maxVoltageDropPct) || payload.maxVoltageDropPct <= 0 || payload.maxVoltageDropPct > 10) {
+    return { error: 'Chute de tension maximale DC invalide (0–10 %).' };
+  }
+  if (!Number.isFinite(payload.maxAcVoltageDropPct) || payload.maxAcVoltageDropPct <= 0 || payload.maxAcVoltageDropPct > 10) {
+    return { error: 'Chute de tension maximale AC invalide (0–10 %).' };
   }
   if (!Array.isArray(payload.runs) || payload.runs.length === 0 || payload.runs.length > MAX_RUNS) {
     return { error: 'Au moins une liaison DC et une liaison AC sont requises.' };
@@ -391,6 +397,7 @@ export async function saveCablingAction(projectId: string, payload: CablingPaylo
     cosPhi: payload.cosPhi,
     lambdaOhmPerM: payload.lambdaOhmPerM,
     maxVoltageDropPct: payload.maxVoltageDropPct,
+    maxAcVoltageDropPct: payload.maxAcVoltageDropPct,
     connectorId: payload.connectorId,
     cableTrayId: payload.cableTrayId,
   };

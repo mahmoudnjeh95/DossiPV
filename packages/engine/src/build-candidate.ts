@@ -209,11 +209,11 @@ export function buildCandidate(
       inverter.iacMaxA,
       SITE_PHASES,
     );
-    return duAcPct(dropV, SITE_PHASES) <= context.maxVoltageDropPct;
+    return duAcPct(dropV, SITE_PHASES) <= context.maxAcVoltageDropPct;
   });
   if (!ac) {
     return fail(
-      `Aucune section de câble AC ne respecte la chute de tension sur ${lengthFormat.format(context.acLengthM)} m.`,
+      `Aucune section de câble AC ne respecte la chute de tension de ${lengthFormat.format(context.maxAcVoltageDropPct)} % sur ${lengthFormat.format(context.acLengthM)} m.`,
     );
   }
 
@@ -240,6 +240,7 @@ export function buildCandidate(
     cosPhi: context.cosPhi,
     lambdaOhmPerM: context.lambdaOhmPerM,
     maxVoltageDropPct: context.maxVoltageDropPct,
+    maxAcVoltageDropPct: context.maxAcVoltageDropPct,
     structure: {
       ballastPerFrame: 0,
       ballastMassKg: 0,

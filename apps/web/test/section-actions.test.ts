@@ -198,6 +198,7 @@ describe('tenant isolation', () => {
         cosPhi: 0.8,
         lambdaOhmPerM: 0,
         maxVoltageDropPct: 3,
+        maxAcVoltageDropPct: 1,
         connectorId: null,
         cableTrayId: null,
         runs: [],
@@ -442,6 +443,7 @@ describe('saveCablingAction', () => {
     cosPhi: 0.8,
     lambdaOhmPerM: 0.00008,
     maxVoltageDropPct: 3,
+    maxAcVoltageDropPct: 1,
     connectorId: null,
     cableTrayId: null,
     runs: [],
@@ -483,6 +485,36 @@ describe('saveCablingAction', () => {
       await saveCablingAction('project-1', { ...base, runs: [run('DC', 'c1'), run('AC', 'c2')] }),
     ).toBeUndefined();
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves both the DC and the AC voltage-drop limits', async () => {
+    mocks.cableFindMany.mockResolvedValue([
+      { id: 'c1', brand: 'G', model: 'DC', usage: 'DC_SOLAR', sections: [{ sectionMm2: 6 }] },
+      { id: 'c2', brand: 'G', model: 'AC', usage: 'AC', sections: [{ sectionMm2: 6 }] },
+    ]);
+    const upsert = vi.fn();
+    const tx = {
+      projectCablingConfig: { upsert },
+      projectCableRun: { deleteMany: vi.fn(), createMany: vi.fn() },
+    };
+    mocks.transaction.mockImplementation(async (callback: (client: typeof tx) => Promise<void>) => callback(tx));
+    await saveCablingAction('project-1', {
+      ...base,
+      maxVoltageDropPct: 2.5,
+      maxAcVoltageDropPct: 0.8,
+      runs: [run('DC', 'c1'), run('AC', 'c2')],
+    });
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ maxVoltageDropPct: 2.5, maxAcVoltageDropPct: 0.8 }) as unknown,
+      }),
+    );
+  });
+
+  it.each([0, 11])('rejects an AC voltage-drop limit of %s', async (value) => {
+    expect(
+      await saveCablingAction('project-1', { ...base, maxAcVoltageDropPct: value, runs: [run('DC', 'c1'), run('AC', 'c2')] }),
+    ).toEqual({ error: 'Chute de tension maximale AC invalide (0–10 %).' });
   });
 });
 

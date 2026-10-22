@@ -22,6 +22,7 @@ export interface CompanyFormValues {
   defaultTMinC: number;
   defaultTMaxC: number;
   defaultMaxVoltageDropPct: number;
+  defaultMaxAcVoltageDropPct: number;
   defaultEarthResistanceTargetOhm: number | null;
   defaultDesignWindSpeedKmh: number;
   defaultCosPhi: number;
@@ -137,8 +138,12 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
             <input type="number" step="any" name="defaultTMaxC" defaultValue={company.defaultTMaxC} required />
           </label>
           <label>
-            Chute de tension max (%)
-            <input type="number" step="any" name="defaultMaxVoltageDropPct" defaultValue={company.defaultMaxVoltageDropPct} required />
+            Chute de tension maximale DC (%)
+            <input type="number" step="any" min={0} max={10} name="defaultMaxVoltageDropPct" defaultValue={company.defaultMaxVoltageDropPct} required />
+          </label>
+          <label>
+            Chute de tension maximale AC (%)
+            <input type="number" step="any" min={0} max={10} name="defaultMaxAcVoltageDropPct" defaultValue={company.defaultMaxAcVoltageDropPct} required />
           </label>
           <label>
             Résistance de terre cible (Ω)

@@ -16,7 +16,7 @@ export interface SizingCatalog { modules: CatalogModule[]; inverters: CatalogInv
 export interface SizingContext {
   annualConsumptionKWh: number; subscribedPowerKVA: number; specificYieldKWhPerKWp: number;
   averagePriceTNDPerKWh: number | null;
-  tMinC: number; tMaxC: number; cosPhi: number; lambdaOhmPerM: number; maxVoltageDropPct: number;
+  tMinC: number; tMaxC: number; cosPhi: number; lambdaOhmPerM: number; maxVoltageDropPct: number; maxAcVoltageDropPct: number;
   dcLengthM: number; acLengthM: number; windSpeedKmh: number; tiltDeg: number;
   gps: { lat: number; lon: number }; dossierDate: string; companyAccreditationValidTo: string;
 }

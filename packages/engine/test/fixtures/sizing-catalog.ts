@@ -284,6 +284,7 @@ export const sizingContext: SizingContext = {
   cosPhi: 0.8,
   lambdaOhmPerM: 0.00008,
   maxVoltageDropPct: 3,
+  maxAcVoltageDropPct: 1,
   dcLengthM: 15,
   acLengthM: 10,
   windSpeedKmh: 120,

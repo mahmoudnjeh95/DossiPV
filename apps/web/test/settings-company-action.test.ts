@@ -69,7 +69,7 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
     name: 'SolarPro', address: '12 Rue de la Paix', phone: '20123456', email: 'contact@solarpro.tn',
     legalRepFullName: 'Ahmed Ben Ali', legalRepRole: 'Gérant', anmeCode: 'ANME-001',
     anmeCategory: 'BT', anmeValidFrom: '2026-01-01', anmeValidTo: '2027-01-01',
-    defaultTMinC: '-10', defaultTMaxC: '85', defaultMaxVoltageDropPct: '3',
+    defaultTMinC: '-10', defaultTMaxC: '85', defaultMaxVoltageDropPct: '3', defaultMaxAcVoltageDropPct: '1',
     defaultDesignWindSpeedKmh: '120', defaultCosPhi: '0.95',
   };
   for (const [key, value] of Object.entries({ ...defaults, ...overrides })) {
@@ -175,5 +175,25 @@ describe('saveCompanyAction — logo and ANME certificate uploads', () => {
     expect(updateCallArg.data.logoFileId).toBeUndefined();
     expect(updateCallArg.data.anmeCertificateFileId).toBeUndefined();
     expect(mockSaveFile).not.toHaveBeenCalled();
+  });
+
+  it('saves both the DC and the AC voltage-drop defaults', async () => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockCompanyUpdate.mockResolvedValue({ id: 'company-1' });
+
+    await saveCompanyAction(undefined, buildFormData({ defaultMaxVoltageDropPct: '2.5', defaultMaxAcVoltageDropPct: '0.8' }));
+
+    const arg = mockCompanyUpdate.mock.calls[0]?.[0] as { data: { defaultMaxVoltageDropPct: number; defaultMaxAcVoltageDropPct: number } };
+    expect(arg.data.defaultMaxVoltageDropPct).toBe(2.5);
+    expect(arg.data.defaultMaxAcVoltageDropPct).toBe(0.8);
+  });
+
+  it.each(['0', '11'])('rejects an AC voltage-drop default of %s', async (value) => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+
+    const result = await saveCompanyAction(undefined, buildFormData({ defaultMaxAcVoltageDropPct: value }));
+
+    expect(result?.error).toContain('Chute de tension maximale AC');
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
   });
 });

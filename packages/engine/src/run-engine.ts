@@ -80,7 +80,10 @@ export interface RunEngineInput {
   acRun: CableRunInput;
   cosPhi: number;
   lambdaOhmPerM: number;
+  /** DC voltage-drop limit (%). */
   maxVoltageDropPct: number;
+  /** AC voltage-drop limit (%); falls back to maxVoltageDropPct when absent. */
+  maxAcVoltageDropPct?: number;
   structure: {
     // frameCount/structureWeightN/heightHM/depthDM are the wind-stability inputs: the stability
     // derivations and check C18 only run when all four are present (Tunisian dossiers need only
@@ -325,6 +328,7 @@ export function runEngine(input: RunEngineInput): EngineResult {
     duDcPctSum: dcDropPct,
     duAcPctSum: acDropPct,
     maxVoltageDropPct: input.maxVoltageDropPct,
+    maxAcVoltageDropPct: input.maxAcVoltageDropPct ?? input.maxVoltageDropPct,
     ...(stability ? { stabilityLhs: stability.lhs, stabilityRhs: stability.rhs } : {}),
     sitePhases: input.site.phases,
     inverterPhases: inverter.phases,

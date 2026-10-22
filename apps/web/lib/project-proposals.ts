@@ -62,6 +62,7 @@ export async function computeProjectProposals(project: ProjectForEngine, now: Da
     cosPhi: company.defaultCosPhi,
     lambdaOhmPerM: LAMBDA_OHM_PER_M,
     maxVoltageDropPct: company.defaultMaxVoltageDropPct,
+    maxAcVoltageDropPct: company.defaultMaxAcVoltageDropPct,
     dcLengthM: dcRun?.lengthM ?? DEFAULT_DC_LENGTH_M,
     acLengthM: acRun?.lengthM ?? DEFAULT_AC_LENGTH_M,
     windSpeedKmh: company.defaultDesignWindSpeedKmh,

@@ -46,9 +46,9 @@ const technicalRoom = { lat: 34.4, lon: 10.10005 };
 const meter = { lat: 34.4, lon: 10.1001 };
 const payload = { field, technicalRoom, meter, earthPit: null, floors: 1 };
 
-function engineResult(overrides: { c13?: boolean; acDropPct?: number } = {}): EngineResult {
+function engineResult(overrides: { c13?: boolean; acDropPct?: number; dcDropPct?: number } = {}): EngineResult {
   return {
-    derived: { DU_DC_PCT: 1, DU_AC_PCT: overrides.acDropPct ?? 1 },
+    derived: { DU_DC_PCT: overrides.dcDropPct ?? 1, DU_AC_PCT: overrides.acDropPct ?? 1 },
     checks: [
       { id: 'C16', level: 'BLOCK', pass: true, message: '' },
       { id: 'C13', level: 'BLOCK', pass: overrides.c13 ?? true, message: '' },
@@ -86,7 +86,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   m.mockRequireOwnedProject.mockResolvedValue({ id: 'p1', companyId: 'company-1', tier: 'STANDARD', status: 'DRAFT' });
   m.mockProjectFindFirst.mockResolvedValue(projectWithAcSections());
-  m.mockBuildEngineInput.mockReturnValue({ ok: true, input: { maxVoltageDropPct: 3 }, meta: {} });
+  m.mockBuildEngineInput.mockReturnValue({ ok: true, input: { maxVoltageDropPct: 3, maxAcVoltageDropPct: 1 }, meta: {} });
   m.mockRunEngine.mockReturnValue(engineResult());
   m.mockGenerate.mockResolvedValue(undefined);
 });
@@ -174,6 +174,36 @@ describe('saveLocationsAndGenerateAction', () => {
     });
     expect(dcSectionWrites).toHaveLength(0);
     expect(m.mockGenerate).toHaveBeenCalled();
+  });
+
+  it('bumps the AC run to a larger section for the 1 % limit but keeps the DC run at 3 %', async () => {
+    // DC drops 2.5 % (fine against 3 %); AC drops 2 % (fine against 3 %, too much against 1 %).
+    m.mockRunEngine
+      .mockReturnValueOnce(engineResult({ dcDropPct: 2.5 })) // DC fits its 3 % limit
+      .mockReturnValueOnce(engineResult({ dcDropPct: 2.5, acDropPct: 2 })) // AC 2.5 mm² over 1 %
+      .mockReturnValue(engineResult({ dcDropPct: 2.5, acDropPct: 0.9 })); // AC 4 mm² within 1 %
+
+    await saveLocationsAndGenerateAction('p1', payload);
+
+    expect(m.mockRunUpdateMany).toHaveBeenCalledWith({
+      where: { projectId: 'p1', circuitType: 'AC' },
+      data: { sectionMm2: 4 },
+    });
+    const dcSectionWrites = m.mockRunUpdateMany.mock.calls.filter((call) => {
+      const arg = call[0] as { where: { circuitType: string }; data: Record<string, unknown> };
+      return arg.where.circuitType === 'DC' && 'sectionMm2' in arg.data;
+    });
+    expect(dcSectionWrites).toHaveLength(0);
+    expect(m.mockGenerate).toHaveBeenCalled();
+  });
+
+  it('reports the AC circuit when no section fits', async () => {
+    m.mockRunEngine.mockReturnValue(engineResult({ acDropPct: 2 })); // AC never gets under 1 %
+
+    const result = await saveLocationsAndGenerateAction('p1', payload);
+
+    expect(result?.error).toMatch(/liaison AC \(\d+ m\)\.$/);
+    expect(m.mockGenerate).not.toHaveBeenCalled();
   });
 
   it('stops when no larger section is left, keeping the points', async () => {

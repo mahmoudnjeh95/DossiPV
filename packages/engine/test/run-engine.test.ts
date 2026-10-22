@@ -31,6 +31,16 @@ describe('runEngine — reference dossier (Habib Khedhira, corrected)', () => {
     expect(result.hasBlockingFailure).toBe(false);
   });
 
+  it('falls back to maxVoltageDropPct for AC when maxAcVoltageDropPct is absent', () => {
+    // Legacy fixture: DC limit 3, no AC limit. A 0.1 % AC limit must fail C17, the absent one must not.
+    expect(habibKhedhiraFixture.maxAcVoltageDropPct).toBeUndefined();
+    const legacy = runEngine(habibKhedhiraFixture).checks.find((c) => c.id === 'C17');
+    expect(legacy?.pass).toBe(true);
+    const strict = runEngine({ ...habibKhedhiraFixture, maxAcVoltageDropPct: 0.001 }).checks.find((c) => c.id === 'C17');
+    expect(strict?.pass).toBe(false);
+    expect(strict?.message).toContain('Chute de tension AC');
+  });
+
   it('returns exactly 22 checks', () => {
     const result = runEngine(habibKhedhiraFixture);
     expect(result.checks).toHaveLength(22);

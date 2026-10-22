@@ -96,6 +96,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           defaultTMinC: company.defaultTMinC,
           defaultTMaxC: company.defaultTMaxC,
           defaultMaxVoltageDropPct: company.defaultMaxVoltageDropPct,
+          defaultMaxAcVoltageDropPct: company.defaultMaxAcVoltageDropPct,
           defaultEarthResistanceTargetOhm: company.defaultEarthResistanceTargetOhm,
           defaultDesignWindSpeedKmh: company.defaultDesignWindSpeedKmh,
           defaultCosPhi: company.defaultCosPhi,

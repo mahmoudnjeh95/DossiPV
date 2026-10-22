@@ -81,7 +81,7 @@ function validate(payload: LocationsPayload): string | null {
 
 type Circuit = 'DC' | 'AC';
 
-/** Does this circuit's cable carry its current (C16 / C13) within the voltage-drop limit? */
+/** Does this circuit's cable carry its current (C16 / C13) within the circuit's own voltage-drop limit (DC 3 %, AC 1 %)? */
 function circuitFits(result: EngineResult, circuit: Circuit, maxDropPct: number): boolean {
   const checkId = circuit === 'DC' ? 'C16' : 'C13';
   const dropPct = result.derived[circuit === 'DC' ? 'DU_DC_PCT' : 'DU_AC_PCT'];
@@ -153,7 +153,9 @@ export async function saveLocationsAndGenerateAction(
         console.error('Locations: engine run failed', error);
         return { error: 'Erreur de calcul : vérifiez les sections du projet.' };
       }
-      if (circuitFits(result, circuit, built.input.maxVoltageDropPct)) break;
+      const maxDropPct =
+        circuit === 'DC' ? built.input.maxVoltageDropPct : (built.input.maxAcVoltageDropPct ?? built.input.maxVoltageDropPct);
+      if (circuitFits(result, circuit, maxDropPct)) break;
 
       const run = project.cableRuns.find((candidate) => candidate.circuitType === circuit);
       const larger = run?.cable.sections

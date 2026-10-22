@@ -242,13 +242,21 @@ describe('C16 DC cable ampacity vs field design current (BLOCK)', () => {
 
 describe('C17 voltage drop within allowed limit (BLOCK)', () => {
   it('passes when both DC and AC drop sums are within the limit', () => {
-    expect(checkC17(1.2, 0.6, 3).pass).toBe(true);
+    expect(checkC17(1.2, 0.6, 3, 1).pass).toBe(true);
   });
-  it('fails when the DC drop sum exceeds the limit', () => {
-    expect(checkC17(3.5, 0.6, 3).pass).toBe(false);
+  it('C17 passes DC 2.5 % and AC 0.9 %', () => {
+    expect(checkC17(2.5, 0.9, 3, 1).pass).toBe(true);
   });
-  it('fails when the AC drop sum exceeds the limit', () => {
-    expect(checkC17(1.2, 3.5, 3).pass).toBe(false);
+  it('C17 fails DC 3.5 %', () => {
+    const result = checkC17(3.5, 0.6, 3, 1);
+    expect(result.pass).toBe(false);
+    expect(result.message).toContain('Chute de tension DC');
+    expect(result.message).not.toContain('AC');
+  });
+  it('C17 fails AC 1.5 % with a 1 % AC limit even though DC allows 3 %', () => {
+    const result = checkC17(1.2, 1.5, 3, 1);
+    expect(result.pass).toBe(false);
+    expect(result.message).toBe('Chute de tension AC 1,5 % > 1 %');
   });
 });
 
@@ -378,6 +386,7 @@ function buildPassingContext(): ChecksContext {
     duDcPctSum: 1.2,
     duAcPctSum: 0.6,
     maxVoltageDropPct: 3,
+    maxAcVoltageDropPct: 1,
     stabilityLhs: 7811.5,
     stabilityRhs: 4704,
     sitePhases: 1,
