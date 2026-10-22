@@ -18,6 +18,9 @@ const mocks = vi.hoisted(() => ({
   mergeDocumentFragments: vi.fn(),
   renderCoverPage: vi.fn(),
   renderDrawingPages: vi.fn(),
+  renderPanelWiringDiagram: vi.fn(),
+  renderDcBoxDiagram: vi.fn(),
+  renderAcBoxDiagram: vi.fn(),
   generatePage37Layout: vi.fn(),
   fetchSatelliteImage: vi.fn(),
   renderSitePlanPages: vi.fn(),
@@ -84,7 +87,12 @@ vi.mock('../src/draft-watermark', async () => ({
   ...(await vi.importActual<typeof import('../src/draft-watermark')>('../src/draft-watermark')),
   applyDraftWatermark: mocks.applyDraftWatermark,
 }));
-vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
+vi.mock('../src/render-drawings', () => ({
+  renderSingleLineDiagram: mocks.renderDrawingPages,
+  renderPanelWiringDiagram: mocks.renderPanelWiringDiagram,
+  renderDcBoxDiagram: mocks.renderDcBoxDiagram,
+  renderAcBoxDiagram: mocks.renderAcBoxDiagram,
+}));
 vi.mock('../src/render-production-report', () => ({ renderProductionReport: mocks.renderProductionReport }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
@@ -269,6 +277,9 @@ beforeEach(async () => {
   mocks.mergeDocumentFragments.mockResolvedValue({ pdf: ASSEMBLED_PDF, skipped: [] });
   mocks.renderCoverPage.mockResolvedValue(COVER_PDF);
   mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
+  mocks.renderPanelWiringDiagram.mockResolvedValue(drawingsPdf);
+  mocks.renderDcBoxDiagram.mockResolvedValue(drawingsPdf);
+  mocks.renderAcBoxDiagram.mockResolvedValue(drawingsPdf);
   mocks.renderProductionReport.mockResolvedValue(simulationReportPdf);
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
   mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
@@ -395,14 +406,17 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
     await processJob('job-1');
 
     // With no project upload, the annexes are the company's ANME agreement, the PVGIS report
-    // (N°2) and the rendered drawings and plans (N°4-6).
+    // (N°2) and the rendered drawings and plans (N°4-9).
     const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { label: string }[]][];
     expect(mergeCalls[0]![1].map((a) => a.label)).toEqual([
       "Annexe N°1 — Agrément ANME de l'installateur",
       'Annexe N°2 — Rapport de simulation de production PVGIS',
-      'Annexe N°4 — Schémas électriques',
+      'Annexe N°4 — Schéma unifilaire',
       "Annexe N°5 — Plan d'implantation et de connexion",
       'Annexe N°6 — Plan de situation',
+      'Annexe N°7 — Câblage des panneaux',
+      'Annexe N°8 — Câblage du coffret DC',
+      'Annexe N°9 — Câblage du coffret AC',
     ]);
     const finalUpdateCall = mocks.dossierJobUpdate.mock.calls.find(
       (call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED',
@@ -688,6 +702,10 @@ describe('processJob — site plans (pages 37-38)', () => {
   });
 });
 
+/** Typed as unknown so a matcher nested in an expected object does not trip the no-unsafe-assignment rule. */
+const has = (shape: Record<string, unknown>): unknown => expect.objectContaining(shape);
+const arr = (items: unknown[]): unknown => expect.arrayContaining(items);
+
 describe('processJob — fragment assembly details', () => {
   it('merges cover → TOC → body → divider into dossier.pdf, then the drawings and plans as annexes, and the divider + annexes into annexes.pdf', async () => {
     await processJob('job-1');
@@ -863,16 +881,40 @@ describe('processJob — fragment assembly details', () => {
       installedKWp: 3.1,
     });
     expect(mocks.renderDrawingPages).toHaveBeenCalledWith(
-      expect.objectContaining({
-        moduleLabel: 'X',
-        inverters: [{ inverterLabel: 'Y (1)', pacW: 4000, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
-        dcSwitchLabel: '—',
-        dcRun: { sectionMm2: 6, lengthM: 20 },
-        acRun: { sectionMm2: 10, lengthM: 15 },
-        earthRodCount: 1,
-        earthingMode: 'DEDICATED_ROD',
+      has({
+        pvField: has({ moduleRef: 'X', moduleCount: 5, strings: 1, modulesPerString: 5 }),
+        dcCable: has({ sectionMm2: 6, lengthM: 20 }),
+        acCable: has({ sectionMm2: 10, lengthM: 15 }),
+        earthing: has({ mode: 'DEDICATED_ROD' }),
+        inverter: has({ lines: arr(['Pac 4 kW']) }),
+        cartouche: has({ installerName: COMPANY.name, dossierNumber: null }),
       }),
     );
+    expect(mocks.renderPanelWiringDiagram).toHaveBeenCalledWith(has({ strings: [{ modules: 5 }], moduleRef: 'X' }));
+    expect(mocks.renderDcBoxDiagram).toHaveBeenCalledWith(has({ strings: 1, dcCable: has({ lengthM: 20 }) }));
+    expect(mocks.renderAcBoxDiagram).toHaveBeenCalledWith(has({ acCable: has({ lengthM: 15 }) }));
+  });
+
+  it('hands the drawings the differential breaker and the AGCP rating of the subscribed power', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: {
+        ...validSnapshot,
+        client: { ...validSnapshot.client, subscribedPowerKVA: 7 },
+        engineInput: { ...validSnapshot.engineInput, rcd: { residualCurrentMA: 30, rcdType: 'A' } },
+      },
+    });
+
+    await processJob('job-1');
+
+    expect(mocks.renderDrawingPages).toHaveBeenCalledWith(
+      has({
+        acBreaker: has({ lines: arr(['30 mA type A']) }),
+        agcp: { calibreA: '30/32' },
+      }),
+    );
+    expect(mocks.renderAcBoxDiagram).toHaveBeenCalledWith(expect.objectContaining({ agcp: { calibreA: '30/32' } }));
   });
 
   it('passes the installer identity, number and dossier date to the template data', async () => {
@@ -1584,9 +1626,12 @@ describe('processJob — annex plan', () => {
       'Annexe N°1 — Dernière facture STEG',
       'Annexe N°2 — Rapport de simulation de production PVGIS',
       'Annexe N°3 — Attestation de conformité de la structure',
-      'Annexe N°4 — Schémas électriques',
+      'Annexe N°4 — Schéma unifilaire',
       "Annexe N°5 — Plan d'implantation et de connexion",
       'Annexe N°6 — Plan de situation',
+      'Annexe N°7 — Câblage des panneaux',
+      'Annexe N°8 — Câblage du coffret DC',
+      'Annexe N°9 — Câblage du coffret AC',
       'Annexe N°11 — Fiche technique LONGi X',
       'Annexe N°12 — Fiche technique Sofar Y',
       'Annexe N°14 — Fiche technique Citel DS',
@@ -1600,7 +1645,7 @@ describe('processJob — annex plan', () => {
     await processJob('job-1');
 
     // Body = pages 3-7, divider = pages 8-9; ADMIN 10-11, PVGIS report 12-14, STRUCTURE 15,
-    // drawings 16-17, implantation 18, situation 19, module 20, inverter 21, (DC SPD unreadable), RCD 22.
+    // drawings 16-17, implantation 18, situation 19, panel wiring 20-21, DC box 22-23, AC box 24-25, module 26, inverter 27, (DC SPD unreadable), RCD 28.
     const divider = (await extractPdfContent((mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[]])[0][3]!))[1]!;
     const pageOf = (title: string): string | undefined => {
       const row = divider.texts.find((t) => t.text === title);
@@ -1611,8 +1656,9 @@ describe('processJob — annex plan', () => {
     expect(pageOf('Attestation de conformité de la structure')).toBe('15');
     expect(pageOf('Schéma unifilaire')).toBe('16');
     expect(pageOf('Plan de situation')).toBe('19');
-    expect(pageOf('Fiche technique du module')).toBe('20');
-    expect(pageOf('Disjoncteur différentiel')).toBe('22');
+    expect(pageOf('Câblage des panneaux')).toBe('20');
+    expect(pageOf('Fiche technique du module')).toBe('26');
+    expect(pageOf('Disjoncteur différentiel')).toBe('28');
     expect(pageOf('Parafoudre DC (document non joint)')).toBe('—');
     expect(pageOf('Chemin de câbles (sans objet)')).toBe('—');
   });
@@ -1655,7 +1701,7 @@ describe('processJob — annex plan', () => {
       expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(stegList, 'Y');
       expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(anmeList, 'X');
       const labels = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1].map((a) => a.label);
-      expect(labels.slice(7)).toEqual([
+      expect(labels.slice(10)).toEqual([
         'Annexe N°11 — Fiche technique LONGi X',
         'Annexe N°11 — Liste ANME des panneaux acceptés — page 7',
         'Annexe N°12 — Fiche technique Sofar Y',

@@ -10,6 +10,7 @@ import {
   K3_PR,
   K3_PVC,
   K4_LAYERS,
+  branchementCalibre,
 } from '../src/constants';
 
 describe('constants', () => {
@@ -32,5 +33,16 @@ describe('constants', () => {
     expect(K4_LAYERS).toEqual(schemaConstants.K4_layers);
     expect(RHO_CU).toBe(schemaConstants.rhoCu);
     expect(RHO_AL).toBe(schemaConstants.rhoAl);
+  });
+});
+
+describe('branchementCalibre', () => {
+  it('reads the STEG single-phase ladder', () => {
+    expect(branchementCalibre(7)).toBe('30/32');
+    expect(branchementCalibre(2)).toBe('10');
+  });
+
+  it('is null off the ladder', () => {
+    expect(branchementCalibre(13)).toBeNull();
   });
 });

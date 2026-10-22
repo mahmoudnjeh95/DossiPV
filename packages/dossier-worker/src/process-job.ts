@@ -27,7 +27,8 @@ import { withRetry, isRetryableError } from './retry';
 import { renderCoverPage } from './render-cover-page';
 import { tryLoadStegLogo } from './steg-logo';
 import { installerIdentityFromCompany } from './installer-identity';
-import { renderDrawingPages } from './render-drawings';
+import { renderAcBoxDiagram, renderDcBoxDiagram, renderPanelWiringDiagram, renderSingleLineDiagram } from './render-drawings';
+import { buildDrawingInputs } from './drawing-inputs';
 import { renderProductionReport } from './render-production-report';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
 import {
@@ -465,34 +466,23 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'cover', error);
   }
 
-  let drawingsBuffer: Buffer;
+  // Annexes N°4 and N°7-9: the single-line diagram and the panel, DC box and AC box wiring diagrams.
+  let drawingBuffers: { singleLine: Buffer; panelWiring: Buffer; dcBox: Buffer; acBox: Buffer };
   try {
-    const protections = snapshot.protections;
-    const equipmentLabel = (device: { brand: string; model: string } | null | undefined): string =>
-      device ? `${device.brand} ${device.model}` : '—';
-    drawingsBuffer = await renderDrawingPages({
-      moduleLabel: snapshot.projectMeta.moduleBrandModel,
-      inverters: snapshot.engineInput.array.map((entry, i) => {
-        // Each inverter's OWN brand/model (I7) — projectMeta.inverterBrandModel is only the
-        // first inverter's; a mixed-model array must not show the wrong model on every row.
-        const snapshotInverter = snapshot.arrayConfig?.inverters[i]?.inverter;
-        const label = snapshotInverter ? `${snapshotInverter.brand} ${snapshotInverter.model}` : snapshot.projectMeta.inverterBrandModel;
-        return {
-          inverterLabel: `${label} (${i + 1})`,
-          pacW: entry.inverter.pacW,
-          mppts: entry.mppts,
-        };
-      }),
-      dcSwitchLabel: equipmentLabel(protections?.dcSwitch),
-      dcSpdLabel: equipmentLabel(protections?.dcSpd),
-      acSpdLabel: equipmentLabel(protections?.acSpd),
-      acBreakerLabel: equipmentLabel(protections?.acBreaker),
-      dcRun: { sectionMm2: snapshot.engineInput.dcRun.sectionMm2, lengthM: snapshot.engineInput.dcRun.lengthM },
-      acRun: { sectionMm2: snapshot.engineInput.acRun.sectionMm2, lengthM: snapshot.engineInput.acRun.lengthM },
-      earthRodCount: snapshot.projectMeta.earthRodCount,
-      earthingMode: snapshot.projectMeta.earthingMode === 'BUILDING_EARTH' ? 'BUILDING_EARTH' : 'DEDICATED_ROD',
+    const inputs = buildDrawingInputs({
+      snapshot,
+      engineResult: workerResult.engineResult,
+      installer,
+      installedKWp: production.installedKWp,
+      stegLogoBuffer,
     });
-    await PDFDocument.load(drawingsBuffer); // an unreadable drawing fails here, at its own step
+    drawingBuffers = {
+      singleLine: await renderSingleLineDiagram(inputs.singleLine),
+      panelWiring: await renderPanelWiringDiagram(inputs.panelWiring),
+      dcBox: await renderDcBoxDiagram(inputs.dcBox),
+      acBox: await renderAcBoxDiagram(inputs.acBox),
+    };
+    for (const buffer of Object.values(drawingBuffers)) await PDFDocument.load(buffer); // an unreadable drawing fails here, at its own step
   } catch (error) {
     return fail(jobId, 'drawings', error);
   }
@@ -733,7 +723,10 @@ export async function processJob(jobId: string): Promise<void> {
     );
     const fragmentDocuments: AnnexDocument[] = [
       { slot: 'SIMULATION', label: 'Rapport de simulation de production PVGIS', source: { kind: 'fragment', buffer: simulationReportBuffer } },
-      { slot: 'SINGLE_LINE', label: 'Schémas électriques', source: { kind: 'fragment', buffer: drawingsBuffer } },
+      { slot: 'SINGLE_LINE', label: 'Schéma unifilaire', source: { kind: 'fragment', buffer: drawingBuffers.singleLine } },
+      { slot: 'PANEL_WIRING', label: 'Câblage des panneaux', source: { kind: 'fragment', buffer: drawingBuffers.panelWiring } },
+      { slot: 'DC_BOX', label: 'Câblage du coffret DC', source: { kind: 'fragment', buffer: drawingBuffers.dcBox } },
+      { slot: 'AC_BOX', label: 'Câblage du coffret AC', source: { kind: 'fragment', buffer: drawingBuffers.acBox } },
       { slot: 'IMPLANTATION', label: "Plan d'implantation et de connexion", source: { kind: 'fragment', buffer: implantationPlanBuffer } },
       ...(situationPlanBuffer ? [{ slot: 'SITUATION', label: 'Plan de situation', source: { kind: 'fragment', buffer: situationPlanBuffer } } satisfies AnnexDocument] : []),
     ];

@@ -101,3 +101,25 @@ export const K4_LAYERS: Record<string, number> = {
   '8': 0.68,
   '9': 0.66,
 };
+
+/**
+ * STEG single-phase branchement: the AGCP (disjoncteur de branchement) rating in amperes by
+ * subscribed power in kVA.
+ */
+export const STEG_SINGLE_PHASE_BRANCHEMENT_A: Record<number, string> = {
+  2: '10',
+  3: '15',
+  4: '20',
+  7: '30/32',
+  10: '45',
+  14: '63',
+  22: '100',
+  27: '125',
+  35: '160',
+  50: '225',
+};
+
+/** The AGCP rating for a subscribed power, or null when the power is not on STEG's ladder. */
+export function branchementCalibre(kVA: number): string | null {
+  return STEG_SINGLE_PHASE_BRANCHEMENT_A[kVA] ?? null;
+}
