@@ -49,6 +49,7 @@ model File {
   dossierJobDocxFor       DossierJob[] @relation("DossierJobDocx")
   dossierJobPdfFor        DossierJob[] @relation("DossierJobPdf")
   dossierJobAnnexesPdfFor DossierJob[] @relation("DossierJobAnnexesPdf")
+  catalogSourceDocumentFor CatalogSourceDocument[] @relation("CatalogSourceDocumentFile")
 
   @@map("file")
 }
@@ -1029,4 +1030,22 @@ model LibraryItem {
   @@unique([companyId, cableId])
   @@unique([companyId, accessoryId])
   @@map("library_item")
+}
+
+/// The official lists the catalog is imported from (STEG accepted inverters, ANME accepted
+/// panels), stored as files so the worker can annex the page listing the chosen model.
+enum CatalogSourceKind {
+  STEG_INVERTER_LIST
+  ANME_PANEL_LIST
+}
+
+model CatalogSourceDocument {
+  id        String            @id @default(uuid())
+  kind      CatalogSourceKind @unique
+  fileId    String
+  file      File              @relation("CatalogSourceDocumentFile", fields: [fileId], references: [id])
+  sourceUrl String
+  fetchedAt DateTime          @default(now())
+
+  @@map("catalog_source_document")
 }

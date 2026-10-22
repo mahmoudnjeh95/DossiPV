@@ -17,6 +17,8 @@ import { assertStorageConfigured, runImport, uploadDatasheet } from './run-impor
 import { runAttachCuratedDatasheets } from './attach-curated-datasheets';
 import { db } from '@dossipv/db';
 import { runPurge } from './purge-test-items';
+import { runStoreSourceLists } from './store-source-lists';
+import { saveFile } from '@dossipv/file-storage';
 
 async function writeJson(relativePath: string, value: unknown): Promise<void> {
   const fullPath = join(DATA_DIR, relativePath);
@@ -94,6 +96,15 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
     if (args.includes('--apply')) assertStorageConfigured();
     await runAttachCuratedDatasheets(db, { apply: args.includes('--apply'), log: console.log, fetchPdf: uploadDatasheet });
     await db.$disconnect();
+  },
+  'store-source-lists': async (args) => {
+    const apply = args.includes('--apply');
+    if (apply) assertStorageConfigured();
+    try {
+      await runStoreSourceLists(db, { apply, log: console.log, save: saveFile });
+    } finally {
+      await db.$disconnect();
+    }
   },
 };
 

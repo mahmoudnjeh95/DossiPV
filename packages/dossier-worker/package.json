@@ -19,7 +19,8 @@
     "@dossipv/engine": "*",
     "@dossipv/pvgis-client": "*",
     "jpeg-js": "^0.4.4",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

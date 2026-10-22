@@ -28,6 +28,8 @@ const mocks = vi.hoisted(() => ({
   simulateProduction: vi.fn(),
   runEngine: vi.fn(),
   projectSimulationUpsert: vi.fn(),
+  catalogSourceDocumentFindUnique: vi.fn(),
+  buildListPageAnnex: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -42,6 +44,7 @@ vi.mock('@dossipv/db', async () => {
       file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
       dossierCheckResult: { createMany: mocks.checkResultCreateMany },
       projectSimulation: { upsert: mocks.projectSimulationUpsert },
+      catalogSourceDocument: { findUnique: mocks.catalogSourceDocumentFindUnique },
     },
   };
 });
@@ -75,6 +78,7 @@ vi.mock('../src/fetch-satellite-image', async () => ({
 }));
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
 vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents }));
+vi.mock('../src/steg-list-annex', () => ({ buildListPageAnnex: mocks.buildListPageAnnex }));
 vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: mocks.getFilePath }));
 vi.mock('fs/promises', async () => {
   const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
@@ -224,6 +228,8 @@ beforeEach(async () => {
   mocks.runEngine.mockReturnValue({ derived: { DU_DC_PCT: 0.74, DU_AC_PCT: 0.48 }, checks: [], hasBlockingFailure: false });
   mocks.simulateProduction.mockResolvedValue(PRODUCTION);
   mocks.projectSimulationUpsert.mockResolvedValue({});
+  mocks.catalogSourceDocumentFindUnique.mockResolvedValue(null);
+  mocks.buildListPageAnnex.mockResolvedValue(null);
 });
 
 describe('processJob — success path', () => {
@@ -472,6 +478,9 @@ describe('processJob — missing annex bytes on disk', () => {
     expect(annexes.map((a) => a.label)).not.toContain('Annexe N°11 — Fiche technique LONGi X');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('file-module-datasheet'));
     expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
+      // No STEG / ANME list is stored in this test.
+      'Page de la liste STEG introuvable pour Y.',
+      'Page de la liste ANME introuvable pour X.',
       'Annexe N°11 — Fiche technique LONGi X : fichier introuvable, non joint au dossier.',
     ]);
     warn.mockRestore();
@@ -1142,7 +1151,81 @@ describe('processJob — annex plan', () => {
     await processJob('job-1');
 
     const update = findSucceededUpdate() as [{ data: { warnings: string[] } }];
-    expect(update[0].data.warnings).toEqual(['Annexe N°14 — Fiche technique Citel DS : document illisible, non joint au dossier.']);
+    expect(update[0].data.warnings).toEqual([
+      'Page de la liste STEG introuvable pour Y.',
+      'Page de la liste ANME introuvable pour X.',
+      'Annexe N°14 — Fiche technique Citel DS : document illisible, non joint au dossier.',
+    ]);
+  });
+
+  describe('STEG and ANME list pages', () => {
+    const LIST_ROWS: Record<string, { file: { storageKey: string } }> = {
+      STEG_INVERTER_LIST: { file: { storageKey: 'steg-list.pdf' } },
+      ANME_PANEL_LIST: { file: { storageKey: 'anme-list.pdf' } },
+    };
+    const stegList = Buffer.from('%PDF-steg-list');
+    const anmeList = Buffer.from('%PDF-anme-list');
+
+    beforeEach(async () => {
+      const listPage = await onePagePdf(500);
+      const actualRead = mocks.readFile.getMockImplementation() as (path: string) => Promise<Buffer>;
+      mocks.readFile.mockImplementation((path: string) =>
+        path === '/storage/steg-list.pdf' ? Promise.resolve(stegList) : path === '/storage/anme-list.pdf' ? Promise.resolve(anmeList) : actualRead(path),
+      );
+      mocks.catalogSourceDocumentFindUnique.mockImplementation(({ where }: { where: { kind: string } }) => Promise.resolve({ kind: where.kind, ...LIST_ROWS[where.kind]! }));
+      mocks.buildListPageAnnex.mockImplementation((_list: Buffer, model: string) => Promise.resolve({ page: listPage, pageNumber: model === 'Y' ? 2 : 7 }));
+    });
+
+    it('annexes the STEG list page under N°10 and, without an acceptance letter, the ANME list page under N°11', async () => {
+      await processJob('job-1');
+
+      expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(stegList, 'Y');
+      expect(mocks.buildListPageAnnex).toHaveBeenCalledWith(anmeList, 'X');
+      const labels = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1].map((a) => a.label);
+      expect(labels.slice(6)).toEqual([
+        'Annexe N°11 — Fiche technique LONGi X',
+        'Annexe N°11 — Liste ANME des panneaux acceptés — page 7',
+        'Annexe N°12 — Fiche technique Sofar Y',
+        'Annexe N°10 — Liste STEG des onduleurs acceptés — page 2',
+        'Annexe N°14 — Fiche technique Citel DS',
+        'Annexe N°18 — Fiche technique Hager RCBO',
+      ]);
+      expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([]);
+    });
+
+    it('leaves the ANME list page out when the module has an acceptance letter', async () => {
+      mocks.projectFindUnique.mockResolvedValue({
+        annexes: { cinFileId: null, commercialRegisterFileId: null, stegContractFileId: null, lastPaidBillFileId: 'file-bill', moduleAcceptanceFileId: 'file-module', extraFiles: [] },
+        structure: { structureAttestationFileId: 'file-structure' },
+      });
+
+      await processJob('job-1');
+
+      expect(mocks.buildListPageAnnex).toHaveBeenCalledTimes(1);
+      expect(mocks.catalogSourceDocumentFindUnique).not.toHaveBeenCalledWith(expect.objectContaining({ where: { kind: 'ANME_PANEL_LIST' } }));
+      const labels = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1].map((a) => a.label);
+      expect(labels.filter((l) => l.includes('Liste ANME'))).toEqual([]);
+    });
+
+    it('warns and appends nothing when the list does not name the model or cannot be read', async () => {
+      mocks.buildListPageAnnex.mockResolvedValue(null);
+      const actualRead = mocks.readFile.getMockImplementation() as (path: string) => Promise<Buffer>;
+      mocks.readFile.mockImplementation((path: string) =>
+        path === '/storage/anme-list.pdf' ? Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' })) : actualRead(path),
+      );
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await processJob('job-1');
+
+      expect(findSucceededUpdate()).toBeDefined();
+      const labels = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1].map((a) => a.label);
+      expect(labels.filter((l) => l.includes('Liste '))).toEqual([]);
+      expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
+        'Page de la liste STEG introuvable pour Y.',
+        'Page de la liste ANME introuvable pour X.',
+      ]);
+      warn.mockRestore();
+    });
   });
 
   it('fails at "annexes" when the uploaded structure attestation is missing on disk', async () => {

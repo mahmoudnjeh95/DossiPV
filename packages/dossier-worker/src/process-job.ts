@@ -39,6 +39,7 @@ import {
 } from './fetch-satellite-image';
 import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
 import { renderTableOfContents } from './render-toc';
+import { buildListPageAnnex } from './steg-list-annex';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 
@@ -174,6 +175,51 @@ async function loadAnnexFiles(documents: AnnexDocument[], projectFileIds: Set<st
     files.set(document, { buffer, mimeType: ANNEX_MIME_TYPES[row.mimeType] ?? 'pdf', label });
   }
   return { files, warnings };
+}
+
+/** A model to find in one of the official lists, and where its page goes. */
+interface ListPageRequest {
+  kind: 'STEG_INVERTER_LIST' | 'ANME_PANEL_LIST';
+  model: string;
+}
+
+const LIST_PAGE_ANNEXES = {
+  STEG_INVERTER_LIST: { slot: 'INVERTER_HOMOLOGATION', name: 'STEG', label: 'Liste STEG des onduleurs acceptés' },
+  ANME_PANEL_LIST: { slot: 'MODULE', name: 'ANME', label: 'Liste ANME des panneaux acceptés' },
+} as const;
+
+/**
+ * The page of the stored STEG / ANME list that names each requested model, its row highlighted,
+ * as an annex fragment. A list that is not stored, unreadable, or does not name the model never
+ * fails the job: nothing is appended and the job records a warning.
+ */
+async function loadListPageAnnexes(requests: ListPageRequest[]): Promise<{ documents: AnnexDocument[]; warnings: string[] }> {
+  const documents: AnnexDocument[] = [];
+  const warnings: string[] = [];
+  const lists = new Map<ListPageRequest['kind'], Promise<Buffer | null>>();
+  const loadList = async (kind: ListPageRequest['kind']): Promise<Buffer | null> => {
+    const stored = await db.catalogSourceDocument.findUnique({ where: { kind }, include: { file: true } });
+    if (!stored) return null;
+    const { getFilePath } = await import('@dossipv/file-storage');
+    return readFile(getFilePath(stored.file.storageKey));
+  };
+
+  for (const { kind, model } of requests) {
+    const annex = LIST_PAGE_ANNEXES[kind];
+    try {
+      if (!lists.has(kind)) lists.set(kind, loadList(kind));
+      const list = await lists.get(kind)!;
+      const found = list ? await buildListPageAnnex(list, model) : null;
+      if (found) {
+        documents.push({ slot: annex.slot, label: `${annex.label} — page ${found.pageNumber}`, source: { kind: 'fragment', buffer: found.page } });
+        continue;
+      }
+    } catch (error) {
+      console.warn(`processJob: the ${annex.name} list page for ${model} could not be built.`, error);
+    }
+    warnings.push(`Page de la liste ${annex.name} introuvable pour ${model}.`);
+  }
+  return { documents, warnings };
 }
 
 /**
@@ -532,7 +578,16 @@ export async function processJob(jobId: string): Promise<void> {
       { slot: 'IMPLANTATION', label: "Plan d'implantation et de connexion", source: { kind: 'fragment', buffer: implantationPlanBuffer } },
       ...(situationPlanBuffer ? [{ slot: 'SITUATION', label: 'Plan de situation', source: { kind: 'fragment', buffer: situationPlanBuffer } } satisfies AnnexDocument] : []),
     ];
-    const plan = buildAnnexPlan([...fragmentDocuments, ...fileDocuments]);
+    // Annex N°10 is the STEG list page naming the inverter; the ANME list page stands in for the
+    // module's acceptance letter (annex N°11) only when there is no such letter.
+    const module = snapshot.arrayConfig?.module;
+    const moduleAcceptanceFileId = annexes?.moduleAcceptanceFileId ?? module?.homologationFileId ?? null;
+    const listPages = await loadListPageAnnexes([
+      ...[...new Set((snapshot.arrayConfig?.inverters ?? []).map(({ inverter }) => inverter.model))].map((model) => ({ kind: 'STEG_INVERTER_LIST' as const, model })),
+      ...(module && !moduleAcceptanceFileId ? [{ kind: 'ANME_PANEL_LIST' as const, model: module.model }] : []),
+    ]);
+    warnings.push(...listPages.warnings);
+    const plan = buildAnnexPlan([...fragmentDocuments, ...fileDocuments, ...listPages.documents]);
     const ordered = physicalAnnexDocuments(plan);
 
     // Uploads are required (a missing one fails the job); catalog files are optional.
