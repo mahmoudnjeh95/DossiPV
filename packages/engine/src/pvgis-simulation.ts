@@ -11,7 +11,7 @@ const NOCT_AMBIENT_C = 20;
  * per-inverter efficiency-curve field (InverterInput never modeled one), so this fixed figure
  * is the acknowledged, documented stand-in until a real efficiency-curve field exists.
  */
-const DEFAULT_INVERTER_EFFICIENCY_PCT = 97;
+export const DEFAULT_INVERTER_EFFICIENCY_PCT = 97;
 
 export function cellTempFromIrradiance(ambientTempC: number, irradianceWM2: number, noctC: number | undefined): number {
   const resolvedNoct = noctC ?? DEFAULT_NOCT_C;
@@ -83,9 +83,18 @@ export interface MonthlySimulationRow {
   ambientTempC: number;
   globIncKWhM2: number;
   globEffKWhM2: number;
+  /** Energy at the array's output (after the temperature derating), before any cable. */
   eArrayKWh: number;
   eGridKWh: number;
   prPct: number;
+  /** kWp × in-plane irradiation: the energy at STC efficiency, before any loss. */
+  eNominalKWh: number;
+  /** After the DC cable losses (inverter input). */
+  eAfterDcCableKWh: number;
+  /** After the inverter's conversion efficiency, before clipping at Pac. */
+  eInverterUnclippedKWh: number;
+  /** The inverter's output, clipped at Pac (before the AC cable). */
+  eInverterOutKWh: number;
 }
 
 export interface SimulationChartData {
@@ -112,7 +121,11 @@ export function computeMonthlySimulationTable(input: ComputeMonthlySimulationTab
   const aggregates = aggregateMonthlyIrradiance(input.inPlaneHourly, input.horizontalHourly);
 
   const monthly: MonthlySimulationRow[] = aggregates.map((aggregate) => {
+    let eNominalWh = 0;
     let eArrayWh = 0;
+    let eAfterDcCableWh = 0;
+    let eInverterUnclippedWh = 0;
+    let eInverterOutWh = 0;
     let eGridWh = 0;
 
     for (const hour of aggregate.hourlyInPlane) {
@@ -122,14 +135,23 @@ export function computeMonthlySimulationTable(input: ComputeMonthlySimulationTab
       const irradianceRatio = hourIrradianceWM2 / STC_IRRADIANCE_WM2;
       const hourArrayWh = input.module.pmaxW * input.moduleCount * irradianceRatio * derateFromStc;
 
-      const irradianceRatioSquared = irradianceRatio * irradianceRatio;
-      const dcLossFraction = (input.dcVoltageDropPct / 100) * irradianceRatioSquared;
-      const acLossFraction = (input.acVoltageDropPct / 100) * irradianceRatioSquared;
-      const afterCableLossWh = hourArrayWh * (1 - dcLossFraction) * (1 - acLossFraction);
-      const afterInverterEfficiencyWh = afterCableLossWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100);
-      const hourGridWh = Math.min(afterInverterEfficiencyWh, input.inverterPacW);
+      // Cable losses are I²R: the lost power goes with the square of the current, so the lost
+      // FRACTION of the power goes linearly with the current. The design drops are computed at
+      // the rated current (DC: string Imp at STC; AC: the inverter's rated output), so each
+      // fraction is the drop scaled by the hour's current against that rated current.
+      const dcLossFraction = (input.dcVoltageDropPct / 100) * Math.max(0, irradianceRatio);
+      const afterDcCableWh = hourArrayWh * (1 - dcLossFraction);
+      // The inverter converts, then clips at its rated AC power; the AC cable comes after it.
+      const inverterUnclippedWh = afterDcCableWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100);
+      const inverterOutputWh = Math.min(inverterUnclippedWh, input.inverterPacW);
+      const acLossFraction = input.inverterPacW > 0 ? (input.acVoltageDropPct / 100) * Math.max(0, inverterOutputWh / input.inverterPacW) : 0;
+      const hourGridWh = inverterOutputWh * (1 - acLossFraction);
 
+      eNominalWh += Math.max(0, input.module.pmaxW * input.moduleCount * irradianceRatio);
       eArrayWh += Math.max(0, hourArrayWh);
+      eAfterDcCableWh += Math.max(0, afterDcCableWh);
+      eInverterUnclippedWh += Math.max(0, inverterUnclippedWh);
+      eInverterOutWh += Math.max(0, inverterOutputWh);
       eGridWh += Math.max(0, hourGridWh);
     }
 
@@ -150,6 +172,10 @@ export function computeMonthlySimulationTable(input: ComputeMonthlySimulationTab
       eArrayKWh,
       eGridKWh,
       prPct,
+      eNominalKWh: eNominalWh / 1000,
+      eAfterDcCableKWh: eAfterDcCableWh / 1000,
+      eInverterUnclippedKWh: eInverterUnclippedWh / 1000,
+      eInverterOutKWh: eInverterOutWh / 1000,
     };
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateMonthlyIrradiance, computeMonthlySimulationTable, pmaxAtCellTemp } from '../src/pvgis-simulation';
+import { aggregateMonthlyIrradiance, computeMonthlySimulationTable, DEFAULT_INVERTER_EFFICIENCY_PCT, pmaxAtCellTemp } from '../src/pvgis-simulation';
 import type { PvgisHourlyRow } from '@dossipv/pvgis-client';
 
 /** Test helper — beamWM2/diffuseWM2 split chosen so (beam+diffuse+reflected) matches each
@@ -128,9 +128,62 @@ describe('computeMonthlySimulationTable', () => {
     const fullCableLossKWh = gridKWhWithCableLoss(fullSun, 0, 0) - gridKWhWithCableLoss(fullSun, 1.5, 1.0);
     const halfCableLossKWh = gridKWhWithCableLoss(halfSun, 0, 0) - gridKWhWithCableLoss(halfSun, 1.5, 1.0);
 
-    // Loss scales with (ratio)^2 * (output which itself scales ~linearly with irradiance) —
-    // so loss at half irradiance should be well under 1/4 of full-irradiance loss, not 1/2.
+    // I²R: the lost watts scale with the square of the current, so at half irradiance the loss
+    // is about a quarter of the full-irradiance loss — well under a third, never a half.
     expect(halfCableLossKWh).toBeLessThan(fullCableLossKWh / 3);
+  });
+
+  it('loses on the DC cable a fraction of the power proportional to the current (I²R), the design drop at STC', () => {
+    // 500 W/m²: half the STC current, so a quarter of the STC loss in watts, i.e. half the design
+    // drop as a fraction of the (halved) power. No AC drop and no clipping isolates the DC cable.
+    const halfSun: PvgisHourlyRow[] = [row('20200101:1200', 400, 100, 25)];
+    const jan = computeMonthlySimulationTable({
+      inPlaneHourly: halfSun, horizontalHourly: halfSun, module, moduleCount: 5,
+      installedKWp: 3.1, dcVoltageDropPct: 2, acVoltageDropPct: 0, inverterPacW: 100_000,
+    }).monthly[0]!;
+
+    expect(jan.eGridKWh).toBeCloseTo(jan.eArrayKWh * (1 - 0.02 * 0.5) * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100), 9);
+  });
+
+  it('applies the AC cable drop after the inverter, in proportion to its output against Pac', () => {
+    const halfSun: PvgisHourlyRow[] = [row('20200101:1200', 400, 100, 25)];
+    const jan = computeMonthlySimulationTable({
+      inPlaneHourly: halfSun, horizontalHourly: halfSun, module, moduleCount: 5,
+      installedKWp: 3.1, dcVoltageDropPct: 0, acVoltageDropPct: 1, inverterPacW: 3000,
+    }).monthly[0]!;
+    const inverterKWh = jan.eArrayKWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100);
+
+    expect(jan.eGridKWh).toBeCloseTo(inverterKWh * (1 - 0.01 * (inverterKWh / 3)), 9);
+  });
+
+  it('loses the full AC design drop on an hour clipped at Pac', () => {
+    // 6 × 620 W at 1 000 W/m² gives more than 3 000 W after the inverter: the output is clipped
+    // at Pac, and the AC cable, carrying the rated current, still loses its 1 %.
+    const fullSun: PvgisHourlyRow[] = [row('20200101:1200', 800, 200, 25)];
+    const jan = computeMonthlySimulationTable({
+      inPlaneHourly: fullSun, horizontalHourly: fullSun, module, moduleCount: 6,
+      installedKWp: 3.72, dcVoltageDropPct: 0, acVoltageDropPct: 1, inverterPacW: 3000,
+    }).monthly[0]!;
+
+    expect(jan.eArrayKWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100)).toBeGreaterThan(3);
+    expect(jan.eGridKWh).toBeCloseTo(3 * 0.99, 9);
+  });
+
+  it('reports the energy after each loss stage, so the losses can be itemised', () => {
+    // Two hours: one clipped (6 × 620 W at 1 000 W/m²), one not (500 W/m²).
+    const hours: PvgisHourlyRow[] = [row('20200101:1200', 800, 200, 25), row('20200101:1300', 400, 100, 25)];
+    const jan = computeMonthlySimulationTable({
+      inPlaneHourly: hours, horizontalHourly: hours, module, moduleCount: 6,
+      installedKWp: 3.72, dcVoltageDropPct: 1.5, acVoltageDropPct: 1, inverterPacW: 3000,
+    }).monthly[0]!;
+
+    expect(jan.eNominalKWh).toBeCloseTo(3.72 * jan.globIncKWhM2, 9); // kWp × in-plane irradiation
+    expect(jan.eArrayKWh).toBeLessThan(jan.eNominalKWh); // temperature
+    expect(jan.eAfterDcCableKWh).toBeLessThan(jan.eArrayKWh);
+    expect(jan.eInverterUnclippedKWh).toBeCloseTo(jan.eAfterDcCableKWh * (DEFAULT_INVERTER_EFFICIENCY_PCT / 100), 9);
+    expect(jan.eInverterOutKWh).toBeLessThan(jan.eInverterUnclippedKWh); // the first hour is clipped
+    expect(jan.eInverterOutKWh).toBeGreaterThan(3); // 3 kWh clipped + the second hour
+    expect(jan.eGridKWh).toBeLessThan(jan.eInverterOutKWh); // AC cable
   });
 
   it('uses the default NOCT of 45C when the module has no noctC field', () => {
