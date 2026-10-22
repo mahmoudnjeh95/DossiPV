@@ -14,6 +14,11 @@ import { computeRowSpacingM } from './panel-layout';
 
 /** Upper bound on buildCandidate calls (each one runs the full engine) per proposeInstallations call. */
 export const MAX_ENGINE_RUNS = 20_000;
+/**
+ * Part of MAX_ENGINE_RUNS kept for the largest installations (phase 2), which sort last by
+ * coverage distance and would otherwise never be built.
+ */
+export const MAX_PRODUCTION_RESERVE_RUNS = 2_000;
 /** Upper bound on the string layouts enumerated (before any engine run) per proposeInstallations call. */
 export const MAX_COMBOS = 200_000;
 
@@ -22,9 +27,7 @@ const MODULE_MAX_PMAX_W = 720;
 const MIN_DC_AC_RATIO = 0.8;
 const MAX_DC_AC_RATIO = 1.3;
 const MIN_COVERAGE = 0.5;
-const MAX_COVERAGE = 1.3;
 const ECONOMIC_MIN_COVERAGE = 0.8;
-const MAX_PRODUCTION_MAX_COVERAGE = 1.2;
 /** Tie-break target: the DC/AC ratio installers usually aim for. */
 const PREFERRED_DC_AC_RATIO = 1.15;
 const MAX_NO_SOLUTION_REASONS = 3;
@@ -141,7 +144,7 @@ function cheapCombos(
           const coverage =
             ((dcW / 1000) * context.specificYieldKWhPerKWp) / context.annualConsumptionKWh;
           if (ratio < MIN_DC_AC_RATIO || ratio > MAX_DC_AC_RATIO) continue;
-          if (coverage < MIN_COVERAGE || coverage > MAX_COVERAGE) continue;
+          if (coverage < MIN_COVERAGE) continue;
           combos.push({ module, inverter, modulesPerString, stringCount, coverage });
           if (combos.length >= MAX_COMBOS) return combos;
         }
@@ -225,7 +228,7 @@ function explain(kind: ProposalKind, scored: Scored, context: SizingContext): st
     case 'ECONOMIC':
       return 'Le moins de panneaux pour couvrir au moins 80 % de la consommation.';
     case 'MAX_PRODUCTION':
-      return `La plus forte production possible avec ${numberFormat.format(context.subscribedPowerKVA)} kVA souscrits.`;
+      return `La plus forte production possible avec ${numberFormat.format(context.subscribedPowerKVA)} kVA souscrits (onduleur ≤ puissance souscrite, rapport DC/AC ≤ 1,3).`;
   }
 }
 
@@ -244,8 +247,8 @@ function noSolution(reasons: string[], combinations = 0, engineRuns = 0): Propos
 /**
  * Up to three single-phase installations from the installer's catalog for the client's need:
  * the one producing closest to the consumption (RECOMMENDED), the one with the fewest modules
- * covering at least 80 % (ECONOMIC) and the most productive one covering at most 120 %
- * (MAX_PRODUCTION). Objectives won by the same installation are merged into one proposal.
+ * covering at least 80 % (ECONOMIC) and the most productive one (MAX_PRODUCTION), limited only by
+ * the subscribed power (inverter AC power) and the DC/AC ratio: there is no coverage ceiling. Objectives won by the same installation are merged into one proposal.
  * When nothing qualifies, `noSolutionReasons` says why, in French, for the installer.
  */
 export function proposeInstallations(
@@ -270,7 +273,7 @@ export function proposeInstallations(
   const combos = cheapCombos(modules, inverters, context);
   if (combos.length === 0) {
     return noSolution([
-      'Aucune combinaison panneaux/onduleur ne couvre entre 50 % et 130 % de la consommation.',
+      'Aucune combinaison panneaux/onduleur ne couvre au moins 50 % de la consommation.',
     ]);
   }
   combos.sort((a, b) => Math.abs(a.coverage - 1) - Math.abs(b.coverage - 1));
@@ -278,8 +281,7 @@ export function proposeInstallations(
   const candidates: Scored[] = [];
   const failures = new Map<string, number>();
   let engineRuns = 0;
-  for (const combo of combos) {
-    if (engineRuns >= MAX_ENGINE_RUNS) break;
+  const build = (combo: Combo): boolean => {
     engineRuns++;
     const result = buildCandidate(
       combo.module,
@@ -289,13 +291,33 @@ export function proposeInstallations(
       catalog,
       context,
     );
-    if (result.ok) candidates.push(score(result.candidate, context));
-    else failures.set(result.reason, (failures.get(result.reason) ?? 0) + 1);
+    if (result.ok) {
+      candidates.push(score(result.candidate, context));
+      return true;
+    }
+    failures.set(result.reason, (failures.get(result.reason) ?? 0) + 1);
+    return false;
+  };
+
+  // Phase 1: the combinations closest to the need, keeping a reserve for phase 2.
+  const phase1Runs = Math.min(combos.length, MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
+  for (let i = 0; i < phase1Runs; i++) build(combos[i] as Combo);
+
+  // Phase 2: the largest installations not built yet, until one succeeds.
+  const dcPowerW = (c: Combo): number => c.modulesPerString * c.stringCount * c.module.pmaxW;
+  const comboKey = (c: Combo): string =>
+    `${c.module.id}|${c.inverter.id}|${c.modulesPerString}x${c.stringCount}`;
+  const remaining = combos
+    .slice(phase1Runs)
+    .sort((a, b) => dcPowerW(b) - dcPowerW(a) || comboKey(a).localeCompare(comboKey(b)));
+  for (const combo of remaining) {
+    if (engineRuns >= MAX_ENGINE_RUNS) break;
+    if (build(combo)) break;
   }
   if (candidates.length === 0) return noSolution(mostFrequent(failures), combos.length, engineRuns);
 
   const consumption = context.annualConsumptionKWh;
-  // A division (not `limit × consumption`) so an exact 80 % / 120 % compares equal to the limit.
+  // A division (not `limit × consumption`) so an exact 80 % compares equal to the limit.
   const coverage = (s: Scored): number => s.annualProductionKWh / consumption;
   const winners: Record<ProposalKind, Scored | null> = {
     RECOMMENDED: best(
@@ -310,7 +332,7 @@ export function proposeInstallations(
     ),
     MAX_PRODUCTION: best(
       candidates,
-      (s) => coverage(s) <= MAX_PRODUCTION_MAX_COVERAGE,
+      () => true,
       (s) => -s.annualProductionKWh,
     ),
   };

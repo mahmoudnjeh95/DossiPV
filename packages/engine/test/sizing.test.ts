@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { MAX_COMBOS, MAX_ENGINE_RUNS, proposeInstallations } from '../src';
+import {
+  MAX_COMBOS,
+  MAX_ENGINE_RUNS,
+  MAX_PRODUCTION_RESERVE_RUNS,
+  proposeInstallations,
+} from '../src';
 import type {
   CatalogInverter,
   CatalogModule,
@@ -8,6 +13,8 @@ import type {
   SizingContext,
 } from '../src';
 import { sizingCatalog, sizingContext } from './fixtures/sizing-catalog';
+import { buildCandidate } from '../src/build-candidate';
+import { nsMax, nsMin, nsOptMax, npOpt } from '../src/string-sizing';
 
 const INELIGIBLE_INVERTER_IDS = [
   'inverter-10kw-three-phase',
@@ -94,7 +101,7 @@ describe('proposeInstallations', () => {
     ]);
   });
 
-  it('explains that no combination covers 50 to 130 % of the need', () => {
+  it('explains that no combination covers half the need', () => {
     const result = proposeInstallations(sizingCatalog, {
       ...sizingContext,
       annualConsumptionKWh: 100_000,
@@ -102,7 +109,7 @@ describe('proposeInstallations', () => {
 
     expect(result.proposals).toEqual([]);
     expect(result.noSolutionReasons).toEqual([
-      'Aucune combinaison panneaux/onduleur ne couvre entre 50 % et 130 % de la consommation.',
+      'Aucune combinaison panneaux/onduleur ne couvre au moins 50 % de la consommation.',
     ]);
   });
 
@@ -131,17 +138,78 @@ describe('proposeInstallations', () => {
     );
     expect(economic.moduleCount).toBeLessThanOrEqual(recommended.moduleCount);
     expect(economic.coveragePct).toBeGreaterThanOrEqual(80);
-    expect(maxProduction.coveragePct).toBeLessThanOrEqual(120);
     for (const proposal of proposals) {
-      expect(proposal.coveragePct).toBeLessThanOrEqual(130);
       expect(proposal.candidate.inverter.pacW).toBeLessThanOrEqual(14000);
     }
     expect(economic.explanation).toContain(
       'Le moins de panneaux pour couvrir au moins 80 % de la consommation.',
     );
     expect(maxProduction.explanation).toContain(
-      'La plus forte production possible avec 14 kVA souscrits.',
+      'La plus forte production possible avec 14 kVA souscrits (onduleur ≤ puissance souscrite, rapport DC/AC ≤ 1,3).',
     );
+  });
+
+  it('production maximale has no coverage ceiling', () => {
+    const { proposals } = proposeInstallations(sizingCatalog, {
+      ...sizingContext,
+      annualConsumptionKWh: 3000,
+      subscribedPowerKVA: 10,
+    });
+
+    const maxProduction = withKind(proposals, 'MAX_PRODUCTION');
+    expect(maxProduction.coveragePct).toBeGreaterThan(130);
+    expect(maxProduction.candidate.inverter.pacW).toBeLessThanOrEqual(10000);
+    expect(
+      (maxProduction.dcPowerKWp * 1000) / maxProduction.candidate.inverter.pacW,
+    ).toBeLessThanOrEqual(1.3);
+  });
+
+  it('production maximale is the largest buildable installation', () => {
+    const context: SizingContext = {
+      ...sizingContext,
+      annualConsumptionKWh: 3000,
+      subscribedPowerKVA: 10,
+    };
+    let bestDcW = 0;
+    for (const module of sizingCatalog.modules) {
+      for (const inverter of sizingCatalog.inverters) {
+        if (
+          inverter.phases !== 1 ||
+          !inverter.stegApproved ||
+          (inverter.homologationValidTo !== null &&
+            inverter.homologationValidTo < context.dossierDate) ||
+          inverter.pacW > context.subscribedPowerKVA * 1000 ||
+          module.pmaxW < 380 ||
+          module.pmaxW > 720 ||
+          (module.homologationValidTo !== null && module.homologationValidTo < context.dossierDate)
+        ) {
+          continue;
+        }
+        const nsLow = Math.max(1, nsMin(module, inverter, context.tMaxC));
+        const nsHigh = Math.min(
+          nsOptMax(module, inverter, context.tMinC),
+          nsMax(module, inverter, context.tMinC),
+          100,
+        );
+        const inputs =
+          inverter.mpptCount *
+          Math.min(inverter.inputsPerMppt, npOpt(module, inverter, context.tMaxC));
+        for (let ns = nsLow; ns <= nsHigh; ns++) {
+          for (let strings = 1; strings <= inputs; strings++) {
+            const dcW = ns * strings * module.pmaxW;
+            const ratio = dcW / inverter.pacW;
+            if (ratio < 0.8 || ratio > 1.3) continue;
+            const result = buildCandidate(module, inverter, ns, strings, sizingCatalog, context);
+            if (result.ok) bestDcW = Math.max(bestDcW, dcW);
+          }
+        }
+      }
+    }
+
+    const { proposals } = proposeInstallations(sizingCatalog, context);
+
+    expect(bestDcW).toBeGreaterThan(0);
+    expect(withKind(proposals, 'MAX_PRODUCTION').dcPowerKWp * 1000).toBeCloseTo(bestDcW, 6);
   });
 
   it('merges objectives that pick the same candidate', () => {
@@ -212,7 +280,8 @@ describe('proposeInstallations', () => {
 
     expect(result.stats.combinations).toBe(28_800);
     expect(result.stats.engineRuns).toBeLessThanOrEqual(MAX_ENGINE_RUNS);
-    expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS);
+    // Phase 1 stops at the reserve; phase 2 builds the largest installations until one succeeds.
+    expect(result.stats.engineRuns).toBeGreaterThan(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
     expect(result.proposals.length).toBeGreaterThan(0);
   }, 30_000);
 
@@ -221,7 +290,8 @@ describe('proposeInstallations', () => {
     const result = proposeInstallations(syntheticCatalog(200, 100), largeConsumer);
 
     expect(result.stats.combinations).toBe(MAX_COMBOS);
-    expect(result.stats.engineRuns).toBe(MAX_ENGINE_RUNS);
+    // Phase 1 stops at the reserve; phase 2 builds the largest installations until one succeeds.
+    expect(result.stats.engineRuns).toBeGreaterThan(MAX_ENGINE_RUNS - MAX_PRODUCTION_RESERVE_RUNS);
     expect(result.proposals.length).toBeGreaterThan(0);
   }, 30_000);
 
@@ -269,11 +339,11 @@ describe('proposeInstallations', () => {
   });
 
   it('merges every objective won by the only valid installation', () => {
-    // 450 W on the 2 kW inverter: 4 modules (1.8 kWp, 2 880 kWh, 115 %) is the only layout
-    // within the DC/AC and coverage bands for 2 500 kWh (5 modules would cover 144 %).
+    // 700 W on the 2 kW inverter: 3 modules (2.1 kWp, 3 360 kWh, 134 %) is the only layout
+    // within the DC/AC band (2 modules: ratio 0.7; 4 modules: ratio 1.4).
     const catalog: SizingCatalog = {
       ...sizingCatalog,
-      modules: [byId(sizingCatalog.modules, 'module-450w')],
+      modules: [{ ...byId(sizingCatalog.modules, 'module-450w'), pmaxW: 700 }],
       inverters: [byId(sizingCatalog.inverters, 'inverter-2kw')],
     };
 
@@ -282,12 +352,12 @@ describe('proposeInstallations', () => {
     expect(result.stats.engineRuns).toBe(1);
     expect(result.proposals).toHaveLength(1);
     const [only] = result.proposals;
-    expect(only?.key).toBe('module-450w|inverter-2kw|4x1');
+    expect(only?.key).toBe('module-450w|inverter-2kw|3x1');
     expect(only?.kinds).toEqual(['RECOMMENDED', 'ECONOMIC', 'MAX_PRODUCTION']);
     expect(only?.explanation).toBe(
-      'Production estimée la plus proche de la consommation (115 %). ' +
+      'Production estimée la plus proche de la consommation (134 %). ' +
         'Le moins de panneaux pour couvrir au moins 80 % de la consommation. ' +
-        'La plus forte production possible avec 4 kVA souscrits.',
+        'La plus forte production possible avec 4 kVA souscrits (onduleur ≤ puissance souscrite, rapport DC/AC ≤ 1,3).',
     );
   });
 
