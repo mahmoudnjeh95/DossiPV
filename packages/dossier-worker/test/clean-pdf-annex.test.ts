@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
 import { PNG } from 'pngjs';
 import { dropBlankTrailingPages, isBrowserPrintedBill } from '../src/clean-pdf-annex';
 
@@ -43,6 +43,20 @@ describe('dropBlankTrailingPages', () => {
     const pdf = await makePdf([{ text: 'A' }, { text: 'B' }]);
     expect(await dropBlankTrailingPages(pdf)).toBe(pdf);
   });
+
+  it('never drops a page whose /Parent chain is cyclic, and returns promptly', async () => {
+    const pdf = await makePdf([{ text: 'A' }, {}]);
+    const doc = await PDFDocument.load(pdf);
+    const tree = doc.catalog.Pages();
+    // The page tree points at itself as its own parent: following /Parent never ends.
+    tree.set(PDFName.of('Parent'), doc.context.getObjectRef(tree)!);
+    doc.getPages()[1]!.node.delete(PDFName.of('Resources'));
+    const cyclic = Buffer.from(await doc.save({ useObjectStreams: false }));
+
+    const out = await dropBlankTrailingPages(cyclic);
+
+    expect(await pageCount(out)).toBe(2);
+  }, 5000);
 
   it('keeps at least one page', async () => {
     const out = await dropBlankTrailingPages(await makePdf([{}, {}]));

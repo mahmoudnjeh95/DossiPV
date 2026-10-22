@@ -6,12 +6,19 @@ export { isBrowserPrintedBill } from './pdf-locate';
 /** Text a browser leaves on an otherwise empty last page of a printed STEG page. */
 const IGNORED_PAGE_TEXT = /^(\[Fermer la fenêtre\])?$/;
 
+/** Longest /Parent chain followed when looking for inherited resources. */
+const MAX_PAGE_TREE_DEPTH = 32;
+
 /** True when the page's resources hold an image XObject (a scan or a photo is not a blank page). */
 function hasImage(page: PDFPage): boolean {
   // Resources may be inherited from a parent Pages node.
   let node: PDFDict | undefined = page.node;
   let xObjects: PDFDict | undefined;
+  const visited = new Set<PDFDict>();
   while (node && !xObjects) {
+    // A crafted /Parent cycle or an absurdly deep tree cannot be judged: treat the page as non-blank.
+    if (visited.has(node) || visited.size >= MAX_PAGE_TREE_DEPTH) return true;
+    visited.add(node);
     xObjects = node.lookupMaybe(PDFName.of('Resources'), PDFDict)?.lookupMaybe(PDFName.of('XObject'), PDFDict);
     node = node.lookupMaybe(PDFName.of('Parent'), PDFDict);
   }
