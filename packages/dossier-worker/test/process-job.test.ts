@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   projectSimulationUpsert: vi.fn(),
   catalogSourceDocumentFindUnique: vi.fn(),
   buildListPageAnnex: vi.fn(),
+  dropBlankTrailingPages: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -64,6 +65,11 @@ vi.mock('../src/merge-annexes', async () => ({
   mergeAnnexes: mocks.mergeAnnexes,
   mergeDocumentFragments: mocks.mergeDocumentFragments,
 }));
+vi.mock('../src/clean-pdf-annex', async () => {
+  const actual = await vi.importActual<typeof import('../src/clean-pdf-annex')>('../src/clean-pdf-annex');
+  mocks.dropBlankTrailingPages.mockImplementation(actual.dropBlankTrailingPages);
+  return { ...actual, dropBlankTrailingPages: mocks.dropBlankTrailingPages };
+});
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
@@ -545,7 +551,8 @@ describe('processJob — site plans (pages 37-38)', () => {
     expect(planData.page37.points.technicalRoom).not.toBeNull();
     // No photo to reason on: the AI layout is skipped rather than failing the job.
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledTimes(2);
+    // The placeholder annex bytes are not PDFs, so their blank-page cleaning warns too: not counted here.
+    expect(warn.mock.calls.filter(([message]) => !String(message).includes('could not be cleaned'))).toHaveLength(2);
     expect(findSucceededUpdate()).toBeDefined();
     warn.mockRestore();
   });
@@ -1115,6 +1122,26 @@ describe('processJob — annex plan', () => {
     'Surlignage impossible dans Annexe N°11 — Fiche technique LONGi X (document scanné ou modèle introuvable).',
     'Surlignage impossible dans Annexe N°12 — Fiche technique Sofar Y (document scanné ou modèle introuvable).',
   ];
+
+  it('cleans only the ADMIN-slot PDFs of blank trailing pages', async () => {
+    await processJob('job-1');
+
+    // Annex N°1: the ANME agreement and the bill (slot ADMIN) are cleaned; nothing else is.
+    expect(mocks.dropBlankTrailingPages).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the original file and logs a warning when cleaning an ADMIN PDF fails', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    mocks.dropBlankTrailingPages.mockRejectedValue(new Error('boom'));
+
+    await processJob('job-1');
+
+    const annexes = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string }[]])[1];
+    expect(annexes.some((a) => a.label.includes('Agrément ANME'))).toBe(true);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('could not be cleaned'), expect.any(Error));
+    expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings.some((w) => w.includes('nettoy'))).toBe(false);
+    warn.mockRestore();
+  });
 
   it('merges the inverter datasheet with the model column highlighted, and warns for the text-less module datasheet', async () => {
     const inverterSheet = await syntheticInverterDatasheet('columns');

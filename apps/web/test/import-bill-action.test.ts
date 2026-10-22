@@ -218,6 +218,49 @@ describe('importStegBillAction', () => {
     );
   });
 
+  it('does not annex a PDF whose text cannot be read, and says so', async () => {
+    m.mockExtractTextBoxes.mockRejectedValue(new Error('corrupt'));
+
+    await redirectTarget(importStegBillAction(undefined, billForm(Buffer.from('%PDF-1.4 test'), 'application/pdf', 'facture.pdf')));
+
+    expect(m.tx.project.create).toHaveBeenCalled();
+    expect(m.tx.projectAnnexes.create).toHaveBeenCalledWith({ data: { projectId: 'project-1' } });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toEqual(
+      expect.arrayContaining([expect.stringContaining('Facture PDF illisible')]),
+    );
+  });
+
+  it('only reads the first pages of the PDF', async () => {
+    await redirectTarget(importStegBillAction(undefined, billForm(Buffer.from('%PDF-1.4 test'), 'application/pdf', 'facture.pdf')));
+
+    expect(m.mockExtractTextBoxes).toHaveBeenCalledWith(expect.any(Buffer), 3);
+  });
+
+  it('does not annex a PDF whose text extraction times out', async () => {
+    vi.useFakeTimers();
+    try {
+      m.mockExtractTextBoxes.mockReturnValue(new Promise(() => undefined));
+      const result = redirectTarget(importStegBillAction(undefined, billForm(Buffer.from('%PDF-1.4 test'), 'application/pdf', 'facture.pdf')));
+      await vi.advanceTimersByTimeAsync(10_001);
+      await result;
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(m.tx.projectAnnexes.create).toHaveBeenCalledWith({ data: { projectId: 'project-1' } });
+    expect(createdData(m.tx.projectBillImport.create)['warnings']).toEqual(
+      expect.arrayContaining([expect.stringContaining('Facture PDF illisible')]),
+    );
+  });
+
+  it('does not extract PDF text when the daily quota is exhausted', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValue(30);
+
+    await importStegBillAction(undefined, billForm(Buffer.from('%PDF-1.4 test'), 'application/pdf', 'facture.pdf'));
+
+    expect(m.mockExtractTextBoxes).not.toHaveBeenCalled();
+  });
+
   it('keeps unreadable fields null', async () => {
     m.mockReadStegBill.mockResolvedValue({ ...testBill, subscribedPowerKVA: null, clientName: null });
 

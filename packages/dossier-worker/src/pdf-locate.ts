@@ -14,14 +14,14 @@ export interface TextBox {
   height: number;
 }
 
-/** Text boxes of every page of `pdf`, one array per page, in content-stream order. */
-export async function extractTextBoxes(pdf: Buffer): Promise<TextBox[][]> {
+/** Text boxes of the first `maxPages` pages (default: all) of `pdf`, one array per page, in content-stream order. */
+export async function extractTextBoxes(pdf: Buffer, maxPages = Infinity): Promise<TextBox[][]> {
   // pdfjs takes ownership of (and detaches) the array it is given: hand it a copy.
   const task = getDocument({ data: new Uint8Array(pdf), disableFontFace: true, useSystemFonts: false, verbosity: 0 });
   const doc = await task.promise;
   try {
     const pages: TextBox[][] = [];
-    for (let p = 1; p <= doc.numPages; p += 1) {
+    for (let p = 1; p <= Math.min(doc.numPages, maxPages); p += 1) {
       const page = await doc.getPage(p);
       const display = userToDisplayMatrix(page.view as [number, number, number, number], page.rotate);
       const content = await page.getTextContent();

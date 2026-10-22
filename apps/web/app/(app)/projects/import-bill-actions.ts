@@ -82,13 +82,32 @@ function inBounds<T extends string | number>(
 const BROWSER_PRINTED_BILL_WARNING =
   "Facture imprimée depuis le site STEG (adresse web avec identifiant de session) : elle n'est pas jointe au dossier. Ajoutez une photo ou un scan de la facture papier acquittée.";
 
-/** Whether the text of a PDF bill shows a browser print; an unreadable PDF is treated as not printed. */
-async function isBrowserPrintedPdf(pdf: Buffer): Promise<boolean> {
+const BROWSER_PRINT_CHECK_PAGES = 3;
+const BROWSER_PRINT_CHECK_TIMEOUT_MS = 10_000;
+
+const UNREADABLE_PDF_BILL_WARNING =
+  "Facture PDF illisible : elle n'est pas jointe au dossier. Ajoutez une photo ou un scan de la facture papier acquittée.";
+
+/**
+ * Whether a PDF bill may be annexed. Only the first pages are read (the web address sits in the
+ * header or footer) and the read is time-boxed. Fail-closed: a PDF that cannot be read in time is
+ * never annexed.
+ */
+async function checkPdfBill(pdf: Buffer): Promise<'clean' | 'browser-printed' | 'unreadable'> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const pages = await extractTextBoxes(pdf);
-    return isBrowserPrintedBill(pages.flatMap((boxes) => boxes.map((box) => box.text)).join(' '));
+    const pages = await Promise.race([
+      extractTextBoxes(pdf, BROWSER_PRINT_CHECK_PAGES),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('PDF text extraction timed out')), BROWSER_PRINT_CHECK_TIMEOUT_MS);
+      }),
+    ]);
+    const text = pages.flatMap((boxes) => boxes.map((box) => box.text)).join(' ');
+    return isBrowserPrintedBill(text) ? 'browser-printed' : 'clean';
   } catch {
-    return false;
+    return 'unreadable';
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -134,13 +153,15 @@ export async function importStegBillAction(
   }
   const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
 
-  // A PDF printed from the STEG site carries the session URL in its footer: it is read, never annexed.
-  const browserPrinted = validation.mimeType === 'pdf' && (await isBrowserPrintedPdf(buffer));
-
   const refused = await reserveBillReading(user.companyId, now);
   if (refused) {
     return refused;
   }
+
+  // A PDF printed from the STEG site carries the session URL in its footer: it is read, never annexed.
+  // Checked only once the reading is reserved, so it cannot be used to burn CPU past the daily limit.
+  const pdfCheck = validation.mimeType === 'pdf' ? await checkPdfBill(buffer) : 'clean';
+  const annexable = pdfCheck === 'clean';
 
   let reading: StegBillReading;
   try {
@@ -162,9 +183,8 @@ export async function importStegBillAction(
   }
   const position = governorate ?? { lat: TUNIS.lat, lon: TUNIS.lon };
 
-  if (browserPrinted) {
-    warnings.push(BROWSER_PRINTED_BILL_WARNING);
-  }
+  if (pdfCheck === 'browser-printed') warnings.push(BROWSER_PRINTED_BILL_WARNING);
+  if (pdfCheck === 'unreadable') warnings.push(UNREADABLE_PDF_BILL_WARNING);
 
   const threePhaseOrMv = reading.tariffLabel !== null && THREE_PHASE_OR_MV_TARIFF.test(reading.tariffLabel);
   if (threePhaseOrMv) {
@@ -227,7 +247,8 @@ export async function importStegBillAction(
           azimuthDeg: 0,
         },
       });
-      await tx.projectAnnexes.create({ data: { projectId: project.id, ...(browserPrinted ? {} : { lastPaidBillFileId: file.id }) },
+      await tx.projectAnnexes.create({
+        data: { projectId: project.id, ...(annexable ? { lastPaidBillFileId: file.id } : {}) },
       });
       await tx.projectBillImport.create({
         data: {

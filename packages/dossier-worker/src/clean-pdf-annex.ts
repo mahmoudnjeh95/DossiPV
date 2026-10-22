@@ -8,8 +8,13 @@ const IGNORED_PAGE_TEXT = /^(\[Fermer la fenêtre\])?$/;
 
 /** True when the page's resources hold an image XObject (a scan or a photo is not a blank page). */
 function hasImage(page: PDFPage): boolean {
-  const resources = page.node.Resources();
-  const xObjects = resources?.lookupMaybe(PDFName.of('XObject'), PDFDict);
+  // Resources may be inherited from a parent Pages node.
+  let node: PDFDict | undefined = page.node;
+  let xObjects: PDFDict | undefined;
+  while (node && !xObjects) {
+    xObjects = node.lookupMaybe(PDFName.of('Resources'), PDFDict)?.lookupMaybe(PDFName.of('XObject'), PDFDict);
+    node = node.lookupMaybe(PDFName.of('Parent'), PDFDict);
+  }
   if (!xObjects) return false;
   for (const [, value] of xObjects.entries()) {
     const target = value instanceof PDFRef ? page.doc.context.lookup(value) : value;
