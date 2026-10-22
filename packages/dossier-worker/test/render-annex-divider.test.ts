@@ -36,6 +36,19 @@ describe('renderAnnexDivider', () => {
     }
   });
 
+  it('shows an entry’s note instead of (sans objet) when its document could not be attached', async () => {
+    const withNote = entries().map((entry) => (entry.number === 14 ? { ...entry, note: 'document non joint' } : entry));
+
+    const bordereau = (await extractPdfContent(await renderAnnexDivider(withNote)))[1]!;
+
+    const row = findText(bordereau, 'Parafoudre DC (document non joint)')!;
+    expect(row).toBeDefined();
+    expect(bordereau.texts.find((t) => t.text === '—' && Math.abs(t.y - row.y) < 1)).toBeDefined();
+    expect(pageText(bordereau)).not.toContain('Parafoudre DC (sans objet)');
+    // Every other empty annex keeps the default wording.
+    expect(findText(bordereau, 'Fusible DC (sans objet)')).toBeDefined();
+  });
+
   it('lists an empty annex as (sans objet) with a dash for its page', async () => {
     const pages = await extractPdfContent(await renderAnnexDivider(entries()));
     const bordereau = pages[1]!;

@@ -82,16 +82,19 @@ const GENERIC_FAILURE_REASONS: Record<string, string> = {
   save: "L'enregistrement du dossier a échoué.",
 };
 
-async function fail(jobId: string, failedStep: string, internalError: unknown): Promise<void> {
+/** No dossier without the company's ANME agreement (product owner, 2026-10-22). */
+export const ANME_AGREEMENT_MISSING_REASON = "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.";
+
+async function fail(jobId: string, failedStep: string, internalError: unknown, installerReason?: string): Promise<void> {
   // Operator-facing log of the real cause; DossierJob.failureReason itself only ever gets the
-  // generic, installer-safe message below.
+  // generic, installer-safe message below (or a fixed, installer-written `installerReason`).
   console.error(`processJob: job ${jobId} failed at step "${failedStep}":`, internalError);
   await db.dossierJob.update({
     where: { id: jobId },
     data: {
       status: 'FAILED',
       failedStep,
-      failureReason: GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.',
+      failureReason: installerReason ?? GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.',
       completedAt: new Date(),
     },
   });
@@ -212,6 +215,16 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'snapshot', new Error('inputSnapshot failed parseJobSnapshot validation'));
   }
 
+  const company = await db.company.findUnique({ where: { id: snapshot.companyId } });
+  if (!company) {
+    return fail(jobId, 'docx', new Error(`Company ${snapshot.companyId} not found`));
+  }
+  // The action refuses to queue a job without the agreement, but the company is read live: one
+  // removed after queueing must still stop the job, before PVGIS or any paid Claude call.
+  if (!company.anmeCertificateFileId) {
+    return fail(jobId, 'annexes', new Error(`Company ${snapshot.companyId} has no ANME agreement`), ANME_AGREEMENT_MISSING_REASON);
+  }
+
   // PVGIS is mandatory (user, 2026-10-22) and runs first, so an outage fails the job before any
   // paid Claude call or rendering work. A 403 (PVGIS maintenance page) is not retried.
   let production: ProductionSimulation;
@@ -229,11 +242,6 @@ export async function processJob(jobId: string): Promise<void> {
     );
   } catch (error) {
     return fail(jobId, 'text', error);
-  }
-
-  const company = await db.company.findUnique({ where: { id: snapshot.companyId } });
-  if (!company) {
-    return fail(jobId, 'docx', new Error(`Company ${snapshot.companyId} not found`));
   }
 
   let docxBuffer: Buffer;

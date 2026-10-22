@@ -162,6 +162,8 @@ const PRODUCTION: ProductionSimulation = {
   })),
 };
 const PVGIS_DOWN_REASON = "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.";
+// Every company carries its ANME agreement: a job without one fails before any work.
+const ANME_ROW = { id: 'file-anme', mimeType: 'pdf', storageKey: 'anme.pdf' };
 let bodyPdf: Buffer;
 let drawingsPdf: Buffer;
 // A real 2-page PDF (pages 37-38 always render exactly 2 pages, both tiers) — processJob now
@@ -179,9 +181,9 @@ beforeEach(async () => {
   drawingsPdf = await makePdf(2);
   sitePlanPdf = await makePdf(2);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
-  mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: null });
+  mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: 'file-anme' });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
-  mocks.fileFindMany.mockResolvedValue([]);
+  mocks.fileFindMany.mockResolvedValue([ANME_ROW]);
   mocks.generateDossierDocument.mockResolvedValue({
     sections: { introduction: 'i', solution: 's', cabling: 'c', earthing: 'e', structure: 'st', conclusion: 'co' },
     engineResult: {
@@ -325,15 +327,16 @@ describe('processJob — failure paths', () => {
 });
 
 describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () => {
-  it('succeeds with a complete dossier when the project has zero annex files uploaded', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', anmeCertificateFileId: null });
+  it('succeeds with a complete dossier when the project has no annex file uploaded (only the company agreement)', async () => {
     mocks.projectFindUnique.mockResolvedValue({ annexes: null });
 
     await processJob('job-1');
 
-    // With no uploaded file, the only annexes are the rendered drawings and plans (N°4-6).
+    // With no project upload, the annexes are the company's ANME agreement and the rendered
+    // drawings and plans (N°4-6).
     const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { label: string }[]][];
     expect(mergeCalls[0]![1].map((a) => a.label)).toEqual([
+      "Annexe N°1 — Agrément ANME de l'installateur",
       'Annexe N°4 — Schémas électriques',
       "Annexe N°5 — Plan d'implantation et de connexion",
       'Annexe N°6 — Plan de situation',
@@ -342,6 +345,25 @@ describe('processJob — annexes edge cases (Review Focus items 1 and 4)', () =>
       (call) => (call[0] as { data: { status?: string } }).data.status === 'SUCCEEDED',
     );
     expect(finalUpdateCall).toBeDefined();
+  });
+
+  it('fails at "annexes" without PVGIS, Claude or the merge when the company has no ANME agreement', async () => {
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: null, anmeCertificateFileId: null });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string; failedStep: string; failureReason: string } };
+    expect(failCall.data).toMatchObject({
+      status: 'FAILED',
+      failedStep: 'annexes',
+      failureReason: "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.",
+    });
+    expect(mocks.simulateProduction).not.toHaveBeenCalled();
+    expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
+    expect(mocks.mergeDocumentFragments).not.toHaveBeenCalled();
+    expect(mocks.saveFile).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 });
 
@@ -359,6 +381,7 @@ describe('processJob — equipment datasheet collection', () => {
     };
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshotWithEquipment });
     mocks.fileFindMany.mockResolvedValue([
+      ANME_ROW,
       { id: 'file-module-datasheet', mimeType: 'pdf', storageKey: 'module-datasheet.pdf' },
       { id: 'file-inverter-datasheet', mimeType: 'pdf', storageKey: 'inverter-datasheet.pdf' },
     ]);
@@ -388,6 +411,7 @@ describe('processJob — equipment datasheet collection', () => {
     };
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshotWithCablesAndAccessories });
     mocks.fileFindMany.mockResolvedValue([
+      ANME_ROW,
       { id: 'file-cable-datasheet', mimeType: 'pdf', storageKey: 'cable.pdf' },
       { id: 'file-connector-datasheet', mimeType: 'pdf', storageKey: 'connector.pdf' },
       { id: 'file-tray-datasheet', mimeType: 'pdf', storageKey: 'tray.pdf' },
@@ -424,6 +448,7 @@ describe('processJob — missing annex bytes on disk', () => {
       },
     });
     mocks.fileFindMany.mockResolvedValue([
+      ANME_ROW,
       { id: 'file-bill', mimeType: 'application/pdf', storageKey: 'bill.pdf' },
       { id: 'file-module-datasheet', mimeType: 'application/pdf', storageKey: 'module-datasheet.pdf' },
     ]);
@@ -443,7 +468,7 @@ describe('processJob — missing annex bytes on disk', () => {
     expect(findSucceededUpdate()).toBeDefined();
     const mergeCalls = mocks.mergeDocumentFragments.mock.calls as [unknown[], { buffer: Buffer; label: string }[]][];
     const annexes = mergeCalls[0]![1];
-    expect(annexes[0]!.buffer).toBe(billBytes);
+    expect(annexes.find((a) => a.label === 'Annexe N°1 — Dernière facture STEG')!.buffer).toBe(billBytes);
     expect(annexes.map((a) => a.label)).not.toContain('Annexe N°11 — Fiche technique LONGi X');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('file-module-datasheet'));
     expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
@@ -606,11 +631,12 @@ describe('processJob — fragment assembly details', () => {
     const dividerText = (await extractPdfContent(dossierCall![0][3]!)).map(pageText).join('\n');
     expect(dividerText).toContain('ANNEXES');
     expect(dividerText).toContain('Bordereau des annexes');
-    // The drawings and plans now follow the divider, as annexes N°4-6.
+    // The drawings and plans now follow the divider (after the N°1 agreement), as annexes N°4-6.
     const annexes = dossierCall![1];
-    expect(annexes[0]!.buffer).toBe(drawingsPdf);
-    expect((await PDFDocument.load(annexes[1]!.buffer)).getPageCount()).toBe(1);
+    expect(annexes[0]!.label).toBe("Annexe N°1 — Agrément ANME de l'installateur");
+    expect(annexes[1]!.buffer).toBe(drawingsPdf);
     expect((await PDFDocument.load(annexes[2]!.buffer)).getPageCount()).toBe(1);
+    expect((await PDFDocument.load(annexes[3]!.buffer)).getPageCount()).toBe(1);
     expect(annexesCall![1]).toEqual(annexes);
     expect(annexesCall![0]).toHaveLength(1);
     expect(mocks.saveFile).toHaveBeenCalledWith(ASSEMBLED_PDF, 'dossier.pdf', 'application/pdf');
@@ -745,7 +771,7 @@ describe('processJob — fragment assembly details', () => {
   });
 
   it('resolves company.logoFileId to a real buffer and passes it to both the cover page and the site-plan pages (I5)', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-logo', anmeCertificateFileId: null });
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-logo', anmeCertificateFileId: 'file-anme' });
     mocks.fileFindUnique.mockResolvedValue({ id: 'file-logo', storageKey: 'logo.png', mimeType: 'png' });
     const logoBuffer = Buffer.from('fake-logo-png-bytes');
     mocks.readFile.mockImplementation((path: string) => Promise.resolve(path === '/fake/path' ? logoBuffer : Buffer.from('template bytes')));
@@ -758,8 +784,10 @@ describe('processJob — fragment assembly details', () => {
   });
 
   it('does not fail the job when the logo file row exists but cannot be read from disk (I5 resilience)', async () => {
-    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-missing-logo', anmeCertificateFileId: null });
+    mocks.companyFindUnique.mockResolvedValue({ name: 'SolarPro', address: 'Tunis', phone: '71000000', email: 'a@b.tn', logoFileId: 'file-missing-logo', anmeCertificateFileId: 'file-anme' });
     mocks.fileFindUnique.mockResolvedValue({ id: 'file-missing-logo', storageKey: 'gone.png', mimeType: 'png' });
+    // Only the logo's bytes are gone; the ANME agreement (a required annex) is still readable.
+    mocks.getFilePath.mockImplementation((storageKey: string) => (storageKey === 'gone.png' ? '/fake/path' : `/storage/${storageKey}`));
     mocks.readFile.mockImplementation((path: string) => (path === '/fake/path' ? Promise.reject(new Error('ENOENT')) : Promise.resolve(Buffer.from('template bytes'))));
 
     await processJob('job-1');
