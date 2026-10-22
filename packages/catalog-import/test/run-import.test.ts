@@ -46,7 +46,7 @@ beforeEach(() => {
     const name = String(path).replace(/\\/g, '/').split('/').pop();
     if (name === 'pv-modules.json') return Promise.resolve(JSON.stringify([moduleEntry('BROKEN-1', BROKEN_URL), moduleEntry('GOOD-1', GOOD_URL)]));
     if (name === 'inverters.json') return Promise.resolve(JSON.stringify([inverterEntry]));
-    if (name === 'cables.json' || name === 'protections.json') return Promise.resolve('[]');
+    if (name === 'cables.json' || name === 'protections.json' || name === 'accessories.json') return Promise.resolve('[]');
     return Promise.resolve(Buffer.from('%PDF-datasheet'));
   });
   mocks.cachedDatasheet.mockImplementation((url: string) => (url === BROKEN_URL ? Promise.reject(new Error('Téléchargement impossible (404)')) : Promise.resolve('/cache/good.pdf')));

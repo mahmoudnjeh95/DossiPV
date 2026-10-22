@@ -19,7 +19,16 @@ const protections = z.array(z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('AC_ISOLATOR'), brand: z.string(), model: z.string(), ratedCurrentA: z.number(), source }),
 ]));
 
+const accessories = z.array(z.object({
+  kind: z.enum(['MC4_CONNECTOR', 'DISTRIBUTION_BLOCK', 'CABLE_TRAY', 'DC_ENCLOSURE', 'AC_ENCLOSURE', 'EARTH_ROD', 'OTHER']),
+  brand: z.string(), model: z.string(), spec: z.string().nullable(), source,
+}));
+
 describe('curated catalog data', () => {
+  it('accessories.json is well-formed and covers connector, earthing block and cable tray', () => {
+    const parsed = accessories.parse(read('accessories.json'));
+    expect(parsed.map((a) => a.kind)).toEqual(expect.arrayContaining(['MC4_CONNECTOR', 'DISTRIBUTION_BLOCK', 'CABLE_TRAY']));
+  });
   it('cables.json is well-formed and every entry cites its source', () => {
     expect(() => cables.parse(read('cables.json'))).not.toThrow();
   });

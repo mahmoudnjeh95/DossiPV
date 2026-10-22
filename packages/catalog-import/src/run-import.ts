@@ -23,8 +23,9 @@ function notesOf(entry: { errors: string[]; warnings: string[] }, extra: string[
   return lines.length > 0 ? lines.join('\n') : null;
 }
 
-async function uploadDatasheet(url: string, model: string): Promise<string> {
+export async function uploadDatasheet(url: string, model: string): Promise<string> {
   const buffer = await readFile(await cachedDatasheet(url));
+  if (buffer.subarray(0, 5).toString('latin1') !== '%PDF-') throw new Error(`Le fichier téléchargé n'est pas un PDF : ${url}`);
   const { storageKey } = await saveFile(buffer, `${model}.pdf`, 'application/pdf');
   const file = await db.file.create({ data: { fileName: `${model}.pdf`, mimeType: 'pdf', storageKey } });
   return file.id;
@@ -48,9 +49,16 @@ type CuratedProtection =
   | { kind: 'AC_BREAKER'; brand: string; model: string; ratedCurrentA: number; curve: string | null; breakingCapacityKA: number | null; source: string }
   | { kind: 'AC_ISOLATOR'; brand: string; model: string; ratedCurrentA: number; source: string };
 
-async function importCurated(dryRun: boolean, count: (key: string) => void): Promise<void> {
+interface CuratedAccessory { kind: string; brand: string; model: string; spec: string | null; source: string }
+
+export async function importCurated(
+  dryRun: boolean,
+  count: (key: string) => void,
+  datasheet: (url: string, model: string) => Promise<{ datasheetFileId: string | null; notes: string[] }> = datasheetOrNote,
+): Promise<void> {
   const cables = JSON.parse(await readFile(join(DATA_DIR, 'cables.json'), 'utf8')) as CuratedCable[];
   const protections = JSON.parse(await readFile(join(DATA_DIR, 'protections.json'), 'utf8')) as CuratedProtection[];
+  const accessories = JSON.parse(await readFile(join(DATA_DIR, 'accessories.json'), 'utf8')) as CuratedAccessory[];
   const draft = { ownerCompanyId: null, catalogStatus: 'DRAFT' as const };
   const countCurated = (label: string, plan: CuratedPlan, what: string): void => {
     if (plan === 'create-alongside') console.log(`conflit : ${what} existe sans source — l'entrée curée est créée à côté`);
@@ -61,12 +69,12 @@ async function importCurated(dryRun: boolean, count: (key: string) => void): Pro
     const plan = planCuratedImport(await db.cable.findMany({ where: { ownerCompanyId: null, brand: cable.brand, model: cable.model }, select: { datasheetSourceUrl: true } }));
     countCurated('câbles', plan, `câble ${cable.brand} ${cable.model}`);
     if (plan === 'skip' || dryRun) continue;
-    await db.cable.create({ data: { ...cable, ...draft, datasheetSourceUrl: source, importNotes: source, sections: { create: sections } } });
+    const { datasheetFileId, notes } = await datasheet(source, cable.model);
+    await db.cable.create({ data: { ...cable, ...draft, datasheetSourceUrl: source, importNotes: [source, ...notes].join('\n'), datasheetFileId, sections: { create: sections } } });
   }
 
   for (const { kind, source, ...item } of protections) {
     const where = { ownerCompanyId: null, brand: item.brand, model: item.model };
-    const data = { ...item, ...draft, datasheetSourceUrl: source, importNotes: source };
     const select = { datasheetSourceUrl: true };
     const rows =
       kind === 'SPD' ? await db.spd.findMany({ where, select })
@@ -77,11 +85,21 @@ async function importCurated(dryRun: boolean, count: (key: string) => void): Pro
     const plan = planCuratedImport(rows);
     countCurated(kind, plan, `${kind} ${item.brand} ${item.model}`);
     if (plan === 'skip' || dryRun) continue;
+    const { datasheetFileId, notes } = await datasheet(source, item.model);
+    const data = { ...item, ...draft, datasheetSourceUrl: source, importNotes: [source, ...notes].join('\n'), datasheetFileId };
     if (kind === 'SPD') await db.spd.create({ data: data as never });
     else if (kind === 'DC_SWITCH') await db.dcSwitch.create({ data: data as never });
     else if (kind === 'DC_FUSE') await db.dcFuse.create({ data: data as never });
     else if (kind === 'AC_BREAKER') await db.acBreaker.create({ data: data as never });
     else await db.acIsolator.create({ data: data as never });
+  }
+
+  for (const { source, ...accessory } of accessories) {
+    const plan = planCuratedImport(await db.accessory.findMany({ where: { ownerCompanyId: null, brand: accessory.brand, model: accessory.model }, select: { datasheetSourceUrl: true } }));
+    countCurated('accessoires', plan, `accessoire ${accessory.brand} ${accessory.model}`);
+    if (plan === 'skip' || dryRun) continue;
+    const { datasheetFileId, notes } = await datasheet(source, accessory.model);
+    await db.accessory.create({ data: { ...accessory, ...draft, datasheetSourceUrl: source, importNotes: [source, ...notes].join('\n'), datasheetFileId } as never });
   }
 }
 

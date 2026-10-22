@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "MC4_CONNECTOR",
+    "brand": "Stäubli",
+    "model": "PV-KBT4/6II-UR + PV-KST4/6II-UR",
+    "spec": "Connecteur MC4, câble 4 à 6 mm², 39 A, 1 kV",
+    "source": "https://midsummer.ie/pdfs/mc4-datasheet.pdf"
+  },
+  {
+    "kind": "DISTRIBUTION_BLOCK",
+    "brand": "Hager",
+    "model": "KXB16E",
+    "spec": "Borne de terre 16 mm² à vis, rail DIN (4 à 16 mm² souple, 1,5 à 10 mm² rigide)",
+    "source": "https://assets.hager.com/step-content/P/PDS_158763112001EN/Document/std.lang.all/KXB16E_2001_en-GB.pdf"
+  },
+  {
+    "kind": "CABLE_TRAY",
+    "brand": "Legrand",
+    "model": "Cablofil Wire Mesh CF",
+    "spec": "Chemin de câbles en fil d'acier (série CF)",
+    "source": "https://www.legrand.ca/p/print/Series-Wire-Mesh-CF.pdf"
+  }
+]
