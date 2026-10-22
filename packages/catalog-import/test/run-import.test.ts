@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   readFile: vi.fn(),
@@ -41,7 +41,7 @@ const inverterEntry = {
 };
 
 beforeEach(() => {
-  process.env.FILE_STORAGE_ROOT = '/tmp/test-storage';
+  vi.stubEnv('FILE_STORAGE_ROOT', '/tmp/test-storage');
   vi.clearAllMocks();
   mocks.readFile.mockImplementation((path: string) => {
     const name = String(path).replace(/\\/g, '/').split('/').pop();
@@ -55,6 +55,24 @@ beforeEach(() => {
   mocks.fileCreate.mockResolvedValue({ id: 'file-good' });
   vi.spyOn(console, 'log').mockImplementation(() => {});
   vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe('runImport — storage configuration', () => {
+  it('a real run rejects with a clear message when FILE_STORAGE_ROOT is unset, before touching the database', async () => {
+    vi.stubEnv('FILE_STORAGE_ROOT', '');
+    await expect(runImport({ dryRun: false })).rejects.toThrow("FILE_STORAGE_ROOT n'est pas défini");
+    expect(mocks.pvModuleCreate).not.toHaveBeenCalled();
+    expect(mocks.inverterCreate).not.toHaveBeenCalled();
+  });
+
+  it('a dry run does not require FILE_STORAGE_ROOT', async () => {
+    vi.stubEnv('FILE_STORAGE_ROOT', '');
+    await expect(runImport({ dryRun: true })).resolves.toBeUndefined();
+  });
 });
 
 describe('runImport — datasheet download failures', () => {
