@@ -3,6 +3,8 @@ import { drawPdfText, wrapPdfText } from './pdf-text';
 
 export const DRAFT_WATERMARK_TEXT = 'BROUILLON – NON RECEVABLE';
 export const MISSING_PIECES_TITLE = "Pièces manquantes — dossier non recevable en l'état";
+/** Pages `applyDraftWatermark` inserts after the cover: every later page number moves by this much. */
+export const DRAFT_INSERTED_PAGE_COUNT = 1;
 
 const WATERMARK_SIZE = 60;
 const WATERMARK_ANGLE_DEG = 45;

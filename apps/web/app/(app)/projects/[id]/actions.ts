@@ -17,6 +17,8 @@ import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/s
 import { assignDossierNumber } from '../../../../lib/dossier-number';
 import { LOCATIONS_PENDING_MESSAGE, locationsPending, stegCompleteness } from '../../../../lib/steg-completeness';
 
+const GENERATION_IN_PROGRESS = 'Une génération est déjà en cours pour ce projet.';
+
 export interface GenerateDossierActionState {
   error: string;
 }
@@ -116,7 +118,7 @@ export async function generateDossierAction(
   }
 
   if (project.jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING')) {
-    return { error: 'Une génération est déjà en cours pour ce projet.' };
+    return { error: GENERATION_IN_PROGRESS };
   }
 
   const engineInput = buildEngineInput(project, now);
@@ -144,6 +146,10 @@ export async function generateDossierAction(
     // The installer's own numbering, taken on the project's first generation only; a regeneration
     // or a retry after a failed job keeps the stored number and never moves the counter.
     const dossierNumber = await assignDossierNumber(tx, project.companyId, project.id);
+    // assignDossierNumber holds the project row (FOR UPDATE): a double submit waits there, finds the
+    // number the first one stored (so the counter does not move) and then sees its queued job here.
+    const active = await tx.dossierJob.count({ where: { projectId: project.id, status: { in: ['PENDING', 'RUNNING'] } } });
+    if (active > 0) return null;
     const snapshot: DossierJobSnapshotV1 = {
       version: 1,
       projectId: project.id,
@@ -178,6 +184,9 @@ export async function generateDossierAction(
     });
     return job.id;
   });
+  if (jobId === null) {
+    return { error: GENERATION_IN_PROGRESS };
+  }
 
   redirect(`/projects/${project.id}/jobs/${jobId}`);
   return undefined;

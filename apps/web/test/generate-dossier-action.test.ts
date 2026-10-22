@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
     transaction: vi.fn(),
     assignDossierNumber: vi.fn(),
     sourceDocumentCount: vi.fn(),
+    txJobCount: vi.fn(),
   };
 });
 
@@ -65,7 +66,7 @@ const activeSubscription = {
 /** The interactive transaction's client: the same mocks, so call assertions stay simple. */
 const tx = {
   project: { update: mocks.projectUpdate },
-  dossierJob: { create: mocks.jobCreate },
+  dossierJob: { create: mocks.jobCreate, count: mocks.txJobCount },
 };
 
 beforeEach(() => {
@@ -85,6 +86,7 @@ beforeEach(() => {
   mocks.jobCreate.mockResolvedValue({ id: 'job-1' });
   mocks.projectUpdate.mockResolvedValue({});
   mocks.sourceDocumentCount.mockResolvedValue(0);
+  mocks.txJobCount.mockResolvedValue(0);
   mocks.mockRedirect.mockImplementation((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   });
@@ -180,6 +182,19 @@ describe('generateDossierAction', () => {
     expect(await generateDossierAction('project-1', undefined)).toEqual({
       error: 'Une génération est déjà en cours pour ce projet.',
     });
+  });
+
+  it('refuses a double submit that finds a job queued meanwhile, under the project lock', async () => {
+    mocks.txJobCount.mockResolvedValue(1);
+
+    expect(await generateDossierAction('project-1', undefined)).toEqual({
+      error: 'Une génération est déjà en cours pour ce projet.',
+    });
+    expect(mocks.txJobCount).toHaveBeenCalledWith({ where: { projectId: 'project-1', status: { in: ['PENDING', 'RUNNING'] } } });
+    // Checked after the number's row lock is taken, so two submits cannot both pass.
+    expect(mocks.assignDossierNumber.mock.invocationCallOrder[0]).toBeLessThan(mocks.txJobCount.mock.invocationCallOrder[0]!);
+    expect(mocks.jobCreate).not.toHaveBeenCalled();
+    expect(mocks.mockRedirect).not.toHaveBeenCalled();
   });
 
   it('refuses an incomplete project and names what is missing', async () => {

@@ -74,7 +74,10 @@ vi.mock('../src/clean-pdf-annex', async () => {
 });
 vi.mock('../src/render-cover-page', () => ({ renderCoverPage: mocks.renderCoverPage }));
 vi.mock('../src/steg-logo', () => ({ tryLoadStegLogo: mocks.tryLoadStegLogo }));
-vi.mock('../src/draft-watermark', () => ({ applyDraftWatermark: mocks.applyDraftWatermark }));
+vi.mock('../src/draft-watermark', async () => ({
+  ...(await vi.importActual<typeof import('../src/draft-watermark')>('../src/draft-watermark')),
+  applyDraftWatermark: mocks.applyDraftWatermark,
+}));
 vi.mock('../src/render-drawings', () => ({ renderDrawingPages: mocks.renderDrawingPages }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
@@ -1043,6 +1046,87 @@ describe('processJob — draft dossiers (STEG pieces missing)', () => {
     expect(mocks.applyDraftWatermark).not.toHaveBeenCalled();
     expect(mocks.saveFile).toHaveBeenCalledWith(DOSSIER_PDF, 'dossier.pdf', 'application/pdf');
     expect(mocks.fillDossierTemplate.mock.calls[0]?.[1]).toMatchObject({ isDraft: false, draftMissingText: '' });
+  });
+
+  /** The TOC entries and the dossier.pdf bordereau's page column of the last processJob run. */
+  async function printedPageNumbers(): Promise<{ toc: { title: string; pageNumber: number }[]; bordereau: Record<string, string | undefined> }> {
+    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
+    const dividerPdf = (mocks.mergeDocumentFragments.mock.calls.at(-2) as [Buffer[]])[0][3]!;
+    const divider = (await extractPdfContent(dividerPdf))[1]!;
+    const pageOf = (title: string): string | undefined => {
+      const row = divider.texts.find((t) => t.text === title);
+      return row ? divider.texts.find((t) => t !== row && Math.abs(t.y - row.y) < 1 && t.x > row.x)?.text : undefined;
+    };
+    const titles = ['Schéma unifilaire', "Plan d'implantation et de connexion", 'Plan de situation'];
+    return { toc, bordereau: Object.fromEntries(titles.map((title) => [title, pageOf(title)])) };
+  }
+
+  it('moves every TOC and bordereau page number of a draft by exactly the inserted page', async () => {
+    await processJob('job-1');
+    const complete = await printedPageNumbers();
+
+    mocks.mergeDocumentFragments.mockResolvedValue({ pdf: DOSSIER_PDF, skipped: [] });
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing: MISSING } });
+    await processJob('job-1');
+    const draft = await printedPageNumbers();
+
+    // Cover 1, TOC 2, body 3-5, divider 6-7; the unreadable N°1 takes no page, so the drawings open on 8.
+    expect(complete.bordereau['Schéma unifilaire']).toBe('8');
+    expect(draft.toc.map((entry) => entry.title)).toEqual(complete.toc.map((entry) => entry.title));
+    expect(draft.toc.map((entry) => entry.pageNumber)).toEqual(complete.toc.map((entry) => entry.pageNumber + 1));
+    for (const [title, page] of Object.entries(complete.bordereau)) {
+      expect(page, title).toMatch(/^\d+$/);
+      expect(draft.bordereau[title], title).toBe(String(Number(page) + 1));
+    }
+    // annexes.pdf is not watermarked: its own bordereau keeps counting from its page 1.
+    const annexesDivider = async (call: number): Promise<string> =>
+      JSON.stringify((await extractPdfContent((mocks.mergeDocumentFragments.mock.calls[call] as [Buffer[]])[0][0]!))[1]!.texts.map((t) => t.text));
+    expect(await annexesDivider(3)).toBe(await annexesDivider(1));
+  });
+
+  it('keeps every TOC and bordereau target on the right page once the real watermark is applied', async () => {
+    const actualWatermark = await vi.importActual<typeof import('../src/draft-watermark')>('../src/draft-watermark');
+    const actualMerge = await vi.importActual<typeof import('../src/merge-annexes')>('../src/merge-annexes');
+    mocks.applyDraftWatermark.mockImplementation(actualWatermark.applyDraftWatermark);
+    mocks.mergeDocumentFragments.mockReset().mockImplementation(actualMerge.mergeDocumentFragments);
+    const labelled = async (labels: string[]): Promise<Buffer> => {
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont((await import('pdf-lib')).StandardFonts.Helvetica);
+      for (const label of labels) doc.addPage([595, 842]).drawText(label, { x: 50, y: 780, size: 14, font });
+      return Buffer.from(await doc.save());
+    };
+    mocks.renderCoverPage.mockResolvedValue(await labelled(['MARQUE COUVERTURE']));
+    mocks.renderTableOfContents.mockResolvedValue(await labelled(['MARQUE SOMMAIRE']));
+    mocks.convertDocxToPdf.mockResolvedValue(await labelled(['MARQUE CORPS 1', 'MARQUE CORPS 2', 'MARQUE CORPS 3']));
+    mocks.renderDrawingPages.mockResolvedValue(await labelled(['MARQUE SCHEMA 1', 'MARQUE SCHEMA 2']));
+    mocks.renderSitePlanPages.mockResolvedValue(await labelled(['MARQUE IMPLANTATION', 'MARQUE SITUATION']));
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...validSnapshot, draftMissing: MISSING } });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await processJob('job-1');
+    warn.mockRestore();
+
+    const saved = mocks.saveFile.mock.calls.find((call) => call[1] === 'dossier.pdf')![0] as Buffer;
+    const pages = (await extractPdfContent(saved)).map((page) => pageText(page));
+    const onPage = (pageNumber: number): string => pages[pageNumber - 1] ?? '';
+    expect(onPage(1)).toContain('MARQUE COUVERTURE');
+    expect(onPage(2)).toContain('Pièces manquantes');
+    expect(onPage(3)).toContain('MARQUE SOMMAIRE');
+
+    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
+    expect(onPage(toc[0]!.pageNumber)).toContain('MARQUE CORPS 1');
+    expect(onPage(toc.at(-2)!.pageNumber)).toContain('MARQUE CORPS 3');
+    expect(onPage(toc.find((entry) => entry.title === 'Annexes')!.pageNumber)).toContain('ANNEXES');
+
+    const bordereau = (await extractPdfContent(saved))[toc.find((entry) => entry.title === 'Annexes')!.pageNumber]!;
+    const pageOf = (title: string): number => {
+      const row = bordereau.texts.find((t) => t.text === title)!;
+      return Number(bordereau.texts.find((t) => t !== row && Math.abs(t.y - row.y) < 1 && t.x > row.x)!.text);
+    };
+    expect(onPage(pageOf('Schéma unifilaire'))).toContain('MARQUE SCHEMA 1');
+    expect(onPage(pageOf("Plan d'implantation et de connexion"))).toContain('MARQUE IMPLANTATION');
+    expect(onPage(pageOf('Plan de situation'))).toContain('MARQUE SITUATION');
+    for (const page of pages) expect(page).toContain('BROUILLON –');
   });
 
   it('fails the job at the assembly step when the watermark cannot be applied', async () => {

@@ -44,7 +44,7 @@ import { renderTableOfContents } from './render-toc';
 import { buildListPageAnnex } from './steg-list-annex';
 import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
-import { applyDraftWatermark } from './draft-watermark';
+import { applyDraftWatermark, DRAFT_INSERTED_PAGE_COUNT } from './draft-watermark';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 
@@ -583,7 +583,11 @@ export async function processJob(jobId: string): Promise<void> {
   const dcFuseRequired = snapshot.engineInput.dcFuse !== null;
   const acIsolatorRequired = snapshot.engineInput.acIsolator !== null;
 
-  const BODY_START_PAGE = 3; // 1 = cover, 2 = TOC
+  // 1 = cover, 2 = TOC. A draft gets its missing-pieces page right after the cover (inserted by
+  // applyDraftWatermark at the end), so every page number printed in the TOC and the bordereau of
+  // dossier.pdf moves by that page. annexes.pdf is never watermarked and keeps its own numbering.
+  const draftPageOffset = snapshot.draftMissing.length > 0 ? DRAFT_INSERTED_PAGE_COUNT : 0;
+  const BODY_START_PAGE = 3 + draftPageOffset;
   let tocBuffer: Buffer;
   try {
     // pdf-lib exposes no API to read the body PDF's real heading/outline destinations (the
