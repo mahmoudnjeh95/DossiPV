@@ -49,7 +49,7 @@ import {
   type SatelliteView,
 } from './fetch-satellite-image';
 import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
-import { renderTableOfContents } from './render-toc';
+import { findHeadingPages, renderTableOfContents, type TocEntry } from './render-toc';
 import { buildListPageAnnex } from './steg-list-annex';
 import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
@@ -647,17 +647,9 @@ export async function processJob(jobId: string): Promise<void> {
   const BODY_START_PAGE = STUDY_PAGE_COUNT_BEFORE_BODY + 1 + draftPageOffset;
   let tocBuffer: Buffer;
   try {
-    // pdf-lib exposes no API to read the body PDF's real heading/outline destinations (the
-    // precise fix), so this is the stopgap the final review accepted: every in-body section gets
-    // a monotonically increasing page number, clamped to the body's own page range
-    // (bodyStartPage..bodyStartPage+bodyPageCount-1) so no entry can point outside the body or
-    // out of order — unlike the previous formula, which mixed absolute and body-relative numbers
-    // and could point an earlier section at a later page.
     // Built from the SAME computeSectionNumbers() the body template itself uses (via
-    // buildTemplateData, below) — never a second, separately hardcoded set of roman numerals,
-    // which previously drifted out of sync with the body whenever the conditional sections were
-    // absent (a real regression the scoped re-review caught: the body said "VII. Conclusion" while
-    // the TOC still said "IX. Conclusion" for the same no-fuse/no-isolator project).
+    // buildTemplateData, below) — never a second, separately hardcoded set of roman numerals —
+    // and each heading's page is read from the body PDF itself.
     const sectionNumbers = computeSectionNumbers(dcFuseRequired, acIsolatorRequired);
     const bodyTitles = [
       `${sectionNumbers.sectionNumberPreambule} Préambule`,
@@ -674,20 +666,16 @@ export async function processJob(jobId: string): Promise<void> {
     ];
     // At most 11 body entries + « Annexes »: well within one TOC page (renderTableOfContents fits
     // 32 rows per page), so the one-page TOC assumed by STUDY_PAGE_COUNT_BEFORE_BODY still holds.
-    const inBodySectionCount = bodyTitles.length;
-    const pageForSection = (index: number): number => {
-      // index is 0-based among inBodySectionCount sections, spread evenly across the body's
-      // real page count so order and range are both guaranteed, never guessed per-section.
-      const span = Math.max(1, bodyPageCount - 1);
-      const offset = Math.round((index / Math.max(1, inBodySectionCount - 1)) * span);
-      return BODY_START_PAGE + Math.min(offset, bodyPageCount - 1);
-    };
-
-    const tocEntries = [
-      ...bodyTitles.map((title, index) => ({ title, pageNumber: pageForSection(index) })),
-      // The divider (« ANNEXES » + bordereau) follows the body; the drawings and plans are annexes.
-      { title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount },
-    ];
+    const bodyPages = await findHeadingPages(bodyPdfBuffer, bodyTitles);
+    let previousPage = 1;
+    const tocEntries: TocEntry[] = bodyTitles.map((title, index) => {
+      const bodyPage = bodyPages[index];
+      if (bodyPage === null || bodyPage === undefined) warnings.push(`Sommaire : titre « ${title} » introuvable.`);
+      previousPage = bodyPage ?? previousPage;
+      return { title, pageNumber: BODY_START_PAGE + previousPage - 1 };
+    });
+    // The divider (« ANNEXES » + bordereau) follows the body; the drawings and plans are annexes.
+    tocEntries.push({ title: 'Annexes', pageNumber: BODY_START_PAGE + bodyPageCount });
     tocBuffer = await renderTableOfContents(tocEntries);
   } catch (error) {
     return fail(jobId, 'toc', error);

@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   fetchSatelliteImage: vi.fn(),
   renderSitePlanPages: vi.fn(),
   renderTableOfContents: vi.fn(),
+  findHeadingPages: vi.fn(),
   saveFile: vi.fn(),
   readFile: vi.fn(),
   getFilePath: vi.fn(),
@@ -105,7 +106,7 @@ vi.mock('../src/fetch-satellite-image', async () => ({
   fetchSatelliteImage: mocks.fetchSatelliteImage,
 }));
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
-vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents }));
+vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents, findHeadingPages: mocks.findHeadingPages }));
 vi.mock('../src/steg-list-annex', () => ({ buildListPageAnnex: mocks.buildListPageAnnex }));
 vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: mocks.getFilePath }));
 vi.mock('fs/promises', async () => {
@@ -277,6 +278,11 @@ beforeEach(async () => {
   mocks.mergeDocumentFragments.mockResolvedValue({ pdf: ASSEMBLED_PDF, skipped: [] });
   mocks.renderCoverPage.mockResolvedValue(COVER_PDF);
   mocks.renderDrawingPages.mockResolvedValue(drawingsPdf);
+  // Headings spread evenly over the body's real page range, first on page 1 and last on the last page.
+  mocks.findHeadingPages.mockImplementation(async (pdf: Buffer, headings: string[]) => {
+    const pages = (await PDFDocument.load(pdf)).getPageCount();
+    return headings.map((_, i) => 1 + Math.round((i / Math.max(1, headings.length - 1)) * (pages - 1)));
+  });
   mocks.renderPanelWiringDiagram.mockResolvedValue(drawingsPdf);
   mocks.renderDcBoxDiagram.mockResolvedValue(drawingsPdf);
   mocks.renderAcBoxDiagram.mockResolvedValue(drawingsPdf);
@@ -1501,6 +1507,33 @@ describe('processJob — PVGIS production simulation (mandatory, first step)', (
     expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
     expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+describe('processJob — table of contents', () => {
+  it("prints each section's real body page, offset by the cover and the TOC", async () => {
+    mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
+    mocks.findHeadingPages.mockImplementation((_pdf: Buffer, headings: string[]) => Promise.resolve(headings.map((_, i) => (i < 3 ? 1 : i < 6 ? 3 : 5))));
+
+    await processJob('job-1');
+
+    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
+    expect(toc[0]!.pageNumber).toBe(3);
+    expect(toc[3]!.pageNumber).toBe(5);
+    expect(toc[6]!.pageNumber).toBe(7);
+    expect(toc.at(-1)).toEqual({ title: 'Annexes', pageNumber: 8 });
+  });
+
+  it('keeps the previous page and warns when a heading is not found', async () => {
+    mocks.convertDocxToPdf.mockResolvedValue(await makePdf(5));
+    mocks.findHeadingPages.mockImplementation((_pdf: Buffer, headings: string[]) => Promise.resolve(headings.map((_, i) => (i === 0 ? 2 : i === 1 ? null : 4))));
+
+    await processJob('job-1');
+
+    const toc = mocks.renderTableOfContents.mock.calls.at(-1)![0] as { title: string; pageNumber: number }[];
+    expect(toc[1]!.pageNumber).toBe(toc[0]!.pageNumber);
+    const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+    expect(warnings).toContain(`Sommaire : titre « ${toc[1]!.title} » introuvable.`);
   });
 });
 

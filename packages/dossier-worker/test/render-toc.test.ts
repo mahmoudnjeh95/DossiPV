@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { PDFDocument } from 'pdf-lib';
-import { renderTableOfContents } from '../src/render-toc';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { findHeadingPages, renderTableOfContents } from '../src/render-toc';
 import { extractPdfContent, pdfFontNames, TIMES_FONTS } from './helpers/pdf-content';
 
 describe('renderTableOfContents', () => {
@@ -54,5 +54,47 @@ describe('renderTableOfContents', () => {
 
     const doc = await PDFDocument.load(buffer);
     expect(doc.getPageCount()).toBeGreaterThan(1);
+  });
+});
+
+describe('level-2 entries and leaders', () => {
+  it('indents a level-2 entry by 16 pt and draws a dotted leader to the page number', async () => {
+    const pages = await extractPdfContent(
+      await renderTableOfContents([
+        { title: 'I. Préambule', pageNumber: 3 },
+        { title: 'I.1 Objet', pageNumber: 3, level: 2 },
+      ]),
+    );
+    const level1 = pages[0]!.texts.find((t) => t.text === 'I. Préambule')!;
+    const level2 = pages[0]!.texts.find((t) => t.text === 'I.1 Objet')!;
+    expect(level2.x - level1.x).toBeCloseTo(16, 1);
+    expect(pages[0]!.paths.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('findHeadingPages', () => {
+  async function body(pages: string[][]): Promise<Buffer> {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.TimesRoman);
+    for (const lines of pages) {
+      const page = doc.addPage([595, 842]);
+      lines.forEach((line, i) => page.drawText(line, { x: 60, y: 780 - i * 30, size: 12, font }));
+    }
+    return Buffer.from(await doc.save());
+  }
+
+  it('finds each heading on its page, searching onwards from the previous one', async () => {
+    const pdf = await body([['I. Préambule', 'II. Présentation du projet'], ['du texte'], ['III. Câblage'], ['IV. Conclusion']]);
+    expect(await findHeadingPages(pdf, ['I. Préambule', 'II. Présentation du projet', 'III. Câblage', 'IV. Conclusion'])).toEqual([1, 1, 3, 4]);
+  });
+
+  it('returns null for a heading that is not printed, and does not let it move the search', async () => {
+    const pdf = await body([['I. Préambule'], ['III. Câblage']]);
+    expect(await findHeadingPages(pdf, ['I. Préambule', 'II. Absent', 'III. Câblage'])).toEqual([1, null, 2]);
+  });
+
+  it('ignores a mention of a heading inside running text', async () => {
+    const pdf = await body([['voir le chapitre II. Câblage plus loin'], ['II. Câblage']]);
+    expect(await findHeadingPages(pdf, ['II. Câblage'])).toEqual([2]);
   });
 });
