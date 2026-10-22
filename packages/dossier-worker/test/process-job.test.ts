@@ -93,6 +93,7 @@ import { planImplantationView, planSituationView, projectToImage, isInsideImage,
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 import { extractPdfContent, pageText } from './helpers/pdf-content';
+import { INVERTER_MODELS, syntheticInverterDatasheet } from './helpers/synthetic-datasheet';
 
 const validSnapshot = {
   version: 1,
@@ -1088,21 +1089,50 @@ describe('processJob — annex plan', () => {
       annexes: { cinFileId: null, commercialRegisterFileId: null, stegContractFileId: null, lastPaidBillFileId: 'file-bill', moduleAcceptanceFileId: null, extraFiles: [] },
       structure: { structureAttestationFileId: 'file-structure' },
     });
-    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue(annexJob('Y'));
+  });
+
+  function annexJob(inverterModel: string): unknown {
+    return {
       id: 'job-1',
       projectId: 'project-1',
       inputSnapshot: {
         ...validSnapshot,
         arrayConfig: {
           module: { brand: 'LONGi', model: 'X', datasheetFileId: 'file-module' },
-          inverters: [{ inverter: { brand: 'Sofar', model: 'Y', datasheetFileId: 'file-inverter' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
+          inverters: [{ inverter: { brand: 'Sofar', model: inverterModel, datasheetFileId: 'file-inverter' }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
         },
         protections: {
           acBreaker: { brand: 'Hager', model: 'RCBO', residualCurrentMA: 30, datasheetFileId: 'file-rcd' },
           dcSpd: { brand: 'Citel', model: 'DS', datasheetFileId: 'file-broken' },
         },
       },
-    });
+    };
+  }
+
+  // The blank one-page datasheets of this block have no text layer: nothing can be highlighted.
+  const NO_HIGHLIGHT_WARNINGS = [
+    'Surlignage impossible dans Annexe N°11 — Fiche technique LONGi X (document scanné ou modèle introuvable).',
+    'Surlignage impossible dans Annexe N°12 — Fiche technique Sofar Y (document scanné ou modèle introuvable).',
+  ];
+
+  it('merges the inverter datasheet with the model column highlighted, and warns for the text-less module datasheet', async () => {
+    const inverterSheet = await syntheticInverterDatasheet('columns');
+    const actualRead = mocks.readFile.getMockImplementation() as (path: string) => Promise<Buffer>;
+    mocks.readFile.mockImplementation((path: string) => (path === '/storage/inverter.pdf' ? Promise.resolve(inverterSheet) : actualRead(path)));
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue(annexJob(INVERTER_MODELS[1]));
+
+    await processJob('job-1');
+
+    const annexes = (mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[], { label: string; buffer: Buffer }[]])[1];
+    const inverter = annexes.find((a) => a.label === `Annexe N°12 — Fiche technique Sofar ${INVERTER_MODELS[1]}`)!;
+    const amber = (await extractPdfContent(inverter.buffer))[0]!.paths.filter((p) => JSON.stringify(p.fill) === JSON.stringify([1, 0.82, 0]));
+    expect(amber.length).toBeGreaterThan(0);
+    expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
+      'Page de la liste STEG introuvable pour SUN-5K-G04.',
+      'Page de la liste ANME introuvable pour X.',
+      NO_HIGHLIGHT_WARNINGS[0],
+    ]);
   });
 
   it('merges the annex documents in physical order, the drawings and plans after the administrative papers', async () => {
@@ -1154,6 +1184,7 @@ describe('processJob — annex plan', () => {
     expect(update[0].data.warnings).toEqual([
       'Page de la liste STEG introuvable pour Y.',
       'Page de la liste ANME introuvable pour X.',
+      ...NO_HIGHLIGHT_WARNINGS,
       'Annexe N°14 — Fiche technique Citel DS : document illisible, non joint au dossier.',
     ]);
   });
@@ -1190,7 +1221,7 @@ describe('processJob — annex plan', () => {
         'Annexe N°14 — Fiche technique Citel DS',
         'Annexe N°18 — Fiche technique Hager RCBO',
       ]);
-      expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([]);
+      expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual(NO_HIGHLIGHT_WARNINGS);
     });
 
     it('leaves the ANME list page out when the module has an acceptance letter', async () => {
@@ -1223,6 +1254,7 @@ describe('processJob — annex plan', () => {
       expect((findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings).toEqual([
         'Page de la liste STEG introuvable pour Y.',
         'Page de la liste ANME introuvable pour X.',
+        ...NO_HIGHLIGHT_WARNINGS,
       ]);
       warn.mockRestore();
     });

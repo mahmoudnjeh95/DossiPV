@@ -40,6 +40,7 @@ import {
 import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
 import { renderTableOfContents } from './render-toc';
 import { buildListPageAnnex } from './steg-list-annex';
+import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 
@@ -175,6 +176,44 @@ async function loadAnnexFiles(documents: AnnexDocument[], projectFileIds: Set<st
     files.set(document, { buffer, mimeType: ANNEX_MIME_TYPES[row.mimeType] ?? 'pdf', label });
   }
   return { files, warnings };
+}
+
+type DatasheetHighlighter = (pdf: Buffer) => Promise<{ pdf: Buffer; highlighted: boolean }>;
+
+/**
+ * Replaces the module and inverter datasheets in `files` with copies whose used values are
+ * highlighted, as the reference dossier does. A datasheet that cannot be highlighted (a scan
+ * without text, a model printed nowhere, an image file, an unreadable PDF) stays as it is and
+ * the job records a warning; it never fails the job.
+ */
+async function highlightDatasheets(files: Map<AnnexDocument, AnnexFile>, snapshot: WorkerJobSnapshot): Promise<string[]> {
+  const highlighters = new Map<string, DatasheetHighlighter>();
+  const module = snapshot.arrayConfig?.module;
+  if (module?.datasheetFileId) {
+    const { pmaxW, vocV, iscA, vmpV, impA } = snapshot.engineInput.module;
+    highlighters.set(`MODULE:${module.datasheetFileId}`, (pdf) => highlightModuleDatasheet(pdf, { model: module.model, pmaxW, vocV, iscA, vmpV, impA }));
+  }
+  for (const { inverter } of snapshot.arrayConfig?.inverters ?? []) {
+    if (inverter.datasheetFileId) highlighters.set(`INVERTER:${inverter.datasheetFileId}`, (pdf) => highlightInverterDatasheet(pdf, inverter.model));
+  }
+
+  const warnings: string[] = [];
+  for (const [document, file] of files) {
+    if (document.source.kind !== 'file') continue;
+    const highlight = highlighters.get(`${document.slot}:${document.source.fileId}`);
+    if (!highlight) continue;
+    try {
+      const result = file.mimeType === 'pdf' ? await highlight(file.buffer) : { highlighted: false, pdf: file.buffer };
+      if (result.highlighted) {
+        files.set(document, { ...file, buffer: result.pdf });
+        continue;
+      }
+    } catch (error) {
+      console.warn(`processJob: ${file.label} could not be highlighted.`, error);
+    }
+    warnings.push(`Surlignage impossible dans ${file.label} (document scanné ou modèle introuvable).`);
+  }
+  return warnings;
 }
 
 /** A model to find in one of the official lists, and where its page goes. */
@@ -605,6 +644,7 @@ export async function processJob(jobId: string): Promise<void> {
     );
     const loaded = await loadAnnexFiles(ordered, projectFileIds);
     warnings.push(...loaded.warnings);
+    warnings.push(...(await highlightDatasheets(loaded.files, snapshot)));
     annexFiles = ordered.flatMap((document) => {
       const file = loaded.files.get(document);
       return file ? [file] : [];
