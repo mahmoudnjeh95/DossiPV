@@ -1,6 +1,7 @@
 import { PvgisFetchError, type PvgisHourlyRow } from './types';
 
 const PVGIS_BASE_URL = 'https://re.jrc.ec.europa.eu/api/v5_3/seriescalc';
+const PVGIS_TIMEOUT_MS = 30_000;
 
 interface RawPvgisHourlyRow {
   time: string;
@@ -33,7 +34,8 @@ export async function fetchPvgisHourlyData(
   url.searchParams.set('components', '1');
   url.searchParams.set('outputformat', 'json');
 
-  const response = await fetch(url.toString());
+  // A hung PVGIS connection must fail the job instead of blocking the worker forever.
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(PVGIS_TIMEOUT_MS) });
   if (!response.ok) {
     throw new PvgisFetchError(response.status, `PVGIS request failed with status ${response.status}`);
   }

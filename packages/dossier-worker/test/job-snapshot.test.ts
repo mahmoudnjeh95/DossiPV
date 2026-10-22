@@ -70,6 +70,55 @@ describe('parseJobSnapshot', () => {
     expect(parsed!.cablingConfig?.cableTray).toBeNull();
   });
 
+  it('parses a pre-round-2 snapshot', () => {
+    const parsed = parseJobSnapshot({
+      ...validSnapshot,
+      site: { gpsLat: 36.8, gpsLon: 10.2, tiltDeg: 30 },
+    });
+
+    expect(parsed).not.toBeNull();
+    expect(parsed!.client).toEqual({
+      fullName: 'Ahmed',
+      address: 'Tunis',
+      stegReference: 'STEG-1',
+      cin: null,
+      annualConsumptionKWh: null,
+      subscribedPowerKVA: null,
+    });
+    expect(parsed!.site).toMatchObject({ tiltDeg: 30, azimuthDeg: null, installationPointLat: null, installationPointLon: null, floors: null });
+  });
+
+  it('reads tilt and installation point from the site row', () => {
+    const parsed = parseJobSnapshot({
+      ...validSnapshot,
+      client: { ...validSnapshot.client, cin: '01234567', annualConsumptionKWh: 4200, subscribedPowerKVA: 6, phone: '20000000' },
+      site: {
+        gpsLat: 36.8,
+        gpsLon: 10.2,
+        tiltDeg: 25,
+        azimuthDeg: -15,
+        installationPointLat: 36.8003,
+        installationPointLon: 10.2004,
+        floors: 2,
+        gridType: 'TT',
+      },
+    });
+
+    expect(parsed!.site).toMatchObject({ tiltDeg: 25, azimuthDeg: -15, installationPointLat: 36.8003, installationPointLon: 10.2004, floors: 2 });
+    expect(parsed!.client).toEqual({
+      fullName: 'Ahmed',
+      address: 'Tunis',
+      stegReference: 'STEG-1',
+      cin: '01234567',
+      annualConsumptionKWh: 4200,
+      subscribedPowerKVA: 6,
+    });
+  });
+
+  it('parses a client without a full name as no client', () => {
+    expect(parseJobSnapshot({ ...validSnapshot, client: { address: 'Tunis' } })!.client).toBeNull();
+  });
+
   it('still parses a snapshot missing the new optional fields (back-compat with narrower snapshots already in the DB)', () => {
     const raw = {
       version: 1,

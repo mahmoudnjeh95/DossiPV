@@ -25,6 +25,9 @@ const mocks = vi.hoisted(() => ({
   saveFile: vi.fn(),
   readFile: vi.fn(),
   getFilePath: vi.fn(),
+  simulateProduction: vi.fn(),
+  runEngine: vi.fn(),
+  projectSimulationUpsert: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -38,9 +41,18 @@ vi.mock('@dossipv/db', async () => {
       project: { findUnique: mocks.projectFindUnique },
       file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
       dossierCheckResult: { createMany: mocks.checkResultCreateMany },
+      projectSimulation: { upsert: mocks.projectSimulationUpsert },
     },
   };
 });
+vi.mock('@dossipv/engine', async () => ({
+  ...(await vi.importActual<typeof import('@dossipv/engine')>('@dossipv/engine')),
+  runEngine: mocks.runEngine,
+}));
+vi.mock('../src/run-simulation', async () => ({
+  ...(await vi.importActual<typeof import('../src/run-simulation')>('../src/run-simulation')),
+  simulateProduction: mocks.simulateProduction,
+}));
 vi.mock('../src/generate-dossier-document', () => ({ generateDossierDocument: mocks.generateDossierDocument, DossierGenerationBlockedError: class extends Error {} }));
 vi.mock('@dossipv/docx-template', () => ({ fillDossierTemplate: mocks.fillDossierTemplate }));
 vi.mock('../src/convert-to-pdf', () => ({ convertDocxToPdf: mocks.convertDocxToPdf }));
@@ -65,7 +77,9 @@ vi.mock('fs/promises', async () => {
   return { ...actual, readFile: mocks.readFile };
 });
 
+import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { processJob } from '../src/process-job';
+import type { ProductionSimulation } from '../src/run-simulation';
 import { planImplantationView, planSituationView, projectToImage, isInsideImage } from '../src/fetch-satellite-image';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 
@@ -85,12 +99,13 @@ const validSnapshot = {
   projectMeta: { moduleBrandModel: 'X', inverterBrandModel: 'Y', gridType: 'TT', mountingType: 'ROOF', structureMaterial: 'ALUMINUM', earthRodCount: 1 },
   client: { fullName: 'Ahmed', address: 'Tunis', stegReference: 'STEG-1' },
   cableRuns: [],
+  site: { gpsLat: 36.8, gpsLon: 10.2, tiltDeg: 30, azimuthDeg: null },
 };
 
 const premiumSnapshot = {
   ...validSnapshot,
   tier: 'PREMIUM',
-  site: { gpsLat: 36.8, gpsLon: 10.2, technicalRoomPointLat: 36.801, technicalRoomPointLon: 10.201, meterPointLat: 36.799, meterPointLon: 10.199, earthPitPointLat: null, earthPitPointLon: null },
+  site: { gpsLat: 36.8, gpsLon: 10.2, tiltDeg: 30, technicalRoomPointLat: 36.801, technicalRoomPointLon: 10.201, meterPointLat: 36.799, meterPointLon: 10.199, earthPitPointLat: null, earthPitPointLon: null },
 };
 
 // processJob reads the real page count of the body PDF and the drawings PDF (pdf-lib's
@@ -113,6 +128,28 @@ const PAGE_37_LAYOUT = {
   panelRectangle: [{ x: 250, y: 250 }, { x: 300, y: 250 }, { x: 300, y: 290 }, { x: 250, y: 290 }],
   wireRoute: [{ x: 300, y: 270 }, { x: 400, y: 200 }],
 };
+const PRODUCTION: ProductionSimulation = {
+  lat: 36.8,
+  lon: 10.2,
+  tiltDeg: 30,
+  azimuthDeg: 0,
+  weatherYear: 2020,
+  installedKWp: 3.1,
+  annualProductionKWh: 5400,
+  annualArrayKWh: 5900,
+  specificYieldKWhPerKWp: 5400 / 3.1,
+  performanceRatioPct: 81.5,
+  monthly: Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    globHorKWhM2: 150,
+    globIncKWhM2: 170,
+    ambientTempC: 20,
+    eArrayKWh: 490,
+    eGridKWh: 450,
+    prPct: 81.5,
+  })),
+};
+const PVGIS_DOWN_REASON = "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.";
 let bodyPdf: Buffer;
 let drawingsPdf: Buffer;
 // A real 2-page PDF (pages 37-38 always render exactly 2 pages, both tiers) — processJob now
@@ -170,6 +207,9 @@ beforeEach(async () => {
   mocks.fileCreate.mockResolvedValue({ id: 'file-x' });
   mocks.readFile.mockResolvedValue(Buffer.from('template bytes'));
   mocks.getFilePath.mockReturnValue('/fake/path');
+  mocks.runEngine.mockReturnValue({ derived: { DU_DC_PCT: 0.74, DU_AC_PCT: 0.48 }, checks: [], hasBlockingFailure: false });
+  mocks.simulateProduction.mockResolvedValue(PRODUCTION);
+  mocks.projectSimulationUpsert.mockResolvedValue({});
 });
 
 describe('processJob — success path', () => {
@@ -652,17 +692,6 @@ describe('processJob — fragment assembly details', () => {
     expect(findSucceededUpdate()).toBeDefined();
   });
 
-  it('falls back to the empty-frame site plan, with no network/API call, for a PREMIUM project whose site is not located yet', async () => {
-    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...premiumSnapshot, site: null } });
-
-    await processJob('job-1');
-
-    expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
-    expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
-    expect(mocks.renderSitePlanPages).toHaveBeenCalledWith(expect.objectContaining({ tier: 'STANDARD', premiumData: null, gps: { lat: 0, lon: 0 } }));
-    expect(findSucceededUpdate()).toBeDefined();
-  });
-
   it('retries a transient Esri tile fetch failure instead of failing the job', async () => {
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: premiumSnapshot });
     mocks.fetchSatelliteImage.mockRejectedValueOnce(new TypeError('fetch failed'));
@@ -704,5 +733,110 @@ describe('processJob — failure paths of the fragment-assembly steps', () => {
     expect(failCall.data.failureReason).not.toContain('boom');
     expect(failCall.data.failureReason).not.toBe('La génération du dossier a échoué.'); // not the unknown-step fallback
     expect(mocks.saveFile).not.toHaveBeenCalled();
+  });
+});
+
+describe('processJob — PVGIS production simulation (mandatory, first step)', () => {
+  function failedUpdate(): { status: string; failedStep: string; failureReason: string } | undefined {
+    const call = mocks.dossierJobUpdate.mock.calls.find((c) => (c[0] as { data: { status?: string } }).data.status === 'FAILED');
+    return (call?.[0] as { data: { status: string; failedStep: string; failureReason: string } } | undefined)?.data;
+  }
+
+  it('fails the job without calling Claude when PVGIS is down', async () => {
+    mocks.simulateProduction.mockRejectedValue(new PvgisFetchError(403, 'PVGIS request failed with status 403'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(failedUpdate()).toMatchObject({ status: 'FAILED', failedStep: 'simulation', failureReason: PVGIS_DOWN_REASON });
+    expect(mocks.simulateProduction).toHaveBeenCalledTimes(1); // a 403 is not retried
+    expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
+    expect(mocks.saveFile).not.toHaveBeenCalled();
+    expect(mocks.projectSimulationUpsert).not.toHaveBeenCalled();
+    expect(findSucceededUpdate()).toBeUndefined();
+    error.mockRestore();
+  });
+
+  it('simulates at the installation point', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...validSnapshot, site: { ...validSnapshot.site, installationPointLat: 36.8012, installationPointLon: 10.2034 } },
+    });
+
+    await processJob('job-1');
+
+    expect(mocks.runEngine).toHaveBeenCalledWith(validSnapshot.engineInput);
+    expect(mocks.simulateProduction).toHaveBeenCalledWith({
+      lat: 36.8012,
+      lon: 10.2034,
+      tiltDeg: 30,
+      azimuthDeg: 0,
+      module: validSnapshot.engineInput.module,
+      moduleCount: 5,
+      inverterPacW: 4000,
+      dcVoltageDropPct: 0.74,
+      acVoltageDropPct: 0.48,
+    });
+    expect(mocks.simulateProduction.mock.invocationCallOrder[0]!).toBeLessThan(mocks.generateDossierDocument.mock.invocationCallOrder[0]!);
+  });
+
+  it('simulates at the site GPS with its azimuth when no installation point is placed, and treats missing voltage drops as 0', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...validSnapshot, site: { ...validSnapshot.site, azimuthDeg: -20 } },
+    });
+    mocks.runEngine.mockReturnValue({ derived: {}, checks: [], hasBlockingFailure: false });
+
+    await processJob('job-1');
+
+    expect(mocks.simulateProduction).toHaveBeenCalledWith(
+      expect.objectContaining({ lat: 36.8, lon: 10.2, tiltDeg: 30, azimuthDeg: -20, dcVoltageDropPct: 0, acVoltageDropPct: 0 }),
+    );
+  });
+
+  it('stores the simulation figures on success', async () => {
+    await processJob('job-1');
+
+    const figures = {
+      source: 'PVGIS_LIVE',
+      annualProductionKWh: 5400,
+      specificYieldKWhPerKWp: 5400 / 3.1,
+      performanceRatioPct: 81.5,
+      systemLossesPct: null,
+      pvsystReportFileId: null,
+    };
+    expect(mocks.projectSimulationUpsert).toHaveBeenCalledWith({
+      where: { projectId: 'project-1' },
+      create: { projectId: 'project-1', ...figures },
+      update: figures,
+    });
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('retries a transient PVGIS network failure', async () => {
+    mocks.simulateProduction.mockRejectedValueOnce(new TypeError('fetch failed'));
+
+    await processJob('job-1');
+
+    expect(mocks.simulateProduction).toHaveBeenCalledTimes(2);
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it.each([
+    ['the site is not located', { site: null }],
+    ['the site has no tilt', { site: { gpsLat: 36.8, gpsLon: 10.2 } }],
+  ])('fails at "simulation" with no PVGIS or Claude call when %s', async (_label, override) => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...premiumSnapshot, ...override } });
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(failedUpdate()).toMatchObject({ failedStep: 'simulation', failureReason: PVGIS_DOWN_REASON });
+    expect(mocks.simulateProduction).not.toHaveBeenCalled();
+    expect(mocks.generateDossierDocument).not.toHaveBeenCalled();
+    expect(mocks.fetchSatelliteImage).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 });

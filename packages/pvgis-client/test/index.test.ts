@@ -44,6 +44,19 @@ describe('fetchPvgisHourlyData', () => {
     ]);
   });
 
+  it('passes a timeout signal to the hourly fetch', async () => {
+    const timeoutSpy = vi.spyOn(AbortSignal, 'timeout');
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve({ outputs: { hourly: [] } }) });
+    globalThis.fetch = mockFetch;
+
+    await fetchPvgisHourlyData(36.8, 10.18, 30, -10, 2020);
+
+    expect(timeoutSpy).toHaveBeenCalledWith(30_000);
+    const init = mockFetch.mock.calls[0]![1] as RequestInit | undefined;
+    expect(init?.signal).toBe(timeoutSpy.mock.results[0]!.value);
+    timeoutSpy.mockRestore();
+  });
+
   it('throws PvgisFetchError on a non-200 response', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 429 });
 

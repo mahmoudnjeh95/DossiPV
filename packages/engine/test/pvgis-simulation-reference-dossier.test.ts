@@ -29,7 +29,10 @@ import { habibKhedhiraFixture } from './fixtures/habib-khedhira';
  * clamp that overstated annual yield by ~67%) — not to proving numerical fidelity to PVsyst or
  * to PVGIS's own more sophisticated model.
  */
-describe('production simulation — reference dossier plausibility check', () => {
+// Live PVGIS call: opt-in with PVGIS_LIVE_TESTS=1 so a PVGIS outage (its maintenance page answers
+// HTTP 403) never turns the offline suite red. The worker's own live check is the PVGIS step of
+// each task report.
+describe.runIf(process.env.PVGIS_LIVE_TESTS === '1')('production simulation — reference dossier plausibility check', () => {
   it('produces an annual yield within a wide, regression-catching band around the reference dossier figure, at the CORRECTED GPS', async () => {
     const { lat, lon } = habibKhedhiraFixture.site.gps;
     const tiltDeg = habibKhedhiraFixture.structure.tiltDeg;

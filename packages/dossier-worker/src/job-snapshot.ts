@@ -4,12 +4,28 @@ import type { ProjectMeta } from './placeholder-map';
 export interface SnapshotSite {
   gpsLat: number;
   gpsLon: number;
+  tiltDeg: number | null;
+  /** PVGIS aspect convention: 0 = south. */
+  azimuthDeg: number | null;
+  /** Where the array actually stands; PVGIS runs here when set, else at gpsLat/gpsLon. */
+  installationPointLat: number | null;
+  installationPointLon: number | null;
+  floors: number | null;
   technicalRoomPointLat: number | null;
   technicalRoomPointLon: number | null;
   meterPointLat: number | null;
   meterPointLon: number | null;
   earthPitPointLat: number | null;
   earthPitPointLon: number | null;
+}
+
+export interface SnapshotClient {
+  fullName: string;
+  address: string | null;
+  stegReference: string | null;
+  cin: string | null;
+  annualConsumptionKWh: number | null;
+  subscribedPowerKVA: number | null;
 }
 
 export interface SnapshotEquipmentRef {
@@ -63,7 +79,7 @@ export interface WorkerJobSnapshot {
   dossierDate: string | null;
   engineInput: RunEngineInput;
   projectMeta: ProjectMeta;
-  client: { fullName: string; address: string | null; stegReference: string | null } | null;
+  client: SnapshotClient | null;
   cableRuns: { label: string; sectionMm2: number; lengthM: number; installMethod: string; cable?: SnapshotEquipmentRef & Record<string, unknown> }[];
   site: SnapshotSite | null;
   arrayConfig: SnapshotArrayConfig | null;
@@ -85,13 +101,35 @@ function optionalRecord(value: unknown): Record<string, unknown> | null {
   return isRecord(value) ? value : null;
 }
 
+function optionalNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+// Snapshots written before round 2 lack the newer fields; each one parses as null.
+function parseClient(value: unknown): SnapshotClient | null {
+  if (!isRecord(value) || typeof value.fullName !== 'string') return null;
+  return {
+    fullName: value.fullName,
+    address: optionalString(value.address),
+    stegReference: optionalString(value.stegReference),
+    cin: optionalString(value.cin),
+    annualConsumptionKWh: optionalNumber(value.annualConsumptionKWh),
+    subscribedPowerKVA: optionalNumber(value.subscribedPowerKVA),
+  };
+}
+
 function parseSite(value: unknown): SnapshotSite | null {
   if (!isRecord(value)) return null;
   if (typeof value.gpsLat !== 'number' || typeof value.gpsLon !== 'number') return null;
-  const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
+  const num = optionalNumber;
   return {
     gpsLat: value.gpsLat,
     gpsLon: value.gpsLon,
+    tiltDeg: num(value.tiltDeg),
+    azimuthDeg: num(value.azimuthDeg),
+    installationPointLat: num(value.installationPointLat),
+    installationPointLon: num(value.installationPointLon),
+    floors: num(value.floors),
     technicalRoomPointLat: num(value.technicalRoomPointLat),
     technicalRoomPointLon: num(value.technicalRoomPointLon),
     meterPointLat: num(value.meterPointLat),
@@ -117,7 +155,6 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
   if (!Array.isArray(value.cableRuns)) {
     return null;
   }
-  const client = value.client === null ? null : isRecord(value.client) ? (value.client as WorkerJobSnapshot['client']) : null;
   const tier = value.tier === 'PREMIUM' ? 'PREMIUM' : 'STANDARD';
 
   return {
@@ -129,7 +166,7 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     dossierDate: optionalString(value.dossierDate),
     engineInput: value.engineInput as unknown as RunEngineInput,
     projectMeta: value.projectMeta as unknown as ProjectMeta,
-    client,
+    client: parseClient(value.client),
     cableRuns: value.cableRuns as WorkerJobSnapshot['cableRuns'],
     site: parseSite(value.site),
     arrayConfig: optionalRecord(value.arrayConfig) as unknown as SnapshotArrayConfig | null,

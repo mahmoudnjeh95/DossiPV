@@ -3,6 +3,7 @@ import { join } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 import { db } from '@dossipv/db';
+import { runEngine } from '@dossipv/engine';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
@@ -10,6 +11,7 @@ import { buildTemplateData, computeSectionNumbers } from './build-template-data'
 import { convertDocxToPdf } from './convert-to-pdf';
 import { mergeDocumentFragments, type AnnexFile } from './merge-annexes';
 import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
+import { simulateProduction, type ProductionSimulation, type ProductionSimulationInput } from './run-simulation';
 import { withRetry, isRetryableError } from './retry';
 import { renderCoverPage } from './render-cover-page';
 import { renderDrawingPages } from './render-drawings';
@@ -37,6 +39,7 @@ const anthropicClient = new Anthropic();
 // The real error is logged server-side for operators via console.error in each catch block below.
 const GENERIC_FAILURE_REASONS: Record<string, string> = {
   snapshot: 'Instantané de la saisie illisible ou corrompu.',
+  simulation: "PVGIS indisponible : le dossier n'a pas été généré. Réessayez plus tard.",
   text: 'La génération du texte du dossier a échoué.',
   docx: 'La génération du document Word a échoué.',
   pdf: 'La conversion en PDF a échoué.',
@@ -140,12 +143,53 @@ async function collectAnnexFiles(projectId: string, companyId: string, snapshot:
   return annexFiles;
 }
 
+/**
+ * PVGIS inputs for the frozen snapshot: the installation point when the installer placed one,
+ * else the site GPS; the engine's own DC and AC voltage drops. Throws when the site or its tilt
+ * is missing, since the dossier cannot carry a simulation without them.
+ */
+function buildSimulationInput(snapshot: WorkerJobSnapshot): ProductionSimulationInput {
+  const site = snapshot.site;
+  if (!site) {
+    throw new Error('The snapshot has no located site: PVGIS needs a GPS point.');
+  }
+  if (site.tiltDeg === null) {
+    throw new Error('The snapshot site has no tilt: PVGIS needs one.');
+  }
+  const point =
+    site.installationPointLat !== null && site.installationPointLon !== null
+      ? { lat: site.installationPointLat, lon: site.installationPointLon }
+      : { lat: site.gpsLat, lon: site.gpsLon };
+  const { array, module } = snapshot.engineInput;
+  const { derived } = runEngine(snapshot.engineInput);
+  return {
+    ...point,
+    tiltDeg: site.tiltDeg,
+    azimuthDeg: site.azimuthDeg ?? 0,
+    module,
+    moduleCount: array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0),
+    inverterPacW: array.reduce((sum, entry) => sum + entry.inverter.pacW, 0),
+    dcVoltageDropPct: derived.DU_DC_PCT ?? 0,
+    acVoltageDropPct: derived.DU_AC_PCT ?? 0,
+  };
+}
+
 export async function processJob(jobId: string): Promise<void> {
   const job = await db.dossierJob.findUniqueOrThrow({ where: { id: jobId } });
 
   const snapshot = parseJobSnapshot(job.inputSnapshot);
   if (!snapshot) {
     return fail(jobId, 'snapshot', new Error('inputSnapshot failed parseJobSnapshot validation'));
+  }
+
+  // PVGIS is mandatory (user, 2026-10-22) and runs first, so an outage fails the job before any
+  // paid Claude call or rendering work. A 403 (PVGIS maintenance page) is not retried.
+  let production: ProductionSimulation;
+  try {
+    const simulationInput = buildSimulationInput(snapshot);
+    production = await withRetry(() => simulateProduction(simulationInput));
+  } catch (error) {
+    return fail(jobId, 'simulation', error);
   }
 
   let workerResult;
@@ -436,6 +480,20 @@ export async function processJob(jobId: string): Promise<void> {
 
     const annexesSaved = await saveFile(annexesPdfBuffer, 'annexes.pdf', 'application/pdf');
     const annexesFile = await db.file.create({ data: { fileName: 'annexes.pdf', mimeType: 'pdf', storageKey: annexesSaved.storageKey } });
+
+    const simulationFigures = {
+      source: 'PVGIS_LIVE',
+      annualProductionKWh: production.annualProductionKWh,
+      specificYieldKWhPerKWp: production.specificYieldKWhPerKWp,
+      performanceRatioPct: production.performanceRatioPct,
+      systemLossesPct: null,
+      pvsystReportFileId: null,
+    };
+    await db.projectSimulation.upsert({
+      where: { projectId: snapshot.projectId },
+      create: { projectId: snapshot.projectId, ...simulationFigures },
+      update: simulationFigures,
+    });
 
     await db.dossierCheckResult.createMany({
       data: workerResult.engineResult.checks.map((check) => ({
