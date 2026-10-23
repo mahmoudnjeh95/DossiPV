@@ -103,7 +103,20 @@ describe('parseJobSnapshot', () => {
       annualConsumptionKWh: null,
       subscribedPowerKVA: null,
     });
-    expect(parsed!.site).toMatchObject({ tiltDeg: 30, azimuthDeg: null, installationPointLat: null, installationPointLon: null, floors: null });
+    expect(parsed!.site).toMatchObject({ tiltDeg: 30, azimuthDeg: null, installationPointLat: null, installationPointLon: null, floors: null, roofOutline: null });
+  });
+
+  it('reads the roof contour from the site row, and drops a malformed one', () => {
+    const roofOutline = [
+      { lat: 36.8, lon: 10.2 },
+      { lat: 36.8, lon: 10.2002 },
+      { lat: 36.8002, lon: 10.2002 },
+    ];
+    const withRoof = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, roofOutline } });
+    const malformed = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, roofOutline: [{ lat: 36.8 }] } });
+
+    expect(withRoof!.site?.roofOutline).toEqual(roofOutline);
+    expect(malformed!.site?.roofOutline).toBeNull();
   });
 
   it('reads tilt and installation point from the site row', () => {

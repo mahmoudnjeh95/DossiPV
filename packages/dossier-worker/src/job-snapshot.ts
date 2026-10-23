@@ -1,4 +1,4 @@
-import type { RunEngineInput } from '@dossipv/engine';
+import { parseRoofOutline, type GpsPoint, type RunEngineInput } from '@dossipv/engine';
 import type { ProjectMeta } from './placeholder-map';
 
 export interface SnapshotSite {
@@ -17,6 +17,8 @@ export interface SnapshotSite {
   meterPointLon: number | null;
   earthPitPointLat: number | null;
   earthPitPointLon: number | null;
+  /** The roof contour drawn on the Emplacements map; null when none was drawn (or older snapshots). */
+  roofOutline: GpsPoint[] | null;
 }
 
 export interface SnapshotClient {
@@ -183,6 +185,7 @@ function parseSite(value: unknown): SnapshotSite | null {
     meterPointLon: num(value.meterPointLon),
     earthPitPointLat: num(value.earthPitPointLat),
     earthPitPointLon: num(value.earthPitPointLon),
+    roofOutline: parseRoofOutline(value.roofOutline),
   };
 }
 

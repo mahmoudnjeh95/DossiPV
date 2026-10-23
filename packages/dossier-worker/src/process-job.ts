@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { db } from '@dossipv/db';
-import { formatRunLengthFormula, groundDistanceM, runEngine } from '@dossipv/engine';
+import { formatRunLengthFormula, groundDistanceM, polygonAreaM2, runEngine } from '@dossipv/engine';
 import { saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
@@ -582,12 +582,15 @@ export async function processJob(jobId: string): Promise<void> {
     };
     const field = gps.field!;
     const placedPoints = [gps.technicalRoom, gps.meter, gps.earthPit].filter((p): p is LatLon => p !== null);
+    // The installer's roof contour: page 37 frames all of it, and draws it.
+    const roofOutline = site.roofOutline;
+    const framed = [field, ...placedPoints, ...(roofOutline ?? [])];
 
     // Page 37 covers every point at the best zoom; page 38 is a neighbourhood-scale view centred
     // on the site. Both have exact pixel bounds, so every GPS point is projected to the image
     // pixel it really falls on.
     let provider = activeImageryProvider();
-    let implantationView = planImplantationView([field, ...placedPoints], implantationViewOptions(provider));
+    let implantationView = planImplantationView(framed, implantationViewOptions(provider));
     let situationView = planSituationView(sitePoint);
     let page37Image: { standard: Buffer; print: Buffer } | null;
     let page38Image: { standard: Buffer; print: Buffer } | null;
@@ -601,7 +604,7 @@ export async function processJob(jobId: string): Promise<void> {
       console.warn(`processJob: job ${jobId}: Mapbox refused the access token (HTTP ${error.status}); falling back to Esri.`);
       warnings.push(MAPBOX_REFUSED_WARNING);
       provider = 'esri';
-      implantationView = planImplantationView([field, ...placedPoints], implantationViewOptions(provider));
+      implantationView = planImplantationView(framed, implantationViewOptions(provider));
       situationView = planSituationView(sitePoint);
       page37Image = await fetchPlanImage(jobId, implantationView, 'implantation', provider);
       page38Image = await fetchPlanImage(jobId, situationView, 'situation', provider);
@@ -618,6 +621,7 @@ export async function processJob(jobId: string): Promise<void> {
       earthPit: toPixels(gps.earthPit),
     };
     const implantationMetersPerPixel = metersPerPixel(implantationView, field.lat);
+    const roofPixels = roofOutline ? roofOutline.map((corner) => projectToImage(implantationView, corner)) : null;
 
     // The vision call needs a photo and at least one placed point to route the wiring to.
     let layout: Page37Layout | null = null;
@@ -638,6 +642,7 @@ export async function processJob(jobId: string): Promise<void> {
                 sitePoint: projectToImage(implantationView, field),
                 points: aiPoints,
                 arrayAreaM2,
+                roofOutline: roofPixels,
               },
               anthropicClient,
             ),
@@ -663,6 +668,7 @@ export async function processJob(jobId: string): Promise<void> {
         meter: pixelPoints.meter,
         earthPit: pixelPoints.earthPit,
         footprint: layout?.panelRectangle ?? null,
+        roofOutline: roofPixels,
         moduleCount: snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0),
         moduleLengthM: (lengthMm ?? 2000) / 1000,
         moduleWidthM: (widthMm ?? 1000) / 1000,
@@ -677,6 +683,8 @@ export async function processJob(jobId: string): Promise<void> {
       page37: {
         image: { buffer: page37Image?.print ?? null, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel, ...providerCredit },
         layout,
+        roofOutline: roofPixels,
+        roofAreaM2: roofOutline ? polygonAreaM2(roofOutline) : null,
         points: pixelPoints,
         gps,
         dc: { lengthM: dcRun.lengthM, sectionMm2: dcRun.sectionMm2, formula: dcFormula },

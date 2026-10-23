@@ -20,6 +20,8 @@ export interface Page37LayoutInput {
   points: Page37Points;
   /** Approximate PV array surface (modules × module area), if known. */
   arrayAreaM2?: number | null;
+  /** The roof contour the installer drew, in image pixels: the panels must stay inside it. */
+  roofOutline?: PixelPoint[] | null;
 }
 
 /**
@@ -95,6 +97,11 @@ function describeScene(input: Page37LayoutInput): string {
   if (input.points.technicalRoom) lines.push(`Local technique : ${px(input.points.technicalRoom)}.`);
   if (input.points.meter) lines.push(`Compteur STEG : ${px(input.points.meter)}.`);
   if (input.points.earthPit) lines.push(`Prise de terre : ${px(input.points.earthPit)}.`);
+  if (input.roofOutline && input.roofOutline.length >= 3) {
+    lines.push(
+      `Contour du toit tracé par l'installateur (sommets dans l'ordre) : ${input.roofOutline.map((p) => `(${px(p)})`).join(' ; ')}. Le quadrilatère du champ doit rester entièrement à l'intérieur de ce contour.`,
+    );
+  }
   if (input.arrayAreaM2 && input.arrayAreaM2 > 0) {
     const areaPx = input.arrayAreaM2 / (mpp * mpp);
     lines.push(`Surface du champ PV : environ ${Math.round(input.arrayAreaM2)} m², soit environ ${Math.round(areaPx)} pixels² ; dimensionne le quadrilatère en conséquence.`);

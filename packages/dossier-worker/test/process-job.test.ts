@@ -120,7 +120,7 @@ vi.mock('fs/promises', async () => {
 });
 
 import { PvgisFetchError } from '@dossipv/pvgis-client';
-import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM } from '@dossipv/engine';
+import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM, polygonAreaM2 } from '@dossipv/engine';
 import { processJob, IMPLANTATION_VIEW_OPTIONS } from '../src/process-job';
 import type { ProductionSimulation } from '../src/run-simulation';
 import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
@@ -725,6 +725,30 @@ describe('processJob — site plans (pages 37-38)', () => {
     }
   });
 
+  it('frames the whole drawn roof on page 37 and hands its contour, in pixels, to the plan, the 3D view and the vision call', async () => {
+    const roofOutline = [
+      { lat: 36.8, lon: 10.2 },
+      { lat: 36.8, lon: 10.2009 },
+      { lat: 36.8006, lon: 10.2009 },
+      { lat: 36.8006, lon: 10.2 },
+    ];
+    const snapshot = { ...premiumSnapshot, site: { ...premiumSnapshot.site, roofOutline } };
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: snapshot });
+
+    await processJob('job-1');
+
+    const field = { lat: 36.8, lon: 10.2 };
+    const view = planImplantationView([field, { lat: 36.801, lon: 10.201 }, { lat: 36.799, lon: 10.199 }, ...roofOutline], IMPLANTATION_VIEW_OPTIONS);
+    expect(mocks.fetchSatelliteImage).toHaveBeenNthCalledWith(1, view);
+    const roofPixels = roofOutline.map((corner) => projectToImage(view, corner));
+    const page37 = sitePlanInput().planData!.page37;
+    expect(page37.roofOutline).toEqual(roofPixels);
+    expect(page37.roofAreaM2).toBeCloseTo(polygonAreaM2(roofOutline), 6);
+    for (const corner of roofPixels) expect(isInsideImage(view, corner)).toBe(true);
+    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ roofOutline: roofPixels }));
+    expect(mocks.generatePage37Layout).toHaveBeenCalledWith(expect.objectContaining({ roofOutline: roofPixels }), expect.anything());
+  });
+
   it('prints the entered length instead of a formula when the installer edited the run', async () => {
     const snapshot = {
       ...validSnapshot,
@@ -1080,6 +1104,8 @@ describe('processJob — fragment assembly details', () => {
         page37: {
           image: { buffer: SATELLITE_TILE, widthPx: view.widthPx, heightPx: view.heightPx, metersPerPixel: metersPerPixel(view, site.lat) },
           layout: PAGE_37_LAYOUT,
+          roofOutline: null,
+          roofAreaM2: null,
           points: { field: projectToImage(view, site), ...expectedPoints },
           gps: { field: site, technicalRoom, meter, earthPit: null },
           // No floors in this snapshot and lengths typed by hand: no formula.

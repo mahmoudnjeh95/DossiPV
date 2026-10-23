@@ -16,6 +16,11 @@ export interface Roof3dInput {
   earthPit: PixelPoint | null;
   /** The Premium AI layout's panel quadrilateral (view pixels); null makes the array a compact grid at `field`. */
   footprint: PixelPoint[] | null;
+  /**
+   * The roof contour the installer drew (view pixels): drawn on the photo and, without an AI
+   * footprint, the array is centred on the roof and its rows kept within the roof's width.
+   */
+  roofOutline?: PixelPoint[] | null;
   moduleCount: number;
   moduleLengthM: number;
   moduleWidthM: number;
@@ -28,13 +33,15 @@ export interface Roof3dInput {
   cartouche: DrawingCartouche;
 }
 
-interface Vec2 {
+export interface Vec2 {
   e: number;
   n: number;
 }
 
 const GROUND_COLOR_OUTSIDE = 255;
 const PIN_COLORS = { field: rgb(0.96, 0.72, 0), room: rgb(0.12, 0.44, 0.85), meter: rgb(0.85, 0.19, 0.15), earth: rgb(0.12, 0.56, 0.24) };
+// The map editor's roof contour colour (ROOF_OUTLINE_STYLE in point-markers.ts).
+const ROOF_CYAN = rgb(0, 184 / 255, 217 / 255);
 const MODULE_COLOR = rgb(0.1, 0.2, 0.45);
 const MODULE_EDGE = rgb(0.85, 0.88, 0.95);
 const CAMERA_ELEVATION_DEG = 42;
@@ -50,6 +57,92 @@ const MAX_ARRAY_MODULES_PER_ROW = 40;
 const GROUND_MARGIN_M = 14;
 
 const rad = (deg: number): number => (deg * Math.PI) / 180;
+
+function isInsidePolygon(p: Vec2, polygon: Vec2[]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const a = polygon[i]!;
+    const b = polygon[j]!;
+    if (a.n > p.n !== b.n > p.n && p.e < ((b.e - a.e) * (p.n - a.n)) / (b.n - a.n) + a.e) inside = !inside;
+  }
+  return inside;
+}
+
+function polygonAreaM2(polygon: Vec2[]): number {
+  let twice = 0;
+  for (let i = 0; i < polygon.length; i += 1) {
+    const a = polygon[i]!;
+    const b = polygon[(i + 1) % polygon.length]!;
+    twice += a.e * b.n - b.e * a.n;
+  }
+  return Math.abs(twice) / 2;
+}
+
+function polygonCentre(polygon: Vec2[]): Vec2 {
+  let twice = 0;
+  let e = 0;
+  let n = 0;
+  for (let i = 0; i < polygon.length; i += 1) {
+    const a = polygon[i]!;
+    const b = polygon[(i + 1) % polygon.length]!;
+    const cross = a.e * b.n - b.e * a.n;
+    twice += cross;
+    e += (a.e + b.e) * cross;
+    n += (a.n + b.n) * cross;
+  }
+  if (Math.abs(twice) < 1e-9) return { e: polygon.reduce((sum, p) => sum + p.e, 0) / polygon.length, n: polygon.reduce((sum, p) => sum + p.n, 0) / polygon.length };
+  return { e: e / (3 * twice), n: n / (3 * twice) };
+}
+
+/**
+ * The stretch of the line `from + t·direction` inside the polygon that contains `from` (t = 0),
+ * as [start, end] in metres along `direction`; null when `from` is not inside.
+ */
+function chordThrough(polygon: Vec2[], from: Vec2, direction: Vec2): [number, number] | null {
+  const hits: number[] = [];
+  for (let i = 0; i < polygon.length; i += 1) {
+    const a = polygon[i]!;
+    const b = polygon[(i + 1) % polygon.length]!;
+    const edge = { e: b.e - a.e, n: b.n - a.n };
+    const denominator = direction.e * edge.n - direction.n * edge.e;
+    if (Math.abs(denominator) < 1e-12) continue; // parallel edge
+    const offset = { e: a.e - from.e, n: a.n - from.n };
+    const t = (offset.e * edge.n - offset.n * edge.e) / denominator;
+    const u = (offset.e * direction.n - offset.n * direction.e) / denominator;
+    if (u >= 0 && u < 1) hits.push(t);
+  }
+  hits.sort((x, y) => x - y);
+  for (let i = 0; i + 1 < hits.length; i += 1) {
+    if (hits[i]! <= 0 && hits[i + 1]! >= 0) return [hits[i]!, hits[i + 1]!];
+  }
+  return null;
+}
+
+/**
+ * Where the array goes on the drawn roof: through the field point when it is on the roof (else
+ * the roof's centre), moved to the middle of the roof across the rows and then along them. The
+ * room for a row is the roof's width across the rows, over the whole depth of a row (a roof
+ * drawn at an angle narrows towards its corners).
+ */
+export function fitOnRoof(roof: Vec2[], field: Vec2, facing: Vec2, across: Vec2, rowDepthM = 0): { centre: Vec2; widthM: number | null } {
+  let centre = isInsidePolygon(field, roof) ? field : polygonCentre(roof);
+  const acrossChord = chordThrough(roof, centre, across);
+  if (!acrossChord) return { centre, widthM: null };
+  const acrossShift = (acrossChord[0] + acrossChord[1]) / 2;
+  centre = { e: centre.e + across.e * acrossShift, n: centre.n + across.n * acrossShift };
+  const facingChord = chordThrough(roof, centre, facing);
+  if (facingChord) {
+    const facingShift = (facingChord[0] + facingChord[1]) / 2;
+    centre = { e: centre.e + facing.e * facingShift, n: centre.n + facing.n * facingShift };
+  }
+  // The row is centred on `centre`: on each edge of it, the room is twice the shorter side.
+  let widthM = Number.POSITIVE_INFINITY;
+  for (const f of [-rowDepthM / 2, 0, rowDepthM / 2]) {
+    const chord = chordThrough(roof, { e: centre.e + facing.e * f, n: centre.n + facing.n * f }, across);
+    if (chord) widthM = Math.min(widthM, 2 * Math.min(-chord[0], chord[1]));
+  }
+  return { centre, widthM: Number.isFinite(widthM) ? widthM : null };
+}
 
 /** The facing direction of the modules (horizontal, east/north metres): azimuth 0 faces south. */
 function facingVector(azimuthDeg: number): Vec2 {
@@ -73,8 +166,12 @@ interface ArrayModel {
   perRow: number;
 }
 
-/** Modules in rows facing `azimuthDeg`, rows spaced so they do not shade each other at the winter solstice. */
-function buildArray(input: Roof3dInput, centre: Vec2, availableWidthM: number | null): ArrayModel {
+/**
+ * Modules in rows facing `azimuthDeg`, rows spaced so they do not shade each other at the winter
+ * solstice. `room` caps a row's length: `fill` packs every row to it (the AI rectangle is sized
+ * for the array); otherwise the array stays a compact grid, only narrowed to fit (a whole roof).
+ */
+function buildArray(input: Roof3dInput, centre: Vec2, room: { widthM: number; fill: boolean } | null): ArrayModel {
   const { moduleCount, moduleLengthM: length, moduleWidthM: width, tiltDeg } = input;
   const facing = facingVector(input.azimuthDeg);
   const across: Vec2 = { e: -facing.n, n: facing.e }; // along a row
@@ -83,8 +180,9 @@ function buildArray(input: Roof3dInput, centre: Vec2, availableWidthM: number | 
   const pitch = depth + computeRowSpacingM(tiltDeg, length, input.latitudeDeg);
 
   const idealPerRow = Math.ceil(Math.sqrt((moduleCount * pitch) / (width + MODULE_GAP_M)));
-  const fitPerRow = availableWidthM ? Math.floor(availableWidthM / (width + MODULE_GAP_M)) : idealPerRow;
-  const perRow = Math.max(1, Math.min(MAX_ARRAY_MODULES_PER_ROW, moduleCount, fitPerRow > 0 ? fitPerRow : idealPerRow));
+  const fitPerRow = room ? Math.floor(room.widthM / (width + MODULE_GAP_M)) : idealPerRow;
+  const wantedPerRow = room && !room.fill ? Math.min(idealPerRow, fitPerRow) : fitPerRow;
+  const perRow = Math.max(1, Math.min(MAX_ARRAY_MODULES_PER_ROW, moduleCount, fitPerRow > 0 ? wantedPerRow : idealPerRow));
   const rows = Math.ceil(moduleCount / perRow);
   const arrayWidth = perRow * (width + MODULE_GAP_M);
   const arrayDepth = (rows - 1) * pitch + depth;
@@ -166,13 +264,20 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
   const mpp = input.image.metersPerPixel;
   const toMetres = (p: PixelPoint): Vec2 => ({ e: (p.x - input.field.x) * mpp, n: -(p.y - input.field.y) * mpp });
   const footprint = input.footprint && input.footprint.length >= 3 ? input.footprint.map(toMetres) : null;
-  const centre: Vec2 = footprint
-    ? { e: footprint.reduce((s, p) => s + p.e, 0) / footprint.length, n: footprint.reduce((s, p) => s + p.n, 0) / footprint.length }
-    : { e: 0, n: 0 };
+  const roof = input.roofOutline && input.roofOutline.length >= 3 ? input.roofOutline.map(toMetres) : null;
   const facing = facingVector(input.azimuthDeg);
   const across: Vec2 = { e: -facing.n, n: facing.e };
-  const availableWidth = footprint ? Math.max(...footprint.map((p) => (p.e - centre.e) * across.e + (p.n - centre.n) * across.n)) * 2 : null;
-  const model = buildArray(input, centre, availableWidth && availableWidth > 0 ? availableWidth : null);
+  let centre: Vec2 = { e: 0, n: 0 };
+  let availableWidth: number | null = null;
+  if (footprint) {
+    centre = { e: footprint.reduce((s, p) => s + p.e, 0) / footprint.length, n: footprint.reduce((s, p) => s + p.n, 0) / footprint.length };
+    availableWidth = Math.max(...footprint.map((p) => (p.e - centre.e) * across.e + (p.n - centre.n) * across.n)) * 2;
+  } else if (roof) {
+    const fitted = fitOnRoof(roof, centre, facing, across, input.moduleLengthM * Math.cos(rad(input.tiltDeg)));
+    centre = fitted.centre;
+    availableWidth = fitted.widthM;
+  }
+  const model = buildArray(input, centre, availableWidth && availableWidth > 0 ? { widthM: availableWidth, fill: footprint !== null } : null);
 
   const pins: { kind: keyof typeof PIN_COLORS; text: string; at: Vec2 }[] = [
     { kind: 'field', text: 'Champ PV', at: centre },
@@ -188,7 +293,7 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
     nMin: -(input.image.heightPx - input.field.y) * mpp,
     nMax: -(0 - input.field.y) * mpp,
   };
-  const subjects = [...pins.map((p) => p.at), ...model.modules.flatMap((m) => m.corners.map(([e, n]) => ({ e, n })))];
+  const subjects = [...pins.map((p) => p.at), ...model.modules.flatMap((m) => m.corners.map(([e, n]) => ({ e, n }))), ...(roof ?? [])];
   const margin = Math.max(GROUND_MARGIN_M, model.halfExtentM);
   const ground = {
     eMin: Math.max(photoRect.eMin, Math.min(...subjects.map((p) => p.e)) - margin),
@@ -267,6 +372,12 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
   const fillPolygon = (points: { x: number; y: number }[], color: ReturnType<typeof rgb>, opacity: number, border?: ReturnType<typeof rgb>, borderWidth = 0.4): void => {
     page.drawSvgPath(svg(points), { x: 0, y: A4_LANDSCAPE[1], color, opacity, ...(border ? { borderColor: border, borderWidth } : {}) });
   };
+  if (roof) {
+    // On the photo's own roof edges: the orthophoto is flat, so the contour lies at ground level.
+    const roofOnPage = roof.map((p) => pagePoint(p.e, p.n, 0));
+    page.drawSvgPath(svg(roofOnPage), { x: 0, y: A4_LANDSCAPE[1], borderColor: rgb(1, 1, 1), borderWidth: 3.5, borderOpacity: 0.85 });
+    page.drawSvgPath(svg(roofOnPage), { x: 0, y: A4_LANDSCAPE[1], color: ROOF_CYAN, opacity: 0.1, borderColor: ROOF_CYAN, borderWidth: 1.6 });
+  }
   for (const shadow of model.shadows) fillPolygon(shadow.map(([e, n]) => pagePoint(e, n, 0)), rgb(0, 0, 0), 0.32);
 
   const legs: [Vec2, Vec2][] = [];
@@ -333,6 +444,7 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
     { text: `Orientation : ${facingText}` },
     { text: rowsText(model, input.moduleCount) },
     { text: `Emprise : ${model.widthM.toFixed(1).replace('.', ',')} × ${model.depthM.toFixed(1).replace('.', ',')} m` },
+    ...(roof ? [{ text: `Surface de la toiture : ${Math.round(polygonAreaM2(roof))} m²` }] : []),
     { text: "Écart entre rangées : sans ombrage au solstice d'hiver" },
     { text: '' },
     { text: 'Vue en perspective, indicative : les cotes font foi sur le plan d’implantation (annexe N°5).' },
@@ -352,6 +464,11 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
     if (pin.kind === 'field') page.drawRectangle({ x: infoX, y: y - 0.5, width: 8, height: 6, color: MODULE_COLOR, borderColor: MODULE_EDGE, borderWidth: 0.4 });
     else page.drawCircle({ x: infoX + 4, y: y + 2.5, size: 3.6, color: PIN_COLORS[pin.kind] });
     label(page, fonts.regular, pin.kind === 'field' ? 'Champ PV (modules)' : pin.text, { x: infoX + 12, y }, 8);
+    y -= 12;
+  }
+  if (roof) {
+    page.drawRectangle({ x: infoX, y: y - 0.5, width: 8, height: 6, color: ROOF_CYAN, opacity: 0.1, borderColor: ROOF_CYAN, borderWidth: 1.2 });
+    label(page, fonts.regular, 'Contour de la toiture', { x: infoX + 12, y }, 8);
     y -= 12;
   }
   page.drawLine({ start: { x: infoX, y: y + 3 }, end: { x: infoX + 8, y: y + 3 }, thickness: 1.4, color: rgb(1, 0.55, 0), dashArray: [3, 2] });

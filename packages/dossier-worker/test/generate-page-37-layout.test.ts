@@ -76,6 +76,24 @@ describe('generatePage37Layout', () => {
     expect(text).not.toContain('Prise de terre');
   });
 
+  it('gives the drawn roof contour in pixels and asks to keep the panels inside it', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout({ ...baseInput, roofOutline: [{ x: 280, y: 280 }, { x: 360, y: 280.4 }, { x: 360, y: 340 }, { x: 280, y: 340 }] }, client);
+
+    const text = promptText(parseMock);
+    expect(text).toContain("Contour du toit tracé par l'installateur (sommets dans l'ordre) : (x=280, y=280) ; (x=360, y=280) ; (x=360, y=340) ; (x=280, y=340).");
+    expect(text).toContain("doit rester entièrement à l'intérieur de ce contour");
+  });
+
+  it('says nothing of a roof contour when none was drawn', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout(baseInput, client);
+
+    expect(promptText(parseMock)).not.toContain('Contour du toit');
+  });
+
   it('throws Page37LayoutParseError when Claude returns no parsed output', async () => {
     const { client } = fakeClient(null);
 

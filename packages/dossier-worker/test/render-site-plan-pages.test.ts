@@ -265,6 +265,30 @@ describe('renderSitePlanPages — implantation plan (page 37)', () => {
   });
 });
 
+describe('renderSitePlanPages — roof contour', () => {
+  const ROOF_CYAN = hex('#00B8D9');
+  const roofOutline = [{ x: 260, y: 230 }, { x: 400, y: 230 }, { x: 400, y: 340 }, { x: 330, y: 340 }, { x: 330, y: 300 }, { x: 260, y: 300 }];
+
+  it('draws the contour through its exact pixel positions, closed, with its surface in the legend', async () => {
+    const [page37] = await render(planData({ roofOutline, roofAreaM2: 1243.6 }));
+    const image = satelliteImage(page37!);
+
+    const edges = page37!.paths.filter((p) => colourIs(p.stroke, ROOF_CYAN) && p.points.length === roofOutline.length && p.points[0]!.y > image.y);
+    expect(edges).toHaveLength(1);
+    expect(edges[0]!.closed).toBe(true);
+    roofOutline.forEach((corner, i) => expect(near(edges[0]!.points[i]!, expectedPdf(image, corner), 0.01)).toBe(true));
+    expect(flat(page37!)).toContain('Contour de la toiture : 1244 m²');
+    expect(everythingOnPage(page37!)).toBe(true);
+  });
+
+  it('draws no contour and no legend entry when none was drawn', async () => {
+    const [page37] = await render(planData({ roofOutline: null }));
+
+    expect(page37!.paths.filter((p) => colourIs(p.stroke, ROOF_CYAN))).toHaveLength(0);
+    expect(flat(page37!)).not.toContain('Contour de la toiture');
+  });
+});
+
 describe('renderSitePlanPages — implantation plan with the AI layout (Premium)', () => {
   it('draws the panel quad exactly where its pixel coordinates fall on the drawn image, never stretched to the image frame', async () => {
     const [page37] = await render(planData({ layout }));

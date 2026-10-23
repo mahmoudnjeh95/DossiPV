@@ -5,8 +5,8 @@ import { drawPdfText, fitPdfText, toPdfSafeText } from './pdf-text';
 import { embedLogo, formatFrenchDate } from './render-cover-page';
 
 /**
- * Pages 37-38 of the dossier: the implantation plan (the installer's four placed points, the DC,
- * AC and earth legs with their lengths, the legend with GPS and length formulas) and the
+ * Pages 37-38 of the dossier: the implantation plan (the installer's four placed points and roof
+ * contour, the DC, AC and earth legs with their lengths, the legend with GPS and length formulas) and the
  * situation plan (site pin, north arrow, GPS in decimal and DMS). Both are drawn for every tier
  * on Esri imagery; when the imagery is missing, on a plain frame at the same scale.
  */
@@ -43,6 +43,10 @@ export interface SitePlanData {
     image: SitePlanImage;
     /** The Premium AI layout (panel rows and route); null otherwise. */
     layout: Page37Layout | null;
+    /** The roof contour the installer drew, in page-37 image pixels; null or absent when none. */
+    roofOutline?: PixelPoint[] | null;
+    /** The contour's surface in m², printed in the legend. */
+    roofAreaM2?: number | null;
     points: SitePlanPoints;
     gps: Record<keyof SitePlanPoints, LatLon | null>;
     dc: SitePlanLink;
@@ -105,6 +109,8 @@ const POINT_STYLES: Record<PointKey, { label: string; color: RGB }> = {
   earthPit: { label: 'Piquet de terre', color: hexColour('#1E8E3E') },
 };
 const MARKER_RADIUS = 6;
+// The map editor's roof contour colour (ROOF_OUTLINE_STYLE in point-markers.ts).
+const ROOF_CYAN = hexColour('#00B8D9');
 
 // Conductor colours (skill): DC in red, AC phase in brown, PE green-yellow.
 const DC_RED = rgb(0.8, 0, 0);
@@ -224,7 +230,7 @@ function svgPolygon(points: { x: number; y: number }[]): string {
   return `${points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${PAGE_HEIGHT - p.y}`).join(' ')} Z`;
 }
 
-function drawPolygon(page: PDFPage, points: { x: number; y: number }[], options: { color?: RGB; opacity?: number; borderColor?: RGB; borderWidth?: number }): void {
+function drawPolygon(page: PDFPage, points: { x: number; y: number }[], options: { color?: RGB; opacity?: number; borderColor?: RGB; borderWidth?: number; borderOpacity?: number }): void {
   page.drawSvgPath(svgPolygon(points), { x: 0, y: PAGE_HEIGHT, ...options });
 }
 
@@ -327,6 +333,14 @@ function drawScaleBar(page: PDFPage, x: number, y: number, ptPerMetre: number, m
   page.drawText(label, { x: x + width - font.widthOfTextAtSize(label, 7) / 2, y, size: 7, font, color: BLACK });
   page.drawText('Échelle', { x: x + width + 14, y: barY - 1, size: 7, font, color: GREY });
   return 22;
+}
+
+/** The roof contour: a light fill and a cyan edge over a white halo, readable on any roof. */
+function drawRoofOutline(page: PDFPage, outline: PixelPoint[], placement: Placement): void {
+  const corners = outline.map((p) => toPdf(placement, p));
+  drawPolygon(page, corners, { color: ROOF_CYAN, opacity: 0.12 });
+  drawPolygon(page, corners, { borderColor: WHITE, borderWidth: 4, borderOpacity: 0.85 });
+  drawPolygon(page, corners, { borderColor: ROOF_CYAN, borderWidth: 1.8 });
 }
 
 function drawLayoutOverlay(page: PDFPage, layout: Page37Layout, placement: Placement): void {
@@ -440,6 +454,12 @@ function drawImplantationLegend(page: PDFPage, fonts: Fonts, data: SitePlanData[
     y = drawFittedLines(page, text, textX, y, textWidth, fonts.regular, { size: 8, color: gps ? BLACK : GREY }) - 1;
   }
 
+  if (data.roofOutline && data.roofOutline.length >= 3) {
+    page.drawRectangle({ x, y: y - 2, width: 18, height: 9, color: ROOF_CYAN, opacity: 0.12, borderColor: ROOF_CYAN, borderWidth: 1.8 });
+    const area = data.roofAreaM2 ? ` : ${frenchNumber(data.roofAreaM2, { max: 0 })} m²` : '';
+    y = drawFittedLines(page, `Contour de la toiture${area}`, textX, y, textWidth, fonts.regular, { size: 8 }) - 1;
+  }
+
   if (data.layout) {
     page.drawRectangle({ x, y: y - 2, width: 18, height: 9, color: PANEL_BLUE, opacity: 0.35, borderColor: PANEL_BLUE, borderWidth: 1.5 });
     y = drawFittedLines(page, 'Champ PV (implantation indicative)', textX, y, textWidth, fonts.regular, { size: 8 }) - 1;
@@ -485,6 +505,7 @@ async function drawImplantationPage(doc: PDFDocument, input: SitePlanPagesInput,
   drawPdfText(page, IMPLANTATION_TITLE, { x: MARGIN, y: PAGE_HEIGHT - 45, size: 16, font: fonts.bold, color: BLACK });
 
   const { placement, titleRect } = await drawBackground(doc, page, data.image, fonts);
+  if (data.roofOutline && data.roofOutline.length >= 3) drawRoofOutline(page, data.roofOutline, placement);
   if (data.layout) drawLayoutOverlay(page, data.layout, placement);
 
   const at: Partial<Record<PointKey, { x: number; y: number }>> = {};

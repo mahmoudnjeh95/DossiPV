@@ -1,8 +1,17 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { db } from '@dossipv/db';
-import { computeRunLengthsM, groundDistanceM, runEngine, type EngineResult, type GpsPoint } from '@dossipv/engine';
+import { db, Prisma } from '@dossipv/db';
+import {
+  computeRunLengthsM,
+  groundDistanceM,
+  isSimplePolygon,
+  polygonAreaM2,
+  runEngine,
+  MAX_ROOF_OUTLINE_POINTS,
+  type EngineResult,
+  type GpsPoint,
+} from '@dossipv/engine';
 import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput, type ProjectForEngine } from '../../../../../lib/project-engine-input';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
@@ -10,6 +19,8 @@ import type { BuildingTypeValue } from '../../../../../lib/building-type';
 const NOT_FOUND = 'Projet introuvable.';
 const MAX_POINT_SPREAD_M = 500;
 const MAX_FLOORS: Record<BuildingTypeValue, number> = { HOUSE: 3, APARTMENT_BUILDING: 15 };
+/** Below this a "roof" is a slip of the finger, not a surface panels could stand on. */
+const MIN_ROOF_AREA_M2 = 4;
 
 export interface LocationsPayload {
   field: GpsPoint | null;
@@ -18,6 +29,8 @@ export interface LocationsPayload {
   earthPit: GpsPoint | null;
   floors: number | null;
   buildingType: BuildingTypeValue | null;
+  /** The roof contour, optional: null (or absent) when the installer did not draw one. */
+  roofOutline?: GpsPoint[] | null;
 }
 
 const REQUIRED_POINTS = [
@@ -46,8 +59,14 @@ function isLocationsPayload(value: unknown): value is LocationsPayload {
     isPointOrNull(record['meter']) &&
     isPointOrNull(record['earthPit']) &&
     (record['floors'] === null || typeof record['floors'] === 'number') &&
-    (record['buildingType'] === null || record['buildingType'] === 'HOUSE' || record['buildingType'] === 'APARTMENT_BUILDING')
+    (record['buildingType'] === null || record['buildingType'] === 'HOUSE' || record['buildingType'] === 'APARTMENT_BUILDING') &&
+    isRoofOutlineOrNull(record['roofOutline'])
   );
+}
+
+function isRoofOutlineOrNull(value: unknown): value is GpsPoint[] | null | undefined {
+  if (value === undefined || value === null) return true;
+  return Array.isArray(value) && value.length <= MAX_ROOF_OUTLINE_POINTS && value.every((point) => point !== null && isPointOrNull(point));
 }
 
 function isValidPoint(point: GpsPoint): boolean {
@@ -84,6 +103,18 @@ function validate(payload: LocationsPayload): string | null {
   if (payload.buildingType === 'HOUSE' && payload.earthPit === null) {
     return 'Placez le point « Piquet de terre » : il est obligatoire pour une maison.';
   }
+  return validateRoofOutline(payload.roofOutline ?? null, payload.field!);
+}
+
+function validateRoofOutline(outline: GpsPoint[] | null, field: GpsPoint): string | null {
+  if (outline === null) return null;
+  if (outline.length < 3) return 'Le contour du toit doit avoir au moins 3 sommets : terminez-le ou effacez-le.';
+  if (!outline.every(isValidPoint)) return 'Coordonnées invalides.';
+  if (outline.some((corner) => groundDistanceM(corner, field) > MAX_POINT_SPREAD_M)) {
+    return `Le contour du toit est trop loin du champ PV (plus de ${MAX_POINT_SPREAD_M} m) : vérifiez-le.`;
+  }
+  if (!isSimplePolygon(outline)) return 'Le contour du toit se croise : retracez-le en suivant le bord du toit.';
+  if (polygonAreaM2(outline) < MIN_ROOF_AREA_M2) return 'Le contour du toit est trop petit : retracez-le.';
   return null;
 }
 
@@ -119,6 +150,7 @@ export async function saveLocationsAction(
   const invalid = validate(payload);
   if (invalid) return { error: invalid };
   const { field, technicalRoom, meter, earthPit, floors, buildingType } = payload;
+  const roofOutline = payload.roofOutline ?? null;
   if (!field || !technicalRoom || !meter || floors === null || buildingType === null) return { error: 'Points manquants.' };
 
   const lengths = computeRunLengthsM({ field, technicalRoom, meter }, floors);
@@ -138,6 +170,7 @@ export async function saveLocationsAction(
       earthPitPointLon: earthPit?.lon ?? null,
       floors,
       buildingType,
+      roofOutline: roofOutline ? roofOutline.map(({ lat, lon }) => ({ lat, lon })) : Prisma.DbNull,
     },
   });
   // A flat with no pit of its own is earthed on the building's existing earth: no dedicated rod.

@@ -105,6 +105,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       meterPointLon: null,
       earthPitPointLat: null,
       earthPitPointLon: null,
+      roofOutline: null,
       equipmentLocation: null,
     },
     arrayConfig: {

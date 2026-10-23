@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
+import { parseRoofOutline } from '@dossipv/engine';
 import { guessBuildingType } from '../../../../../lib/building-type';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { LocationsMapClientOnly as LocationsMap } from './locations-map-loader';
@@ -26,7 +27,10 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
         <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> › Emplacements
       </p>
       <h1>Emplacements — {fullName}</h1>
-      <p className="muted">Touchez un bouton puis la carte pour placer chaque point. Les points sont déplaçables.</p>
+      <p className="muted">
+        Touchez un bouton puis la carte pour placer chaque point. Les points sont déplaçables. Vous pouvez aussi tracer le
+        contour du toit : il apparaît sur le plan d&apos;implantation et la vue 3D du dossier.
+      </p>
       <LocationsMap
         projectId={id}
         center={{ lat: site.gpsLat, lon: site.gpsLon }}
@@ -36,6 +40,7 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
           meter: point(site.meterPointLat, site.meterPointLon),
           earthPit: point(site.earthPitPointLat, site.earthPitPointLon),
         }}
+        initialRoofOutline={parseRoofOutline(site.roofOutline)}
         initialFloors={site.floors}
         initialBuildingType={site.buildingType ?? guessBuildingType(project.client?.address ?? null)}
       />

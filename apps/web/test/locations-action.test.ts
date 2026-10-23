@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Prisma } from '@dossipv/db';
 import { computeRunLengthsM, type EngineResult } from '@dossipv/engine';
 import { buildFullProject } from './fixtures/full-project';
 
@@ -115,6 +116,8 @@ describe('saveLocationsAction', () => {
     ['a point with a string latitude', { ...payload, field: { lat: '34.4', lon: 10.1 } }],
     ['a point that is not an object', { ...payload, earthPit: 'here' }],
     ['a non-numeric floor count', { ...payload, floors: '1' }],
+    ['a roof outline that is not a list', { ...payload, roofOutline: 'roof' }],
+    ['a roof corner with a string longitude', { ...payload, roofOutline: [field, technicalRoom, { lat: 34.4001, lon: '10.1' }] }],
   ])('refuses %s as the payload before touching the database', async (_label, invalidPayload) => {
     const result = await saveLocationsAction('p1', invalidPayload as never);
 
@@ -194,6 +197,46 @@ describe('saveLocationsAction', () => {
 
     expect(result).toEqual({ error: 'Les points sont trop éloignés (plus de 500 m) : vérifiez leur emplacement.' });
     expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+  });
+
+  describe('roof outline', () => {
+    // A 10 m x 10 m roof around the field point.
+    const dLat = 10 / 111_320;
+    const dLon = 10 / (111_320 * Math.cos((34.4 * Math.PI) / 180));
+    const roof = [
+      { lat: 34.4, lon: 10.1 },
+      { lat: 34.4, lon: 10.1 + dLon },
+      { lat: 34.4 + dLat, lon: 10.1 + dLon },
+      { lat: 34.4 + dLat, lon: 10.1 },
+    ];
+    const siteData = (): Record<string, unknown> => (m.mockSiteUpdate.mock.calls[0]?.[0] as { data: Record<string, unknown> }).data;
+
+    it('saves the drawn contour with the points', async () => {
+      await expect(saveLocationsAction('p1', { ...payload, roofOutline: roof })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
+
+      expect(siteData()['roofOutline']).toEqual(roof);
+    });
+
+    it('clears the stored contour when none is sent', async () => {
+      await expect(saveLocationsAction('p1', { ...payload, roofOutline: null })).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
+      expect(siteData()['roofOutline']).toBe(Prisma.DbNull);
+
+      m.mockSiteUpdate.mockClear();
+      await expect(saveLocationsAction('p1', payload)).rejects.toThrow('NEXT_REDIRECT:/projects/p1/summary');
+      expect(siteData()['roofOutline']).toBe(Prisma.DbNull);
+    });
+
+    it.each([
+      ['an unfinished contour', roof.slice(0, 2), 'Le contour du toit doit avoir au moins 3 sommets : terminez-le ou effacez-le.'],
+      ['a crossing contour', [roof[0]!, roof[2]!, roof[1]!, roof[3]!], 'Le contour du toit se croise : retracez-le en suivant le bord du toit.'],
+      ['a contour of a few centimetres', roof.map((p) => ({ lat: 34.4 + (p.lat - 34.4) / 100, lon: 10.1 + (p.lon - 10.1) / 100 })), 'Le contour du toit est trop petit : retracez-le.'],
+      ['a contour 2 km away', roof.map((p) => ({ lat: p.lat + 0.018, lon: p.lon })), 'Le contour du toit est trop loin du champ PV (plus de 500 m) : vérifiez-le.'],
+    ])('refuses %s', async (_label, roofOutline, message) => {
+      const result = await saveLocationsAction('p1', { ...payload, roofOutline });
+
+      expect(result).toEqual({ error: message });
+      expect(m.mockSiteUpdate).not.toHaveBeenCalled();
+    });
   });
 
   it('saves points and lengths, then opens the summary without generating', async () => {

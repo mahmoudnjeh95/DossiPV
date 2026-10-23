@@ -15,3 +15,4 @@ export * from './sizing-types';
 export * from './build-candidate';
 export * from './sizing';
 export * from './run-lengths';
+export * from './roof-outline';

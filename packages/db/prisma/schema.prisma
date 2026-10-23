@@ -680,6 +680,8 @@ model ProjectSite {
   meterPointLon            Float?
   earthPitPointLat         Float?
   earthPitPointLon         Float?
+  /// The roof contour drawn on the Emplacements map: [{ lat, lon }, …], at least 3 corners.
+  roofOutline              Json?
   equipmentLocation        String?
 
   @@map("project_site")
