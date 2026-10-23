@@ -363,7 +363,7 @@ describe('buildTemplateData', () => {
       });
 
       expect(data.installerTaxIdLine).toBe('Matricule fiscal : non renseigné');
-      expect(data.clientCinLine).toBe('CIN : copie jointe en annexe N°1');
+      expect(data.clientCinLine).toBe('');
     });
 
     it('prints a mixed ANME category readably', () => {

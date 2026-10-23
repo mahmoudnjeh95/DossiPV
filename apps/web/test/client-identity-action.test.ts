@@ -75,28 +75,18 @@ describe('saveClientIdentityAction', () => {
     expect(m.mockClientUpdate).not.toHaveBeenCalled();
   });
 
-  it('refuses a 7-digit CIN', async () => {
-    const result = await saveClientIdentityAction('p1', undefined, form([['fullName', 'MR TEST CLIENT'], ['cin', '0123456']]));
-    expect(result).toEqual({ error: 'N° CIN invalide (8 chiffres).' });
-    expect(m.mockStoreAnnexFiles).not.toHaveBeenCalled();
-    expect(m.mockClientUpdate).not.toHaveBeenCalled();
-  });
-
-  it('stores the CIN photo and renames the client', async () => {
-    const data = form([['cin', photo()], ['fullName', ' MR TEST CLIENT '], ['cin', '01234567']]);
+  it('stores the name and ignores any CIN field', async () => {
+    const data = form([['fullName', ' MR TEST CLIENT '], ['cin', '0123456']]);
     expect(await saveClientIdentityAction('p1', undefined, data)).toBeUndefined();
     expect(m.mockStoreAnnexFiles).toHaveBeenCalledWith('p1', data);
-    expect(m.mockClientUpdate).toHaveBeenCalledWith({
-      where: { projectId: 'p1' },
-      data: { fullName: 'MR TEST CLIENT', cin: '01234567' },
-    });
+    expect(m.mockClientUpdate).toHaveBeenCalledWith({ where: { projectId: 'p1' }, data: { fullName: 'MR TEST CLIENT' } });
     expect(m.mockRevalidatePath).toHaveBeenCalledWith('/projects/p1/proposals');
   });
 
   it('does not rename a locked identity', async () => {
     m.mockJobCount.mockResolvedValue(1);
-    await saveClientIdentityAction('p1', undefined, form([['fullName', 'AUTRE NOM'], ['cin', '01234567']]));
-    expect(m.mockClientUpdate).toHaveBeenCalledWith({ where: { projectId: 'p1' }, data: { cin: '01234567' } });
+    await saveClientIdentityAction('p1', undefined, form([['fullName', 'AUTRE NOM']]));
+    expect(m.mockClientUpdate).not.toHaveBeenCalled();
   });
 
   it('writes nothing when the photo is invalid', async () => {

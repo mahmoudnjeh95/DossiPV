@@ -80,7 +80,7 @@ describe('uploadStegPieceAction', () => {
   it('guards first: an unauthenticated caller is redirected and nothing is stored', async () => {
     m.mockValidateSession.mockResolvedValue(null);
 
-    await expect(uploadStegPieceAction('p1', undefined, form('cin', pdf()))).rejects.toThrow('NEXT_REDIRECT');
+    await expect(uploadStegPieceAction('p1', undefined, form('stegContract', pdf()))).rejects.toThrow('NEXT_REDIRECT');
     expect(m.mockStoreAnnexFiles).not.toHaveBeenCalled();
     expect(m.mockSaveFile).not.toHaveBeenCalled();
   });
@@ -96,7 +96,7 @@ describe('uploadStegPieceAction', () => {
 
   it('refuses an unknown piece and an empty file', async () => {
     expect(await uploadStegPieceAction('p1', undefined, form('extraFiles', pdf()))).toEqual({ error: 'Pièce inconnue.' });
-    expect(await uploadStegPieceAction('p1', undefined, form('cin'))).toEqual({ error: 'Choisissez une photo ou un fichier PDF.' });
+    expect(await uploadStegPieceAction('p1', undefined, form('stegContract'))).toEqual({ error: 'Choisissez une photo ou un fichier PDF.' });
     expect(m.mockStoreAnnexFiles).not.toHaveBeenCalled();
     expect(m.mockRevalidatePath).not.toHaveBeenCalled();
   });
@@ -117,7 +117,7 @@ describe('uploadStegPieceAction', () => {
   it("passes the annex store's refusal on without revalidating", async () => {
     m.mockStoreAnnexFiles.mockResolvedValue({ error: 'Type de fichier non autorisé.' });
 
-    expect(await uploadStegPieceAction('p1', undefined, form('cin', pdf()))).toEqual({ error: 'Type de fichier non autorisé.' });
+    expect(await uploadStegPieceAction('p1', undefined, form('stegContract', pdf()))).toEqual({ error: 'Type de fichier non autorisé.' });
     expect(m.mockRevalidatePath).not.toHaveBeenCalled();
   });
 

@@ -35,7 +35,7 @@ export default async function ProposalsPage({ params }: { params: Promise<{ id: 
   const proposals = computed.ok ? computed.result.proposals : [];
 
   const identityNeeds = client
-    ? clientIdentityNeeds({ fullName: client.fullName, reading, cinFileId: project.annexes?.cinFileId ?? null })
+    ? clientIdentityNeeds({ fullName: client.fullName, reading })
     : null;
 
   const months = reading?.monthsBilled ?? null;
@@ -48,7 +48,7 @@ export default async function ProposalsPage({ params }: { params: Promise<{ id: 
       </p>
       <h1>Propositions pour {client?.fullName ?? 'ce client'}</h1>
 
-      {identityNeeds && (identityNeeds.name || identityNeeds.cinPhoto) && (
+      {identityNeeds && identityNeeds.name && (
         <section className="card">
           <h2>Identité du titulaire</h2>
           <IdentityForm projectId={id} needs={identityNeeds} />

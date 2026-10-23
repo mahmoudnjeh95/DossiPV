@@ -64,7 +64,6 @@ describe('stegCompleteness', () => {
     expect(missingLabels).toEqual([]);
     expect(pieces.map((piece) => piece.key)).toEqual([
       'holderName',
-      'cin',
       'stegContract',
       'lastPaidBill',
       'installerAccreditation',
@@ -90,7 +89,7 @@ describe('stegCompleteness', () => {
     const { pieces, missingLabels } = stegCompleteness(authorized, DOSSIER_DATE, false);
     expect(missingLabels).toEqual([]);
     // Listed right after the installer's papers.
-    expect(pieces.map((piece) => piece.key).indexOf('syndicAuthorization')).toBe(6);
+    expect(pieces.map((piece) => piece.key).indexOf('syndicAuthorization')).toBe(5);
   });
 
   it('counts an expired ANME agreement as missing', () => {
@@ -135,7 +134,6 @@ describe('stegCompleteness', () => {
 
     expect(missingLabels).toEqual([
       'Nom du titulaire du contrat',
-      'Copie de la CIN du titulaire',
       "Contrat STEG ou attestation d'abonnement",
       'Dernière facture STEG acquittée',
       "Matricule fiscal de l'installateur",

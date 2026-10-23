@@ -15,22 +15,21 @@ const reading = (overrides: Partial<StegBillReading>): StegBillReading =>
 
 describe('clientIdentityNeeds', () => {
   it('flags the placeholder name', () => {
-    expect(clientIdentityNeeds({ fullName: CLIENT_NAME_PLACEHOLDER, reading: null, cinFileId: 'f1' }).name).toBe(true);
-    expect(clientIdentityNeeds({ fullName: '  ', reading: null, cinFileId: 'f1' }).name).toBe(true);
+    expect(clientIdentityNeeds({ fullName: CLIENT_NAME_PLACEHOLDER, reading: null }).name).toBe(true);
+    expect(clientIdentityNeeds({ fullName: '  ', reading: null }).name).toBe(true);
   });
 
   it('does not flag a real name', () => {
-    expect(clientIdentityNeeds({ fullName: 'MR TEST CLIENT', reading: null, cinFileId: 'f1' }).name).toBe(false);
+    expect(clientIdentityNeeds({ fullName: 'MR TEST CLIENT', reading: null }).name).toBe(false);
   });
 
-  it('flags a missing CIN photo only', () => {
-    expect(clientIdentityNeeds({ fullName: 'MR TEST CLIENT', reading: null, cinFileId: null }).cinPhoto).toBe(true);
-    expect(clientIdentityNeeds({ fullName: 'MR TEST CLIENT', reading: null, cinFileId: 'f1' }).cinPhoto).toBe(false);
+  it('never asks for the CIN', () => {
+    expect(clientIdentityNeeds({ fullName: 'MR TEST CLIENT', reading: null })).not.toHaveProperty('cinPhoto');
   });
 
   it('lists the missing bill fields, none without a reading', () => {
-    expect(clientIdentityNeeds({ fullName: 'X Y', reading: null, cinFileId: 'f1' }).missingBillFields).toEqual([]);
-    const needs = clientIdentityNeeds({ fullName: CLIENT_NAME_PLACEHOLDER, reading: reading({ clientName: null }), cinFileId: 'f1' });
+    expect(clientIdentityNeeds({ fullName: 'X Y', reading: null }).missingBillFields).toEqual([]);
+    const needs = clientIdentityNeeds({ fullName: CLIENT_NAME_PLACEHOLDER, reading: reading({ clientName: null }) });
     expect(needs.missingBillFields).toContain('clientName');
   });
 });

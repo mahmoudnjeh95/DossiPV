@@ -114,7 +114,7 @@ describe('renderCoverPage', () => {
     const text = lines(page!);
 
     expect(page!.images).toHaveLength(0);
-    expect(text).toContain('CIN : copie jointe en annexe N°1');
+    expect(text.some((line) => line.startsWith('CIN'))).toBe(false);
     expect(text).toContain('Référence STEG : —');
     expect(text).toContain('Localisation (GPS) : —');
     expect(text).toContain('N° dossier : —');

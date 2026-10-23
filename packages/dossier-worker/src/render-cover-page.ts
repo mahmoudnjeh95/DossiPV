@@ -112,7 +112,7 @@ export async function renderCoverPage(input: CoverPageInput): Promise<Buffer> {
   const { installer, client, gps } = input;
   const fields: [string, string][] = [
     ['Client BT', client.fullName],
-    ['CIN', client.cin?.trim() || 'copie jointe en annexe N°1'],
+    ...(client.cin?.trim() ? [['CIN', client.cin.trim()] as [string, string]] : []),
     ['Référence STEG', client.stegReference?.trim() || '—'],
     ['Adresse', client.address?.trim() || '—'],
     ['Localisation (GPS)', gps ? `${gps.lat.toFixed(5)}, ${gps.lon.toFixed(5)}` : '—'],

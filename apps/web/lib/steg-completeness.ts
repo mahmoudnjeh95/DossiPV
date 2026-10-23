@@ -3,7 +3,6 @@ import { toIsoDate, type ProjectForEngine } from './project-engine-input';
 
 export type StegPieceKey =
   | 'holderName'
-  | 'cin'
   | 'stegContract'
   | 'lastPaidBill'
   | 'installerAccreditation'
@@ -23,7 +22,6 @@ export interface StegPiece {
 
 /** The pieces the installer can add from the summary screen, one photo or PDF each. */
 export const UPLOADABLE_STEG_PIECES = [
-  'cin',
   'stegContract',
   'lastPaidBill',
   'syndicAuthorization',
@@ -116,7 +114,6 @@ export function stegCompleteness(
       done: fullName !== '' && fullName !== CLIENT_NAME_PLACEHOLDER,
       detail: null,
     },
-    { key: 'cin', label: 'Copie de la CIN du titulaire', done: Boolean(annexes?.cinFileId), detail: null },
     {
       key: 'stegContract',
       label: "Contrat STEG ou attestation d'abonnement",

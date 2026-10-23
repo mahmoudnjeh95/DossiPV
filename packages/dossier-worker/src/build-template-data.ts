@@ -86,7 +86,8 @@ function buildIdentityLines(input: BuildTemplateDataInput): Pick<
     installerAnmeLine: `Installateur agréé ANME n° ${installer.anmeCode} (catégorie ${anmeCategoryLabel(installer.anmeCategory)}), agrément valable jusqu'au ${formatIsoDate(installer.anmeValidTo)}`,
     installerTaxIdLine: `Matricule fiscal : ${installer.taxId ?? 'non renseigné'}`,
     installerLegalRepLine: `Représentant légal : ${installer.legalRepFullName}, ${installer.legalRepRole}`,
-    clientCinLine: cin ? `CIN : ${cin}` : 'CIN : copie jointe en annexe N°1',
+    // The CIN is optional: no line at all when the client has none.
+    clientCinLine: cin ? `CIN : ${cin}` : '',
   };
 }
 

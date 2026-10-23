@@ -196,12 +196,10 @@ export async function saveBillCorrectionsAction(
 }
 
 const NAME_REQUIRED = 'Indiquez le nom du titulaire du contrat STEG.';
-const CIN_PATTERN = /^\d{8}$/;
 
 /**
- * The bill did not carry the holder's name or the installer has no CIN photo yet: store what was
- * given. The name is read only when the field is on the form and stays as it was once a dossier was
- * generated. The CIN number is personal data and is never logged.
+ * The bill did not carry the holder's name: store it. The name is read only when the field is on
+ * the form and stays as it was once a dossier was generated. The CIN is not asked for.
  */
 export async function saveClientIdentityAction(
   projectId: string,
@@ -229,21 +227,11 @@ export async function saveClientIdentityAction(
     fullName = trimmed;
   }
 
-  let cin: string | undefined;
-  const rawCin = formData.getAll('cin').find((v): v is string => typeof v === 'string');
-  if (rawCin !== undefined && rawCin.trim() !== '') {
-    if (!CIN_PATTERN.test(rawCin.trim())) return { error: 'N° CIN invalide (8 chiffres).' };
-    cin = rawCin.trim();
-  }
-
   const failure = await storeAnnexFiles(projectId, formData);
   if (failure) return failure;
 
-  if (fullName !== undefined || cin !== undefined) {
-    await db.projectClient.update({
-      where: { projectId },
-      data: { ...(fullName !== undefined ? { fullName } : {}), ...(cin !== undefined ? { cin } : {}) },
-    });
+  if (fullName !== undefined) {
+    await db.projectClient.update({ where: { projectId }, data: { fullName } });
   }
   revalidatePath(`/projects/${projectId}/proposals`);
   return undefined;

@@ -5,10 +5,10 @@ import { saveClientIdentityAction } from './actions';
 
 interface IdentityFormProps {
   projectId: string;
-  needs: { name: boolean; cinPhoto: boolean };
+  needs: { name: boolean };
 }
 
-/** Asks only for what the bill did not give: the holder's name and the CIN photo. */
+/** Asks only for what the bill did not give: the holder's name (the CIN is not required). */
 export function IdentityForm({ projectId, needs }: IdentityFormProps): React.JSX.Element {
   const bound = saveClientIdentityAction.bind(null, projectId);
   const [state, formAction, pending] = useActionState(bound, undefined);
@@ -20,18 +20,6 @@ export function IdentityForm({ projectId, needs }: IdentityFormProps): React.JSX
           <label>
             Nom du titulaire (comme sur le contrat STEG)
             <input type="text" name="fullName" minLength={2} maxLength={200} required />
-          </label>
-        </>
-      )}
-      {needs.cinPhoto && (
-        <>
-          <label>
-            Photo de la CIN
-            <input type="file" name="cin" accept="image/jpeg,image/png,application/pdf" />
-          </label>
-          <label>
-            N° CIN (facultatif)
-            <input type="text" name="cin" inputMode="numeric" pattern="\d{8}" maxLength={8} autoComplete="off" />
           </label>
         </>
       )}

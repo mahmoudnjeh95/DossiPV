@@ -245,7 +245,6 @@ describe('generateDossierAction', () => {
     await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
 
     expect(createdSnapshot().draftMissing).toEqual([
-      'Copie de la CIN du titulaire',
       "Contrat STEG ou attestation d'abonnement",
       'Dernière facture STEG acquittée',
       "Matricule fiscal de l'installateur",
