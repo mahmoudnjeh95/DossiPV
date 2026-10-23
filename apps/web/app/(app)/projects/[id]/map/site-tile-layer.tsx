@@ -36,6 +36,8 @@ export function SiteTileLayer() {
       attribution={ACTIVE_MAP_PROVIDER.attribution}
       maxZoom={ACTIVE_MAP_PROVIDER.maxZoom}
       maxNativeZoom={ACTIVE_MAP_PROVIDER.maxNativeZoom}
+      tileSize={ACTIVE_MAP_PROVIDER.tileSize}
+      zoomOffset={ACTIVE_MAP_PROVIDER.zoomOffset}
     />
   );
 }
