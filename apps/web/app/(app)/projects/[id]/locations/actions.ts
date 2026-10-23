@@ -1,22 +1,17 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import sharp from 'sharp';
 import { db, Prisma } from '@dossipv/db';
 import {
   computeRunLengthsM,
   groundDistanceM,
   isSimplePolygon,
-  parseSiteImageBounds,
   polygonAreaM2,
   runEngine,
   MAX_ROOF_OUTLINE_POINTS,
   type EngineResult,
   type GpsPoint,
-  type SiteImageBounds,
 } from '@dossipv/engine';
-import { saveFile, validateUploadedFile } from '@dossipv/file-storage';
-import { siteImageUrl } from '../../../../../lib/site-image';
 import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput, type ProjectForEngine } from '../../../../../lib/project-engine-input';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
@@ -36,11 +31,6 @@ export interface LocationsPayload {
   buildingType: BuildingTypeValue | null;
   /** The roof contour, optional: null (or absent) when the installer did not draw one. */
   roofOutline?: GpsPoint[] | null;
-  /**
-   * The imported satellite photo: its aligned bounds, null to remove it, absent to leave it as
-   * it is. The photo itself is uploaded beforehand by `uploadSiteImageAction`.
-   */
-  siteImage?: { bounds: SiteImageBounds } | null;
 }
 
 const REQUIRED_POINTS = [
@@ -70,8 +60,7 @@ function isLocationsPayload(value: unknown): value is LocationsPayload {
     isPointOrNull(record['earthPit']) &&
     (record['floors'] === null || typeof record['floors'] === 'number') &&
     (record['buildingType'] === null || record['buildingType'] === 'HOUSE' || record['buildingType'] === 'APARTMENT_BUILDING') &&
-    isRoofOutlineOrNull(record['roofOutline']) &&
-    (record['siteImage'] === undefined || record['siteImage'] === null || (typeof record['siteImage'] === 'object' && 'bounds' in record['siteImage']))
+    isRoofOutlineOrNull(record['roofOutline'])
   );
 }
 
@@ -142,8 +131,8 @@ function circuitFits(result: EngineResult, circuit: Circuit, maxDropPct: number)
 /**
  * The installer placed the points: save them, derive the DC/AC run lengths, bump a run to the
  * cable's next larger section while its current-carrying check or voltage drop fails with the new
- * length, mark the cable runs and earthing as confirmed (flowStep READY) and open the summary
- * screen. Nothing is generated here: the installer reviews the summary first.
+ * length, mark the cable runs and earthing as confirmed (flowStep READY) and go on to the photo
+ * for the 3D annex (optional), then the summary. Nothing is generated here.
  */
 export async function saveLocationsAction(
   projectId: string,
@@ -164,17 +153,6 @@ export async function saveLocationsAction(
   const roofOutline = payload.roofOutline ?? null;
   if (!field || !technicalRoom || !meter || floors === null || buildingType === null) return { error: 'Points manquants.' };
 
-  let siteImage: Pick<Prisma.ProjectSiteUncheckedUpdateInput, 'siteImageFileId' | 'siteImageBounds'> = {};
-  if (payload.siteImage === null) {
-    siteImage = { siteImageFileId: null, siteImageBounds: Prisma.DbNull };
-  } else if (payload.siteImage) {
-    const bounds = parseSiteImageBounds(payload.siteImage.bounds);
-    if (!bounds) return { error: 'Position de la photo satellite invalide : recalez-la sur la carte.' };
-    const stored = await db.projectSite.findUnique({ where: { projectId }, select: { siteImageFileId: true } });
-    if (!stored?.siteImageFileId) return { error: 'Importez la photo satellite avant de la caler.' };
-    siteImage = { siteImageBounds: { ...bounds } };
-  }
-
   const lengths = computeRunLengthsM({ field, technicalRoom, meter }, floors);
 
   await db.projectSite.update({
@@ -193,7 +171,6 @@ export async function saveLocationsAction(
       floors,
       buildingType,
       roofOutline: roofOutline ? roofOutline.map(({ lat, lon }) => ({ lat, lon })) : Prisma.DbNull,
-      ...siteImage,
     },
   });
   // A flat with no pit of its own is earthed on the building's existing earth: no dedicated rod.
@@ -247,56 +224,5 @@ export async function saveLocationsAction(
   }
 
   await db.project.update({ where: { id: projectId }, data: { flowStep: 'READY' } });
-  redirect(`/projects/${projectId}/summary`);
-}
-
-/** A capture smaller than this cannot beat the Mapbox photo it replaces. */
-const MIN_SITE_IMAGE_SIDE_PX = 400;
-/** Larger captures are scaled down: the plan prints the photo about 15 cm wide. */
-const MAX_SITE_IMAGE_SIDE_PX = 4096;
-
-export interface SiteImageUploadResult {
-  error?: string;
-  image?: { url: string; widthPx: number; heightPx: number };
-}
-
-/**
- * Stores the installer's own satellite photo of the site (a Google Maps capture, ideally) as a
- * JPEG, upright and at most MAX_SITE_IMAGE_SIDE_PX on its long side. It replaces the previous
- * photo and waits to be aligned on the map: until then the dossier keeps the Mapbox imagery.
- */
-export async function uploadSiteImageAction(projectId: string, formData: FormData): Promise<SiteImageUploadResult> {
-  try {
-    await requireOwnedProject(projectId);
-  } catch (error) {
-    if (error instanceof ProjectNotFoundError) return { error: NOT_FOUND };
-    throw error;
-  }
-
-  const file = formData.get('file');
-  if (!(file instanceof File) || file.size === 0) return { error: 'Choisissez une image PNG ou JPEG.' };
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const validation = validateUploadedFile(buffer, file.type, file.size, { allowWebp: true });
-  if (!validation.valid) return { error: validation.error };
-  if (validation.mimeType === 'pdf') return { error: 'Choisissez une image PNG ou JPEG, pas un PDF.' };
-
-  let jpeg: { data: Buffer; info: { width: number; height: number } };
-  try {
-    jpeg = await sharp(buffer)
-      .rotate()
-      .resize({ width: MAX_SITE_IMAGE_SIDE_PX, height: MAX_SITE_IMAGE_SIDE_PX, fit: 'inside', withoutEnlargement: true })
-      .flatten({ background: '#ffffff' })
-      .jpeg({ quality: 90 })
-      .toBuffer({ resolveWithObject: true });
-  } catch {
-    return { error: 'Image illisible : choisissez une capture PNG ou JPEG.' };
-  }
-  if (Math.max(jpeg.info.width, jpeg.info.height) < MIN_SITE_IMAGE_SIDE_PX) {
-    return { error: `Image trop petite : la capture doit faire au moins ${MIN_SITE_IMAGE_SIDE_PX} pixels de large.` };
-  }
-
-  const { storageKey } = await saveFile(jpeg.data, 'photo-satellite.jpg', 'image/jpeg');
-  const stored = await db.file.create({ data: { fileName: 'photo-satellite.jpg', mimeType: 'jpeg', storageKey } });
-  await db.projectSite.update({ where: { projectId }, data: { siteImageFileId: stored.id, siteImageBounds: Prisma.DbNull } });
-  return { image: { url: siteImageUrl(projectId, stored.id), widthPx: jpeg.info.width, heightPx: jpeg.info.height } };
+  redirect(`/projects/${projectId}/locations/photo`);
 }

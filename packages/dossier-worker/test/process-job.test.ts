@@ -129,10 +129,10 @@ vi.mock('fs/promises', async () => {
 
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM, polygonAreaM2 } from '@dossipv/engine';
-import { processJob, IMPLANTATION_VIEW_OPTIONS, INSTALLER_PHOTO_NOT_COVERING_WARNING, INSTALLER_PHOTO_UNREADABLE_WARNING } from '../src/process-job';
+import { processJob, IMPLANTATION_VIEW_OPTIONS, INSTALLER_PHOTO_POINTS_WARNING, INSTALLER_PHOTO_UNREADABLE_WARNING } from '../src/process-job';
 import { encodeJpegBitmap } from '../src/image-enhance';
 import type { ProductionSimulation } from '../src/run-simulation';
-import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, viewFromBounds, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 import { DRAFT_INSERTED_PAGE_COUNT } from '../src/draft-watermark';
@@ -620,7 +620,7 @@ function sitePlanInput(): { planData: SitePlanData | null } {
   return mocks.renderSitePlanPages.mock.calls[0]![0] as { planData: SitePlanData | null };
 }
 
-const ROOF_PLACEMENT = { centre: { x: 120, y: 120 } };
+const ROOF_PLACEMENT = { centre: { x: 120, y: 120 }, freeRowLengthPx: 60 };
 const DRAWN_ROOF = [
   { lat: 36.8, lon: 10.2 },
   { lat: 36.8, lon: 10.2009 },
@@ -656,7 +656,7 @@ describe('processJob — where the array stands on a drawn roof (3D view)', () =
       }),
       expect.anything(),
     );
-    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ placement: ROOF_PLACEMENT.centre }));
+    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ placement: ROOF_PLACEMENT }));
     expect(findSucceededUpdate()).toBeDefined();
   });
 
@@ -686,15 +686,23 @@ describe("processJob — the installer's own satellite photo (page 37)", () => {
   const field = { lat: 36.8, lon: 10.2 };
   const technicalRoom = { lat: 36.801, lon: 10.201 };
   const meter = { lat: 36.799, lon: 10.199 };
-  const bounds = { north: 36.802, south: 36.798, west: 10.198, east: 10.202 };
-  // 1 200 x 1 000 px: page 37 reasons on it scaled to 1 024 px wide.
+  // 1 200 x 1 000 px: page 37 reasons on it scaled to 1 024 x 853 px.
   const photo = encodeJpegBitmap({ width: 1200, height: 1000, data: new Uint8Array(1200 * 1000 * 4).fill(200) }, 80);
+  // The capture as a north-up Web-Mercator window (≈ 0,27 m per pixel), the field in its middle.
+  const zoom = 18.8;
+  const centre = projectToImage({ zoom, originX: 0, originY: 0, widthPx: 0, heightPx: 0 }, field);
+  const view: SatelliteView = { zoom, originX: centre.x - 512, originY: centre.y - 426.5, widthPx: 1024, heightPx: 853 };
+  const onPhoto = (p: { lat: number; lon: number }): { x: number; y: number } => {
+    const px = projectToImage(view, p);
+    return { x: px.x / 1024, y: px.y / 853 };
+  };
+  const placed = { field: onPhoto(field), technicalRoom: onPhoto(technicalRoom), meter: onPhoto(meter), earthPit: null, roofOutline: null };
 
-  function withPhoto(siteImageBounds: unknown, fileFound = true): void {
+  function withPhoto(siteImagePoints: unknown, { fileFound = true, site = {} }: { fileFound?: boolean; site?: Record<string, unknown> } = {}): void {
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
       id: 'job-1',
       projectId: 'project-1',
-      inputSnapshot: { ...premiumSnapshot, site: { ...premiumSnapshot.site, siteImageFileId: 'photo-1', siteImageBounds } },
+      inputSnapshot: { ...premiumSnapshot, site: { ...premiumSnapshot.site, ...site, siteImageFileId: 'photo-1', siteImagePoints } },
     });
     mocks.fileFindUnique.mockImplementation(({ where }: { where: { id: string } }) =>
       Promise.resolve(where.id === 'photo-1' && fileFound ? { id: 'photo-1', storageKey: 'photo.jpg', mimeType: 'jpeg' } : null),
@@ -703,36 +711,61 @@ describe("processJob — the installer's own satellite photo (page 37)", () => {
     mocks.readFile.mockImplementation((path: string) => Promise.resolve(path === '/storage/photo.jpg' ? photo : Buffer.from('template bytes')));
   }
 
-  it('draws page 37 on the photo, in the view its bounds define, and fetches only page 38', async () => {
-    withPhoto(bounds);
+  it('draws page 37 on the photo, at the scale its points give it, and fetches only page 38', async () => {
+    withPhoto(placed);
 
     await processJob('job-1');
 
-    const view = viewFromBounds(bounds, 1024, 853);
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(1);
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledWith(planSituationView(field));
     const page37 = sitePlanInput().planData!.page37;
     expect(page37.image).toMatchObject({ widthPx: 1024, heightPx: 853, provider: 'installer' });
-    expect(page37.image.metersPerPixel).toBeCloseTo(metersPerPixel(view, field.lat), 9);
-    expect(page37.points.technicalRoom).toEqual(projectToImage(view, technicalRoom));
-    expect(page37.points.meter).toEqual(projectToImage(view, meter));
+    expect(page37.image.metersPerPixel).toBeCloseTo(metersPerPixel(view, field.lat), 6);
     expect(sitePlanInput().planData!.page38.image.provider).not.toBe('installer');
     expect(mocks.generatePage37Layout).toHaveBeenCalledWith(expect.objectContaining({ imageWidthPx: 1024, imageHeightPx: 853 }), expect.anything());
-    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_POINTS_WARNING);
   });
 
-  it('keeps the default imagery, and says so, when the photo misses a point', async () => {
-    withPhoto({ ...bounds, south: 36.7995 }); // the meter (36.799) falls off its bottom edge
+  it('draws each point where the installer put it on the photo, not where the map projects it', async () => {
+    // The meter 2 m east of its map position: within what two imageries disagree by.
+    const shifted = { ...placed, meter: { x: placed.meter.x + 2 / metersPerPixel(view, meter.lat) / 1024, y: placed.meter.y } };
+    withPhoto(shifted);
+
+    await processJob('job-1');
+
+    const page37 = sitePlanInput().planData!.page37;
+    expect(page37.points.meter!.x).toBeCloseTo(shifted.meter.x * 1024, 6);
+    expect(page37.points.meter!.y).toBeCloseTo(shifted.meter.y * 853, 6);
+    expect(page37.image.provider).toBe('installer');
+  });
+
+  it('draws the roof drawn on the photo, on page 37 and in the 3D view', async () => {
+    const photoRoof = DRAWN_ROOF.map(onPhoto);
+    withPhoto({ ...placed, roofOutline: photoRoof }, { site: { roofOutline: DRAWN_ROOF } });
+
+    await processJob('job-1');
+
+    const roofPixels = photoRoof.map((p) => ({ x: p.x * 1024, y: p.y * 853 }));
+    expect(sitePlanInput().planData!.page37.roofOutline).toEqual(roofPixels);
+    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ roofOutline: roofPixels }));
+  });
+
+  it.each([
+    ['a point moved on the map since', { ...placed, meter: onPhoto({ lat: 36.7993, lon: 10.199 }) }, {}],
+    ['a map point missing on the photo', { ...placed, meter: null }, {}],
+    ['a map roof missing on the photo', placed, { roofOutline: DRAWN_ROOF }],
+  ])('keeps the default imagery, and says so, for %s', async (_label, points, site) => {
+    withPhoto(points, { site });
 
     await processJob('job-1');
 
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     expect(sitePlanInput().planData!.page37.image.provider).not.toBe('installer');
-    expect(warningsOfTheJob()).toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+    expect(warningsOfTheJob()).toContain(INSTALLER_PHOTO_POINTS_WARNING);
   });
 
   it('keeps the default imagery, and says so, when the photo cannot be read', async () => {
-    withPhoto(bounds, false);
+    withPhoto(placed, { fileFound: false });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     await processJob('job-1');
@@ -742,14 +775,14 @@ describe("processJob — the installer's own satellite photo (page 37)", () => {
     warn.mockRestore();
   });
 
-  it('ignores a photo that was imported but never aligned', async () => {
+  it('ignores a photo imported but with no points placed on it yet', async () => {
     withPhoto(null);
 
     await processJob('job-1');
 
     expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_UNREADABLE_WARNING);
-    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_POINTS_WARNING);
   });
 });
 
@@ -1221,6 +1254,7 @@ describe('processJob — fragment assembly details', () => {
 
     await processJob('job-1');
 
+    const aNumber = expect.any(Number) as unknown;
     expect(mocks.generatePage37Layout).toHaveBeenCalledWith(
       expect.objectContaining({
         satelliteImage: SATELLITE_TILE,
@@ -1229,6 +1263,9 @@ describe('processJob — fragment assembly details', () => {
         metersPerPixel: metersPerPixel(view, site.lat),
         sitePoint: projectToImage(view, site),
         points: expectedPoints,
+        array: expect.objectContaining({ moduleCount: aNumber, perRow: aNumber, rows: aNumber, widthM: aNumber, depthM: aNumber }) as unknown,
+        azimuthDeg: 0,
+        tiltDeg: 30,
       }),
       expect.anything(),
     );

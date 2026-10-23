@@ -7,6 +7,7 @@ import {
   Page37LayoutOutOfBoundsError,
   type Page37LayoutInput,
 } from '../src/generate-page-37-layout';
+import { ROOF_PART_RULE } from '../src/generate-roof-placement';
 
 function fakeClient(parsedOutput: unknown): { client: import('@anthropic-ai/sdk').default; parseMock: ReturnType<typeof vi.fn> } {
   const parseMock = vi.fn().mockResolvedValue({ parsed_output: parsedOutput });
@@ -25,7 +26,9 @@ const baseInput: Page37LayoutInput = {
   metersPerPixel: 0.24,
   sitePoint: { x: 320, y: 320 },
   points: { technicalRoom: { x: 400, y: 300 }, meter: { x: 250, y: 420 }, earthPit: { x: 380, y: 360 } },
-  arrayAreaM2: 30,
+  array: { moduleCount: 5, perRow: 5, rows: 1, widthM: 5.77, depthM: 2.06 },
+  azimuthDeg: 0,
+  tiltDeg: 30,
 };
 
 const validLayout = {
@@ -63,6 +66,21 @@ describe('generatePage37Layout', () => {
     expect(text).not.toMatch(/lat=|lon=/);
     const system = (parseMock.mock.calls[0]![0] as { system: string }).system;
     expect(system).toContain('PIXELS');
+    // The panels stay clear of the obstacles and of the borders between roof parts, like the 3D view's placement.
+    expect(system).toContain(ROOF_PART_RULE);
+  });
+
+  it('asks for a quadrilateral the size of the array, along its rows', async () => {
+    const { client, parseMock } = fakeClient(validLayout);
+
+    await generatePage37Layout(baseInput, client);
+
+    const text = promptText(parseMock);
+    expect(text).toContain('5 modules en 1 rangée(s) de 5 au plus, inclinés à 30°');
+    expect(text).toContain('alignées est-ouest');
+    expect(text).toContain('environ 5,8 m le long des rangées sur 2,1 m');
+    expect(text).toContain('Le quadrilatère du champ est cette emprise : environ 24 pixels le long des rangées sur 9 pixels.');
+    expect(text).not.toContain('Surface du champ');
   });
 
   it('still sends a non-empty description (the site point) when only some points are placed', async () => {

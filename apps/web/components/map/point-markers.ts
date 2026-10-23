@@ -1,10 +1,11 @@
 import L from 'leaflet';
+import { SITE_POINT_LABELS } from '../../lib/site-points';
 
 export const POINT_STYLES = {
-  field: { label: 'Champ PV', tag: 'Champ PV', color: '#F5B800' },
-  technicalRoom: { label: 'Local technique (onduleur)', tag: 'Local technique', color: '#1E6FD9' },
-  meter: { label: 'Compteur STEG', tag: 'Compteur STEG', color: '#D93025' },
-  earthPit: { label: 'Piquet de terre', tag: 'Piquet de terre', color: '#1E8E3E' },
+  field: { label: SITE_POINT_LABELS.field, tag: 'Champ PV', color: '#F5B800' },
+  technicalRoom: { label: SITE_POINT_LABELS.technicalRoom, tag: 'Local technique', color: '#1E6FD9' },
+  meter: { label: SITE_POINT_LABELS.meter, tag: 'Compteur STEG', color: '#D93025' },
+  earthPit: { label: SITE_POINT_LABELS.earthPit, tag: 'Piquet de terre', color: '#1E8E3E' },
 } as const;
 
 export type PointKind = keyof typeof POINT_STYLES;
@@ -68,17 +69,5 @@ export function roofCornerIcon(first: boolean): L.DivIcon {
     html: `<div role="img" aria-label="Sommet du contour du toit" style="width:${size}px;height:${size}px;border-radius:50%;background:#fff;border:3px solid ${ROOF_OUTLINE_STYLE.color};box-shadow:0 1px 3px rgba(0,0,0,.6);box-sizing:border-box"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
-  });
-}
-
-/** A round handle for the imported photo: ✥ moves it, ⤡ resizes it. */
-export function photoHandleIcon(kind: 'move' | 'resize'): L.DivIcon {
-  const glyph = kind === 'move' ? '✥' : '⤡';
-  const label = kind === 'move' ? 'Déplacer la photo' : 'Agrandir ou réduire la photo';
-  return L.divIcon({
-    className: '',
-    html: `<div role="img" aria-label="${label}" title="${label}" style="width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #1a1a1a;box-shadow:0 1px 4px rgba(0,0,0,.6);box-sizing:border-box;display:flex;align-items:center;justify-content:center;font:700 16px/1 system-ui,sans-serif;color:#1a1a1a;cursor:${kind === 'move' ? 'move' : 'nwse-resize'}">${glyph}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
   });
 }

@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
-import { parseRoofOutline, parseSiteImageBounds } from '@dossipv/engine';
+import { parseRoofOutline } from '@dossipv/engine';
 import { guessBuildingType } from '../../../../../lib/building-type';
-import { siteImageUrl } from '../../../../../lib/site-image';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { LocationsMapClientOnly as LocationsMap } from './locations-map-loader';
 
@@ -29,7 +28,7 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
           <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> › Emplacements
         </p>
         <h1>Emplacements — {fullName}</h1>
-        <p className="muted">Choisissez dans la barre ce que vous placez, puis touchez la carte. Tout se déplace en le faisant glisser.</p>
+        <p className="muted">Étape 1 sur 2 : placez les points et le toit sur la carte (les longueurs de câbles sont mesurées ici). Tout se déplace en le faisant glisser.</p>
       </div>
       <LocationsMap
         projectId={id}
@@ -41,7 +40,6 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
           earthPit: point(site.earthPitPointLat, site.earthPitPointLon),
         }}
         initialRoofOutline={parseRoofOutline(site.roofOutline)}
-        initialSiteImage={site.siteImageFileId ? { url: siteImageUrl(id, site.siteImageFileId), bounds: parseSiteImageBounds(site.siteImageBounds) } : null}
         initialFloors={site.floors}
         initialBuildingType={site.buildingType ?? guessBuildingType(project.client?.address ?? null)}
       />

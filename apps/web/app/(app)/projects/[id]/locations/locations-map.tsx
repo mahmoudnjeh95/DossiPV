@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -38,20 +37,17 @@ import {
 import {
   computeRunLengthsM,
   groundDistanceM,
-  isInsideBounds,
   isSimplePolygon,
   polygonAreaM2,
   polygonCentroid,
-  type SiteImageBounds,
 } from '@dossipv/engine';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
-import { saveLocationsAction, uploadSiteImageAction } from './actions';
-import { SiteImageOverlay, type SiteImageState } from './site-image-overlay';
+import { saveLocationsAction } from './actions';
 
 type Point = { lat: number; lon: number };
 type Points = Record<PointKind, Point | null>;
-/** What a tap on the map does: place a point, add a roof corner, or (photo) nothing — its handles move it. */
-type Tool = PointKind | 'roof' | 'photo';
+/** What a tap on the map does: place a point or add a roof corner. */
+type Tool = PointKind | 'roof';
 
 const KINDS: PointKind[] = ['field', 'technicalRoom', 'meter', 'earthPit'];
 const HOUSE_MAX_FLOORS = 3;
@@ -88,8 +84,6 @@ export interface LocationsMapProps {
   initial: Points;
   /** The saved roof contour; null when none was drawn. */
   initialRoofOutline: Point[] | null;
-  /** The imported satellite photo and where it was aligned (null bounds: not aligned yet). */
-  initialSiteImage: { url: string; bounds: SiteImageBounds | null } | null;
   initialFloors: number | null;
   initialBuildingType: BuildingTypeValue | null;
 }
@@ -162,27 +156,22 @@ function RoofSwatch(): React.JSX.Element {
 }
 
 /**
- * The Emplacements workspace: the map fills the screen; a toolbar over it picks what the next tap
- * places (any order), a hint says what to do, a checklist tracks what is placed and the cable
- * lengths, and the footer holds the building, the roof level and the save button.
+ * The Emplacements workspace, where every length is measured: the map fills the screen; a toolbar
+ * over it picks what the next tap places (any order), a hint says what to do, a checklist tracks
+ * what is placed and the cable lengths, and the footer holds the building, the roof level and the
+ * save button, which goes on to the photo for the 3D annex.
  */
 export function LocationsMap({
   projectId,
   center,
   initial,
   initialRoofOutline,
-  initialSiteImage,
   initialFloors,
   initialBuildingType,
 }: LocationsMapProps): React.JSX.Element {
   const [points, setPoints] = useState<Points>(initial);
   const [tool, setTool] = useState<Tool | null>(null);
   const [roof, setRoof] = useState<Point[]>(initialRoofOutline ?? []);
-  const [siteImage, setSiteImage] = useState<SiteImageState | null>(
-    initialSiteImage ? { ...initialSiteImage, aspect: null } : null,
-  );
-  const [photoOpacity, setPhotoOpacity] = useState(0.85);
-  const [uploading, setUploading] = useState(false);
   const [floors, setFloors] = useState<number | null>(initialFloors);
   const [buildingType, setBuildingType] = useState<BuildingTypeValue | null>(initialBuildingType);
   const [notice, setNotice] = useState<{ text: string; tone: 'info' | 'danger' } | null>(null);
@@ -248,38 +237,11 @@ export function LocationsMap({
     return (): void => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const photoUrl = siteImage?.url ?? null;
-  const photoAspectKnown = siteImage?.aspect !== null && siteImage?.aspect !== undefined;
-  const setPhotoBounds = useCallback(
-    (bounds: SiteImageBounds) => setSiteImage((prev) => (prev ? { ...prev, bounds } : prev)),
-    [],
-  );
-
-  // A photo saved earlier: read its proportions before laying it on the map.
-  useEffect(() => {
-    if (!photoUrl || photoAspectKnown) return;
-    const img = new Image();
-    img.onload = (): void =>
-      setSiteImage((prev) =>
-        prev && prev.url === photoUrl
-          ? { ...prev, aspect: img.naturalHeight / img.naturalWidth }
-          : prev,
-      );
-    img.src = photoUrl;
-  }, [photoUrl, photoAspectKnown]);
-
   const drawingRoof = tool === 'roof';
   // One or two corners are a contour in progress: it must be finished or cleared before saving.
   const roofIncomplete = roof.length > 0 && roof.length < 3;
   const roofAreaM2 = roof.length >= 3 ? polygonAreaM2(roof) : null;
   const roofCrossed = roof.length >= 4 && !isSimplePolygon(roof);
-  const photoBounds = siteImage?.bounds ?? null;
-  // The dossier only uses the photo when it shows every point and the whole roof.
-  const photoMissesSomething =
-    photoBounds !== null &&
-    [...KINDS.map((kind) => points[kind]), ...roof].some(
-      (p) => p !== null && !isInsideBounds(photoBounds, p),
-    );
   const maxFloors = buildingType === 'APARTMENT_BUILDING' ? BUILDING_MAX_FLOORS : HOUSE_MAX_FLOORS;
   const floorOptions = Array.from({ length: maxFloors + 1 }, (_, level) => level);
   const lengths =
@@ -326,7 +288,7 @@ export function LocationsMap({
     }
     setTool(next);
     // A point already placed: show it, ready to be moved.
-    const placed = next !== 'roof' && next !== 'photo' ? points[next] : null;
+    const placed = next !== 'roof' ? points[next] : null;
     if (placed && mapRef.current) mapRef.current.panTo([placed.lat, placed.lon]);
   }
 
@@ -348,7 +310,7 @@ export function LocationsMap({
   function handleMapClick(point: Point): void {
     if (tool === 'roof') {
       setRoof((prev) => [...prev, point]);
-    } else if (tool && tool !== 'photo') {
+    } else if (tool) {
       place(tool, point);
       setTool(null);
     }
@@ -395,43 +357,14 @@ export function LocationsMap({
     );
   }
 
-  async function importPhoto(file: File): Promise<void> {
-    setNotice(null);
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append('file', file);
-      const result = await uploadSiteImageAction(projectId, form);
-      if (result.error || !result.image) {
-        setNotice({ text: result.error ?? "La photo n'a pas pu être importée.", tone: 'danger' });
-        return;
-      }
-      setSiteImage({
-        url: result.image.url,
-        aspect: result.image.heightPx / result.image.widthPx,
-        bounds: null,
-      });
-    } finally {
-      setUploading(false);
-    }
-  }
-
   function submit(): void {
     setError(null);
-    // Removed: cleared; aligned: its bounds; imported but not aligned yet: left as it is.
-    const photo =
-      siteImage === null
-        ? { siteImage: null }
-        : siteImage.bounds
-          ? { siteImage: { bounds: siteImage.bounds } }
-          : {};
     startTransition(async () => {
       const result = await saveLocationsAction(projectId, {
         ...points,
         floors,
         buildingType,
         roofOutline: roof.length >= 3 ? roof : null,
-        ...photo,
       });
       if (result?.error) setError(result.error);
     });
@@ -483,7 +416,7 @@ export function LocationsMap({
   const workspaceClass = [
     'locations-workspace',
     'locations-map',
-    tool && tool !== 'photo' ? 'placing' : '',
+    tool ? 'placing' : '',
     zoom >= ALL_TAGS_ZOOM ? 'show-tags' : '',
   ]
     .filter(Boolean)
@@ -503,9 +436,6 @@ export function LocationsMap({
           <FitOnOpen points={initialView} center={center} />
           <SizeWatcher height={height} />
           <ZoomWatcher onZoom={setZoom} />
-          {siteImage && (
-            <SiteImageOverlay image={siteImage} opacity={photoOpacity} onBounds={setPhotoBounds} />
-          )}
           <ClickHandler onClick={handleMapClick} />
           {roof.length >= 2 && drawingRoof && (
             <Polyline
@@ -613,16 +543,6 @@ export function LocationsMap({
               {points[kind] && <span className="done">✓</span>}
             </button>
           ))}
-          <button
-            type="button"
-            className="map-tool"
-            aria-pressed={tool === 'photo'}
-            onClick={() => chooseTool('photo')}
-          >
-            <span aria-hidden="true">🖼</span>
-            Photo
-            {photoBounds && !photoMissesSomething && <span className="done">✓</span>}
-          </button>
         </div>
 
         {tool && (
@@ -657,7 +577,7 @@ export function LocationsMap({
                 )}
               </>
             )}
-            {tool !== 'roof' && tool !== 'photo' && (
+            {tool !== 'roof' && (
               <>
                 <span>
                   {points[tool]
@@ -682,64 +602,10 @@ export function LocationsMap({
                 </button>
               </>
             )}
-            {tool === 'photo' && (
-              <>
-                <span>
-                  Capture Google Maps (vue Satellite, relief 3D désactivé, zoom au plus près du
-                  toit) : calez-la avec ✥ et ⤡. Sans photo, le dossier utilise l&apos;imagerie
-                  Mapbox.
-                </span>
-                <label className="button small" aria-disabled={uploading}>
-                  {uploading ? 'Import…' : siteImage ? 'Remplacer' : 'Importer une capture'}
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    hidden
-                    disabled={uploading}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = '';
-                      if (file) void importPhoto(file);
-                    }}
-                  />
-                </label>
-                {siteImage && (
-                  <>
-                    <button
-                      type="button"
-                      className="small secondary"
-                      onClick={() =>
-                        setSiteImage((prev) => (prev ? { ...prev, bounds: null } : prev))
-                      }
-                    >
-                      Recentrer
-                    </button>
-                    <button
-                      type="button"
-                      className="small secondary"
-                      onClick={() => setSiteImage(null)}
-                    >
-                      Retirer
-                    </button>
-                    <label className="map-hint-range">
-                      Transparence
-                      <input
-                        type="range"
-                        min={0.2}
-                        max={1}
-                        step={0.05}
-                        value={photoOpacity}
-                        onChange={(event) => setPhotoOpacity(Number(event.target.value))}
-                      />
-                    </label>
-                  </>
-                )}
-              </>
-            )}
           </div>
         )}
 
-        {(notice || roofCrossed || photoMissesSomething) && (
+        {(notice || roofCrossed) && (
           <div className="map-notices">
             {notice && (
               <p role="alert" className={`map-notice ${notice.tone}`}>
@@ -749,12 +615,6 @@ export function LocationsMap({
             {roofCrossed && (
               <p role="alert" className="map-notice danger">
                 Le contour du toit se croise : déplacez les sommets pour suivre le bord du toit.
-              </p>
-            )}
-            {photoMissesSomething && (
-              <p role="alert" className="map-notice info">
-                La photo ne montre pas tous les points et tout le toit : le dossier gardera
-                l&apos;imagerie Mapbox.
               </p>
             )}
           </div>
@@ -852,7 +712,7 @@ export function LocationsMap({
           </span>
         )}
         <button type="button" onClick={submit} disabled={missing.length > 0 || pending}>
-          {pending ? 'Enregistrement…' : 'Enregistrer et voir le récapitulatif'}
+          {pending ? 'Enregistrement…' : 'Enregistrer et continuer'}
         </button>
       </div>
     </div>

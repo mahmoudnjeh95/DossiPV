@@ -18,9 +18,9 @@ import {
   metersPerPixel,
   isInsideImage,
   TILE_SIZE,
-  viewFromBounds,
   type SatelliteView,
 } from '../src/fetch-satellite-image';
+import { fitSiteImage } from '@dossipv/engine';
 
 /** A solid-colour 256x256 JPEG whose colour encodes its tile x/y, so stitching can be checked. */
 function colouredTile(tileX: number, tileY: number): Uint8Array {
@@ -368,35 +368,21 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
   });
 });
 
-describe('viewFromBounds', () => {
-  /** World pixel back to lat/lon (inverse Web Mercator). */
-  function toLatLon(x: number, y: number, zoom: number): { lat: number; lon: number } {
-    const scale = TILE_SIZE * 2 ** zoom;
-    const n = Math.PI - (2 * Math.PI * y) / scale;
-    return { lat: (180 / Math.PI) * Math.atan(Math.sinh(n)), lon: (x / scale) * 360 - 180 };
-  }
+describe("an installer's photo", () => {
   const site = { lat: 34.795, lon: 10.799 };
   const tiles = planImplantationView([site], { maxZoom: 19, minSizePx: 600, maxSizePx: 600 });
-  const northWest = toLatLon(tiles.originX, tiles.originY, tiles.zoom);
-  const southEast = toLatLon(tiles.originX + tiles.widthPx, tiles.originY + tiles.heightPx, tiles.zoom);
-  const bounds = { north: northWest.lat, west: northWest.lon, east: southEast.lon };
 
-  it('rebuilds the view a photo shows from its bounds and its pixel size', () => {
-    const view = viewFromBounds(bounds, tiles.widthPx, tiles.heightPx);
+  it('is fitted by the engine to the same Web-Mercator view the plans project into', () => {
+    const around = (dLat: number, dLon: number): { lat: number; lon: number } => ({ lat: site.lat + dLat, lon: site.lon + dLon });
+    const map = { field: site, technicalRoom: around(0.0001, 0.00012), meter: around(-0.00009, -0.0001), earthPit: around(0.00011, -0.00008) };
+    const photo = { field: projectToImage(tiles, map.field), technicalRoom: projectToImage(tiles, map.technicalRoom), meter: projectToImage(tiles, map.meter), earthPit: projectToImage(tiles, map.earthPit) };
 
-    expect(view.zoom).toBeCloseTo(tiles.zoom, 9);
-    expect(view.originX).toBeCloseTo(tiles.originX, 3);
-    expect(view.originY).toBeCloseTo(tiles.originY, 3);
-    expect(projectToImage(view, site).x).toBeCloseTo(projectToImage(tiles, site).x, 3);
-    expect(projectToImage(view, site).y).toBeCloseTo(projectToImage(tiles, site).y, 3);
-  });
+    const fit = fitSiteImage(map, photo)!;
 
-  it('scales with a photo of any pixel size: a fractional zoom, the same ground', () => {
-    const view = viewFromBounds(bounds, 1000, 1000);
-
-    expect(view.zoom).toBeCloseTo(tiles.zoom + Math.log2(1000 / 600), 9);
-    expect(projectToImage(view, site).x).toBeCloseTo((projectToImage(tiles, site).x * 1000) / 600, 3);
-    expect(metersPerPixel(view, site.lat)).toBeCloseTo((metersPerPixel(tiles, site.lat) * 600) / 1000, 9);
+    expect(fit.zoom).toBeCloseTo(tiles.zoom, 6);
+    expect(fit.originX).toBeCloseTo(tiles.originX, 2);
+    expect(fit.originY).toBeCloseTo(tiles.originY, 2);
+    expect(fit.metersPerPixel).toBeCloseTo(metersPerPixel(tiles, site.lat), 6);
   });
 
   it('credits the installer for an imported photo', () => {

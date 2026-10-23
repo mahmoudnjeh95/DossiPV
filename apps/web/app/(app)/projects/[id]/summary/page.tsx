@@ -193,6 +193,10 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         {project.site && (
           <p style={{ margin: '12px 0 0' }}>
             <Link href={`/projects/${project.id}/locations`}>Modifier les points</Link>
+            {' · '}
+            <Link href={`/projects/${project.id}/locations/photo`}>
+              {project.site.siteImagePoints ? "Modifier la photo de l'annexe 3D" : "Ajouter la photo Google Maps (annexe 3D)"}
+            </Link>
           </p>
         )}
       </section>

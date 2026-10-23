@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { PixelPoint } from './fetch-satellite-image';
+import { describeArray, ROOF_PART_RULE, type ArrayToPlace } from './generate-roof-placement';
 
 /** The installer-placed points, already projected into the satellite image's pixel space. */
 export interface Page37Points {
@@ -18,8 +19,14 @@ export interface Page37LayoutInput {
   /** The site's own GPS point (the building to equip), in image pixels. */
   sitePoint: PixelPoint;
   points: Page37Points;
-  /** Approximate PV array surface (modules × module area), if known. */
-  arrayAreaM2?: number | null;
+  /**
+   * The array to place: the panel quadrilateral is its footprint, so the 3D view, which packs its
+   * rows to the quadrilateral's width, draws this same grid.
+   */
+  array: ArrayToPlace;
+  /** PVGIS convention: 0 = south, +90 = west, -90 = east. */
+  azimuthDeg: number;
+  tiltDeg: number;
   /** The roof contour the installer drew, in image pixels: the panels must stay inside it. */
   roofOutline?: PixelPoint[] | null;
 }
@@ -81,7 +88,9 @@ const page37OutputFormat = {
 const SYSTEM_PROMPT = [
   "Tu analyses une image satellite (vue du dessus, nord en haut) d'un site pour une installation photovoltaïque raccordée au réseau.",
   "Toutes les coordonnées sont en PIXELS de l'image : origine (0, 0) au coin supérieur gauche, x vers la droite, y vers le bas.",
-  "Propose l'emplacement du champ de panneaux solaires sur le toit (ou le terrain) du bâtiment situé au point du site : un quadrilatère de 4 coins donnés dans l'ordre du contour, qui peut être tourné pour suivre l'orientation du toit.",
+  "Propose l'emplacement du champ de panneaux solaires sur le toit (ou le terrain) du bâtiment situé au point du site : un quadrilatère de 4 coins donnés dans l'ordre du contour, l'emprise du champ, aux dimensions et dans le sens des rangées indiqués.",
+  "Un toit se compose souvent de plusieurs parties séparées par des bordures (acrotères, murets, relevés, marches entre deux niveaux).",
+  ROOF_PART_RULE,
   'Propose aussi un tracé de câblage : une liste ordonnée de points partant du champ de panneaux, passant par le local technique, puis allant au compteur STEG (seulement les points fournis).',
   "Chaque coordonnée renvoyée doit rester à l'intérieur de l'image. Réponds uniquement avec les coordonnées demandées.",
 ].join(' ');
@@ -102,10 +111,8 @@ function describeScene(input: Page37LayoutInput): string {
       `Contour du toit tracé par l'installateur (sommets dans l'ordre) : ${input.roofOutline.map((p) => `(${px(p)})`).join(' ; ')}. Le quadrilatère du champ doit rester entièrement à l'intérieur de ce contour.`,
     );
   }
-  if (input.arrayAreaM2 && input.arrayAreaM2 > 0) {
-    const areaPx = input.arrayAreaM2 / (mpp * mpp);
-    lines.push(`Surface du champ PV : environ ${Math.round(input.arrayAreaM2)} m², soit environ ${Math.round(areaPx)} pixels² ; dimensionne le quadrilatère en conséquence.`);
-  }
+  lines.push(...describeArray(input.array, input.tiltDeg, input.azimuthDeg, mpp));
+  lines.push(`Le quadrilatère du champ est cette emprise : environ ${Math.round(input.array.widthM / mpp)} pixels le long des rangées sur ${Math.round(input.array.depthM / mpp)} pixels.`);
   lines.push(`Toutes les coordonnées renvoyées doivent vérifier 0 <= x <= ${w} et 0 <= y <= ${h}.`);
   return lines.join('\n');
 }

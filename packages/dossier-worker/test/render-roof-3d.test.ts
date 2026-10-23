@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encodeJpegBitmap } from '../src/image-enhance';
-import { compactArrayFootprint, fitOnRoof, renderRoof3dView, roomAcross, type Roof3dInput } from '../src/render-roof-3d';
+import { compactArrayFootprint, fitOnRoof, renderRoof3dView, roomAcross, ROOF_VIEW_TITLE, type Roof3dInput } from '../src/render-roof-3d';
 import { extractPdfContent, everythingOnPage, pageText, pdfFontNames, TIMES_FONTS } from './helpers/pdf-content';
 
 function photo(size: number): Buffer {
@@ -37,34 +37,31 @@ const input: Roof3dInput = {
   },
 };
 
-/** Closed paths filled with the module blue, except the legend's axis-aligned swatch. */
+/** Closed paths filled with the module blue above the legend band: each module is drawn on the site view and on the detail. */
 const moduleFaces = (paths: { closed: boolean; fill: number[] | null; points: { x: number; y: number }[] }[]): number =>
-  paths.filter(
-    (p) =>
-      p.closed &&
-      p.fill &&
-      Math.abs(p.fill[0]! - 0.1) < 0.01 &&
-      Math.abs(p.fill[2]! - 0.45) < 0.01 &&
-      new Set(p.points.map((pt) => pt.x.toFixed(1))).size > 2,
-  ).length;
+  paths.filter((p) => p.closed && p.fill && Math.abs(p.fill[0]! - 0.09) < 0.01 && Math.abs(p.fill[2]! - 0.38) < 0.01 && p.points.every((pt) => pt.y > 100)).length;
 
 describe('renderRoof3dView', { timeout: 20_000 }, () => {
-  it('draws one page with the photo, one face per module and the installation facts', async () => {
-    const buffer = await renderRoof3dView(input);
+  it('draws one page: the site and the detail of the field on the photo, each module on both, the section and the facts', async () => {
+    const buffer = await renderRoof3dView({ ...input, imageCredit: 'Imagerie : test' });
     const [page, ...rest] = await extractPdfContent(buffer);
     expect(rest).toHaveLength(0);
     const text = pageText(page!).replace(/\s+/g, ' ');
-    expect(text).toContain("Vue 3D de l'implantation sur toiture");
+    expect(text).toContain(ROOF_VIEW_TITLE);
+    expect(text).toContain('VUE DE DESSUS DU SITE');
+    expect(text).toContain('DÉTAIL DU CHAMP PV');
+    expect(text).toContain('Coupe A-A');
     expect(text).toContain('5 modules');
-    expect(text).toContain('Inclinaison : 30°');
-    expect(text).toContain('Orientation : plein sud');
+    expect(text).toContain('Inclinaison 30°');
+    expect(text).toContain('orientation plein sud');
+    expect(text).toContain('Imagerie : test');
     expect(text).toContain('1 rangée de 5 modules');
     expect(text).toContain('Local technique');
     expect(text).toContain('Compteur STEG');
     expect(text).toContain('Piquet de terre');
     expect(text).toContain('Plan N° 5');
-    expect(page!.images).toHaveLength(1);
-    expect(moduleFaces(page!.paths)).toBe(5);
+    expect(page!.images).toHaveLength(2);
+    expect(moduleFaces(page!.paths)).toBe(10);
     expect(everythingOnPage(page!)).toBe(true);
     for (const font of await pdfFontNames(buffer)) expect(TIMES_FONTS).toContain(font);
   });
@@ -72,9 +69,10 @@ describe('renderRoof3dView', { timeout: 20_000 }, () => {
   it('splits a large array into several rows and names a west orientation', async () => {
     const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 24, azimuthDeg: 45 }));
     const text = pageText(page!).replace(/\s+/g, ' ');
-    expect(moduleFaces(page!.paths)).toBe(24);
+    expect(moduleFaces(page!.paths)).toBe(48);
     expect(text).toMatch(/\d+ rangées (de \d+ modules|\([\d +]+ modules\))/);
-    expect(text).toContain('Orientation : ouest (45° du sud)');
+    expect(text).toContain('orientation ouest (45° du sud)');
+    expect(text).toMatch(/Écart entre rangées \d,\d\d m/);
     expect(everythingOnPage(page!)).toBe(true);
   });
 
@@ -88,6 +86,13 @@ describe('renderRoof3dView', { timeout: 20_000 }, () => {
     ];
     const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, footprint }));
     expect(pageText(page!).replace(/\s+/g, ' ')).toContain('2 rangées de 4 modules');
+  });
+
+  it('keeps one row when the AI rectangle is drawn a little short of it', async () => {
+    // 42 px (5,04 m) for a 5,29 m row of five: four and three quarter modules.
+    const footprint = [{ x: 160, y: 160 }, { x: 202, y: 160 }, { x: 202, y: 178 }, { x: 160, y: 178 }];
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, footprint }));
+    expect(pageText(page!).replace(/\s+/g, ' ')).toContain('1 rangée de 5 modules');
   });
 
   it('draws the page without the optional points', async () => {
@@ -113,14 +118,14 @@ describe('renderRoof3dView on a drawn roof', { timeout: 20_000 }, () => {
     { x: 160, y: 190 },
   ];
 
-  it('fits the rows to the roof width and draws the contour with its surface', async () => {
-    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline }));
+  it('fits the rows to the roof width and draws the contour, with the surface measured on the map', async () => {
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, roofAreaM2: 23.4 }));
     const text = pageText(page!).replace(/\s+/g, ' ');
     expect(text).toContain('2 rangées de 4 modules');
-    expect(text).toContain('Surface de la toiture : 22 m²');
+    expect(text).toContain('Surface de la toiture : 23 m²');
     expect(text).toContain('Contour de la toiture');
-    const cyanOutlines = page!.paths.filter((p) => p.closed && p.stroke && Math.abs(p.stroke[1]! - 184 / 255) < 0.01 && p.points.length === 4);
-    expect(cyanOutlines.length).toBeGreaterThanOrEqual(1);
+    const cyanEdges = page!.paths.filter((p) => p.stroke && Math.abs(p.stroke[0]!) < 0.01 && Math.abs(p.stroke[1]! - 184 / 255) < 0.01);
+    expect(cyanEdges.length).toBeGreaterThanOrEqual(4);
     expect(everythingOnPage(page!)).toBe(true);
   });
 
@@ -132,18 +137,30 @@ describe('renderRoof3dView on a drawn roof', { timeout: 20_000 }, () => {
 
   it("puts the array where Claude chose, narrowed to the room the roof leaves there", async () => {
     // 6 px (0,72 m) from the roof's west edge: a row there holds a single module.
-    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { x: 166, y: 170 } }));
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { centre: { x: 166, y: 170 }, freeRowLengthPx: null } }));
     expect(pageText(page!).replace(/\s+/g, ' ')).toContain('8 rangées de 1 module');
   });
 
+  it('keeps the rows within the free length Claude saw between the borders of that part of the roof', async () => {
+    // In the middle of the 4,56 m roof, but a border leaves 18 px (2,16 m) free along the rows: two modules.
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { centre: { x: 179, y: 170 }, freeRowLengthPx: 18 } }));
+    expect(pageText(page!).replace(/\s+/g, ' ')).toContain('4 rangées de 2 modules');
+  });
+
   it("ignores a placement off the roof", async () => {
-    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { x: 20, y: 20 } }));
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { centre: { x: 20, y: 20 }, freeRowLengthPx: 18 } }));
     expect(pageText(page!).replace(/\s+/g, ' ')).toContain('2 rangées de 4 modules');
+  });
+
+  it('states no surface measured on the photo: only the map measures it', async () => {
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline }));
+    expect(pageText(page!)).not.toContain('Surface de la toiture');
   });
 
   it('says nothing of a roof when none was drawn', async () => {
     const [page] = await extractPdfContent(await renderRoof3dView(input));
-    expect(pageText(page!)).not.toContain('toiture :');
+    expect(pageText(page!)).not.toContain('Surface de la toiture');
+    expect(pageText(page!)).not.toContain('Contour de la toiture');
   });
 });
 

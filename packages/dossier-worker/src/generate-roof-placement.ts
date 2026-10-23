@@ -2,6 +2,15 @@ import type Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import type { PixelPoint } from './fetch-satellite-image';
 
+/** The compact array the 3D view draws (compactArrayFootprint): its rows and its footprint on the roof. */
+export interface ArrayToPlace {
+  moduleCount: number;
+  perRow: number;
+  rows: number;
+  widthM: number;
+  depthM: number;
+}
+
 export interface RoofPlacementInput {
   satelliteImage: Buffer;
   imageWidthPx: number;
@@ -12,8 +21,7 @@ export interface RoofPlacementInput {
   roofOutline: PixelPoint[];
   /** Where the installer put the "Champ PV" point, in image pixels: a hint, not a constraint. */
   field: PixelPoint;
-  /** The compact array to place: its rows and its footprint on the roof. */
-  array: { moduleCount: number; perRow: number; rows: number; widthM: number; depthM: number };
+  array: ArrayToPlace;
   /** PVGIS convention: 0 = south, +90 = west, -90 = east. */
   azimuthDeg: number;
   tiltDeg: number;
@@ -22,9 +30,15 @@ export interface RoofPlacementInput {
 /** In the photo's PIXEL space (origin top-left, x right, y down), like the 3D view draws it. */
 export interface RoofPlacement {
   centre: PixelPoint;
+  /**
+   * The free length along the rows through the centre, between the borders or obstacles that
+   * close the chosen part of the roof (setback deducted): a row never runs longer. Null when
+   * Claude gave none that makes sense.
+   */
+  freeRowLengthPx: number | null;
 }
 
-const placementSchema = z.object({ centre: z.object({ x: z.number().finite(), y: z.number().finite() }) });
+const placementSchema = z.object({ centre: z.object({ x: z.number().finite(), y: z.number().finite() }), freeRowLengthPx: z.number() });
 
 export class RoofPlacementParseError extends Error {
   constructor(reason: string) {
@@ -44,17 +58,27 @@ const placementOutputFormat = {
     type: 'object',
     properties: {
       centre: { type: 'object', properties: { x: { type: 'number' }, y: { type: 'number' } }, required: ['x', 'y'], additionalProperties: false },
+      freeRowLengthPx: { type: 'number' },
     },
-    required: ['centre'],
+    required: ['centre', 'freeRowLengthPx'],
     additionalProperties: false,
   },
 };
 
+/** Where an array may stand on a roof photo; both vision prompts state it. */
+export const ROOF_PART_RULE = [
+  "Avant de répondre, repère sur la photo chaque obstacle du toit : cage d'escalier, édicule, réservoirs et citernes d'eau, chauffe-eau solaires, panneaux existants, paraboles, antennes, climatiseurs, cheminées, lanterneaux et puits de lumière, gaines, conduits et tuyaux, garde-corps, arbres en surplomb ; dans le doute, une forme en relief ou une tache sombre est un obstacle.",
+  "Le champ entier, toute son emprise comprise, doit tenir dans UNE seule partie plane et dégagée du toit : il ne recouvre ni ne chevauche aucun obstacle, aucune bordure, aucun muret ni aucune marche, et garde au moins 50 cm de recul par rapport à chacun et aux bords du toit.",
+  "Il reste aussi hors de l'ombre portée en hiver par les éléments hauts (cage d'escalier, murs, réservoirs, arbres), qui s'étend vers le nord sur plus d'une fois et demie leur hauteur.",
+].join(' ');
+
 const SYSTEM_PROMPT = [
   "Tu analyses une image satellite (vue du dessus, nord en haut) du toit d'un bâtiment où sera posé un champ photovoltaïque sur châssis inclinés.",
   "Toutes les coordonnées sont en PIXELS de l'image : origine (0, 0) au coin supérieur gauche, x vers la droite, y vers le bas.",
-  "Le toit est délimité par le contour tracé par l'installateur. Choisis le meilleur emplacement du champ sur ce toit : une zone dégagée et plane, à l'écart des obstacles (cage d'escalier, réservoirs d'eau, chauffe-eau solaires, paraboles, climatiseurs, acrotères) et de leurs ombres, en gardant un peu de recul par rapport aux bords du toit.",
-  "Réponds uniquement avec le centre du champ, qui doit se trouver à l'intérieur du contour.",
+  "Le toit est délimité par le contour tracé par l'installateur, qui peut englober plusieurs parties séparées par des bordures : acrotères, murets, relevés, marches entre deux niveaux, gaines ou joints.",
+  ROOF_PART_RULE,
+  "Choisis la plus grande partie qui convient. Si aucune n'est assez longue pour une rangée complète, prends la plus longue : le champ y sera réparti en davantage de rangées plus courtes.",
+  "Réponds avec le centre du champ, à l'intérieur du contour, et la longueur libre le long des rangées à travers ce centre : la distance en pixels entre les bordures ou obstacles qui ferment la partie choisie de part et d'autre, recul déduit.",
 ].join(' ');
 
 const px = (p: PixelPoint): string => `x=${Math.round(p.x)}, y=${Math.round(p.y)}`;
@@ -66,14 +90,21 @@ function orientation(azimuthDeg: number): string {
   return `les modules font face au sud tourné de ${Math.abs(Math.round(azimuthDeg))}° vers l'${side}, les rangées sont perpendiculaires à cette direction`;
 }
 
+/** The array's rows, orientation and footprint in metres and pixels, as both vision prompts state them. */
+export function describeArray(array: ArrayToPlace, tiltDeg: number, azimuthDeg: number, metersPerPixel: number): string[] {
+  return [
+    `Champ à placer : ${array.moduleCount} modules en ${array.rows} rangée(s) de ${array.perRow} au plus, inclinés à ${Math.round(tiltDeg)}° ; ${orientation(azimuthDeg)}.`,
+    `Emprise du champ, écarts entre rangées compris : environ ${metres(array.widthM)} m le long des rangées sur ${metres(array.depthM)} m, soit environ ${Math.round(array.widthM / metersPerPixel)} x ${Math.round(array.depthM / metersPerPixel)} pixels.`,
+  ];
+}
+
 function describeScene(input: RoofPlacementInput): string {
-  const { imageWidthPx: w, imageHeightPx: h, metersPerPixel: mpp, array } = input;
+  const { imageWidthPx: w, imageHeightPx: h, metersPerPixel: mpp } = input;
   return [
     `Image : ${w} x ${h} pixels, environ ${mpp.toFixed(2)} m par pixel.`,
     `Contour du toit (sommets dans l'ordre) : ${input.roofOutline.map((p) => `(${px(p)})`).join(' ; ')}.`,
     `Point « Champ PV » placé par l'installateur (indicatif) : ${px(input.field)}.`,
-    `Champ à placer : ${array.moduleCount} modules en ${array.rows} rangée(s) de ${array.perRow} au plus, inclinés à ${Math.round(input.tiltDeg)}° ; ${orientation(input.azimuthDeg)}.`,
-    `Emprise du champ, écarts entre rangées compris : environ ${metres(array.widthM)} m le long des rangées sur ${metres(array.depthM)} m, soit environ ${Math.round(array.widthM / mpp)} x ${Math.round(array.depthM / mpp)} pixels.`,
+    ...describeArray(input.array, input.tiltDeg, input.azimuthDeg, mpp),
     `Le centre renvoyé doit vérifier 0 <= x <= ${w} et 0 <= y <= ${h} et être à l'intérieur du contour du toit.`,
   ].join('\n');
 }
@@ -102,8 +133,9 @@ export function validateRoofPlacement(placement: RoofPlacement, input: Pick<Roof
 
 /**
  * Asks claude-opus-5-5 where the array should stand on the roof the installer drew, looking at
- * the photo for obstacles and shade. Only the centre comes back: the 3D view keeps the array a
- * compact grid there, narrowed to the roof's width (render-roof-3d.ts).
+ * the photo for the borders between roof parts, obstacles and shade. The centre and the free
+ * length along the rows there come back: the 3D view keeps the array a compact grid at that
+ * centre, its rows no longer than that length or the roof's width (render-roof-3d.ts).
  */
 export async function generateRoofPlacement(input: RoofPlacementInput, client: Anthropic): Promise<RoofPlacement> {
   const response = await client.messages.parse({
@@ -134,5 +166,6 @@ export async function generateRoofPlacement(input: RoofPlacementInput, client: A
   if (!parsed.success) {
     throw new RoofPlacementParseError(parsed.error.message);
   }
-  return validateRoofPlacement(parsed.data, input);
+  const { centre, freeRowLengthPx } = parsed.data;
+  return validateRoofPlacement({ centre, freeRowLengthPx: Number.isFinite(freeRowLengthPx) && freeRowLengthPx > 0 ? freeRowLengthPx : null }, input);
 }

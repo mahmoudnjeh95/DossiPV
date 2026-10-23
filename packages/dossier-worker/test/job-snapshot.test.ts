@@ -119,15 +119,15 @@ describe('parseJobSnapshot', () => {
     expect(malformed!.site?.roofOutline).toBeNull();
   });
 
-  it('reads the imported satellite photo and its bounds, and drops bounds that are not a rectangle', () => {
-    const siteImageBounds = { north: 36.802, south: 36.798, east: 10.202, west: 10.198 };
-    const aligned = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImageBounds } });
-    const upsideDown = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImageBounds: { ...siteImageBounds, north: 36.79 } } });
+  it('reads the imported satellite photo and the points placed on it, and drops points off the photo', () => {
+    const siteImagePoints = { field: { x: 0.5, y: 0.5 }, technicalRoom: { x: 0.6, y: 0.3 }, meter: { x: 0.2, y: 0.8 }, earthPit: null, roofOutline: null };
+    const placed = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImagePoints } });
+    const offPhoto = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImagePoints: { ...siteImagePoints, meter: { x: 1.5, y: 0.8 } } } });
     const older = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2 } });
 
-    expect(aligned!.site).toMatchObject({ siteImageFileId: 'photo-1', siteImageBounds });
-    expect(upsideDown!.site?.siteImageBounds).toBeNull();
-    expect(older!.site).toMatchObject({ siteImageFileId: null, siteImageBounds: null });
+    expect(placed!.site).toMatchObject({ siteImageFileId: 'photo-1', siteImagePoints });
+    expect(offPhoto!.site?.siteImagePoints).toBeNull();
+    expect(older!.site).toMatchObject({ siteImageFileId: null, siteImagePoints: null });
   });
 
   it('reads tilt and installation point from the site row', () => {

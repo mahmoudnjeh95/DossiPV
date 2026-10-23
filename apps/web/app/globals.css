@@ -1572,6 +1572,40 @@ main.locations-main {
   cursor: crosshair;
 }
 
+/* Step 2 of Emplacements: the Google Maps capture, shown flat on a neutral background. */
+.site-photo-area .leaflet-container {
+  background: #3a3f44;
+}
+
+.site-photo-intro {
+  max-width: 760px;
+}
+
+.site-photo-intro ol {
+  margin: 0 0 12px;
+  padding-left: 1.3em;
+  line-height: 1.6;
+}
+
+.site-photo-intro kbd {
+  padding: 0 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg, #f6f7f9);
+  font: inherit;
+  font-size: 0.88em;
+}
+
+.site-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.site-photo-error {
+  color: var(--color-danger);
+}
+
 .locations-workspace button {
   min-height: 40px;
 }
