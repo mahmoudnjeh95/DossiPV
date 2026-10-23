@@ -1,18 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'child_process';
+import { existsSync } from 'fs';
+import { isAbsolute } from 'path';
 import PizZip from 'pizzip';
-import { convertDocxToPdf } from '../src/convert-to-pdf';
+import { convertDocxToPdf, sofficeCommand } from '../src/convert-to-pdf';
 
 function sofficeAvailable(): boolean {
+  const command = sofficeCommand();
+  // A resolved path is checked on disk: on Windows, soffice.exe --version never exits.
+  if (isAbsolute(command)) return existsSync(command);
   try {
-    execFileSync('soffice', ['--version'], { stdio: 'ignore' });
+    execFileSync(command, ['--version'], { stdio: 'ignore', timeout: 60_000 });
     return true;
   } catch {
     return false;
   }
 }
 
-const describeIfSoffice = sofficeAvailable() ? describe : describe.skip;
+const SOFFICE_AVAILABLE = sofficeAvailable();
+const describeIfSoffice = SOFFICE_AVAILABLE ? describe : describe.skip;
+// A real LibreOffice start takes tens of seconds; above CONVERSION_TIMEOUT_MS so its own error shows.
+const CONVERSION_TEST_TIMEOUT_MS = 150_000;
 
 // A minimal, real, valid .docx: a zip containing the three parts Word requires.
 // Built inline with pizzip (already a dependency of @dossipv/docx-template; add it here too)
@@ -42,15 +50,15 @@ describeIfSoffice('convertDocxToPdf', () => {
 
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(100);
-  });
+  }, CONVERSION_TEST_TIMEOUT_MS);
 
   it('rejects when the input is not a valid docx', async () => {
     const garbage = Buffer.from('this is not a docx file at all');
 
     await expect(convertDocxToPdf(garbage)).rejects.toThrow();
-  });
+  }, CONVERSION_TEST_TIMEOUT_MS);
 });
 
-if (!sofficeAvailable()) {
-  console.warn('convert-to-pdf.test.ts: soffice not found on PATH, skipping (the real server has it installed).');
+if (!SOFFICE_AVAILABLE) {
+  console.warn('convert-to-pdf.test.ts: soffice not found (SOFFICE_PATH, ~/LibreOfficeX or PATH), skipping (the real server has it installed).');
 }
