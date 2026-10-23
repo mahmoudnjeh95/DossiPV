@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   renderAcBoxDiagram: vi.fn(),
   generatePage37Layout: vi.fn(),
   fetchSatelliteImage: vi.fn(),
+  renderRoof3dView: vi.fn(),
   renderSitePlanPages: vi.fn(),
   renderTableOfContents: vi.fn(),
   findHeadingPages: vi.fn(),
@@ -94,6 +95,7 @@ vi.mock('../src/render-drawings', () => ({
   renderDcBoxDiagram: mocks.renderDcBoxDiagram,
   renderAcBoxDiagram: mocks.renderAcBoxDiagram,
 }));
+vi.mock('../src/render-roof-3d', () => ({ renderRoof3dView: mocks.renderRoof3dView }));
 vi.mock('../src/render-production-report', () => ({ renderProductionReport: mocks.renderProductionReport }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
@@ -104,6 +106,8 @@ vi.mock('../src/generate-page-37-layout', async () => ({
 vi.mock('../src/fetch-satellite-image', async () => ({
   ...(await vi.importActual<typeof import('../src/fetch-satellite-image')>('../src/fetch-satellite-image')),
   fetchSatelliteImage: mocks.fetchSatelliteImage,
+  // The worker asks for both images at once; the tests drive the standard one.
+  fetchSatelliteImages: async (...args: unknown[]): Promise<{ standard: Buffer; detailed: null }> => ({ standard: (await mocks.fetchSatelliteImage(...args)) as Buffer, detailed: null }),
 }));
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
 vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents, findHeadingPages: mocks.findHeadingPages }));
@@ -233,6 +237,7 @@ let drawingsPdf: Buffer;
 // reads this fragment's own page count (for the TOC's Annexes entry), so it must be a real,
 // loadable PDF like bodyPdf/drawingsPdf, not a recognisable fake buffer.
 let sitePlanPdf: Buffer;
+let roof3dPdf: Buffer;
 // The PVGIS report (annex N°2) is three real pages: the bordereau counts them.
 let simulationReportPdf: Buffer;
 
@@ -245,6 +250,7 @@ beforeEach(async () => {
   bodyPdf = await makePdf(3);
   drawingsPdf = await makePdf(2);
   sitePlanPdf = await makePdf(2);
+  roof3dPdf = await makePdf(1);
   simulationReportPdf = await makePdf(3);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
   mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
@@ -289,6 +295,7 @@ beforeEach(async () => {
   mocks.renderAcBoxDiagram.mockResolvedValue(drawingsPdf);
   mocks.renderProductionReport.mockResolvedValue(simulationReportPdf);
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
+  mocks.renderRoof3dView.mockResolvedValue(roof3dPdf);
   mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
   mocks.renderSitePlanPages.mockResolvedValue(sitePlanPdf);
   mocks.renderTableOfContents.mockResolvedValue(TOC_PDF);
@@ -588,7 +595,7 @@ describe('processJob — site plans (pages 37-38)', () => {
 
     expect(mocks.renderCoverPage).toHaveBeenCalled();
     expect(mocks.renderDrawingPages).toHaveBeenCalled();
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     expect(mocks.generatePage37Layout).toHaveBeenCalledTimes(1);
     expect(sitePlanInput().planData!.page37.layout).toEqual(PAGE_37_LAYOUT);
     expect(mocks.renderTableOfContents).toHaveBeenCalled();
@@ -598,7 +605,7 @@ describe('processJob — site plans (pages 37-38)', () => {
   it('fetches satellite plans for a STANDARD project without calling the AI layout', async () => {
     await processJob('job-1'); // validSnapshot's default tier is STANDARD
 
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
     const planData = sitePlanInput().planData!;
     expect(planData.page37.image.buffer).toBe(SATELLITE_TILE);
@@ -623,7 +630,7 @@ describe('processJob — site plans (pages 37-38)', () => {
     // No photo to reason on: the AI layout is skipped rather than failing the job.
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
     // The placeholder annex bytes are not PDFs, so their blank-page cleaning warns too: not counted here.
-    expect(warn.mock.calls.filter(([message]) => !String(message).includes('could not be cleaned'))).toHaveLength(2);
+    expect(warn.mock.calls.filter(([message]) => !String(message).includes('could not be cleaned'))).toHaveLength(3);
     expect(findSucceededUpdate()).toBeDefined();
     warn.mockRestore();
   });
@@ -729,7 +736,7 @@ describe('processJob — fragment assembly details', () => {
     expect(annexes[0]!.label).toBe("Annexe N°1 — Agrément ANME de l'installateur");
     expect(annexes[1]!.buffer).toBe(simulationReportPdf);
     expect(annexes[2]!.buffer).toBe(drawingsPdf);
-    expect((await PDFDocument.load(annexes[3]!.buffer)).getPageCount()).toBe(1);
+    expect((await PDFDocument.load(annexes[3]!.buffer)).getPageCount()).toBe(2); // the implantation plan and its 3D view
     expect((await PDFDocument.load(annexes[4]!.buffer)).getPageCount()).toBe(1);
     expect(annexesCall![1]).toEqual(annexes);
     expect(annexesCall![0]).toHaveLength(1);
@@ -996,7 +1003,7 @@ describe('processJob — fragment assembly details', () => {
 
     await processJob('job-1');
 
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     const implantationView = planImplantationView([site, ...placed], IMPLANTATION_VIEW_OPTIONS);
     const situationView = planSituationView(site);
     // Esri's native imagery stops at zoom 18 outside the large cities (zoom 19 is a "Map data not
@@ -1075,7 +1082,7 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     const planData = sitePlanInput().planData!;
     expect(planData.page37.layout).toBeNull();
     expect(planData.page37.points).toEqual({ field: projectToImage(planImplantationView([{ lat: 36.8, lon: 10.2 }], IMPLANTATION_VIEW_OPTIONS), { lat: 36.8, lon: 10.2 }), technicalRoom: null, meter: null, earthPit: null });
@@ -1099,7 +1106,7 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     // 1 failed attempt + 1 retried success (page 37) + 1 fetch for page 38.
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(4);
     expect(findSucceededUpdate()).toBeDefined();
   });
 });
@@ -1681,7 +1688,7 @@ describe('processJob — annex plan', () => {
     await processJob('job-1');
 
     // Body = pages 3-7, divider = pages 8-9; ADMIN 10-11, PVGIS report 12-14, STRUCTURE 15,
-    // drawings 16-17, implantation 18, situation 19, panel wiring 20-21, DC box 22-23, AC box 24-25, module 26, inverter 27, (DC SPD unreadable), RCD 28.
+    // drawings 16-17, implantation 18-19 (with the 3D view), situation 20, panel wiring 21-22, DC box 23-24, AC box 25-26, module 27, inverter 28, (DC SPD unreadable), RCD 29.
     const divider = (await extractPdfContent((mocks.mergeDocumentFragments.mock.calls[0] as [Buffer[]])[0][3]!))[1]!;
     const pageOf = (title: string): string | undefined => {
       const row = divider.texts.find((t) => t.text === title);
@@ -1691,10 +1698,10 @@ describe('processJob — annex plan', () => {
     expect(pageOf('Simulation de production PVGIS')).toBe('12');
     expect(pageOf('Attestation de conformité de la structure')).toBe('15');
     expect(pageOf('Schéma unifilaire')).toBe('16');
-    expect(pageOf('Plan de situation')).toBe('19');
-    expect(pageOf('Câblage des panneaux')).toBe('20');
-    expect(pageOf('Fiche technique du module')).toBe('26');
-    expect(pageOf('Disjoncteur différentiel')).toBe('28');
+    expect(pageOf('Plan de situation')).toBe('20');
+    expect(pageOf('Câblage des panneaux')).toBe('21');
+    expect(pageOf('Fiche technique du module')).toBe('27');
+    expect(pageOf('Disjoncteur différentiel')).toBe('29');
     expect(pageOf('Parafoudre DC (document non joint)')).toBe('—');
     expect(pageOf('Chemin de câbles (sans objet)')).toBe('—');
   });
@@ -1844,7 +1851,7 @@ describe('processJob — Mapbox imagery', () => {
     await processJob('job-1');
 
     const calls = mocks.fetchSatelliteImage.mock.calls;
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     expect(calls[0]!.length).toBe(1);
     expect(calls[1]![1]).toBe('esri');
     expect((calls[1]![0] as SatelliteView).zoom).toBeLessThanOrEqual(18);
@@ -1882,7 +1889,7 @@ describe('processJob — Mapbox imagery', () => {
     await processJob('job-1');
 
     const calls = mocks.fetchSatelliteImage.mock.calls;
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(5);
     expect(calls[2]![1]).toBe('esri');
     expect(calls[3]![1]).toBe('esri');
     const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;

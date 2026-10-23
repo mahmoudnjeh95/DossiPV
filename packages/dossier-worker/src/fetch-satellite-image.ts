@@ -236,7 +236,13 @@ function decodeTile(bytes: Uint8Array, label: string, url: string): Bitmap {
   throw new TileFormatError(redactSecrets(`${label} tile ${url} is not a decodable JPEG or PNG (${isWebp ? 'WebP is not supported' : 'unknown image format'}).`));
 }
 
-async function fetchTile(provider: ImageryProvider, zoom: number, x: number, y: number): Promise<Bitmap> {
+/** A decoded tile at its native resolution, and how many times denser than the 256 px grid it is (1 or 2). */
+interface NativeTile {
+  bitmap: Bitmap;
+  factor: number;
+}
+
+async function fetchTile(provider: ImageryProvider, zoom: number, x: number, y: number): Promise<NativeTile> {
   const url = tileUrl(provider, zoom, x, y);
   const label = provider === 'mapbox' ? 'Mapbox' : 'Esri';
   let response: Response;
@@ -254,23 +260,55 @@ async function fetchTile(provider: ImageryProvider, zoom: number, x: number, y: 
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   const tile = decodeTile(bytes, label, url);
-  // Bring a retina tile back onto the 256 px grid so view maths and metersPerPixel stay unchanged.
   const factor = tile.width >= 2 * TILE_SIZE && tile.width % TILE_SIZE === 0 ? tile.width / TILE_SIZE : 1;
-  return factor > 1 ? downscale(tile, factor) : tile;
+  return { bitmap: tile, factor };
+}
+
+/** The satellite photo of a view at the 256 px grid (the one overlays are projected on), and a denser copy when the provider serves retina tiles. */
+export interface SatelliteImages {
+  /** `view.widthPx` × `view.heightPx`: the pixel space every overlay and the AI layout use. */
+  standard: Buffer;
+  /** Same ground, 2× the pixels (the retina tiles' real detail); null when the tiles had none. */
+  detailed: Buffer | null;
+}
+
+/** Stitches the tiles into one JPEG; `density` 1 box-filters retina tiles down, 2 keeps their detail. */
+function stitch(view: SatelliteView, tiles: { tileX: number; tileY: number; tile: NativeTile }[], density: 1 | 2): Buffer {
+  const tileSide = TILE_SIZE * density;
+  const width = view.widthPx * density;
+  const height = view.heightPx * density;
+  const out = new Uint8Array(width * height * 4).fill(220); // light grey outside the world
+  for (const { tileX, tileY, tile: native } of tiles) {
+    const tile = density === 1 && native.factor > 1 ? downscale(native.bitmap, native.factor) : native.bitmap;
+    if (density === 2 && tile.width !== tileSide) continue;
+    const offsetX = tileX * tileSide - view.originX * density;
+    const offsetY = tileY * tileSide - view.originY * density;
+    const fromCol = Math.max(0, -offsetX);
+    const toCol = Math.min(tile.width, width - offsetX);
+    if (toCol <= fromCol) continue;
+    for (let row = 0; row < tile.height; row += 1) {
+      const destRow = offsetY + row;
+      if (destRow < 0 || destRow >= height) continue;
+      const src = tile.data.subarray((row * tile.width + fromCol) * 4, (row * tile.width + toCol) * 4);
+      out.set(src, (destRow * width + offsetX + fromCol) * 4);
+    }
+  }
+  return Buffer.from(encodeJpeg({ data: out, width, height }, density === 2 ? 90 : 85).data);
 }
 
 /**
- * Fetches every tile overlapping `view` and stitches them into one JPEG of exactly
- * `view.widthPx` × `view.heightPx`, whose top-left pixel is world pixel (originX, originY).
+ * Fetches every tile overlapping `view` once and stitches them into the standard JPEG of exactly
+ * `view.widthPx` × `view.heightPx` (top-left pixel = world pixel originX, originY) and, when the
+ * provider serves retina tiles, a 2× copy that keeps their detail.
  */
-export async function fetchSatelliteImage(view: SatelliteView, provider: ImageryProvider = activeImageryProvider()): Promise<Buffer> {
+export async function fetchSatelliteImages(view: SatelliteView, provider: ImageryProvider = activeImageryProvider()): Promise<SatelliteImages> {
   const tilesPerAxis = 2 ** view.zoom;
   const firstX = Math.floor(view.originX / TILE_SIZE);
   const lastX = Math.floor((view.originX + view.widthPx - 1) / TILE_SIZE);
   const firstY = Math.max(0, Math.floor(view.originY / TILE_SIZE));
   const lastY = Math.min(tilesPerAxis - 1, Math.floor((view.originY + view.heightPx - 1) / TILE_SIZE));
 
-  const jobs: Promise<{ tileX: number; tileY: number; tile: { width: number; height: number; data: Uint8Array } }>[] = [];
+  const jobs: Promise<{ tileX: number; tileY: number; tile: NativeTile }>[] = [];
   for (let tileY = firstY; tileY <= lastY; tileY += 1) {
     for (let tileX = firstX; tileX <= lastX; tileX += 1) {
       const wrappedX = ((tileX % tilesPerAxis) + tilesPerAxis) % tilesPerAxis; // antimeridian wrap
@@ -278,21 +316,11 @@ export async function fetchSatelliteImage(view: SatelliteView, provider: Imagery
     }
   }
   const tiles = await Promise.all(jobs);
+  const retina = tiles.length > 0 && tiles.every(({ tile }) => tile.factor === 2);
+  return { standard: stitch(view, tiles, 1), detailed: retina ? stitch(view, tiles, 2) : null };
+}
 
-  const out = new Uint8Array(view.widthPx * view.heightPx * 4).fill(220); // light grey outside the world
-  for (const { tileX, tileY, tile } of tiles) {
-    const offsetX = tileX * TILE_SIZE - view.originX;
-    const offsetY = tileY * TILE_SIZE - view.originY;
-    const fromCol = Math.max(0, -offsetX);
-    const toCol = Math.min(tile.width, view.widthPx - offsetX);
-    if (toCol <= fromCol) continue;
-    for (let row = 0; row < tile.height; row += 1) {
-      const destRow = offsetY + row;
-      if (destRow < 0 || destRow >= view.heightPx) continue;
-      const src = tile.data.subarray((row * tile.width + fromCol) * 4, (row * tile.width + toCol) * 4);
-      out.set(src, (destRow * view.widthPx + offsetX + fromCol) * 4);
-    }
-  }
-
-  return Buffer.from(encodeJpeg({ data: out, width: view.widthPx, height: view.heightPx }, 85).data);
+/** Just the standard image (see `fetchSatelliteImages`). */
+export async function fetchSatelliteImage(view: SatelliteView, provider: ImageryProvider = activeImageryProvider()): Promise<Buffer> {
+  return (await fetchSatelliteImages(view, provider)).standard;
 }
