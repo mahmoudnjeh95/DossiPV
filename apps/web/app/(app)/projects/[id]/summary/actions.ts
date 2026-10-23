@@ -40,11 +40,11 @@ export async function uploadStegPieceAction(
   if (file.type === 'image/webp') {
     try {
       const jpeg = await sharp(Buffer.from(await file.arrayBuffer())).jpeg({ quality: 90 }).toBuffer();
-      upload = new File([new Uint8Array(jpeg)], file.name.replace(/.webp$/i, '') + '.jpg', { type: 'image/jpeg' });
+      upload = new File([new Uint8Array(jpeg)], file.name.replace(/\.webp$/i, '') + '.jpg', { type: 'image/jpeg' });
     } catch {
       return { error: "Image illisible : choisissez une photo JPEG, PNG ou un PDF." };
     }
-  } else if (file.type === 'image/heic' || file.type === 'image/heif' || /.hei[cf]$/i.test(file.name)) {
+  } else if (file.type === 'image/heic' || file.type === 'image/heif' || /\.hei[cf]$/i.test(file.name)) {
     return { error: 'Format HEIC non pris en charge : réglez l’appareil photo sur JPEG ou choisissez un PDF.' };
   }
 
