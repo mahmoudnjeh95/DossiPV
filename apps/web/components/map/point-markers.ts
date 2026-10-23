@@ -40,16 +40,17 @@ export function pointPinSvg(kind: PointKind, height = PIN_HEIGHT): string {
 
 /**
  * A location tag: the pin, its tip on the point, with what the point is written beside it, so
- * the map reads without a legend.
+ * the map reads without a legend. `active` marks the point the current tool would move (the
+ * Emplacements map shows its tag even when the others are hidden).
  */
-export function pointIcon(kind: PointKind): L.DivIcon {
+export function pointIcon(kind: PointKind, { active = false }: { active?: boolean } = {}): L.DivIcon {
   const { color, label, tag } = POINT_STYLES[kind];
   return L.divIcon({
-    className: '',
+    className: active ? 'pin pin-active' : 'pin',
     html:
       `<div role="img" aria-label="${label}" style="position:relative;width:${PIN_WIDTH}px;height:${PIN_HEIGHT}px">` +
       pointPinSvg(kind) +
-      `<span style="position:absolute;left:${PIN_WIDTH - 4}px;top:6px;white-space:nowrap;background:#fff;color:#1a1a1a;border:2px solid ${color};border-radius:10px;padding:0 7px;font:600 11px/16px system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.4)">${tag}</span>` +
+      `<span class="pin-tag" style="position:absolute;left:${PIN_WIDTH - 4}px;top:6px;white-space:nowrap;background:#fff;color:#1a1a1a;border:2px solid ${color};border-radius:10px;padding:0 7px;font:600 11px/16px system-ui,sans-serif;box-shadow:0 1px 3px rgba(0,0,0,.4)">${tag}</span>` +
       '</div>',
     iconSize: [PIN_WIDTH, PIN_HEIGHT],
     iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT - 1],

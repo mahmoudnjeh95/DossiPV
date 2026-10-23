@@ -23,15 +23,14 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
   const fullName = project.client?.fullName ?? 'Projet';
 
   return (
-    <main>
-      <p className="breadcrumb">
-        <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> › Emplacements
-      </p>
-      <h1>Emplacements — {fullName}</h1>
-      <p className="muted">
-        Touchez un bouton puis la carte pour placer chaque point. Les points sont déplaçables. Vous pouvez aussi tracer le
-        contour du toit : il apparaît sur le plan d&apos;implantation et la vue 3D du dossier.
-      </p>
+    <main className="locations-main">
+      <div className="locations-head">
+        <p className="breadcrumb">
+          <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> › Emplacements
+        </p>
+        <h1>Emplacements — {fullName}</h1>
+        <p className="muted">Choisissez dans la barre ce que vous placez, puis touchez la carte. Tout se déplace en le faisant glisser.</p>
+      </div>
       <LocationsMap
         projectId={id}
         center={{ lat: site.gpsLat, lon: site.gpsLon }}
