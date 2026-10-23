@@ -3,7 +3,6 @@ import { toIsoDate, type ProjectForEngine } from './project-engine-input';
 
 export type StegPieceKey =
   | 'holderName'
-  | 'stegContract'
   | 'lastPaidBill'
   | 'installerAccreditation'
   | 'installerTaxId'
@@ -21,7 +20,6 @@ export interface StegPiece {
 
 /** The pieces the installer can add from the summary screen, one photo or PDF each. */
 export const UPLOADABLE_STEG_PIECES = [
-  'stegContract',
   'lastPaidBill',
   'syndicAuthorization',
   'moduleAcceptance',
@@ -110,12 +108,6 @@ export function stegCompleteness(
       key: 'holderName',
       label: 'Nom du titulaire du contrat',
       done: fullName !== '' && fullName !== CLIENT_NAME_PLACEHOLDER,
-      detail: null,
-    },
-    {
-      key: 'stegContract',
-      label: "Contrat STEG ou attestation d'abonnement",
-      done: Boolean(annexes?.stegContractFileId),
       detail: null,
     },
     {
