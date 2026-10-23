@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { execFileSync } from 'child_process';
 import { existsSync } from 'fs';
-import { isAbsolute } from 'path';
+import { tmpdir } from 'os';
+import { isAbsolute, join } from 'path';
 import PizZip from 'pizzip';
 import { convertDocxToPdf, sofficeCommand } from '../src/convert-to-pdf';
 
@@ -51,12 +52,19 @@ describeIfSoffice('convertDocxToPdf', () => {
     expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(100);
   }, CONVERSION_TEST_TIMEOUT_MS);
+});
 
-  it('rejects when the input is not a valid docx', async () => {
-    const garbage = Buffer.from('this is not a docx file at all');
+// Not a garbage-input test: LibreOffice falls back to its plain-text import and still writes a PDF.
+describe('convertDocxToPdf without LibreOffice', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
 
-    await expect(convertDocxToPdf(garbage)).rejects.toThrow();
-  }, CONVERSION_TEST_TIMEOUT_MS);
+  it('rejects when soffice cannot be started', async () => {
+    vi.stubEnv('SOFFICE_PATH', join(tmpdir(), 'no-libreoffice-here', 'soffice.exe'));
+
+    await expect(convertDocxToPdf(buildMinimalDocx())).rejects.toThrow();
+  });
 });
 
 if (!SOFFICE_AVAILABLE) {
