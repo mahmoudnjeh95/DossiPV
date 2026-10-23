@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { loadSections } from './library-data';
 import { LibraryTabs } from './library-tabs';
-import { AddAllButton, AddButton, RemoveButton } from './library-buttons';
+import { AddAllButton, AddButton, DeleteOwnButton, RemoveButton } from './library-buttons';
+import { ownEquipmentSlug } from './own-equipment-kinds';
 import { PriceForm } from './price-form';
 
 type SearchParams = Promise<{ tab?: string; q?: string }>;
@@ -10,7 +11,8 @@ type BulkKind = 'SPD' | 'DC_SWITCH' | 'DC_FUSE' | 'AC_BREAKER' | 'AC_ISOLATOR' |
 
 /**
  * The installer's own equipment library: each company picks, from the shared catalog, the
- * equipment it installs; only that equipment is offered in its projects.
+ * equipment it installs, or adds its own (see /library/new); only that equipment is offered in
+ * its projects.
  */
 export default async function LibraryPage({ searchParams }: { searchParams: SearchParams }): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
@@ -38,8 +40,14 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
 
       {!catalogue && total === 0 && (
         <section className="card">
-          <p>Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé.</p>
-          <Link href="/library?tab=catalogue">Ouvrir le catalogue partagé</Link>
+          <p>
+            Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé, ou saisissez
+            votre propre matériel.
+          </p>
+          <div className="actions">
+            <Link href="/library?tab=catalogue">Ouvrir le catalogue partagé</Link>
+            <Link href="/library/new">Ajouter mon matériel</Link>
+          </div>
         </section>
       )}
 
@@ -55,7 +63,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
               <tbody>
                 {s.rows.map((r) => (
                   <tr key={r.itemId}>
-                    <td>{r.label}</td>
+                    <td>
+                      {r.label} {r.own && <span className="badge">Mon matériel</span>}
+                    </td>
                     <td>{r.figures}</td>
                     {catalogue ? (
                       <td>
@@ -68,7 +78,13 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                     ) : (
                       <>
                         <td>{r.libraryItemId && <PriceForm libraryItemId={r.libraryItemId} priceTnd={r.priceTnd} />}</td>
-                        <td>{r.libraryItemId && <RemoveButton libraryItemId={r.libraryItemId} />}</td>
+                        <td>
+                          <div className="actions">
+                            {r.own && <Link href={`/library/edit/${ownEquipmentSlug(s.kind)}/${r.itemId}`}>Modifier</Link>}
+                            {r.libraryItemId && <RemoveButton libraryItemId={r.libraryItemId} />}
+                            {r.own && <DeleteOwnButton kind={s.kind} itemId={r.itemId} />}
+                          </div>
+                        </td>
                       </>
                     )}
                   </tr>

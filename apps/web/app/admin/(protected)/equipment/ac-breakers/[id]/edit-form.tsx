@@ -2,15 +2,8 @@
 
 import { useActionState } from 'react';
 import type { AcBreaker } from '@dossipv/db';
-import { RCD_TYPE_OPTIONS } from '../../../../../../lib/labels';
+import { AcBreakerFields } from '../../../../../../components/equipment/ac-breaker-fields';
 import { updateAcBreakerAction } from '../actions';
-
-function toDateInputValue(date: Date | null): string | undefined {
-  if (!date) {
-    return undefined;
-  }
-  return date.toISOString().slice(0, 10);
-}
 
 export function EditAcBreakerForm({ acBreaker }: { acBreaker: AcBreaker }): React.JSX.Element {
   const boundAction = updateAcBreakerAction.bind(null, acBreaker.id);
@@ -22,45 +15,7 @@ export function EditAcBreakerForm({ acBreaker }: { acBreaker: AcBreaker }): Reac
         Modifier le disjoncteur AC : {acBreaker.brand} {acBreaker.model}
       </h1>
       <form action={formAction}>
-        <label>
-          Marque <input name="brand" defaultValue={acBreaker.brand} required />
-        </label>
-        <label>
-          Modèle <input name="model" defaultValue={acBreaker.model} required />
-        </label>
-        <label>
-          Courant nominal (A) <input type="number" name="ratedCurrentA" step="0.01" defaultValue={acBreaker.ratedCurrentA} required />
-        </label>
-        <label>
-          Courbe (optionnel) <input name="curve" defaultValue={acBreaker.curve ?? undefined} />
-        </label>
-        <label>
-          Pouvoir de coupure (kA, optionnel){' '}
-          <input type="number" name="breakingCapacityKA" step="0.01" defaultValue={acBreaker.breakingCapacityKA ?? undefined} />
-        </label>
-        <label>
-          Sensibilité différentielle IΔn (mA, vide pour un disjoncteur sans différentiel){' '}
-          <input type="number" name="residualCurrentMA" step="1" min="1" defaultValue={acBreaker.residualCurrentMA ?? undefined} />
-        </label>
-        <label>
-          Type de différentiel{' '}
-          <select name="rcdType" defaultValue={acBreaker.rcdType ?? ''}>
-            <option value="">— Sans différentiel —</option>
-            {RCD_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Référence d&apos;homologation (optionnel){' '}
-          <input name="homologationReference" defaultValue={acBreaker.homologationReference ?? undefined} />
-        </label>
-        <label>
-          Homologation valide jusqu&apos;au (optionnel){' '}
-          <input type="date" name="homologationValidTo" defaultValue={toDateInputValue(acBreaker.homologationValidTo)} />
-        </label>
+        <AcBreakerFields item={acBreaker} />
         <label>
           Remplacer la fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
         </label>

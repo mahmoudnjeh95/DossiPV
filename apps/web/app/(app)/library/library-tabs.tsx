@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export type LibraryTab = 'mine' | 'catalogue';
+export type LibraryTab = 'mine' | 'catalogue' | 'new';
 
 export function LibraryTabs({ active }: { active: LibraryTab }): React.JSX.Element {
   return (
@@ -18,6 +18,13 @@ export function LibraryTabs({ active }: { active: LibraryTab }): React.JSX.Eleme
         style={{ fontWeight: active === 'catalogue' ? 700 : 400 }}
       >
         Catalogue partagé
+      </Link>
+      <Link
+        href="/library/new"
+        aria-current={active === 'new' ? 'page' : undefined}
+        style={{ fontWeight: active === 'new' ? 700 : 400 }}
+      >
+        Ajouter mon matériel
       </Link>
     </nav>
   );

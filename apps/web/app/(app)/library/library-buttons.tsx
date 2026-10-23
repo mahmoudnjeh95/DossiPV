@@ -8,11 +8,25 @@ import {
   removeFromLibraryAction,
   type LibraryActionState,
 } from './actions';
+import { deleteOwnEquipmentAction } from './own-equipment-actions';
 
-function ActionButton({ action, label }: { action: () => Promise<LibraryActionState>; label: string }): React.JSX.Element {
+function ActionButton({
+  action,
+  label,
+  confirmMessage,
+}: {
+  action: () => Promise<LibraryActionState>;
+  label: string;
+  confirmMessage?: string;
+}): React.JSX.Element {
   const [state, formAction, pending] = useActionState<LibraryActionState>(action, undefined);
   return (
-    <form action={formAction}>
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
+      }}
+    >
       <button type="submit" disabled={pending}>{label}</button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
@@ -33,4 +47,14 @@ export function AddAllButton({
 
 export function RemoveButton({ libraryItemId }: { libraryItemId: string }): React.JSX.Element {
   return <ActionButton action={removeFromLibraryAction.bind(null, libraryItemId)} label="Retirer" />;
+}
+
+export function DeleteOwnButton({ kind, itemId }: { kind: EquipmentKind; itemId: string }): React.JSX.Element {
+  return (
+    <ActionButton
+      action={deleteOwnEquipmentAction.bind(null, kind, itemId)}
+      label="Supprimer"
+      confirmMessage="Supprimer définitivement cet équipement de votre matériel ?"
+    />
+  );
 }

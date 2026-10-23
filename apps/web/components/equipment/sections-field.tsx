@@ -10,7 +10,7 @@ export interface SectionRow {
 
 const EMPTY_ROW: SectionRow = { sectionMm2: '', izA: '', izReferenceMethod: '' };
 
-export function SectionsField({ initialRows }: { initialRows?: SectionRow[] }): React.JSX.Element {
+export function SectionsField({ initialRows }: { initialRows?: SectionRow[] | undefined }): React.JSX.Element {
   const [rows, setRows] = useState<SectionRow[]>(initialRows && initialRows.length > 0 ? initialRows : [EMPTY_ROW]);
 
   const serialized = JSON.stringify(
@@ -36,7 +36,7 @@ export function SectionsField({ initialRows }: { initialRows?: SectionRow[] }): 
   }
 
   return (
-    <fieldset>
+    <fieldset style={{ gridColumn: '1 / -1' }}>
       <legend>Sections de câble</legend>
       <input type="hidden" name="sections" value={serialized} />
       {rows.map((row, index) => (

@@ -10,6 +10,8 @@ export interface LibraryRow {
   /** Present when the company already has the item in its library. */
   libraryItemId: string | null;
   priceTnd: number;
+  /** The company's own item (not from the shared catalog): it may edit or delete it. */
+  own: boolean;
 }
 
 export interface LibrarySection {
@@ -48,6 +50,7 @@ interface Owned {
   id: string;
   brand: string;
   model: string;
+  ownerCompanyId: string | null;
   libraryItems: { id: string; purchasePriceTnd: number }[];
 }
 
@@ -58,6 +61,7 @@ function row(item: Owned, figures: string): LibraryRow {
     figures,
     libraryItemId: item.libraryItems[0]?.id ?? null,
     priceTnd: item.libraryItems[0]?.purchasePriceTnd ?? 0,
+    own: item.ownerCompanyId !== null,
   };
 }
 

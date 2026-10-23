@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { DcFuseFields } from '../../../../../../components/equipment/dc-fuse-fields';
 import { createDcFuseAction } from '../actions';
 
 export default function NewDcFusePage(): React.JSX.Element {
@@ -10,24 +11,7 @@ export default function NewDcFusePage(): React.JSX.Element {
     <main>
       <h1>Ajouter un fusible DC</h1>
       <form action={formAction}>
-        <label>
-          Marque <input name="brand" required />
-        </label>
-        <label>
-          Modèle <input name="model" required />
-        </label>
-        <label>
-          Tension nominale (V) <input type="number" name="ratedVoltageV" step="0.01" required />
-        </label>
-        <label>
-          Courant nominal (A) <input type="number" name="ratedCurrentA" step="0.01" required />
-        </label>
-        <label>
-          Référence d&apos;homologation (optionnel) <input name="homologationReference" />
-        </label>
-        <label>
-          Homologation valide jusqu&apos;au (optionnel) <input type="date" name="homologationValidTo" />
-        </label>
+        <DcFuseFields />
         <label>
           Fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
         </label>

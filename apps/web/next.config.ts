@@ -4,8 +4,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@dossipv/engine'],
   experimental: {
-    // Bill photos are validated against a 10 MB cap in the action; leave headroom for multipart overhead.
-    serverActions: { bodySizeLimit: '11mb' },
+    // Uploads are validated against a 10 MB cap per file in the actions; an equipment form carries up
+    // to two files (datasheet + homologation document). Leave headroom for multipart overhead.
+    serverActions: { bodySizeLimit: '21mb' },
   },
 };
 
