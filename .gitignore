@@ -13,3 +13,6 @@ build/
 .playwright-mcp/
 .file-storage/
 change_pwd.mjs
+
+# Local dossier worker output (run-app.bat / manual runs)
+worker.log
