@@ -2,20 +2,22 @@ import type { RunEngineInput } from '@dossipv/engine';
 import type { DossierJobSnapshotV1 } from '../app/(app)/projects/[id]/actions';
 
 /**
- * The 8 steps of the generation pipeline (master spec §5), in order. `key` is the value the
- * worker is expected to write into `DossierJob.failedStep` when a step fails, so the results
- * page can mark exactly where the pipeline stopped. Matching is case-insensitive and also
- * accepts the French label, so a worker writing either form lights up the right step.
+ * The 8 steps of the generation pipeline (master spec §5), in the order the worker runs them.
+ * `key` is what the worker writes into `DossierJob.progressStep` as it enters the step, and into
+ * `failedStep` when the step fails; `workerSteps` are the finer failedStep keys the worker uses
+ * within the step. Matching is case-insensitive and also accepts the French label, so a worker
+ * writing either form lights up the right step. `seconds` is the step's typical duration: it
+ * weights the progress bar.
  */
-export const PIPELINE_STEPS: { key: string; label: string }[] = [
-  { key: 'snapshot', label: 'Gel des données du projet' },
-  { key: 'simulation', label: 'Simulation de production (PVGIS)' },
-  { key: 'text', label: 'Rédaction des textes' },
-  { key: 'drawings', label: 'Schémas et plans' },
-  { key: 'docx', label: 'Document Word' },
-  { key: 'pdf', label: 'Conversion PDF' },
-  { key: 'annexes', label: 'Fusion des annexes' },
-  { key: 'save', label: 'Enregistrement du dossier' },
+export const PIPELINE_STEPS: { key: string; label: string; seconds: number; workerSteps?: string[] }[] = [
+  { key: 'snapshot', label: 'Gel des données du projet', seconds: 1 },
+  { key: 'simulation', label: 'Simulation de production (PVGIS)', seconds: 8 },
+  { key: 'text', label: 'Rédaction des textes', seconds: 45 },
+  { key: 'docx', label: 'Document Word', seconds: 2 },
+  { key: 'pdf', label: 'Conversion PDF', seconds: 12 },
+  { key: 'drawings', label: 'Schémas et plans', seconds: 20, workerSteps: ['cover', 'simulation-report', 'map-pages', 'page-37-layout'] },
+  { key: 'annexes', label: 'Fusion des annexes', seconds: 12, workerSteps: ['toc', 'assembly'] },
+  { key: 'save', label: 'Enregistrement du dossier', seconds: 2 },
 ];
 
 /** failureReason stored when the installer cancels a PENDING job (see jobs/[jobId]/actions.ts). */
@@ -29,18 +31,26 @@ export interface PipelineStepView {
   state: StepState;
 }
 
+export type JobStatusValue = 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+
 export interface JobLike {
-  status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  status: JobStatusValue;
   failedStep: string | null;
+  progressStep?: string | null;
 }
 
-function matchesStep(step: { key: string; label: string }, failedStep: string): boolean {
-  const needle = failedStep.trim().toLowerCase();
-  return needle === step.key || needle === step.label.toLowerCase() || needle.includes(step.key);
+/** The PIPELINE_STEPS index a worker step key (or label) names, or -1. */
+function stepIndex(workerStep: string): number {
+  const needle = workerStep.trim().toLowerCase();
+  const exact = PIPELINE_STEPS.findIndex(
+    (step) => needle === step.key || needle === step.label.toLowerCase() || (step.workerSteps ?? []).includes(needle),
+  );
+  return exact !== -1 ? exact : PIPELINE_STEPS.findIndex((step) => needle.includes(step.key));
 }
 
 /**
- * Derives a per-step state from the job's status and failedStep. A FAILED job with an
+ * Derives a per-step state from the job's status, progressStep and failedStep. A RUNNING job
+ * without a recognised progressStep shows its first step running. A FAILED job with an
  * unrecognised failedStep marks no step as failed (the raw text is shown separately by the
  * page) and leaves every step pending, rather than guessing.
  */
@@ -52,15 +62,13 @@ export function derivePipelineSteps(job: JobLike): PipelineStepView[] {
     return PIPELINE_STEPS.map((step) => ({ ...step, state: 'pending' }));
   }
   if (job.status === 'RUNNING') {
+    const runningIndex = Math.max(0, job.progressStep ? stepIndex(job.progressStep) : 0);
     return PIPELINE_STEPS.map((step, index) => ({
       ...step,
-      state: index === 0 ? 'running' : 'pending',
+      state: index < runningIndex ? 'done' : index === runningIndex ? 'running' : 'pending',
     }));
   }
-  const failedIndex =
-    job.failedStep === null
-      ? -1
-      : PIPELINE_STEPS.findIndex((step) => matchesStep(step, job.failedStep!));
+  const failedIndex = job.failedStep === null ? -1 : stepIndex(job.failedStep);
   return PIPELINE_STEPS.map((step, index) => ({
     ...step,
     state:
@@ -72,6 +80,75 @@ export function derivePipelineSteps(job: JobLike): PipelineStepView[] {
             ? 'failed'
             : 'pending',
   }));
+}
+
+/**
+ * A job's live state as the progress bar and the end-of-generation notifications see it (the
+ * /api/dossier-jobs payload). The durations are measured on the server when the view is built,
+ * so the browser extrapolates from them without trusting its own clock against the server's.
+ */
+export interface JobProgressView {
+  id: string;
+  projectId: string;
+  clientName: string;
+  status: JobStatusValue;
+  cancelled: boolean;
+  failedStep: string | null;
+  progressStep: string | null;
+  /** Time since the job was claimed by the worker (or queued, while PENDING). */
+  elapsedMs: number;
+  /** Time since the worker entered progressStep; null before it reported one. */
+  stepElapsedMs: number | null;
+  /** Server time the view was built: of two views of a job, the later one wins. */
+  asOf: number;
+}
+
+export interface JobProgressRow {
+  id: string;
+  projectId: string;
+  status: JobStatusValue;
+  failedStep: string | null;
+  failureReason: string | null;
+  progressStep: string | null;
+  progressAt: Date | null;
+  startedAt: Date;
+  project: { client: { fullName: string } | null };
+}
+
+export function toJobProgressView(job: JobProgressRow, now: Date): JobProgressView {
+  return {
+    id: job.id,
+    projectId: job.projectId,
+    clientName: job.project.client?.fullName ?? 'Projet',
+    status: job.status,
+    cancelled: job.failureReason === CANCELLED_BY_INSTALLER_REASON,
+    failedStep: job.failedStep,
+    progressStep: job.progressStep,
+    elapsedMs: Math.max(0, now.getTime() - job.startedAt.getTime()),
+    stepElapsedMs: job.progressAt ? Math.max(0, now.getTime() - job.progressAt.getTime()) : null,
+    asOf: now.getTime(),
+  };
+}
+
+export function isJobActive(status: JobStatusValue): boolean {
+  return status === 'PENDING' || status === 'RUNNING';
+}
+
+/**
+ * The progress bar's percentage: the steps already done, weighted by their typical duration,
+ * plus a share of the current step that grows with the time spent in it and slows down as it
+ * passes the typical duration, so the bar keeps moving without ever claiming the step is over.
+ * 0 while queued, 100 once succeeded; a running job stays within 1–99.
+ */
+export function jobProgressPercent(job: { status: JobStatusValue; progressStep: string | null }, stepElapsedMs: number | null): number {
+  if (job.status === 'SUCCEEDED') return 100;
+  if (job.status !== 'RUNNING') return 0;
+  const total = PIPELINE_STEPS.reduce((sum, step) => sum + step.seconds, 0);
+  const index = Math.max(0, job.progressStep ? stepIndex(job.progressStep) : 0);
+  const done = PIPELINE_STEPS.slice(0, index).reduce((sum, step) => sum + step.seconds, 0);
+  const current = PIPELINE_STEPS[index]!.seconds;
+  const share = stepElapsedMs === null ? 0 : Math.min(0.95, 1 - Math.exp(-stepElapsedMs / 1000 / current));
+  return Math.min(99, Math.max(1, ((done + share * current) / total) * 100));
 }
 
 /** `DossierJob.warnings` (a JSON string[] the worker writes) as strings; anything else is dropped. */

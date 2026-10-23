@@ -143,6 +143,19 @@ async function fail(jobId: string, failedStep: string, internalError: unknown, i
   });
 }
 
+/**
+ * Records the step the job has entered, for the installer's progress bar. The keys are the web
+ * app's PIPELINE_STEPS (apps/web/lib/dossier-jobs.ts), in that order. Progress is cosmetic: a
+ * failed write is logged and never fails the job, and a job no longer RUNNING is left alone.
+ */
+async function reportProgress(jobId: string, step: string): Promise<void> {
+  try {
+    await db.dossierJob.updateMany({ where: { id: jobId, status: 'RUNNING' }, data: { progressStep: step, progressAt: new Date() } });
+  } catch (error) {
+    console.warn(`processJob: job ${jobId}: progress "${step}" not recorded.`, error);
+  }
+}
+
 /** File.mimeType as stored (short form since upload validation; full MIME in older rows). */
 const ANNEX_MIME_TYPES: Record<string, AnnexFile['mimeType']> = {
   pdf: 'pdf',
@@ -357,6 +370,7 @@ function buildSimulationInput(snapshot: WorkerJobSnapshot): ProductionSimulation
 }
 
 export async function processJob(jobId: string): Promise<void> {
+  await reportProgress(jobId, 'snapshot');
   const job = await db.dossierJob.findUniqueOrThrow({ where: { id: jobId } });
 
   const snapshot = parseJobSnapshot(job.inputSnapshot);
@@ -382,6 +396,7 @@ export async function processJob(jobId: string): Promise<void> {
   // never a 403 (its maintenance page), so only network failures are retried here.
   let production: ProductionSimulation;
   let simulationInput: ProductionSimulationInput;
+  await reportProgress(jobId, 'simulation');
   try {
     simulationInput = buildSimulationInput(snapshot);
     const input = simulationInput;
@@ -391,6 +406,7 @@ export async function processJob(jobId: string): Promise<void> {
   }
 
   let workerResult;
+  await reportProgress(jobId, 'text');
   try {
     workerResult = await withRetry(() =>
       generateDossierDocument({ engineInput: snapshot.engineInput, projectMeta: snapshot.projectMeta }, anthropicClient),
@@ -400,6 +416,7 @@ export async function processJob(jobId: string): Promise<void> {
   }
 
   let docxBuffer: Buffer;
+  await reportProgress(jobId, 'docx');
   try {
     const templateData = buildTemplateData({
       workerResult,
@@ -441,6 +458,7 @@ export async function processJob(jobId: string): Promise<void> {
   // fragment fails at the step responsible for it rather than at the TOC.
   let bodyPdfBuffer: Buffer;
   let bodyPageCount: number;
+  await reportProgress(jobId, 'pdf');
   try {
     bodyPdfBuffer = await convertDocxToPdf(docxBuffer);
     bodyPageCount = (await PDFDocument.load(bodyPdfBuffer)).getPageCount();
@@ -448,6 +466,8 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'pdf', error);
   }
 
+  // The cover, drawings, PVGIS report and site plans.
+  await reportProgress(jobId, 'drawings');
   let companyLogoBuffer: Buffer | null = null;
   if (company.logoFileId) {
     try {
@@ -705,6 +725,8 @@ export async function processJob(jobId: string): Promise<void> {
     warnings.push(ROOF_3D_MISSING_WARNING);
   }
 
+  // The TOC, the annexes and the assembly of both PDFs.
+  await reportProgress(jobId, 'annexes');
   const dcFuseRequired = snapshot.engineInput.dcFuse !== null;
   const acIsolatorRequired = snapshot.engineInput.acIsolator !== null;
 
@@ -889,6 +911,7 @@ export async function processJob(jobId: string): Promise<void> {
     }
   }
 
+  await reportProgress(jobId, 'save');
   try {
     const docxSaved = await saveFile(docxBuffer, 'dossier.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     const docxFile = await db.file.create({ data: { fileName: 'dossier.docx', mimeType: 'docx', storageKey: docxSaved.storageKey } });

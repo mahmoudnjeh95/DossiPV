@@ -5,24 +5,19 @@ import { runEngine } from '@dossipv/engine';
 import { requireAuthenticatedCompanyUser } from '../../../../layout';
 import { ChecksPanel, type CheckLike } from '../../../../../../components/checks-panel';
 import {
-  derivePipelineSteps,
+  isJobActive,
   jobWarnings,
   parseJobSnapshot,
   snapshotDraftMissing,
   summarizeSnapshot,
+  toJobProgressView,
   CANCELLED_BY_INSTALLER_REASON,
 } from '../../../../../../lib/dossier-jobs';
 import { listJobFiles } from '../../../../../../lib/dossier-files';
 import { JOB_STATUS_LABELS } from '../../../../../../lib/labels';
 import { GenerateButton } from '../../generate-button';
 import { CancelJobButton } from './cancel-button';
-
-const STEP_BADGE: Record<string, { className: string; text: string }> = {
-  done: { className: 'badge badge-ok', text: 'OK' },
-  running: { className: 'badge badge-warn', text: 'En cours' },
-  failed: { className: 'badge badge-danger', text: 'Échec' },
-  pending: { className: 'badge', text: 'À venir' },
-};
+import { JobProgressBanner, JobStepList } from './job-progress';
 
 function formatDuration(start: Date, end: Date | null): string | null {
   if (!end) {
@@ -65,7 +60,7 @@ export default async function DossierJobPage({
 
   const snapshot = parseJobSnapshot(job.inputSnapshot);
   const summary = snapshot ? summarizeSnapshot(snapshot) : null;
-  const steps = derivePipelineSteps(job);
+  const progressView = toJobProgressView(job, new Date());
   const files = listJobFiles(job, projectId);
   const clientName = job.project.client?.fullName ?? 'Projet';
   const jobIndex = job.project.jobs.findIndex((j) => j.id === job.id);
@@ -115,17 +110,7 @@ export default async function DossierJobPage({
         {revisionLabel && <span className="muted">{revisionLabel}</span>}
       </div>
 
-      {job.status === 'PENDING' && (
-        <div className="banner banner-warn">
-          Génération en attente de traitement. Elle démarrera automatiquement ; vous pouvez fermer
-          cette page.
-        </div>
-      )}
-      {job.status === 'RUNNING' && (
-        <div className="banner banner-warn">
-          Génération en cours. Actualisez la page pour suivre l&apos;avancement.
-        </div>
-      )}
+      {isJobActive(job.status) && <JobProgressBanner initial={progressView} />}
       {job.status === 'FAILED' && !isCancelled && (
         <div className="banner banner-danger">
           La génération a échoué{job.failedStep ? ` à l'étape « ${job.failedStep} »` : ''}
@@ -163,17 +148,7 @@ export default async function DossierJobPage({
               </>
             )}
           </dl>
-          <ul className="section-list">
-            {steps.map((step) => {
-              const badge = STEP_BADGE[step.state]!;
-              return (
-                <li key={step.key}>
-                  <span className={badge.className}>{badge.text}</span>
-                  <span className="grow">{step.label}</span>
-                </li>
-              );
-            })}
-          </ul>
+          <JobStepList initial={progressView} />
           <div className="actions" style={{ marginTop: 12 }}>
             {job.status === 'PENDING' && <CancelJobButton projectId={projectId} jobId={job.id} />}
             {job.status === 'FAILED' && (

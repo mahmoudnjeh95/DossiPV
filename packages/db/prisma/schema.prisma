@@ -946,6 +946,10 @@ model DossierJob {
   status          JobStatus   @default(PENDING)
   failedStep      String?
   failureReason   String?
+  /// The pipeline step a RUNNING job is on (a PIPELINE_STEPS key of the web app) and when the
+  /// worker entered it: what the installer's progress bar is drawn from.
+  progressStep    String?
+  progressAt      DateTime?
   inputSnapshot   Json
   startedAt       DateTime    @default(now())
   completedAt     DateTime?

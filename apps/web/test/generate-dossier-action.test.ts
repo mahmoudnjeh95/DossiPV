@@ -168,6 +168,8 @@ describe('generateDossierAction', () => {
             status: 'PENDING',
             failedStep: null,
             failureReason: null,
+            progressStep: null,
+            progressAt: null,
             inputSnapshot: {},
             startedAt: new Date(),
             completedAt: null,

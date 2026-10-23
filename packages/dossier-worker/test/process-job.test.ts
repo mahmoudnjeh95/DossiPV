@@ -5,6 +5,7 @@ import { computeSectionNumbers } from '../src/build-template-data';
 const mocks = vi.hoisted(() => ({
   dossierJobFindUniqueOrThrow: vi.fn(),
   dossierJobUpdate: vi.fn(),
+  dossierJobUpdateMany: vi.fn(),
   companyFindUnique: vi.fn(),
   projectFindUnique: vi.fn(),
   fileFindMany: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
+      dossierJob: { findUniqueOrThrow: mocks.dossierJobFindUniqueOrThrow, update: mocks.dossierJobUpdate, updateMany: mocks.dossierJobUpdateMany },
       company: { findUnique: mocks.companyFindUnique },
       project: { findUnique: mocks.projectFindUnique },
       file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
@@ -252,6 +254,7 @@ beforeEach(async () => {
   roof3dPdf = await makePdf(1);
   simulationReportPdf = await makePdf(3);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
+  mocks.dossierJobUpdateMany.mockResolvedValue({ count: 1 });
   mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
   mocks.fileFindMany.mockResolvedValue([ANME_ROW]);
@@ -329,6 +332,27 @@ describe('processJob — success path', () => {
     expect(mocks.checkResultCreateMany).toHaveBeenCalledWith({
       data: [{ jobId: 'job-1', checkId: 'C01', level: 'BLOCK', pass: true, message: 'ok' }],
     });
+  });
+});
+
+describe('processJob — progress', () => {
+  it('records each pipeline step as it starts, in order, on the job only while it is RUNNING', async () => {
+    await processJob('job-1');
+
+    const calls = mocks.dossierJobUpdateMany.mock.calls.map((call) => call[0] as { where: unknown; data: { progressStep: string; progressAt: Date } });
+    expect(calls.map((call) => call.data.progressStep)).toEqual(['snapshot', 'simulation', 'text', 'docx', 'pdf', 'drawings', 'annexes', 'save']);
+    expect(calls[0]!.where).toEqual({ id: 'job-1', status: 'RUNNING' });
+    expect(calls[0]!.data.progressAt).toBeInstanceOf(Date);
+  });
+
+  it('still generates the dossier when a progress write fails', async () => {
+    mocks.dossierJobUpdateMany.mockRejectedValue(new Error('connection reset'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await processJob('job-1');
+
+    expect(findSucceededUpdate()).toBeDefined();
+    warn.mockRestore();
   });
 });
 

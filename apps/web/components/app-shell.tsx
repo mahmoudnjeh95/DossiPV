@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { logoutAction } from '../app/(app)/actions';
 import { Dashboard, Projects, Library, Settings, Logout } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
+import { JobWatcherProvider } from './job-watcher';
 
 export interface AppShellProps {
   userFullName: string;
@@ -24,8 +25,8 @@ const NAV_LINKS: NavLink[] = [
 
 /**
  * Authenticated chrome shared by every installer-facing page: brand, primary navigation,
- * current user and logout. Rendered by the (app) route-group layout, so a new page under
- * (app)/ gets it for free.
+ * current user and logout, and the watcher that announces finished generations on any page.
+ * Rendered by the (app) route-group layout, so a new page under (app)/ gets it for free.
  */
 export function AppShell({ userFullName, children }: AppShellProps): React.JSX.Element {
   return (
@@ -58,7 +59,7 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
           </div>
         </div>
       </header>
-      {children}
+      <JobWatcherProvider>{children}</JobWatcherProvider>
     </>
   );
 }

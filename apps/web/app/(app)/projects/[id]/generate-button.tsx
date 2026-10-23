@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { requestNotificationPermission } from '../../../../components/job-watcher';
 import { generateDossierAction, type GenerateDossierActionState } from './actions';
 
 export function GenerateButton({
@@ -21,7 +22,8 @@ export function GenerateButton({
   );
 
   return (
-    <form action={formAction} className="stack">
+    // The click is the moment a browser lets the page ask to notify the end of the generation.
+    <form action={formAction} onSubmit={() => void requestNotificationPermission()} className="stack">
       <div className="actions">
         <button type="submit" disabled={disabled || pending}>
           {pending ? 'Envoi…' : label}

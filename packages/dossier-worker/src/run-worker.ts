@@ -26,7 +26,7 @@ export async function claimNextJob(): Promise<string | null> {
 export async function resetStaleRunningJobs(staleThresholdMs: number): Promise<number> {
   const result = await db.dossierJob.updateMany({
     where: { status: 'RUNNING', startedAt: { lt: new Date(Date.now() - staleThresholdMs) } },
-    data: { status: 'PENDING' },
+    data: { status: 'PENDING', progressStep: null, progressAt: null },
   });
   return result.count;
 }
