@@ -4,8 +4,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { db } from '@dossipv/db';
-import { formatRunLengthFormula, groundDistanceM, polygonAreaM2, runEngine } from '@dossipv/engine';
-import { saveFile } from '@dossipv/file-storage';
+import { formatRunLengthFormula, groundDistanceM, isInsideBounds, polygonAreaM2, runEngine } from '@dossipv/engine';
+import { getFilePath, saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
 import { buildTemplateData, computeSectionNumbers, type EarthingRow } from './build-template-data';
@@ -21,7 +21,7 @@ import {
   type AnnexEntry,
 } from './annex-plan';
 import { renderAnnexDivider, type AnnexDividerEntry } from './render-annex-divider';
-import { parseJobSnapshot, type WorkerJobSnapshot } from './job-snapshot';
+import { parseJobSnapshot, type SnapshotSite, type WorkerJobSnapshot } from './job-snapshot';
 import { simulateProduction, type ProductionSimulation, type ProductionSimulationInput } from './run-simulation';
 import { withRetry, isRetryableError } from './retry';
 import { renderCoverPage } from './render-cover-page';
@@ -32,6 +32,7 @@ import { buildDrawingInputs } from './drawing-inputs';
 import { buildEquipmentTables } from './equipment-tables';
 import { renderProductionReport } from './render-production-report';
 import { generatePage37Layout, isRetryablePage37LayoutError, type Page37Layout, type Page37Points } from './generate-page-37-layout';
+import { generateRoofPlacement, isRetryableRoofPlacementError } from './generate-roof-placement';
 import {
   activeImageryProvider,
   fetchSatelliteImages,
@@ -48,9 +49,10 @@ import {
   type LatLon,
   type PixelPoint,
   type SatelliteView,
+  viewFromBounds,
 } from './fetch-satellite-image';
-import { enhanceSatelliteImage } from './image-enhance';
-import { renderRoof3dView, type Roof3dInput } from './render-roof-3d';
+import { decodeJpegBitmap, encodeJpegBitmap, enhanceSatelliteImage, resizeLanczos, type Bitmap } from './image-enhance';
+import { compactArrayFootprint, renderRoof3dView, type Roof3dInput } from './render-roof-3d';
 import type { DrawingCartouche } from './drawing-kit';
 import { renderSitePlanPages, type SitePlanData, type SitePlanPoints } from './render-site-plan-pages';
 import { findHeadingPages, renderTableOfContents, type TocEntry } from './render-toc';
@@ -95,6 +97,52 @@ async function fetchPlanImage(jobId: string, view: SatelliteView, plan: string, 
 }
 
 export const ROOF_3D_MISSING_WARNING = 'Vue 3D de la toiture indisponible (fond satellite manquant) : annexe N°5 sans vue 3D.';
+
+export const INSTALLER_PHOTO_NOT_COVERING_WARNING =
+  "Photo satellite importée : elle ne montre pas tous les points et tout le toit, le plan d'implantation garde l'imagerie par défaut.";
+export const INSTALLER_PHOTO_UNREADABLE_WARNING = "Photo satellite importée illisible : le plan d'implantation garde l'imagerie par défaut.";
+/** The installer's photo as Claude sees it and as page 37's pixel grid. */
+const INSTALLER_PHOTO_VIEW_SIDE_PX = 1024;
+/** The installer's photo as printed on the plans. */
+const INSTALLER_PHOTO_PRINT_SIDE_PX = 2400;
+
+/**
+ * Page 37's photo from the installer's own capture, aligned on the map: the view its bounds
+ * define, the photo scaled to that view (what Claude reasons on) and a larger copy for print.
+ * Null when there is none, or, with a job warning, when it misses a point or the roof or cannot
+ * be read: the plan then keeps Mapbox/Esri.
+ */
+async function loadInstallerPhoto(
+  jobId: string,
+  site: SnapshotSite,
+  framed: LatLon[],
+  warnings: string[],
+): Promise<{ view: SatelliteView; images: { standard: Buffer; print: Buffer } } | null> {
+  const bounds = site.siteImageBounds;
+  if (!site.siteImageFileId || !bounds) return null;
+  if (framed.some((point) => !isInsideBounds(bounds, point))) {
+    warnings.push(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+    return null;
+  }
+  try {
+    const file = await db.file.findUnique({ where: { id: site.siteImageFileId } });
+    if (!file) throw new Error(`file ${site.siteImageFileId} is not in the database`);
+    const photo = decodeJpegBitmap(await readFile(getFilePath(file.storageKey)));
+    const fit = (side: number): Bitmap => {
+      const scale = side / Math.max(photo.width, photo.height);
+      return scale < 1 ? resizeLanczos(photo, Math.round(photo.width * scale), Math.round(photo.height * scale)) : photo;
+    };
+    const standard = fit(INSTALLER_PHOTO_VIEW_SIDE_PX);
+    return {
+      view: viewFromBounds(bounds, standard.width, standard.height),
+      images: { standard: encodeJpegBitmap(standard, 88), print: encodeJpegBitmap(fit(INSTALLER_PHOTO_PRINT_SIDE_PX), 90) },
+    };
+  } catch (error) {
+    console.warn(`processJob: job ${jobId}: the imported satellite photo could not be used.`, error);
+    warnings.push(INSTALLER_PHOTO_UNREADABLE_WARNING);
+    return null;
+  }
+}
 
 const missingImageryWarning = (plan: string): string => `Fond satellite indisponible pour le plan ${plan} : plan dessiné sans fond.`;
 
@@ -589,13 +637,15 @@ export async function processJob(jobId: string): Promise<void> {
     // Page 37 covers every point at the best zoom; page 38 is a neighbourhood-scale view centred
     // on the site. Both have exact pixel bounds, so every GPS point is projected to the image
     // pixel it really falls on.
+    // The installer's own photo, when it shows everything, replaces the provider's on page 37.
+    const installerPhoto = await loadInstallerPhoto(jobId, site, framed, warnings);
     let provider = activeImageryProvider();
-    let implantationView = planImplantationView(framed, implantationViewOptions(provider));
+    let implantationView = installerPhoto?.view ?? planImplantationView(framed, implantationViewOptions(provider));
     let situationView = planSituationView(sitePoint);
     let page37Image: { standard: Buffer; print: Buffer } | null;
     let page38Image: { standard: Buffer; print: Buffer } | null;
     try {
-      page37Image = await fetchPlanImage(jobId, implantationView, 'implantation');
+      page37Image = installerPhoto?.images ?? (await fetchPlanImage(jobId, implantationView, 'implantation'));
       page38Image = await fetchPlanImage(jobId, situationView, 'situation');
     } catch (error) {
       if (!(error instanceof MapboxAuthError)) throw error;
@@ -604,15 +654,16 @@ export async function processJob(jobId: string): Promise<void> {
       console.warn(`processJob: job ${jobId}: Mapbox refused the access token (HTTP ${error.status}); falling back to Esri.`);
       warnings.push(MAPBOX_REFUSED_WARNING);
       provider = 'esri';
-      implantationView = planImplantationView(framed, implantationViewOptions(provider));
+      if (!installerPhoto) implantationView = planImplantationView(framed, implantationViewOptions(provider));
       situationView = planSituationView(sitePoint);
-      page37Image = await fetchPlanImage(jobId, implantationView, 'implantation', provider);
+      page37Image = installerPhoto?.images ?? (await fetchPlanImage(jobId, implantationView, 'implantation', provider));
       page38Image = await fetchPlanImage(jobId, situationView, 'situation', provider);
     }
     if (!page37Image) warnings.push(missingImageryWarning("d'implantation"));
     if (!page38Image) warnings.push(missingImageryWarning('de situation'));
 
     const providerCredit = provider === 'mapbox' ? { provider } : {}; // Esri is the default credit
+    const page37Credit = installerPhoto ? { provider: 'installer' as const } : providerCredit;
     const toPixels = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(implantationView, p) : null);
     const pixelPoints: SitePlanPoints = {
       field: toPixels(field),
@@ -655,12 +706,50 @@ export async function processJob(jobId: string): Promise<void> {
       }
     }
 
+    // Without an AI rectangle, Claude still picks where the array stands on a drawn roof (3D view).
+    // Indicative only: any failure keeps the 3D view's own placement and never fails the dossier.
+    const moduleSpec = {
+      moduleCount: snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0),
+      moduleLengthM: (snapshot.engineInput.module.lengthMm ?? 2000) / 1000,
+      moduleWidthM: (snapshot.engineInput.module.widthMm ?? 1000) / 1000,
+      tiltDeg: site.tiltDeg ?? snapshot.engineInput.structure.tiltDeg,
+      latitudeDeg: field.lat,
+    };
+    const azimuthDeg = site.azimuthDeg ?? 0;
+    let placement: PixelPoint | null = null;
+    if (!layout && roofPixels && page37Image) {
+      const array = { moduleCount: moduleSpec.moduleCount, ...compactArrayFootprint(moduleSpec) };
+      try {
+        placement = (
+          await withRetry(
+            () =>
+              generateRoofPlacement(
+                {
+                  satelliteImage: page37Image.standard,
+                  imageWidthPx: implantationView.widthPx,
+                  imageHeightPx: implantationView.heightPx,
+                  metersPerPixel: implantationMetersPerPixel,
+                  roofOutline: roofPixels,
+                  field: pixelPoints.field!,
+                  array,
+                  azimuthDeg,
+                  tiltDeg: moduleSpec.tiltDeg,
+                },
+                anthropicClient,
+              ),
+            { isRetryable: (error) => isRetryableError(error) || isRetryableRoofPlacementError(error) },
+          )
+        ).centre;
+      } catch (error) {
+        console.warn(`processJob: job ${jobId}: no roof placement from Claude; the 3D view centres the array on the roof.`, error);
+      }
+    }
+
     const { dcRun, acRun } = snapshot.engineInput;
     const dcFormula = gps.technicalRoom ? formatRunLengthFormula(groundDistanceM(field, gps.technicalRoom), dcRun.lengthM, site.floors, 'DC') : null;
     const acFormula = gps.technicalRoom && gps.meter ? formatRunLengthFormula(groundDistanceM(gps.technicalRoom, gps.meter), acRun.lengthM, site.floors, 'AC') : null;
     // The 3D view is drawn on page 37's own photo, so the AI panel rectangle needs no conversion.
     if (page37Image) {
-      const { lengthMm, widthMm } = snapshot.engineInput.module;
       roof3dInput = {
         image: { buffer: page37Image.print, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel },
         field: pixelPoints.field!,
@@ -669,19 +758,16 @@ export async function processJob(jobId: string): Promise<void> {
         earthPit: pixelPoints.earthPit,
         footprint: layout?.panelRectangle ?? null,
         roofOutline: roofPixels,
-        moduleCount: snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0),
-        moduleLengthM: (lengthMm ?? 2000) / 1000,
-        moduleWidthM: (widthMm ?? 1000) / 1000,
+        placement,
+        ...moduleSpec,
         moduleLabel: snapshot.projectMeta.moduleBrandModel,
-        tiltDeg: site.tiltDeg ?? snapshot.engineInput.structure.tiltDeg,
-        azimuthDeg: site.azimuthDeg ?? 0,
-        latitudeDeg: field.lat,
+        azimuthDeg,
         installedKWp: production.installedKWp,
       };
     }
     sitePlanData = {
       page37: {
-        image: { buffer: page37Image?.print ?? null, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel, ...providerCredit },
+        image: { buffer: page37Image?.print ?? null, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel, ...page37Credit },
         layout,
         roofOutline: roofPixels,
         roofAreaM2: roofOutline ? polygonAreaM2(roofOutline) : null,

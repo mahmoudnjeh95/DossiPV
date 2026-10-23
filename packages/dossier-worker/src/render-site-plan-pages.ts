@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib';
-import { IMAGERY_ATTRIBUTION, type ImageryProvider, type LatLon, type PixelPoint } from './fetch-satellite-image';
+import { IMAGERY_ATTRIBUTION, type LatLon, type PixelPoint, type PlanImageSource } from './fetch-satellite-image';
 import type { Page37Layout } from './generate-page-37-layout';
 import { drawPdfText, fitPdfText, toPdfSafeText } from './pdf-text';
 import { embedLogo, formatFrenchDate } from './render-cover-page';
@@ -20,7 +20,7 @@ export interface SitePlanImage {
   /** Ground metres per image pixel, for the scale bar. */
   metersPerPixel: number;
   /** Which imagery the photo came from, for the credit under it; Esri when omitted. */
-  provider?: ImageryProvider;
+  provider?: PlanImageSource;
 }
 
 /** Installer-placed points in page-37 image pixels; `field` falls back to the site GPS. */

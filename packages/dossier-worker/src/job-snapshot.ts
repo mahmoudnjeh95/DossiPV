@@ -1,4 +1,4 @@
-import { parseRoofOutline, type GpsPoint, type RunEngineInput } from '@dossipv/engine';
+import { parseRoofOutline, parseSiteImageBounds, type GpsPoint, type RunEngineInput, type SiteImageBounds } from '@dossipv/engine';
 import type { ProjectMeta } from './placeholder-map';
 
 export interface SnapshotSite {
@@ -19,6 +19,9 @@ export interface SnapshotSite {
   earthPitPointLon: number | null;
   /** The roof contour drawn on the Emplacements map; null when none was drawn (or older snapshots). */
   roofOutline: GpsPoint[] | null;
+  /** The installer's own satellite photo (a File id) and where it was aligned on the map. */
+  siteImageFileId: string | null;
+  siteImageBounds: SiteImageBounds | null;
 }
 
 export interface SnapshotClient {
@@ -186,6 +189,8 @@ function parseSite(value: unknown): SnapshotSite | null {
     earthPitPointLat: num(value.earthPitPointLat),
     earthPitPointLon: num(value.earthPitPointLon),
     roofOutline: parseRoofOutline(value.roofOutline),
+    siteImageFileId: optionalString(value.siteImageFileId),
+    siteImageBounds: parseSiteImageBounds(value.siteImageBounds),
   };
 }
 

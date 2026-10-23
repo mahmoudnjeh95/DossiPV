@@ -21,6 +21,8 @@ export interface Roof3dInput {
    * footprint, the array is centred on the roof and its rows kept within the roof's width.
    */
   roofOutline?: PixelPoint[] | null;
+  /** Where Claude chose to centre the array on the drawn roof (view pixels); used without an AI footprint. */
+  placement?: PixelPoint | null;
   moduleCount: number;
   moduleLengthM: number;
   moduleWidthM: number;
@@ -135,13 +137,42 @@ export function fitOnRoof(roof: Vec2[], field: Vec2, facing: Vec2, across: Vec2,
     const facingShift = (facingChord[0] + facingChord[1]) / 2;
     centre = { e: centre.e + facing.e * facingShift, n: centre.n + facing.n * facingShift };
   }
-  // The row is centred on `centre`: on each edge of it, the room is twice the shorter side.
+  return { centre, widthM: roomAcross(roof, centre, facing, across, rowDepthM) };
+}
+
+/**
+ * The longest row centred on `centre` that stays on the roof, over the whole depth of a row: on
+ * each edge of the row, twice the distance to the nearer side of the roof. Null off the roof.
+ */
+export function roomAcross(roof: Vec2[], centre: Vec2, facing: Vec2, across: Vec2, rowDepthM = 0): number | null {
   let widthM = Number.POSITIVE_INFINITY;
   for (const f of [-rowDepthM / 2, 0, rowDepthM / 2]) {
     const chord = chordThrough(roof, { e: centre.e + facing.e * f, n: centre.n + facing.n * f }, across);
     if (chord) widthM = Math.min(widthM, 2 * Math.min(-chord[0], chord[1]));
   }
-  return { centre, widthM: Number.isFinite(widthM) ? widthM : null };
+  return Number.isFinite(widthM) ? widthM : null;
+}
+
+/** What the array is made of; the same fields as Roof3dInput. */
+export interface ArraySpec {
+  moduleCount: number;
+  moduleLengthM: number;
+  moduleWidthM: number;
+  tiltDeg: number;
+  latitudeDeg: number;
+}
+
+/**
+ * The compact array with no width limit: about as deep as wide once the rows are spaced so they
+ * do not shade each other at the winter solstice. Its footprint, gaps between rows included.
+ */
+export function compactArrayFootprint(spec: ArraySpec): { perRow: number; rows: number; widthM: number; depthM: number } {
+  const depth = spec.moduleLengthM * Math.cos(rad(spec.tiltDeg));
+  const pitch = depth + computeRowSpacingM(spec.tiltDeg, spec.moduleLengthM, spec.latitudeDeg);
+  const ideal = Math.ceil(Math.sqrt((spec.moduleCount * pitch) / (spec.moduleWidthM + MODULE_GAP_M)));
+  const perRow = Math.max(1, Math.min(MAX_ARRAY_MODULES_PER_ROW, spec.moduleCount, ideal));
+  const rows = Math.ceil(spec.moduleCount / perRow);
+  return { perRow, rows, widthM: perRow * (spec.moduleWidthM + MODULE_GAP_M), depthM: (rows - 1) * pitch + depth };
 }
 
 /** The facing direction of the modules (horizontal, east/north metres): azimuth 0 faces south. */
@@ -179,7 +210,7 @@ function buildArray(input: Roof3dInput, centre: Vec2, room: { widthM: number; fi
   const heightGain = length * Math.sin(rad(tiltDeg));
   const pitch = depth + computeRowSpacingM(tiltDeg, length, input.latitudeDeg);
 
-  const idealPerRow = Math.ceil(Math.sqrt((moduleCount * pitch) / (width + MODULE_GAP_M)));
+  const idealPerRow = compactArrayFootprint(input).perRow;
   const fitPerRow = room ? Math.floor(room.widthM / (width + MODULE_GAP_M)) : idealPerRow;
   const wantedPerRow = room && !room.fill ? Math.min(idealPerRow, fitPerRow) : fitPerRow;
   const perRow = Math.max(1, Math.min(MAX_ARRAY_MODULES_PER_ROW, moduleCount, fitPerRow > 0 ? wantedPerRow : idealPerRow));
@@ -273,7 +304,10 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
     centre = { e: footprint.reduce((s, p) => s + p.e, 0) / footprint.length, n: footprint.reduce((s, p) => s + p.n, 0) / footprint.length };
     availableWidth = Math.max(...footprint.map((p) => (p.e - centre.e) * across.e + (p.n - centre.n) * across.n)) * 2;
   } else if (roof) {
-    const fitted = fitOnRoof(roof, centre, facing, across, input.moduleLengthM * Math.cos(rad(input.tiltDeg)));
+    const rowDepthM = input.moduleLengthM * Math.cos(rad(input.tiltDeg));
+    const chosen = input.placement ? toMetres(input.placement) : null;
+    // Claude's choice when it is on the roof; else the middle of the roof through the field point.
+    const fitted = chosen && isInsidePolygon(chosen, roof) ? { centre: chosen, widthM: roomAcross(roof, chosen, facing, across, rowDepthM) } : fitOnRoof(roof, centre, facing, across, rowDepthM);
     centre = fitted.centre;
     availableWidth = fitted.widthM;
   }

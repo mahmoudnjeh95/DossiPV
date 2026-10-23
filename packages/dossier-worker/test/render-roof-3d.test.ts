@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encodeJpegBitmap } from '../src/image-enhance';
-import { fitOnRoof, renderRoof3dView, type Roof3dInput } from '../src/render-roof-3d';
+import { compactArrayFootprint, fitOnRoof, renderRoof3dView, roomAcross, type Roof3dInput } from '../src/render-roof-3d';
 import { extractPdfContent, everythingOnPage, pageText, pdfFontNames, TIMES_FONTS } from './helpers/pdf-content';
 
 function photo(size: number): Buffer {
@@ -130,6 +130,17 @@ describe('renderRoof3dView on a drawn roof', { timeout: 20_000 }, () => {
     expect(pageText(page!).replace(/\s+/g, ' ')).toContain('2 rangées (6 + 3 modules)');
   });
 
+  it("puts the array where Claude chose, narrowed to the room the roof leaves there", async () => {
+    // 6 px (0,72 m) from the roof's west edge: a row there holds a single module.
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { x: 166, y: 170 } }));
+    expect(pageText(page!).replace(/\s+/g, ' ')).toContain('8 rangées de 1 module');
+  });
+
+  it("ignores a placement off the roof", async () => {
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 8, roofOutline, placement: { x: 20, y: 20 } }));
+    expect(pageText(page!).replace(/\s+/g, ' ')).toContain('2 rangées de 4 modules');
+  });
+
   it('says nothing of a roof when none was drawn', async () => {
     const [page] = await extractPdfContent(await renderRoof3dView(input));
     expect(pageText(page!)).not.toContain('toiture :');
@@ -184,5 +195,31 @@ describe('fitOnRoof', () => {
     ];
     expect(fitOnRoof(lShape, { e: 5, n: 1 }, facing, across).widthM).toBeCloseTo(10, 9);
     expect(fitOnRoof(lShape, { e: 1, n: 6 }, facing, across).widthM).toBeCloseTo(2, 9);
+  });
+});
+
+describe('roomAcross', () => {
+  const facing = { e: 0, n: -1 };
+  const across = { e: 1, n: 0 };
+  const roof = [
+    { e: 0, n: 0 },
+    { e: 10, n: 0 },
+    { e: 10, n: 6 },
+    { e: 0, n: 6 },
+  ];
+
+  it('is twice the distance to the nearer side, and null off the roof', () => {
+    expect(roomAcross(roof, { e: 5, n: 3 }, facing, across)).toBeCloseTo(10, 9);
+    expect(roomAcross(roof, { e: 2, n: 3 }, facing, across)).toBeCloseTo(4, 9);
+    expect(roomAcross(roof, { e: 20, n: 3 }, facing, across)).toBeNull();
+  });
+});
+
+describe('compactArrayFootprint', () => {
+  it('lays 12 modules out about as deep as wide, rows spaced for the winter sun', () => {
+    const footprint = compactArrayFootprint({ moduleCount: 12, moduleLengthM: 2.094, moduleWidthM: 1.038, tiltDeg: 30, latitudeDeg: 34.79 });
+    expect(footprint).toMatchObject({ perRow: 7, rows: 2 });
+    expect(footprint.widthM).toBeCloseTo(7 * 1.058, 6);
+    expect(footprint.depthM).toBeGreaterThan(2.094 * Math.cos(Math.PI / 6));
   });
 });

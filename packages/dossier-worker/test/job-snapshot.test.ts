@@ -119,6 +119,17 @@ describe('parseJobSnapshot', () => {
     expect(malformed!.site?.roofOutline).toBeNull();
   });
 
+  it('reads the imported satellite photo and its bounds, and drops bounds that are not a rectangle', () => {
+    const siteImageBounds = { north: 36.802, south: 36.798, east: 10.202, west: 10.198 };
+    const aligned = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImageBounds } });
+    const upsideDown = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2, siteImageFileId: 'photo-1', siteImageBounds: { ...siteImageBounds, north: 36.79 } } });
+    const older = parseJobSnapshot({ ...validSnapshot, site: { gpsLat: 36.8, gpsLon: 10.2 } });
+
+    expect(aligned!.site).toMatchObject({ siteImageFileId: 'photo-1', siteImageBounds });
+    expect(upsideDown!.site?.siteImageBounds).toBeNull();
+    expect(older!.site).toMatchObject({ siteImageFileId: null, siteImageBounds: null });
+  });
+
   it('reads tilt and installation point from the site row', () => {
     const parsed = parseJobSnapshot({
       ...validSnapshot,

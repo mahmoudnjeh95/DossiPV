@@ -105,6 +105,19 @@ export function planImplantationView(points: LatLon[], options: ImplantationView
   throw new Error('unreachable');
 }
 
+/**
+ * The view an installer's own photo shows, from where it was aligned on the map: its west and
+ * east edges and its pixel width fix the (fractional) zoom, its north-west corner the origin. Its
+ * height follows from the photo's own proportions, kept on the map while it was aligned.
+ */
+export function viewFromBounds(bounds: { north: number; west: number; east: number }, widthPx: number, heightPx: number): SatelliteView {
+  const west = latLonToWorldPixel({ lat: bounds.north, lon: bounds.west }, 0);
+  const east = latLonToWorldPixel({ lat: bounds.north, lon: bounds.east }, 0);
+  const zoom = Math.log2(widthPx / (east.x - west.x));
+  const origin = latLonToWorldPixel({ lat: bounds.north, lon: bounds.west }, zoom);
+  return { zoom, originX: origin.x, originY: origin.y, widthPx, heightPx };
+}
+
 /** Page 38's view: a neighbourhood-scale square (≈ 700 m across at zoom 17) centred on the site. */
 export function planSituationView(site: LatLon, zoom = 17, sizePx = 768): SatelliteView {
   return squareViewAround(zoom, latLonToWorldPixel(site, zoom), sizePx);
@@ -119,10 +132,14 @@ export type ImageryProvider = 'mapbox' | 'esri';
  */
 export const MAX_NATIVE_ZOOM: Record<ImageryProvider, number> = { esri: 18, mapbox: 19 };
 
-/** Credit printed under the imagery on plan pages; Mapbox's terms require it. */
-export const IMAGERY_ATTRIBUTION: Record<ImageryProvider, string> = {
+/** Where a plan's photo comes from: an imagery provider, or the installer's own capture. */
+export type PlanImageSource = ImageryProvider | 'installer';
+
+/** Credit printed under the imagery on plan pages; Mapbox's terms require it, Google's too. */
+export const IMAGERY_ATTRIBUTION: Record<PlanImageSource, string> = {
   esri: 'Imagerie : Esri, Maxar, Earthstar Geographics et la communauté des utilisateurs SIG',
   mapbox: 'Imagerie : © Mapbox © Maxar © OpenStreetMap',
+  installer: "Imagerie : capture satellite fournie par l'installateur (Google Maps, © Google)",
 };
 
 /** Warning recorded on the job when Mapbox rejects the token (it never contains the token). */

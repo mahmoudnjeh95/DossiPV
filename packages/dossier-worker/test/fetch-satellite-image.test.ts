@@ -18,6 +18,7 @@ import {
   metersPerPixel,
   isInsideImage,
   TILE_SIZE,
+  viewFromBounds,
   type SatelliteView,
 } from '../src/fetch-satellite-image';
 
@@ -364,5 +365,41 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
     await fetchSatelliteImage({ zoom: 18, originX: 0, originY: 0, widthPx: 256, heightPx: 256 }, 'esri');
 
     expect(requestUrl(fetchSpy.mock.calls[0]![0])).toContain('server.arcgisonline.com');
+  });
+});
+
+describe('viewFromBounds', () => {
+  /** World pixel back to lat/lon (inverse Web Mercator). */
+  function toLatLon(x: number, y: number, zoom: number): { lat: number; lon: number } {
+    const scale = TILE_SIZE * 2 ** zoom;
+    const n = Math.PI - (2 * Math.PI * y) / scale;
+    return { lat: (180 / Math.PI) * Math.atan(Math.sinh(n)), lon: (x / scale) * 360 - 180 };
+  }
+  const site = { lat: 34.795, lon: 10.799 };
+  const tiles = planImplantationView([site], { maxZoom: 19, minSizePx: 600, maxSizePx: 600 });
+  const northWest = toLatLon(tiles.originX, tiles.originY, tiles.zoom);
+  const southEast = toLatLon(tiles.originX + tiles.widthPx, tiles.originY + tiles.heightPx, tiles.zoom);
+  const bounds = { north: northWest.lat, west: northWest.lon, east: southEast.lon };
+
+  it('rebuilds the view a photo shows from its bounds and its pixel size', () => {
+    const view = viewFromBounds(bounds, tiles.widthPx, tiles.heightPx);
+
+    expect(view.zoom).toBeCloseTo(tiles.zoom, 9);
+    expect(view.originX).toBeCloseTo(tiles.originX, 3);
+    expect(view.originY).toBeCloseTo(tiles.originY, 3);
+    expect(projectToImage(view, site).x).toBeCloseTo(projectToImage(tiles, site).x, 3);
+    expect(projectToImage(view, site).y).toBeCloseTo(projectToImage(tiles, site).y, 3);
+  });
+
+  it('scales with a photo of any pixel size: a fractional zoom, the same ground', () => {
+    const view = viewFromBounds(bounds, 1000, 1000);
+
+    expect(view.zoom).toBeCloseTo(tiles.zoom + Math.log2(1000 / 600), 9);
+    expect(projectToImage(view, site).x).toBeCloseTo((projectToImage(tiles, site).x * 1000) / 600, 3);
+    expect(metersPerPixel(view, site.lat)).toBeCloseTo((metersPerPixel(tiles, site.lat) * 600) / 1000, 9);
+  });
+
+  it('credits the installer for an imported photo', () => {
+    expect(IMAGERY_ATTRIBUTION.installer).toContain('Google');
   });
 });

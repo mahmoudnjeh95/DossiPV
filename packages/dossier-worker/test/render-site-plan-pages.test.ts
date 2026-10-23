@@ -398,6 +398,14 @@ describe('renderSitePlanPages — imagery attribution per provider', () => {
     }
   });
 
+  it("credits the installer's own capture (Google Maps) on page 37 only", async () => {
+    const data = planData({ image: { buffer: solidJpeg(IMAGE_PX, IMAGE_PX), widthPx: IMAGE_PX, heightPx: IMAGE_PX, metersPerPixel: 0.25, provider: 'installer' } });
+    const [page37, page38] = await render(data);
+
+    expect(flat(page37!)).toContain("Imagerie : capture satellite fournie par l'installateur (Google Maps, © Google)");
+    expect(flat(page38!)).not.toContain("fournie par l'installateur");
+  });
+
   it('keeps the Esri credit when no provider is given', async () => {
     const [page37] = await render(planData());
 

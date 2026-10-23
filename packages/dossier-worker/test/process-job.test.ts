@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   renderDcBoxDiagram: vi.fn(),
   renderAcBoxDiagram: vi.fn(),
   generatePage37Layout: vi.fn(),
+  generateRoofPlacement: vi.fn(),
   fetchSatelliteImage: vi.fn(),
   renderRoof3dView: vi.fn(),
   renderSitePlanPages: vi.fn(),
@@ -96,13 +97,20 @@ vi.mock('../src/render-drawings', () => ({
   renderDcBoxDiagram: mocks.renderDcBoxDiagram,
   renderAcBoxDiagram: mocks.renderAcBoxDiagram,
 }));
-vi.mock('../src/render-roof-3d', () => ({ renderRoof3dView: mocks.renderRoof3dView }));
+vi.mock('../src/render-roof-3d', async () => ({
+  ...(await vi.importActual<typeof import('../src/render-roof-3d')>('../src/render-roof-3d')),
+  renderRoof3dView: mocks.renderRoof3dView,
+}));
 vi.mock('../src/render-production-report', () => ({ renderProductionReport: mocks.renderProductionReport }));
 // Only the network/API calls are mocked; the pure view-planning/projection helpers and the error
 // classes stay real, so the test exercises the real geometry process-job hands to the renderer.
 vi.mock('../src/generate-page-37-layout', async () => ({
   ...(await vi.importActual<typeof import('../src/generate-page-37-layout')>('../src/generate-page-37-layout')),
   generatePage37Layout: mocks.generatePage37Layout,
+}));
+vi.mock('../src/generate-roof-placement', async () => ({
+  ...(await vi.importActual<typeof import('../src/generate-roof-placement')>('../src/generate-roof-placement')),
+  generateRoofPlacement: mocks.generateRoofPlacement,
 }));
 vi.mock('../src/fetch-satellite-image', async () => ({
   ...(await vi.importActual<typeof import('../src/fetch-satellite-image')>('../src/fetch-satellite-image')),
@@ -121,9 +129,10 @@ vi.mock('fs/promises', async () => {
 
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM, polygonAreaM2 } from '@dossipv/engine';
-import { processJob, IMPLANTATION_VIEW_OPTIONS } from '../src/process-job';
+import { processJob, IMPLANTATION_VIEW_OPTIONS, INSTALLER_PHOTO_NOT_COVERING_WARNING, INSTALLER_PHOTO_UNREADABLE_WARNING } from '../src/process-job';
+import { encodeJpegBitmap } from '../src/image-enhance';
 import type { ProductionSimulation } from '../src/run-simulation';
-import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
+import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, viewFromBounds, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
 import type { SitePlanData } from '../src/render-site-plan-pages';
 import { Page37LayoutOutOfBoundsError } from '../src/generate-page-37-layout';
 import { DRAFT_INSERTED_PAGE_COUNT } from '../src/draft-watermark';
@@ -299,6 +308,7 @@ beforeEach(async () => {
   mocks.fetchSatelliteImage.mockResolvedValue(SATELLITE_TILE);
   mocks.renderRoof3dView.mockResolvedValue(roof3dPdf);
   mocks.generatePage37Layout.mockResolvedValue(PAGE_37_LAYOUT);
+  mocks.generateRoofPlacement.mockResolvedValue(ROOF_PLACEMENT);
   mocks.renderSitePlanPages.mockResolvedValue(sitePlanPdf);
   mocks.renderTableOfContents.mockResolvedValue(TOC_PDF);
   mocks.saveFile.mockResolvedValue({ storageKey: 'dossier/fake.bin' });
@@ -609,6 +619,139 @@ describe('processJob — missing annex bytes on disk', () => {
 function sitePlanInput(): { planData: SitePlanData | null } {
   return mocks.renderSitePlanPages.mock.calls[0]![0] as { planData: SitePlanData | null };
 }
+
+const ROOF_PLACEMENT = { centre: { x: 120, y: 120 } };
+const DRAWN_ROOF = [
+  { lat: 36.8, lon: 10.2 },
+  { lat: 36.8, lon: 10.2009 },
+  { lat: 36.8006, lon: 10.2009 },
+  { lat: 36.8006, lon: 10.2 },
+];
+
+function warningsOfTheJob(): string[] {
+  return (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;
+}
+
+describe('processJob — where the array stands on a drawn roof (3D view)', () => {
+  const standardWithRoof = { ...validSnapshot, site: { ...validSnapshot.site, roofOutline: DRAWN_ROOF } };
+
+  it('asks Claude where the array goes when there is no AI layout, and hands its choice to the 3D view', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: standardWithRoof });
+
+    await processJob('job-1');
+
+    const field = { lat: 36.8, lon: 10.2 };
+    const view = planImplantationView([field, ...DRAWN_ROOF], IMPLANTATION_VIEW_OPTIONS);
+    const aNumber = expect.any(Number) as unknown;
+    expect(mocks.generateRoofPlacement).toHaveBeenCalledWith(
+      expect.objectContaining({
+        satelliteImage: SATELLITE_TILE,
+        imageWidthPx: view.widthPx,
+        imageHeightPx: view.heightPx,
+        roofOutline: DRAWN_ROOF.map((corner) => projectToImage(view, corner)),
+        field: projectToImage(view, field),
+        azimuthDeg: 0,
+        tiltDeg: 30,
+        array: expect.objectContaining({ moduleCount: aNumber, perRow: aNumber, rows: aNumber, widthM: aNumber, depthM: aNumber }) as unknown,
+      }),
+      expect.anything(),
+    );
+    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ placement: ROOF_PLACEMENT.centre }));
+    expect(findSucceededUpdate()).toBeDefined();
+  });
+
+  it('keeps going without a placement when Claude cannot answer', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: standardWithRoof });
+    mocks.generateRoofPlacement.mockRejectedValue(new Error('Claude declined the roof placement request'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(mocks.renderRoof3dView).toHaveBeenCalledWith(expect.objectContaining({ placement: null }));
+    expect(findSucceededUpdate()).toBeDefined();
+    warn.mockRestore();
+  });
+
+  it('does not ask without a drawn roof, nor when the Premium layout already places the panels', async () => {
+    await processJob('job-1');
+    expect(mocks.generateRoofPlacement).not.toHaveBeenCalled();
+
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...premiumSnapshot, site: { ...premiumSnapshot.site, roofOutline: DRAWN_ROOF } } });
+    await processJob('job-1');
+    expect(mocks.generateRoofPlacement).not.toHaveBeenCalled();
+  });
+});
+
+describe("processJob — the installer's own satellite photo (page 37)", () => {
+  const field = { lat: 36.8, lon: 10.2 };
+  const technicalRoom = { lat: 36.801, lon: 10.201 };
+  const meter = { lat: 36.799, lon: 10.199 };
+  const bounds = { north: 36.802, south: 36.798, west: 10.198, east: 10.202 };
+  // 1 200 x 1 000 px: page 37 reasons on it scaled to 1 024 px wide.
+  const photo = encodeJpegBitmap({ width: 1200, height: 1000, data: new Uint8Array(1200 * 1000 * 4).fill(200) }, 80);
+
+  function withPhoto(siteImageBounds: unknown, fileFound = true): void {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({
+      id: 'job-1',
+      projectId: 'project-1',
+      inputSnapshot: { ...premiumSnapshot, site: { ...premiumSnapshot.site, siteImageFileId: 'photo-1', siteImageBounds } },
+    });
+    mocks.fileFindUnique.mockImplementation(({ where }: { where: { id: string } }) =>
+      Promise.resolve(where.id === 'photo-1' && fileFound ? { id: 'photo-1', storageKey: 'photo.jpg', mimeType: 'jpeg' } : null),
+    );
+    mocks.getFilePath.mockImplementation((storageKey: string) => `/storage/${storageKey}`);
+    mocks.readFile.mockImplementation((path: string) => Promise.resolve(path === '/storage/photo.jpg' ? photo : Buffer.from('template bytes')));
+  }
+
+  it('draws page 37 on the photo, in the view its bounds define, and fetches only page 38', async () => {
+    withPhoto(bounds);
+
+    await processJob('job-1');
+
+    const view = viewFromBounds(bounds, 1024, 853);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledWith(planSituationView(field));
+    const page37 = sitePlanInput().planData!.page37;
+    expect(page37.image).toMatchObject({ widthPx: 1024, heightPx: 853, provider: 'installer' });
+    expect(page37.image.metersPerPixel).toBeCloseTo(metersPerPixel(view, field.lat), 9);
+    expect(page37.points.technicalRoom).toEqual(projectToImage(view, technicalRoom));
+    expect(page37.points.meter).toEqual(projectToImage(view, meter));
+    expect(sitePlanInput().planData!.page38.image.provider).not.toBe('installer');
+    expect(mocks.generatePage37Layout).toHaveBeenCalledWith(expect.objectContaining({ imageWidthPx: 1024, imageHeightPx: 853 }), expect.anything());
+    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+  });
+
+  it('keeps the default imagery, and says so, when the photo misses a point', async () => {
+    withPhoto({ ...bounds, south: 36.7995 }); // the meter (36.799) falls off its bottom edge
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(sitePlanInput().planData!.page37.image.provider).not.toBe('installer');
+    expect(warningsOfTheJob()).toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+  });
+
+  it('keeps the default imagery, and says so, when the photo cannot be read', async () => {
+    withPhoto(bounds, false);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(warningsOfTheJob()).toContain(INSTALLER_PHOTO_UNREADABLE_WARNING);
+    warn.mockRestore();
+  });
+
+  it('ignores a photo that was imported but never aligned', async () => {
+    withPhoto(null);
+
+    await processJob('job-1');
+
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
+    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_UNREADABLE_WARNING);
+    expect(warningsOfTheJob()).not.toContain(INSTALLER_PHOTO_NOT_COVERING_WARNING);
+  });
+});
 
 describe('processJob — site plans (pages 37-38)', () => {
   it('still calls the AI layout for PREMIUM', async () => {

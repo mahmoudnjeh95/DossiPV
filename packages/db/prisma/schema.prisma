@@ -14,6 +14,7 @@ model File {
   createdAt  DateTime @default(now())
 
   companyLogoFor           Company[] @relation("CompanyLogo")
+  siteImageFor             ProjectSite[] @relation("SiteImage")
   companyAnmeCertificateFor Company[] @relation("CompanyAnmeCertificate")
 
   pvModuleDatasheetFor      PvModule[]   @relation("PvModuleDatasheet")
@@ -682,6 +683,12 @@ model ProjectSite {
   earthPitPointLon         Float?
   /// The roof contour drawn on the Emplacements map: [{ lat, lon }, …], at least 3 corners.
   roofOutline              Json?
+  /// The installer's own satellite photo of the site (e.g. a Google Maps capture), stored as JPEG:
+  /// the implantation plan and the 3D view use it instead of Mapbox/Esri once it is aligned.
+  siteImageFileId          String?
+  siteImage                File?   @relation("SiteImage", fields: [siteImageFileId], references: [id])
+  /// Where that photo lies on the map, aligned by the installer: { north, south, east, west } in degrees.
+  siteImageBounds          Json?
   equipmentLocation        String?
 
   @@map("project_site")

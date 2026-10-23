@@ -1,15 +1,16 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { MapContainer, Marker, Polygon, Polyline, useMapEvents } from 'react-leaflet';
 import type { DivIcon, LeafletEvent, LeafletMouseEvent, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ACTIVE_MAP_PROVIDER } from '../map/esri-provider';
 import { SiteTileLayer } from '../map/site-tile-layer';
-import { POINT_STYLES, ROOF_OUTLINE_STYLE, pointIcon, roofCornerIcon, type PointKind } from '../../../../../components/map/point-markers';
-import { computeRunLengthsM, isSimplePolygon, polygonAreaM2, polygonCentroid } from '@dossipv/engine';
+import { POINT_STYLES, ROOF_OUTLINE_STYLE, pointIcon, pointPinSvg, roofCornerIcon, type PointKind } from '../../../../../components/map/point-markers';
+import { computeRunLengthsM, isInsideBounds, isSimplePolygon, polygonAreaM2, polygonCentroid, type SiteImageBounds } from '@dossipv/engine';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
-import { saveLocationsAction } from './actions';
+import { saveLocationsAction, uploadSiteImageAction } from './actions';
+import { SiteImageOverlay, type SiteImageState } from './site-image-overlay';
 
 type Point = { lat: number; lon: number };
 type Points = Record<PointKind, Point | null>;
@@ -30,6 +31,8 @@ export interface LocationsMapProps {
   initial: Points;
   /** The saved roof contour; null when none was drawn. */
   initialRoofOutline: Point[] | null;
+  /** The imported satellite photo and where it was aligned (null bounds: not aligned yet). */
+  initialSiteImage: { url: string; bounds: SiteImageBounds | null } | null;
   initialFloors: number | null;
   initialBuildingType: BuildingTypeValue | null;
 }
@@ -41,13 +44,9 @@ function ClickHandler({ onClick }: { onClick: (point: Point) => void }): null {
   return null;
 }
 
-function ColourDot({ color }: { color: string }): React.JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      style={{ width: 14, height: 14, borderRadius: '50%', background: color, border: '2px solid #fff', boxShadow: '0 0 0 1px rgba(0,0,0,.4)', display: 'inline-block' }}
-    />
-  );
+/** The point's map pin, small, for its button and the legend. */
+function PinSwatch({ kind }: { kind: PointKind }): React.JSX.Element {
+  return <span aria-hidden="true" style={{ display: 'inline-block' }} dangerouslySetInnerHTML={{ __html: pointPinSvg(kind, 20) }} />;
 }
 
 function RoofSwatch(): React.JSX.Element {
@@ -59,11 +58,15 @@ function RoofSwatch(): React.JSX.Element {
   );
 }
 
-export function LocationsMap({ projectId, center, initial, initialRoofOutline, initialFloors, initialBuildingType }: LocationsMapProps): React.JSX.Element {
+export function LocationsMap({ projectId, center, initial, initialRoofOutline, initialSiteImage, initialFloors, initialBuildingType }: LocationsMapProps): React.JSX.Element {
   const [points, setPoints] = useState<Points>(initial);
   const [active, setActive] = useState<PointKind | null>(null);
   const [roof, setRoof] = useState<Point[]>(initialRoofOutline ?? []);
   const [drawingRoof, setDrawingRoof] = useState(false);
+  const [siteImage, setSiteImage] = useState<SiteImageState | null>(initialSiteImage ? { ...initialSiteImage, aspect: null } : null);
+  const [photoOpacity, setPhotoOpacity] = useState(0.85);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [floors, setFloors] = useState<number | null>(initialFloors);
   const [buildingType, setBuildingType] = useState<BuildingTypeValue | null>(initialBuildingType);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,22 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
     [],
   );
   const cornerIcons = useMemo(() => ({ first: roofCornerIcon(true), other: roofCornerIcon(false) }), []);
+  const photoUrl = siteImage?.url ?? null;
+  const photoAspectKnown = siteImage?.aspect !== null && siteImage?.aspect !== undefined;
+  const setPhotoBounds = useCallback((bounds: SiteImageBounds) => setSiteImage((prev) => (prev ? { ...prev, bounds } : prev)), []);
+
+  // A photo saved earlier: read its proportions before laying it on the map.
+  useEffect(() => {
+    if (!photoUrl || photoAspectKnown) return;
+    const img = new Image();
+    img.onload = (): void => setSiteImage((prev) => (prev && prev.url === photoUrl ? { ...prev, aspect: img.naturalHeight / img.naturalWidth } : prev));
+    img.src = photoUrl;
+  }, [photoUrl, photoAspectKnown]);
+
+  // The dossier only uses the photo when it shows every point and the whole roof.
+  const photoBounds = siteImage?.bounds ?? null;
+  const photoMissesSomething =
+    photoBounds !== null && [...KINDS.map((kind) => points[kind]), ...roof].some((p) => p !== null && !isInsideBounds(photoBounds, p));
 
   // One or two corners are a contour in progress: it must be finished or cleared before saving.
   const roofIncomplete = roof.length > 0 && roof.length < 3;
@@ -117,10 +136,29 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
     setRoof((prev) => prev.map((corner, i) => (i === index ? point : corner)));
   }
 
+  async function importPhoto(file: File): Promise<void> {
+    setPhotoError(null);
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const result = await uploadSiteImageAction(projectId, form);
+      if (result.error || !result.image) {
+        setPhotoError(result.error ?? "La photo n'a pas pu être importée.");
+        return;
+      }
+      setSiteImage({ url: result.image.url, aspect: result.image.heightPx / result.image.widthPx, bounds: null });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function submit(): void {
     setError(null);
+    // Removed: cleared; aligned: its bounds; imported but not aligned yet: left as it is.
+    const photo = siteImage === null ? { siteImage: null } : siteImage.bounds ? { siteImage: { bounds: siteImage.bounds } } : {};
     startTransition(async () => {
-      const result = await saveLocationsAction(projectId, { ...points, floors, buildingType, roofOutline: roof.length >= 3 ? roof : null });
+      const result = await saveLocationsAction(projectId, { ...points, floors, buildingType, roofOutline: roof.length >= 3 ? roof : null, ...photo });
       if (result?.error) setError(result.error);
     });
   }
@@ -129,7 +167,7 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
     <>
       <div className="actions" style={{ marginBottom: 12 }}>
         {KINDS.map((kind) => {
-          const { label, color } = POINT_STYLES[kind];
+          const { label } = POINT_STYLES[kind];
           return (
             <button
               key={kind}
@@ -141,13 +179,62 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
               }}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, outline: active === kind ? '2px solid currentColor' : undefined }}
             >
-              <ColourDot color={color} />
+              <PinSwatch kind={kind} />
               {label}
               {kind === 'earthPit' ? (buildingType === null ? '' : buildingType === 'HOUSE' ? ' (obligatoire)' : ' (facultatif : sinon terre du bâtiment)') : ''} — {points[kind] ? '✓ placé' : 'à placer'}
             </button>
           );
         })}
       </div>
+      <fieldset style={{ border: 0, padding: 0, margin: '0 0 12px' }}>
+        <legend>Photo satellite du site (recommandé)</legend>
+        <p className="muted" style={{ margin: '0 0 6px' }}>
+          Pour un plan d&apos;implantation plus net : dans Google Maps, passez en vue Satellite (relief 3D désactivé), zoomez au
+          plus près du toit, faites une capture d&apos;écran et importez-la. Calez-la ensuite sur la carte : ✥ la déplace, ⤡ change
+          sa taille, la transparence aide à superposer les toits. Sans photo, le dossier utilise l&apos;imagerie Mapbox.
+        </p>
+        <div className="actions">
+          <label className="button secondary" aria-disabled={uploading}>
+            {uploading ? 'Import…' : siteImage ? 'Remplacer la photo' : 'Importer une capture'}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              hidden
+              disabled={uploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) void importPhoto(file);
+              }}
+            />
+          </label>
+          {siteImage && (
+            <>
+              <button type="button" onClick={() => setSiteImage((prev) => (prev ? { ...prev, bounds: null } : prev))}>
+                Replacer au centre de la carte
+              </button>
+              <button type="button" onClick={() => setSiteImage(null)}>
+                Retirer la photo
+              </button>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Transparence
+                <input type="range" min={0.2} max={1} step={0.05} value={photoOpacity} onChange={(event) => setPhotoOpacity(Number(event.target.value))} />
+              </label>
+            </>
+          )}
+        </div>
+        {photoError && (
+          <p role="alert" style={{ margin: '4px 0 0', color: '#D93025' }}>
+            {photoError}
+          </p>
+        )}
+        {photoMissesSomething && (
+          <p role="alert" style={{ margin: '4px 0 0', color: '#B35C00' }}>
+            La photo ne couvre pas tous les points et tout le toit : le dossier gardera l&apos;imagerie Mapbox tant qu&apos;elle ne
+            les montre pas tous.
+          </p>
+        )}
+      </fieldset>
       <fieldset style={{ border: 0, padding: 0, margin: '0 0 12px' }}>
         <legend>Contour du toit (facultatif)</legend>
         <div className="actions">
@@ -239,6 +326,7 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
       </div>
       <MapContainer center={[center.lat, center.lon]} zoom={18} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} style={{ height: '500px', width: '100%' }}>
         <SiteTileLayer />
+        {siteImage && <SiteImageOverlay image={siteImage} opacity={photoOpacity} onBounds={setPhotoBounds} />}
         <ClickHandler
           onClick={(point) => {
             if (drawingRoof) {
@@ -295,7 +383,7 @@ export function LocationsMap({ projectId, center, initial, initialRoofOutline, i
       <ul className="actions" style={{ listStyle: 'none', padding: 0, margin: '8px 0 16px' }}>
         {KINDS.map((kind) => (
           <li key={kind} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <ColourDot color={POINT_STYLES[kind].color} />
+            <PinSwatch kind={kind} />
             {POINT_STYLES[kind].label}
           </li>
         ))}
