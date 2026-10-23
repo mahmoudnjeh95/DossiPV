@@ -9,7 +9,7 @@ import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input'
 import { storeAnnexFiles } from '../../../../../lib/annex-upload';
 import { CLIENT_NAME_PLACEHOLDER } from '../../../../../lib/client-identity';
 import { FormReader } from '../../../../../lib/form-reader';
-import { computeProjectProposals } from '../../../../../lib/project-proposals';
+import { computeProjectProposals, type EquipmentSelection } from '../../../../../lib/project-proposals';
 import { structureDataFor, EARTHING_FIXED_VALUES } from '../../../../../lib/section-defaults';
 
 const NOT_FOUND = 'Projet introuvable.';
@@ -22,7 +22,11 @@ const DEFAULT_EARTH_RESISTANCE_TARGET_OHM = 25;
  * library or the client data may have changed since the page was shown), and if the chosen key is
  * still among them write every technical section in one transaction, then go to the map step.
  */
-export async function applyProposalAction(projectId: string, proposalKey: string): Promise<{ error: string } | undefined> {
+export async function applyProposalAction(
+  projectId: string,
+  proposalKey: string,
+  selection: EquipmentSelection = {},
+): Promise<{ error: string } | undefined> {
   let owned: Awaited<ReturnType<typeof requireOwnedProject>>;
   try {
     owned = await requireOwnedProject(projectId);
@@ -37,7 +41,7 @@ export async function applyProposalAction(projectId: string, proposalKey: string
   });
   if (!project) return { error: NOT_FOUND };
 
-  const computed = await computeProjectProposals(project, new Date());
+  const computed = await computeProjectProposals(project, new Date(), selection);
   if (!computed.ok && computed.blockedReasons.length > 0) return { error: computed.blockedReasons.join(' ') };
   const proposal = computed.ok ? computed.result.proposals.find((p) => p.key === proposalKey) : undefined;
   if (!computed.ok || !proposal) return { error: PROPOSALS_CHANGED };

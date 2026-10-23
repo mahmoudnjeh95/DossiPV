@@ -9,8 +9,26 @@ const LAMBDA_OHM_PER_M = 0.00008;
 const DEFAULT_DC_LENGTH_M = 15;
 const DEFAULT_AC_LENGTH_M = 10;
 
+/** The equipment the installer fixed (by library id) before recomputing; null or absent leaves the choice to the sizing. */
+export interface EquipmentSelection {
+  moduleId?: string | null;
+  inverterId?: string | null;
+}
+
+/** A library item the installer may pick, as shown in the selector. */
+export interface EquipmentChoice {
+  id: string;
+  label: string;
+}
+
 export type ProjectProposalsResult =
-  | { ok: true; result: ProposeResult; context: SizingContext; yieldWarning: string | null }
+  | {
+      ok: true;
+      result: ProposeResult;
+      context: SizingContext;
+      yieldWarning: string | null;
+      choices: { modules: EquipmentChoice[]; inverters: EquipmentChoice[] };
+    }
   | { ok: false; missing: string[]; missingLibraryKinds: string[]; blockedReasons: string[] };
 
 const NOT_SINGLE_PHASE = 'Le site doit être monophasé (abonné BT monophasé) pour les propositions automatiques.';
@@ -19,12 +37,17 @@ const LIGHTNING_ROD =
 
 /**
  * Sizes up to three single-phase installations for a project from the company's library.
+ * The installer may fix the panel and/or the inverter (`selection`): only that equipment is then sized, so the figures follow it.
  * Nothing is sized while the client's need or the site is unknown (`missing`, French labels),
  * while the library lacks a kind of equipment (`missingLibraryKinds`), or while the site is one the
  * sizing does not model (`blockedReasons`: the candidates are validated as a single-phase site
  * without a lightning rod, so any other site could fail C12/C19 once the proposal is applied).
  */
-export async function computeProjectProposals(project: ProjectForEngine, now: Date): Promise<ProjectProposalsResult> {
+export async function computeProjectProposals(
+  project: ProjectForEngine,
+  now: Date,
+  selection: EquipmentSelection = {},
+): Promise<ProjectProposalsResult> {
   const { site, company } = project;
   const annualConsumptionKWh = project.client?.annualConsumptionKWh ?? null;
   const subscribedPowerKVA = project.client?.subscribedPowerKVA ?? null;
@@ -72,5 +95,20 @@ export async function computeProjectProposals(project: ProjectForEngine, now: Da
     companyAccreditationValidTo: toIsoDate(company.anmeValidTo),
   };
 
-  return { ok: true, result: proposeInstallations(catalog, context), context, yieldWarning: specificYield.warning };
+  const choices = {
+    modules: catalog.modules.map((m) => ({ id: m.id, label: `${m.brand} ${m.model} (${m.pmaxW} W)` })),
+    inverters: catalog.inverters
+      .filter((i) => i.phases === 1)
+      .map((i) => ({ id: i.id, label: `${i.brand} ${i.model} (${i.pacW / 1000} kW)` })),
+  };
+  // An id no longer in the library (deleted since the page was shown) is ignored rather than blocking the sizing.
+  const modules = catalog.modules.filter((m) => !selection.moduleId || m.id === selection.moduleId);
+  const inverters = catalog.inverters.filter((i) => !selection.inverterId || i.id === selection.inverterId);
+  const narrowed = {
+    ...catalog,
+    modules: modules.length > 0 ? modules : catalog.modules,
+    inverters: inverters.length > 0 ? inverters : catalog.inverters,
+  };
+
+  return { ok: true, result: proposeInstallations(narrowed, context), context, yieldWarning: specificYield.warning, choices };
 }
