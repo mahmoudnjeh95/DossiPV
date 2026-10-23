@@ -19,7 +19,7 @@ async function createGoogleSession(key: string): Promise<string> {
   return ((await response.json()) as { session: string }).session;
 }
 
-export function SiteTileLayer() {
+export function SiteTileLayer(): React.JSX.Element {
   const [googleUrl, setGoogleUrl] = useState<string | null>(null);
 
   useEffect(() => {
