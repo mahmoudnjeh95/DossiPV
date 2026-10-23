@@ -21,14 +21,15 @@ export function PieceUploadForm({ projectId, piece, label }: PieceUploadFormProp
       <input
         type="file"
         name="file"
-        accept="image/jpeg,image/png,application/pdf"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
         required
         aria-label={`${label} : photo ou PDF`}
       />
       <button type="submit" className="small secondary" disabled={pending}>
         {pending ? 'Envoi…' : 'Ajouter la photo'}
       </button>
-      {state?.error && <p role="alert">{state.error}</p>}
+      {state?.error && <p role="alert" className="banner banner-danger">{state.error}</p>}
+      {state?.saved && <p role="status">Fichier enregistré ✓</p>}
     </form>
   );
 }

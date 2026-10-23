@@ -104,7 +104,7 @@ describe('uploadStegPieceAction', () => {
   it('stores the syndic authorization through the annex store, under its own field only', async () => {
     const file = pdf('syndic.pdf');
 
-    expect(await uploadStegPieceAction('p1', undefined, form('syndicAuthorization', file))).toBeUndefined();
+    expect(await uploadStegPieceAction('p1', undefined, form('syndicAuthorization', file))).toEqual({ saved: true });
 
     expect(m.mockStoreAnnexFiles).toHaveBeenCalledTimes(1);
     const [projectId, upload] = m.mockStoreAnnexFiles.mock.calls[0] as [string, FormData];
@@ -125,7 +125,7 @@ describe('uploadStegPieceAction', () => {
     m.mockStructureFindUnique.mockResolvedValue({ structureAttestationFileId: 'file-old' });
     m.mockFileFindUnique.mockResolvedValue({ id: 'file-old', storageKey: 'uploads/old.pdf' });
 
-    expect(await uploadStegPieceAction('p1', undefined, form('structureAttestation', pdf('attestation.pdf')))).toBeUndefined();
+    expect(await uploadStegPieceAction('p1', undefined, form('structureAttestation', pdf('attestation.pdf')))).toEqual({ saved: true });
 
     expect(m.mockStoreAnnexFiles).not.toHaveBeenCalled();
     expect(m.mockSaveFile).toHaveBeenCalledWith(expect.any(Buffer), 'attestation.pdf', 'pdf');
