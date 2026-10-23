@@ -62,7 +62,7 @@ function notifySystem(job: JobProgressView, succeeded: boolean, open: () => void
         : `La génération du dossier de ${job.clientName} a échoué.`,
       tag: `dossier-job-${job.id}`,
     });
-    notification.onclick = () => {
+    notification.onclick = (): void => {
       window.focus();
       open();
       notification.close();
@@ -197,7 +197,7 @@ export function JobWatcherProvider({ children }: { children: ReactNode }): React
       if (isJobActive(view.status) && !timerRef.current && !inFlightRef.current) {
         timerRef.current = setTimeout(() => void poll(), POLL_INTERVAL_MS);
       }
-      return () => {
+      return (): void => {
         const count = (watched.get(view.id) ?? 1) - 1;
         if (count > 0) watched.set(view.id, count);
         else watched.delete(view.id);
@@ -215,7 +215,7 @@ export function JobWatcherProvider({ children }: { children: ReactNode }): React
     };
     document.addEventListener('visibilitychange', onReturn);
     window.addEventListener('focus', onReturn);
-    return () => {
+    return (): void => {
       mountedRef.current = false;
       document.removeEventListener('visibilitychange', onReturn);
       window.removeEventListener('focus', onReturn);
@@ -269,7 +269,7 @@ export function useNow(intervalMs: number, running: boolean): number | null {
     setNow(Date.now());
     if (!running) return;
     const timer = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(timer);
+    return (): void => clearInterval(timer);
   }, [intervalMs, running]);
   return now;
 }
