@@ -240,7 +240,7 @@ describe('fetchSatelliteImage — Mapbox satellite-v9', () => {
   });
 
   it('exposes the native zoom ceilings and the attribution per provider', () => {
-    expect(MAX_NATIVE_ZOOM).toEqual({ esri: 18, mapbox: 20 });
+    expect(MAX_NATIVE_ZOOM).toEqual({ esri: 18, mapbox: 19 });
     expect(IMAGERY_ATTRIBUTION.mapbox).toContain('© Mapbox © Maxar © OpenStreetMap');
     expect(IMAGERY_ATTRIBUTION.esri).toContain('Esri');
   });

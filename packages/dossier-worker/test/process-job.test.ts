@@ -48,7 +48,6 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      dossierJob: { findUniqueOrThrow: mocks.dossierJobFindUniqueOrThrow, update: mocks.dossierJobUpdate },
       company: { findUnique: mocks.companyFindUnique },
       project: { findUnique: mocks.projectFindUnique },
       file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
@@ -595,7 +594,7 @@ describe('processJob — site plans (pages 37-38)', () => {
 
     expect(mocks.renderCoverPage).toHaveBeenCalled();
     expect(mocks.renderDrawingPages).toHaveBeenCalled();
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     expect(mocks.generatePage37Layout).toHaveBeenCalledTimes(1);
     expect(sitePlanInput().planData!.page37.layout).toEqual(PAGE_37_LAYOUT);
     expect(mocks.renderTableOfContents).toHaveBeenCalled();
@@ -605,7 +604,7 @@ describe('processJob — site plans (pages 37-38)', () => {
   it('fetches satellite plans for a STANDARD project without calling the AI layout', async () => {
     await processJob('job-1'); // validSnapshot's default tier is STANDARD
 
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
     const planData = sitePlanInput().planData!;
     expect(planData.page37.image.buffer).toBe(SATELLITE_TILE);
@@ -630,7 +629,7 @@ describe('processJob — site plans (pages 37-38)', () => {
     // No photo to reason on: the AI layout is skipped rather than failing the job.
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
     // The placeholder annex bytes are not PDFs, so their blank-page cleaning warns too: not counted here.
-    expect(warn.mock.calls.filter(([message]) => !String(message).includes('could not be cleaned'))).toHaveLength(3);
+    expect(warn.mock.calls.filter(([message]) => !String(message).includes('could not be cleaned'))).toHaveLength(2);
     expect(findSucceededUpdate()).toBeDefined();
     warn.mockRestore();
   });
@@ -1003,7 +1002,7 @@ describe('processJob — fragment assembly details', () => {
 
     await processJob('job-1');
 
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     const implantationView = planImplantationView([site, ...placed], IMPLANTATION_VIEW_OPTIONS);
     const situationView = planSituationView(site);
     // Esri's native imagery stops at zoom 18 outside the large cities (zoom 19 is a "Map data not
@@ -1082,7 +1081,7 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     expect(mocks.generatePage37Layout).not.toHaveBeenCalled();
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(2);
     const planData = sitePlanInput().planData!;
     expect(planData.page37.layout).toBeNull();
     expect(planData.page37.points).toEqual({ field: projectToImage(planImplantationView([{ lat: 36.8, lon: 10.2 }], IMPLANTATION_VIEW_OPTIONS), { lat: 36.8, lon: 10.2 }), technicalRoom: null, meter: null, earthPit: null });
@@ -1106,7 +1105,7 @@ describe('processJob — fragment assembly details', () => {
     await processJob('job-1');
 
     // 1 failed attempt + 1 retried success (page 37) + 1 fetch for page 38.
-    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(4);
+    expect(mocks.fetchSatelliteImage).toHaveBeenCalledTimes(3);
     expect(findSucceededUpdate()).toBeDefined();
   });
 });
@@ -1851,7 +1850,7 @@ describe('processJob — Mapbox imagery', () => {
     await processJob('job-1');
 
     const calls = mocks.fetchSatelliteImage.mock.calls;
-    expect(calls).toHaveLength(4);
+    expect(calls).toHaveLength(3);
     expect(calls[0]!.length).toBe(1);
     expect(calls[1]![1]).toBe('esri');
     expect((calls[1]![0] as SatelliteView).zoom).toBeLessThanOrEqual(18);
@@ -1889,7 +1888,7 @@ describe('processJob — Mapbox imagery', () => {
     await processJob('job-1');
 
     const calls = mocks.fetchSatelliteImage.mock.calls;
-    expect(calls).toHaveLength(5);
+    expect(calls).toHaveLength(4);
     expect(calls[2]![1]).toBe('esri');
     expect(calls[3]![1]).toBe('esri');
     const warnings = (findSucceededUpdate() as [{ data: { warnings: string[] } }])[0].data.warnings;

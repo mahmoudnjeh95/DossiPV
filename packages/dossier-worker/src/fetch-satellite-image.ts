@@ -112,8 +112,12 @@ export function planSituationView(site: LatLon, zoom = 17, sizePx = 768): Satell
 
 export type ImageryProvider = 'mapbox' | 'esri';
 
-/** Highest zoom at which each provider has real imagery (Esri has none at 19+ outside big cities). */
-export const MAX_NATIVE_ZOOM: Record<ImageryProvider, number> = { esri: 18, mapbox: 20 };
+/**
+ * Highest zoom worth asking each provider for. Esri has no imagery at 19+ outside big cities;
+ * Mapbox answers zoom 20 but, in Tunisia, only enlarges its zoom-19 imagery (its retina tiles at
+ * 19 already carry all the detail there is).
+ */
+export const MAX_NATIVE_ZOOM: Record<ImageryProvider, number> = { esri: 18, mapbox: 19 };
 
 /** Credit printed under the imagery on plan pages; Mapbox's terms require it. */
 export const IMAGERY_ATTRIBUTION: Record<ImageryProvider, string> = {

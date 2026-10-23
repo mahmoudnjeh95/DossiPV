@@ -44,16 +44,19 @@ Everything runs in Docker on the server under `/home/debian`:
 | Compose file and secrets `.env` | `/home/debian/dossipv/` (keep this folder)                  |
 | Build scratch folder            | `/home/debian/dossipv-release/` (temporary; safe to delete) |
 | App container                   | `dossipv-app-1`, bound to `127.0.0.1:3100`                  |
+| Dossier worker container        | `dossipv-worker-1`, runs the queued dossier jobs            |
 | Database container              | `dossipv-postgres-1`, data in volume `dossipv_pgdata`       |
 | Uploaded files                  | volume `dossipv_files`                                      |
 | Public entry point              | nginx on port 3001, config in `deploy/nginx-dossipv.conf`   |
 
 Pushing to `main` runs lint, typecheck and tests, then `.github/workflows/deploy.yml` builds the image
-on the server and restarts the app.
+on the server, applies database migrations and restarts the app and worker.
 
 ### Database migrations on the server
 
-The deploy does **not** apply migrations yet. After merging a change that adds a migration, run on the server:
+The deploy applies pending migrations (`prisma migrate deploy`) with the new image before it restarts the app
+and worker. If a migration fails, the deploy stops and the previous containers keep running. To apply them by
+hand, run on the server:
 
 ```bash
 cd /home/debian/dossipv

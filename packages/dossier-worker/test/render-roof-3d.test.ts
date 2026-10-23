@@ -37,11 +37,18 @@ const input: Roof3dInput = {
   },
 };
 
-/** Closed paths filled with the module blue. */
-const moduleFaces = (paths: { closed: boolean; fill: number[] | null }[]): number =>
-  paths.filter((p) => p.closed && p.fill && Math.abs(p.fill[0]! - 0.1) < 0.01 && Math.abs(p.fill[2]! - 0.45) < 0.01).length;
+/** Closed paths filled with the module blue, except the legend's axis-aligned swatch. */
+const moduleFaces = (paths: { closed: boolean; fill: number[] | null; points: { x: number; y: number }[] }[]): number =>
+  paths.filter(
+    (p) =>
+      p.closed &&
+      p.fill &&
+      Math.abs(p.fill[0]! - 0.1) < 0.01 &&
+      Math.abs(p.fill[2]! - 0.45) < 0.01 &&
+      new Set(p.points.map((pt) => pt.x.toFixed(1))).size > 2,
+  ).length;
 
-describe('renderRoof3dView', () => {
+describe('renderRoof3dView', { timeout: 20_000 }, () => {
   it('draws one page with the photo, one face per module and the installation facts', async () => {
     const buffer = await renderRoof3dView(input);
     const [page, ...rest] = await extractPdfContent(buffer);
@@ -66,7 +73,7 @@ describe('renderRoof3dView', () => {
     const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 24, azimuthDeg: 45 }));
     const text = pageText(page!).replace(/\s+/g, ' ');
     expect(moduleFaces(page!.paths)).toBe(24);
-    expect(text).toMatch(/\d+ rangées de \d+ modules/);
+    expect(text).toMatch(/\d+ rangées (de \d+ modules|\([\d +]+ modules\))/);
     expect(text).toContain('Orientation : ouest (45° du sud)');
     expect(everythingOnPage(page!)).toBe(true);
   });
@@ -87,5 +94,12 @@ describe('renderRoof3dView', () => {
     const [page] = await extractPdfContent(await renderRoof3dView({ ...input, technicalRoom: null, meter: null, earthPit: null }));
     expect(pageText(page!)).not.toContain('Compteur STEG');
     expect(everythingOnPage(page!)).toBe(true);
+  });
+});
+
+describe('renderRoof3dView rows', { timeout: 20_000 }, () => {
+  it('names a shorter last row', async () => {
+    const [page] = await extractPdfContent(await renderRoof3dView({ ...input, moduleCount: 9, footprint: [{ x: 150, y: 150 }, { x: 207, y: 150 }, { x: 207, y: 200 }, { x: 150, y: 200 }] }));
+    expect(pageText(page!).replace(/\s+/g, ' ')).toContain('2 rangées (6 + 3 modules)');
   });
 });

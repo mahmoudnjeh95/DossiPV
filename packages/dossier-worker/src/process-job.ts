@@ -66,16 +66,14 @@ const STUDY_PAGE_COUNT_BEFORE_BODY = 2;
 
 /**
  * Page 37's view: at most the provider's native zoom (Esri has no zoom-19 imagery outside the
- * large Tunisian cities and answers a "Map data not yet available" tile there; Mapbox goes to 20),
- * and a small minimum size (≈ 80 m across) so the house fills the plan rather than a whole neighbourhood.
+ * large Tunisian cities and answers a "Map data not yet available" tile there), and at least
+ * ≈ 60 m across at zoom 19: the imagery holds about 0,3 m of detail, so a tighter view only
+ * enlarges blur, while this one shows the house, its roof and the street sharply.
  */
-export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: MAX_NATIVE_ZOOM.esri, minSizePx: 160, paddingPx: 40 };
+export const IMPLANTATION_VIEW_OPTIONS: ImplantationViewOptions = { maxZoom: MAX_NATIVE_ZOOM.esri, minSizePx: 240, paddingPx: 40 };
 
 /** Page 37's options for a provider: only the zoom ceiling differs. Page 38 stays at zoom 17 on both. */
 const implantationViewOptions = (provider: ImageryProvider): ImplantationViewOptions => ({ ...IMPLANTATION_VIEW_OPTIONS, maxZoom: MAX_NATIVE_ZOOM[provider] });
-
-/** The 3D roof view's photo: wider than page 37's (≥ ≈ 50 m across) so the roof edges and the neighbours show. */
-const roof3dViewOptions = (provider: ImageryProvider): ImplantationViewOptions => ({ maxZoom: MAX_NATIVE_ZOOM[provider], minSizePx: 400, paddingPx: 60 });
 
 /**
  * A plan's satellite photo: `standard` at the view's own pixel size (what overlays and the AI layout
@@ -573,13 +571,9 @@ export async function processJob(jobId: string): Promise<void> {
     let situationView = planSituationView(sitePoint);
     let page37Image: { standard: Buffer; print: Buffer } | null;
     let page38Image: { standard: Buffer; print: Buffer } | null;
-    let roof3dView: SatelliteView;
-    let roof3dImage: { standard: Buffer; print: Buffer } | null;
     try {
       page37Image = await fetchPlanImage(jobId, implantationView, 'implantation');
       page38Image = await fetchPlanImage(jobId, situationView, 'situation');
-      roof3dView = planImplantationView([field, ...placedPoints], roof3dViewOptions(provider));
-      roof3dImage = await fetchPlanImage(jobId, roof3dView, '3D');
     } catch (error) {
       if (!(error instanceof MapboxAuthError)) throw error;
       // Mapbox refused the token: say so on the job and redo the plans on Esri (re-planned, since
@@ -591,8 +585,6 @@ export async function processJob(jobId: string): Promise<void> {
       situationView = planSituationView(sitePoint);
       page37Image = await fetchPlanImage(jobId, implantationView, 'implantation', provider);
       page38Image = await fetchPlanImage(jobId, situationView, 'situation', provider);
-      roof3dView = planImplantationView([field, ...placedPoints], roof3dViewOptions(provider));
-      roof3dImage = await fetchPlanImage(jobId, roof3dView, '3D', provider);
     }
     if (!page37Image) warnings.push(missingImageryWarning("d'implantation"));
     if (!page38Image) warnings.push(missingImageryWarning('de situation'));
@@ -641,24 +633,16 @@ export async function processJob(jobId: string): Promise<void> {
     const { dcRun, acRun } = snapshot.engineInput;
     const dcFormula = gps.technicalRoom ? formatRunLengthFormula(groundDistanceM(field, gps.technicalRoom), dcRun.lengthM, site.floors, 'DC') : null;
     const acFormula = gps.technicalRoom && gps.meter ? formatRunLengthFormula(groundDistanceM(gps.technicalRoom, gps.meter), acRun.lengthM, site.floors, 'AC') : null;
-    if (roof3dImage) {
+    // The 3D view is drawn on page 37's own photo, so the AI panel rectangle needs no conversion.
+    if (page37Image) {
       const { lengthMm, widthMm } = snapshot.engineInput.module;
-      const to3d = (p: LatLon | null): PixelPoint | null => (p ? projectToImage(roof3dView, p) : null);
-      // The AI panel rectangle is in page-37 pixels: through world pixels into the 3D view's.
-      const zoomScale = 2 ** (roof3dView.zoom - implantationView.zoom);
-      const footprint = layout
-        ? layout.panelRectangle.map((p) => ({
-            x: (p.x + implantationView.originX) * zoomScale - roof3dView.originX,
-            y: (p.y + implantationView.originY) * zoomScale - roof3dView.originY,
-          }))
-        : null;
       roof3dInput = {
-        image: { buffer: roof3dImage.print, widthPx: roof3dView.widthPx, heightPx: roof3dView.heightPx, metersPerPixel: metersPerPixel(roof3dView, field.lat) },
-        field: to3d(field)!,
-        technicalRoom: to3d(gps.technicalRoom),
-        meter: to3d(gps.meter),
-        earthPit: to3d(gps.earthPit),
-        footprint,
+        image: { buffer: page37Image.print, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel },
+        field: pixelPoints.field!,
+        technicalRoom: pixelPoints.technicalRoom,
+        meter: pixelPoints.meter,
+        earthPit: pixelPoints.earthPit,
+        footprint: layout?.panelRectangle ?? null,
         moduleCount: snapshot.engineInput.array.reduce((sum, entry) => sum + entry.mppts.reduce((s, m) => s + m.stringsInParallel * m.modulesPerString, 0), 0),
         moduleLengthM: (lengthMm ?? 2000) / 1000,
         moduleWidthM: (widthMm ?? 1000) / 1000,

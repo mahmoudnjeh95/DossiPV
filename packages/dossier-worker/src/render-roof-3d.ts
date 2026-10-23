@@ -35,14 +35,19 @@ interface Vec2 {
 
 const GROUND_COLOR_OUTSIDE = 255;
 const PIN_COLORS = { field: rgb(0.96, 0.72, 0), room: rgb(0.12, 0.44, 0.85), meter: rgb(0.85, 0.19, 0.15), earth: rgb(0.12, 0.56, 0.24) };
+const MODULE_COLOR = rgb(0.1, 0.2, 0.45);
+const MODULE_EDGE = rgb(0.85, 0.88, 0.95);
 const CAMERA_ELEVATION_DEG = 42;
 const CAMERA_YAW_DEG = 28;
 const MODULE_GAP_M = 0.02;
 const LOW_EDGE_HEIGHT_M = 0.35;
 const RASTER_PX_PER_PT = 2;
 const MAX_ARRAY_MODULES_PER_ROW = 40;
-/** Ground kept around the array and the points, so the roof edges show. */
-const GROUND_MARGIN_M = 10;
+/**
+ * Ground kept around the array and the points: enough for the roof edges and the street to show,
+ * and not so little that the photo (≈ 0,3 m of real detail) is enlarged into blur.
+ */
+const GROUND_MARGIN_M = 14;
 
 const rad = (deg: number): number => (deg * Math.PI) / 180;
 
@@ -116,6 +121,15 @@ function buildArray(input: Roof3dInput, centre: Vec2, availableWidthM: number | 
     shadows.push([toGround(left, frontF), toGround(right, frontF), toGround(right, backF - shadowLength), toGround(left, backF - shadowLength)]);
   }
   return { modules, shadows, halfExtentM: Math.hypot(arrayWidth, arrayDepth) / 2, widthM: arrayWidth, depthM: arrayDepth, rows, perRow };
+}
+
+/** `2 rangées de 6 modules`, or `2 rangées (6 + 3 modules)` when the last row is shorter. */
+function rowsText(model: ArrayModel, moduleCount: number): string {
+  const modules = (n: number): string => `${n} module${n > 1 ? 's' : ''}`;
+  if (model.rows === 1) return `1 rangée de ${modules(moduleCount)}`;
+  const last = moduleCount - (model.rows - 1) * model.perRow;
+  if (last === model.perRow) return `${model.rows} rangées de ${modules(model.perRow)}`;
+  return `${model.rows} rangées (${Array.from({ length: model.rows - 1 }, () => model.perRow).join(' + ')} + ${modules(last)})`;
 }
 
 /** Bilinear sample of a bitmap; white outside. */
@@ -267,7 +281,7 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
   });
   for (const module of ordered) {
     const corners = module.corners.map(([e, n, z]) => pagePoint(e, n, z));
-    fillPolygon(corners, rgb(0.1, 0.2, 0.45), 0.96, rgb(0.85, 0.88, 0.95), 0.5);
+    fillPolygon(corners, MODULE_COLOR, 0.96, MODULE_EDGE, 0.5);
     // Cell lines: two across and one along, a hint of the module's cells.
     const lerp = (a: { x: number; y: number }, b: { x: number; y: number }, t: number): { x: number; y: number } => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
     for (const t of [1 / 3, 2 / 3]) page.drawLine({ start: lerp(corners[0]!, corners[3]!, t), end: lerp(corners[1]!, corners[2]!, t), thickness: 0.25, color: rgb(0.55, 0.62, 0.8) });
@@ -275,16 +289,31 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
   }
 
   // ---- pins -------------------------------------------------------------------------------------
-  for (const pin of pins) {
-    const at = pagePoint(pin.at.e, pin.at.n, pin.kind === 'field' ? LOW_EDGE_HEIGHT_M + 1.2 : 0);
+  // The modules themselves mark the field: only the other points get a pin.
+  const pointPins = pins.filter((p) => p.kind !== 'field').map((pin) => ({ ...pin, page: pagePoint(pin.at.e, pin.at.n, 0) }));
+  // Labels avoid each other and every pin.
+  const placedLabels: Rect[] = pointPins.map((p) => ({ x: p.page.x - 5, y: p.page.y - 5, width: 10, height: 10 }));
+  for (const pin of pointPins) {
+    const at = pin.page;
     page.drawCircle({ x: at.x, y: at.y, size: 4.2, color: PIN_COLORS[pin.kind], borderColor: rgb(1, 1, 1), borderWidth: 1 });
-    const width = fonts.bold.widthOfTextAtSize(pin.text, 7);
-    page.drawRectangle({ x: at.x + 6, y: at.y - 3.5, width: width + 6, height: 10, color: rgb(1, 1, 1), opacity: 0.85 });
-    label(page, fonts.bold, pin.text, { x: at.x + 9, y: at.y - 1 });
+    // The label goes right of the pin, else left, below or above: never over another label.
+    const width = fonts.bold.widthOfTextAtSize(pin.text, 7) + 6;
+    const candidates = [
+      { x: at.x + 6, y: at.y - 3.5 },
+      { x: at.x - 6 - width, y: at.y - 3.5 },
+      { x: at.x - width / 2, y: at.y - 17 },
+      { x: at.x - width / 2, y: at.y + 7 },
+    ];
+    const overlaps = (r: Rect): boolean => placedLabels.some((o) => r.x < o.x + o.width && o.x < r.x + r.width && r.y < o.y + o.height && o.y < r.y + r.height);
+    const spot = candidates.map((c) => ({ ...c, width, height: 10 })).find((r) => !overlaps(r)) ?? { ...candidates[0]!, width, height: 10 };
+    placedLabels.push(spot);
+    page.drawRectangle({ x: spot.x, y: spot.y, width, height: 10, color: rgb(1, 1, 1), opacity: 0.85 });
+    label(page, fonts.bold, pin.text, { x: spot.x + 3, y: spot.y + 2.5 });
   }
 
   // ---- north arrow ------------------------------------------------------------------------------
-  const northDir = { x: 1 * (0 * right.e + 1 * right.n), y: (0 * look.e + 1 * look.n) * sinE };
+  // North (0, 1) on the screen.
+  const northDir = { x: right.n, y: look.n * sinE };
   const nLen = Math.hypot(northDir.x, northDir.y) || 1;
   const arrowBase = { x: box.x + box.width - 30, y: box.y + box.height - 30 };
   const arrowTip = { x: arrowBase.x + (northDir.x / nLen) * 22, y: arrowBase.y + (northDir.y / nLen) * 22 };
@@ -302,7 +331,7 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
     { text: input.moduleLabel },
     { text: `Inclinaison : ${Math.round(input.tiltDeg)}°` },
     { text: `Orientation : ${facingText}` },
-    { text: `${model.rows} rangée${model.rows > 1 ? 's' : ''} de ${model.perRow} module${model.perRow > 1 ? 's' : ''}` },
+    { text: rowsText(model, input.moduleCount) },
     { text: `Emprise : ${model.widthM.toFixed(1).replace('.', ',')} × ${model.depthM.toFixed(1).replace('.', ',')} m` },
     { text: "Écart entre rangées : sans ombrage au solstice d'hiver" },
     { text: '' },
@@ -320,8 +349,9 @@ export async function renderRoof3dView(input: Roof3dInput): Promise<Buffer> {
   label(page, fonts.bold, 'Légende', { x: infoX, y }, 8);
   y -= 13;
   for (const pin of pins) {
-    page.drawCircle({ x: infoX + 4, y: y + 2.5, size: 3.6, color: PIN_COLORS[pin.kind] });
-    label(page, fonts.regular, pin.text, { x: infoX + 12, y }, 8);
+    if (pin.kind === 'field') page.drawRectangle({ x: infoX, y: y - 0.5, width: 8, height: 6, color: MODULE_COLOR, borderColor: MODULE_EDGE, borderWidth: 0.4 });
+    else page.drawCircle({ x: infoX + 4, y: y + 2.5, size: 3.6, color: PIN_COLORS[pin.kind] });
+    label(page, fonts.regular, pin.kind === 'field' ? 'Champ PV (modules)' : pin.text, { x: infoX + 12, y }, 8);
     y -= 12;
   }
   page.drawLine({ start: { x: infoX, y: y + 3 }, end: { x: infoX + 8, y: y + 3 }, thickness: 1.4, color: rgb(1, 0.55, 0), dashArray: [3, 2] });

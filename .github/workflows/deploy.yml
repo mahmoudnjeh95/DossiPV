@@ -101,10 +101,18 @@ jobs:
           IMAGE_TAG=${{ github.sha }}
           EOF
 
-          # Deploy the compose file from this checkout and roll the app
-          # service. Postgres is unaffected unless its config actually
-          # changed (compose only recreates services whose config differs).
+          # Deploy the compose file from this checkout.
           cat deploy/docker-compose.yml | $SSH "cat > /home/debian/dossipv/docker-compose.yml"
+
+          # Apply pending migrations with the new image before rolling app and
+          # worker, so neither starts against an old schema. If a migration
+          # fails, set -e stops here and the previous containers keep running.
+          $SSH "cd /home/debian/dossipv && docker compose up -d --wait postgres"
+          $SSH "cd /home/debian/dossipv && docker compose run --rm --no-deps -w /app/packages/db app npx prisma migrate deploy"
+
+          # Roll app and worker. Postgres is unaffected unless its config
+          # actually changed (compose only recreates services whose config
+          # differs).
           $SSH "cd /home/debian/dossipv && docker compose up -d --remove-orphans"
 
           # Clean up the build dir, and old dossipv-web images only (this
