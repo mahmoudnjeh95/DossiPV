@@ -103,7 +103,7 @@ export function drawSheet(page: PDFPage, fonts: Fonts, cartouche: SheetCartouche
   const left = [
     `Projet : ${cartouche.projectTitle}`,
     `Client : ${cartouche.client}`,
-    `Commune : ${cartouche.commune}`,
+    `Adresse : ${cartouche.commune}`,
     `Installateur : ${cartouche.installerName}`,
     `Dossier N° ${cartouche.dossierNumber ?? '—'}`,
   ];
