@@ -68,6 +68,37 @@ describe('GET /projects/[id]/jobs/[jobId]/files/[kind]', () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('application/pdf');
-    expect(response.headers.get('Content-Disposition')).toContain('dossier.pdf');
+    expect(response.headers.get('Content-Disposition')).toContain('.pdf');
+  });
+
+  it("downloads under the client's name and the day the job generated the file", async () => {
+    mocks.mockProjectFindFirst.mockResolvedValue({ id: 'p1', client: { fullName: 'Hélène Ben Ali' } });
+    mocks.mockJobFindFirst.mockResolvedValue({
+      id: 'j1',
+      projectId: 'p1',
+      pdfFileId: null,
+      docxFileId: null,
+      annexesPdfFileId: 'file-2',
+      startedAt: new Date('2026-10-22T08:00:00Z'),
+      completedAt: new Date('2026-10-23T08:05:00Z'),
+    });
+    mocks.mockFileFindUnique.mockResolvedValue({ id: 'file-2', fileName: 'annexes.pdf', mimeType: 'pdf', storageKey: 'dossier/def.pdf' });
+    mocks.mockGetFilePath.mockReturnValue('/fake/storage/dossier/def.pdf');
+    mocks.mockCreateReadStream.mockReturnValue(Readable.from(['fake pdf bytes']));
+
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'p1', jobId: 'j1', kind: 'annexes' }) });
+
+    expect(response.headers.get('Content-Disposition')).toBe(
+      `attachment; filename="Annexes - Helene Ben Ali - 23-10-2026.pdf"; filename*=UTF-8''${encodeURIComponent('Annexes - Hélène Ben Ali - 23-10-2026.pdf')}`,
+    );
+  });
+
+  it('returns 404 when the job does not belong to the project', async () => {
+    mocks.mockProjectFindFirst.mockResolvedValue({ id: 'p1', client: null });
+    mocks.mockJobFindFirst.mockResolvedValue(null);
+
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'p1', jobId: 'j1', kind: 'pdf' }) });
+
+    expect(response.status).toBe(404);
   });
 });

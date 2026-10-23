@@ -4,6 +4,7 @@ import { Readable } from 'stream';
 import { db } from '@dossipv/db';
 import { validateSession } from '@dossipv/auth';
 import { getFilePath } from '@dossipv/file-storage';
+import { attachmentDisposition, dossierDownloadName } from '../../../../../../../../lib/dossier-files';
 
 const FILE_ID_FIELDS = { docx: 'docxFileId', pdf: 'pdfFileId', annexes: 'annexesPdfFileId' } as const;
 const CONTENT_TYPES: Record<string, string> = { pdf: 'application/pdf', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
@@ -20,7 +21,10 @@ export async function GET(
     return new Response(null, { status: 401 });
   }
 
-  const project = await db.project.findFirst({ where: { id: projectId, companyId: user.companyId }, select: { id: true } });
+  const project = await db.project.findFirst({
+    where: { id: projectId, companyId: user.companyId },
+    select: { id: true, client: { select: { fullName: true } } },
+  });
   if (!project) {
     return new Response(null, { status: 404 });
   }
@@ -31,7 +35,10 @@ export async function GET(
   const fileIdField = FILE_ID_FIELDS[kind as keyof typeof FILE_ID_FIELDS];
 
   const job = await db.dossierJob.findFirst({ where: { id: jobId, projectId } });
-  const fileId = job ? (job as unknown as Record<string, string | null>)[fileIdField] : null;
+  if (!job) {
+    return new Response(null, { status: 404 });
+  }
+  const fileId = (job as unknown as Record<string, string | null>)[fileIdField];
   if (!fileId) {
     return new Response(null, { status: 404 });
   }
@@ -43,12 +50,14 @@ export async function GET(
 
   const stream = createReadStream(getFilePath(file.storageKey));
   const contentType = CONTENT_TYPES[file.mimeType] ?? 'application/octet-stream';
+  // Saved under the client's name and the generation day, not the stored `dossier.pdf`.
+  const downloadName = dossierDownloadName(kind as keyof typeof FILE_ID_FIELDS, project.client?.fullName, job.completedAt ?? job.startedAt);
 
   return new Response(Readable.toWeb(stream) as unknown as ReadableStream, {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${file.fileName}"`,
+      'Content-Disposition': attachmentDisposition(downloadName),
     },
   });
 }
