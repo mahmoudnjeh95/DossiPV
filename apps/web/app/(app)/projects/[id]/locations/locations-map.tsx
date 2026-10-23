@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, useMapEvents } from 'react-leaflet';
 import type { DivIcon, LeafletEvent, LeafletMouseEvent, Marker as LeafletMarker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ACTIVE_MAP_PROVIDER } from '../map/esri-provider';
+import { SiteTileLayer } from '../map/site-tile-layer';
 import { POINT_STYLES, pointIcon, type PointKind } from '../../../../../components/map/point-markers';
 import { computeRunLengthsM } from '@dossipv/engine';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
@@ -151,7 +152,7 @@ export function LocationsMap({ projectId, center, initial, initialFloors, initia
         )}
       </div>
       <MapContainer center={[center.lat, center.lon]} zoom={18} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} style={{ height: '500px', width: '100%' }}>
-        <TileLayer url={ACTIVE_MAP_PROVIDER.tileUrlTemplate} attribution={ACTIVE_MAP_PROVIDER.attribution} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} maxNativeZoom={ACTIVE_MAP_PROVIDER.maxNativeZoom} />
+        <SiteTileLayer />
         <ClickHandler
           onClick={(point) => {
             if (!active) return;

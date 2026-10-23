@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polygon, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, Polygon, useMapEvents } from 'react-leaflet';
 import L, { type Marker as LeafletMarker, type LeafletEvent, type LeafletMouseEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { computePanelLayout } from '@dossipv/engine';
 import { saveMapDataAction } from './actions';
-import { ACTIVE_MAP_PROVIDER } from './esri-provider';
+import { SiteTileLayer } from './site-tile-layer';
 import { pointIcon } from '../../../../../components/map/point-markers';
 import { Map as MapIcon, Polygon as PolygonIcon, MarkerTech, MarkerMeter, MarkerEarth, Check } from '@dossipv/icons';
 
@@ -186,7 +186,7 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         </div>
       )}
       <MapContainer center={[gps.lat, gps.lon]} zoom={18} style={{ height: '500px', width: '100%' }}>
-        <TileLayer url={ACTIVE_MAP_PROVIDER.tileUrlTemplate} attribution={ACTIVE_MAP_PROVIDER.attribution} maxZoom={ACTIVE_MAP_PROVIDER.maxZoom} maxNativeZoom={ACTIVE_MAP_PROVIDER.maxNativeZoom} />
+        <SiteTileLayer />
         <ClickHandler onClick={handleMapClick} />
         <Marker
           position={[gps.lat, gps.lon]}

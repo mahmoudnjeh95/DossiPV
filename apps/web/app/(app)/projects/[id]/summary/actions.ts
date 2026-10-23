@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import sharp from 'sharp';
 import { requireOwnedProject, ProjectNotFoundError } from '../../../../../lib/project-access';
-import { storeAnnexFiles, storeStructureAttestation } from '../../../../../lib/annex-upload';
+import { storeAnnexFiles } from '../../../../../lib/annex-upload';
 import { isUploadableStegPiece } from '../../../../../lib/steg-completeness';
 
 export interface PieceUploadState {
@@ -48,15 +48,10 @@ export async function uploadStegPieceAction(
     return { error: 'Format HEIC non pris en charge : réglez l’appareil photo sur JPEG ou choisissez un PDF.' };
   }
 
-  let result: { error: string } | null;
-  if (piece === 'structureAttestation') {
-    result = await storeStructureAttestation(projectId, upload);
-  } else {
-    // Only this piece's file reaches the annex store, under its own field name.
-    const form = new FormData();
-    form.append(piece, upload);
-    result = await storeAnnexFiles(projectId, form);
-  }
+  // Only this piece's file reaches the annex store, under its own field name.
+  const form = new FormData();
+  form.append(piece, upload);
+  const result = await storeAnnexFiles(projectId, form);
   if (result) return result;
 
   revalidatePath(`/projects/${projectId}/summary`);

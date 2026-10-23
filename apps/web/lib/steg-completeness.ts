@@ -8,7 +8,6 @@ export type StegPieceKey =
   | 'installerAccreditation'
   | 'installerTaxId'
   | 'syndicAuthorization'
-  | 'structureAttestation'
   | 'moduleAcceptance'
   | 'datasheets'
   | 'mapPoints';
@@ -25,7 +24,6 @@ export const UPLOADABLE_STEG_PIECES = [
   'stegContract',
   'lastPaidBill',
   'syndicAuthorization',
-  'structureAttestation',
   'moduleAcceptance',
 ] as const satisfies readonly StegPieceKey[];
 
@@ -152,12 +150,6 @@ export function stegCompleteness(
           },
         ]
       : []),
-    {
-      key: 'structureAttestation',
-      label: 'Attestation de conformité de la structure (bureau de contrôle)',
-      done: Boolean(project.structure?.structureAttestationFileId),
-      detail: null,
-    },
     {
       key: 'moduleAcceptance',
       label: 'Acceptation ANME du module',

@@ -248,7 +248,6 @@ describe('generateDossierAction', () => {
       "Contrat STEG ou attestation d'abonnement",
       'Dernière facture STEG acquittée',
       "Matricule fiscal de l'installateur",
-      'Attestation de conformité de la structure (bureau de contrôle)',
       'Acceptation ANME du module',
       'Fiches techniques de tous les équipements',
       "Points GPS du plan d'implantation",
