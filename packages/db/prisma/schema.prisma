@@ -13,6 +13,7 @@ model File {
   storageKey String // path/key into whatever object storage is used — decided at implementation time
   createdAt  DateTime @default(now())
 
+  invoicePdfFor            Invoice[] @relation("InvoicePdf")
   companyLogoFor           Company[] @relation("CompanyLogo")
   siteImageFor             ProjectSite[] @relation("SiteImage")
   companyAnmeCertificateFor Company[] @relation("CompanyAnmeCertificate")
@@ -122,6 +123,8 @@ model Company {
   sponsor                  Company?  @relation("Sponsorship", fields: [sponsorCompanyId], references: [id], onDelete: SetNull)
   sponsoredInstallers      Company[] @relation("Sponsorship")
   supplierProducts         SupplierProduct[]
+  paymentIntents           PaymentIntent[]
+  invoices                 Invoice[]
   supplierInvitations      SupplierInvitation[]
   /// Self sign-up (/inscription) details; null for companies the admin created.
   signupAt                 DateTime?
@@ -314,9 +317,57 @@ model PlatformSettings {
   id                 String   @id
   /// Monthly price of the 3D option that sponsored installers can buy alone.
   option3dPriceTnd   Decimal? @db.Decimal(10, 2)
+  /// Who invoices (the legal entity selling DossiPV), printed on every invoice.
+  sellerLegalName    String?
+  sellerTaxId        String?
+  sellerAddress      String?
+  sellerPhone        String?
+  sellerEmail        String?
+  /// VAT rate in percent applied to plan prices (19 in Tunisia), and the fixed stamp duty (droit de timbre).
+  vatRatePct         Decimal  @default(19) @db.Decimal(5, 2)
+  stampDutyTnd       Decimal  @default(1) @db.Decimal(10, 3)
+  invoiceFooter      String?
   updatedAt          DateTime @updatedAt
 
   @@map("platform_settings")
+}
+
+/// A numbered invoice for one payment (Tunisian invoice: matricule fiscal, VAT, timbre fiscal).
+/// Numbers are sequential per year with no gaps: 2026-0001, 2026-0002…
+model Invoice {
+  id          String   @id @default(uuid())
+  number      String   @unique
+  year        Int
+  sequence    Int
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  paymentId   String   @unique
+  payment     Payment  @relation(fields: [paymentId], references: [id])
+  issuedAt    DateTime @default(now())
+  /// Seller and buyer as they were at issue time, and the lines: an invoice never changes afterwards.
+  seller      Json
+  buyer       Json
+  lines       Json
+  totalHtTnd  Decimal  @db.Decimal(10, 3)
+  vatRatePct  Decimal  @db.Decimal(5, 2)
+  vatTnd      Decimal  @db.Decimal(10, 3)
+  stampTnd    Decimal  @db.Decimal(10, 3)
+  totalTtcTnd Decimal  @db.Decimal(10, 3)
+  /// The generated PDF, kept as a stored file.
+  pdfFileId   String?
+  pdfFile     File?    @relation("InvoicePdf", fields: [pdfFileId], references: [id])
+
+  @@unique([year, sequence])
+  @@index([companyId, issuedAt])
+  @@map("invoice")
+}
+
+/// The last invoice number used in a year, incremented in the same transaction as the invoice.
+model InvoiceCounter {
+  year Int @id
+  last Int @default(0)
+
+  @@map("invoice_counter")
 }
 
 model Subscription {
@@ -375,12 +426,63 @@ model Payment {
   recordedByAdmin  Boolean       @default(true)
   createdAt        DateTime      @default(now())
 
+  intent  PaymentIntent?
+  invoice Invoice?
+
   @@map("payment")
 }
 
 enum PaymentMethod {
   MANUAL
   KONNECT
+  FLOUCI
+  IZI
+  D17
+}
+
+/// What a checkout pays for.
+enum PaymentPurpose {
+  /// A plan period (renewing, or upgrading to the plan).
+  SUBSCRIPTION
+  /// The monthly 3D option of a sponsored installer.
+  OPTION_3D
+}
+
+enum PaymentIntentStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+/// One online checkout opened for a company: created before redirecting to the provider, settled
+/// when the provider confirms (webhook or return page), at most once.
+model PaymentIntent {
+  id                String              @id @default(uuid())
+  companyId         String
+  company           Company             @relation(fields: [companyId], references: [id])
+  purpose           PaymentPurpose
+  /// The plan paid for (SUBSCRIPTION).
+  planId            String?
+  /// How many months it buys.
+  months            Int                 @default(1)
+  /// Amount in TND including VAT and the stamp duty: what the client is charged.
+  amountTnd         Decimal             @db.Decimal(10, 2)
+  provider          PaymentMethod
+  status            PaymentIntentStatus @default(PENDING)
+  /// The provider's own payment id, to verify it with the provider.
+  providerReference String?
+  checkoutUrl       String?
+  failureReason     String?
+  /// The Payment (and so the invoice) this settled into.
+  paymentId         String?             @unique
+  payment           Payment?            @relation(fields: [paymentId], references: [id])
+  createdAt         DateTime            @default(now())
+  paidAt            DateTime?
+
+  @@index([companyId, createdAt])
+  @@index([providerReference])
+  @@map("payment_intent")
 }
 
 model PvModule {
@@ -1185,9 +1287,25 @@ model SupplierProduct {
   highlighted       Boolean       @default(false)
   createdAt         DateTime      @default(now())
 
+  dailyStats SupplierProductDailyStat[]
+
   @@unique([supplierCompanyId, pvModuleId])
   @@unique([supplierCompanyId, inverterId])
   @@map("supplier_product")
+}
+
+/// How many times a highlighted product was shown in a sponsored proposal, and applied, per day:
+/// aggregates only, no installer or client is recorded (spec 2026-10-23 §6.4).
+model SupplierProductDailyStat {
+  id                String          @id @default(uuid())
+  supplierProductId String
+  supplierProduct   SupplierProduct @relation(fields: [supplierProductId], references: [id], onDelete: Cascade)
+  date              DateTime        @db.Date
+  shownCount        Int             @default(0)
+  appliedCount      Int             @default(0)
+
+  @@unique([supplierProductId, date])
+  @@map("supplier_product_daily_stat")
 }
 
 /// A supplier's invitation of an installer by email (valid 7 days).
