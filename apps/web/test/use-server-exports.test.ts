@@ -28,7 +28,7 @@ describe('"use server" files', () => {
   });
 
   it.each(serverFiles.map((file) => [relative(ROOT, file), file]))('%s exports only async functions and types', (_name, file) => {
-    const lines = readFileSync(file as string, 'utf8').split(/\r?\n/);
+    const lines = readFileSync(file, 'utf8').split(/\r?\n/);
     const offenders = lines
       .map((line, index) => ({ line, number: index + 1 }))
       .filter(({ line }) => /^export\s/.test(line))
