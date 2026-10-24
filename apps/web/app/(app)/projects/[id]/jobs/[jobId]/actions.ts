@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
-import { requireAuthenticatedCompanyUser } from '../../../../layout';
+import { requireInstallerUser } from '../../../../layout';
 import { CANCELLED_BY_INSTALLER_REASON } from '../../../../../../lib/dossier-jobs';
 
 export interface CancelJobActionState {
@@ -21,7 +21,7 @@ export async function cancelJobAction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes the previous state
   _prevState: CancelJobActionState | undefined,
 ): Promise<CancelJobActionState | undefined> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
 
   const result = await db.dossierJob.updateMany({
     where: { id: jobId, status: 'PENDING', project: { id: projectId, companyId: user.companyId } },

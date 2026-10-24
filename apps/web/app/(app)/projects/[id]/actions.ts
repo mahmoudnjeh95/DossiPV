@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { db, type Prisma } from '@dossipv/db';
 import { runEngine } from '@dossipv/engine';
-import { requireAuthenticatedCompanyUser } from '../../layout';
+import { requireInstallerUser } from '../../layout';
 import type { RunEngineInput } from '@dossipv/engine';
 import {
   PROJECT_ENGINE_INCLUDE,
@@ -77,7 +77,7 @@ export async function generateDossierAction(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes the previous state
   _prevState: GenerateDossierActionState | undefined,
 ): Promise<GenerateDossierActionState | undefined> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const now = new Date();
 
   const project = await db.project.findFirst({

@@ -32,6 +32,22 @@ export async function requireAuthenticatedCompanyUser(): Promise<AuthenticatedCo
   return user;
 }
 
+/**
+ * The signed-in user of an INSTALLER company, for the installer actions (projects, library, bill
+ * import, generation…). The layout only guards the pages: a server action can be posted from any
+ * page, so a supplier company (which has its own space) is refused here too, before it can spend
+ * the paid bill reading or generate dossiers.
+ */
+export async function requireInstallerUser(): Promise<AuthenticatedCompanyUser> {
+  const user = await requireAuthenticatedCompanyUser();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { kind: true } });
+  if (company?.kind === 'SUPPLIER') {
+    redirect('/fournisseur');
+    return undefined as never;
+  }
+  return user;
+}
+
 export default async function AppLayout({
   children,
 }: {

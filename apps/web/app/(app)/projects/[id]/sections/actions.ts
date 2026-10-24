@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
-import { requireAuthenticatedCompanyUser } from '../../../layout';
+import { requireInstallerUser } from '../../../layout';
 import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../lib/project-access';
 import { storeAnnexFiles } from '../../../../../lib/annex-upload';
 import { FormReader } from '../../../../../lib/form-reader';
@@ -26,7 +26,7 @@ export interface SectionActionState {
 const values = (options: { value: string }[]): string[] => options.map((o) => o.value);
 
 async function requireOwnedProjectId(projectId: string): Promise<{ companyId: string } | null> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const project = await db.project.findFirst({ where: { id: projectId, companyId: user.companyId }, select: { id: true } });
   return project ? { companyId: user.companyId } : null;
 }

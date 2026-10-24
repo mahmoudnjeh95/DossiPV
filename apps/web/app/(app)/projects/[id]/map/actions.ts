@@ -1,7 +1,7 @@
 'use server';
 
 import { db, type Prisma } from '@dossipv/db';
-import { requireAuthenticatedCompanyUser } from '../../../layout';
+import { requireInstallerUser } from '../../../layout';
 
 export interface ProjectGeometry {
   outline: { lat: number; lon: number }[];
@@ -87,7 +87,7 @@ export async function saveMapDataAction(
   projectId: string,
   payload: MapSavePayload,
 ): Promise<SaveMapDataActionError | void> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
 
   const project = await db.project.findFirst({ where: { id: projectId, companyId: user.companyId } });
   if (!project) {

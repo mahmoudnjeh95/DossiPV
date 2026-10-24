@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
-import { requireAuthenticatedCompanyUser } from '../layout';
+import { requireInstallerUser } from '../layout';
 import { SponsorshipError, consumeInvitation, normalizeEmail } from '../../../lib/sponsorship';
 
 export type SponsorshipActionState = { error: string } | undefined;
 
 /** An installer accepts a pending invitation addressed to one of its users (the Paramètres block). */
 export async function acceptPendingInvitationAction(invitationId: string): Promise<SponsorshipActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const invitation = await db.supplierInvitation.findUnique({ where: { id: invitationId } });
   const addressedToUs = invitation !== null && normalizeEmail(invitation.email) === normalizeEmail(user.email);
   if (!invitation || !addressedToUs || invitation.acceptedAt || invitation.expiresAt <= new Date()) {

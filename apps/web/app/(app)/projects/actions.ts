@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
-import { requireAuthenticatedCompanyUser } from '../layout';
+import { requireInstallerUser } from '../layout';
 import { FormReader } from '../../../lib/form-reader';
 import { CIVILITY_OPTIONS, CLIENT_KIND_OPTIONS } from '../../../lib/labels';
 import { newProjectSettings } from '../../../lib/subscription';
@@ -20,7 +20,7 @@ export async function createProjectAction(
   _prevState: CreateProjectActionState | undefined,
   formData: FormData,
 ): Promise<CreateProjectActionState | undefined> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
 
   const reader = new FormReader(formData);
   const fullName = reader.text('fullName', 'Nom du client', 200);

@@ -32,7 +32,7 @@ vi.mock('@dossipv/db', async () => {
     db: {
       ...actual.db,
       subscription: { findUnique: mockSubscriptionFindUnique },
-      company: { findUnique: (): Promise<unknown> => (mockSubscriptionFindUnique as () => Promise<unknown>)().then((subscription) => ({ sponsorCompanyId: null, subscription })) },
+      company: { findUnique: (): Promise<unknown> => Promise.resolve((mockSubscriptionFindUnique as () => unknown)()).then((subscription) => ({ sponsorCompanyId: null, subscription })) },
       project: { create: mockProjectCreate },
     },
   };

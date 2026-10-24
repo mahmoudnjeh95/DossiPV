@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
-import { requireAuthenticatedCompanyUser } from '../layout';
+import { requireInstallerUser } from '../layout';
 import { catalogScope, provenanceScope } from '../../../lib/project-access';
 import { LOCKED_KINDS, isSponsored } from '../../../lib/sponsorship';
 
@@ -38,7 +38,7 @@ const UNSOURCED_ERROR = 'Équipement sans fiche technique source : non disponibl
 const MAX_PRICE_TND = 1_000_000;
 
 export async function addToLibraryAction(kind: EquipmentKind, itemId: string): Promise<LibraryActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const entry = KINDS[kind] as (typeof KINDS)[EquipmentKind] | undefined;
   if (!entry) {
     return { error: 'Équipement introuvable dans le catalogue.' };
@@ -68,7 +68,7 @@ export async function addToLibraryAction(kind: EquipmentKind, itemId: string): P
 }
 
 export async function addAllOfKindAction(kind: BulkKind): Promise<LibraryActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   if (!BULK_KINDS.includes(kind)) {
     return { error: 'Type d’équipement invalide.' };
   }
@@ -93,7 +93,7 @@ export async function addAllOfKindAction(kind: BulkKind): Promise<LibraryActionS
 }
 
 export async function removeFromLibraryAction(libraryItemId: string): Promise<LibraryActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   if (await isSponsored(user.companyId)) {
     const item = await db.libraryItem.findFirst({ where: { id: libraryItemId, companyId: user.companyId }, select: { kind: true } });
     if (item && isLockedKind(item.kind)) {
@@ -113,7 +113,7 @@ export async function updateLibraryPriceAction(
   _prev: LibraryActionState,
   formData: FormData,
 ): Promise<LibraryActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const rawValue = formData.get('price');
   const raw = (typeof rawValue === 'string' ? rawValue : '').trim().replace(',', '.');
   const price = raw === '' ? Number.NaN : Number(raw);

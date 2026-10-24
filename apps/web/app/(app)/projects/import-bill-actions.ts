@@ -17,7 +17,7 @@ import {
   type StegBillReading,
 } from '@dossipv/bill-reader';
 import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/pdf-locate';
-import { requireAuthenticatedCompanyUser } from '../layout';
+import { requireInstallerUser } from '../layout';
 import {
   summarizeSubscription,
   quotaJobs,
@@ -140,7 +140,7 @@ export async function importStegBillAction(
   _prevState: ImportBillState | undefined,
   formData: FormData,
 ): Promise<ImportBillState | undefined> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const now = new Date();
 
   const effectiveSubscription = await loadEffectiveSubscription(user.companyId);

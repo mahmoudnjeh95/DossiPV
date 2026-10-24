@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import type { EquipmentKind, Prisma } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
-import { requireAuthenticatedCompanyUser } from '../layout';
+import { requireInstallerUser } from '../layout';
 import { readEquipmentForm } from '../../../lib/equipment-form';
 import { FormReader } from '../../../lib/form-reader';
 import { isSponsored } from '../../../lib/sponsorship';
@@ -107,7 +107,7 @@ export async function createOwnEquipmentAction(
   _prev: OwnEquipmentActionState,
   formData: FormData,
 ): Promise<OwnEquipmentActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   if (await isSponsored(user.companyId)) {
     return { error: SPONSORED_OWN_EQUIPMENT_MESSAGE };
   }
@@ -150,7 +150,7 @@ export async function updateOwnEquipmentAction(
   _prev: OwnEquipmentActionState,
   formData: FormData,
 ): Promise<OwnEquipmentActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   if (await isSponsored(user.companyId)) {
     return { error: SPONSORED_OWN_EQUIPMENT_MESSAGE };
   }
@@ -191,7 +191,7 @@ export async function updateOwnEquipmentAction(
 
 /** Deletes one of the company's own items (and its library entry), refused while a project uses it. */
 export async function deleteOwnEquipmentAction(kind: EquipmentKind, itemId: string): Promise<OwnEquipmentActionState> {
-  const user = await requireAuthenticatedCompanyUser();
+  const user = await requireInstallerUser();
   const entry = KINDS[kind] as KindEntry | undefined;
   if (!entry) {
     return { error: INVALID_KIND_ERROR };
