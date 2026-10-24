@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import type { AuthenticatedCompanyUser } from '@dossipv/auth';
+import { monthStart as tunisMonthStart } from './subscription';
 import { requireAuthenticatedCompanyUser } from '../app/(app)/layout';
 
 export interface SupplierContext {
@@ -23,9 +24,9 @@ export async function requireSupplier(): Promise<SupplierContext> {
   return { user, supplierId: company.id, supplierName: company.name };
 }
 
-/** First day (UTC) of the month containing `now`: the window of "dossiers this month". */
+/** First day (Africa/Tunis) of the month containing `now`: the window of "dossiers this month", the same as the installers' quota. */
 export function monthStart(now: Date = new Date()): Date {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return tunisMonthStart(now);
 }
 
 /**

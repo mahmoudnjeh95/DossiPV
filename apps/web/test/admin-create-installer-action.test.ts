@@ -10,6 +10,7 @@ const m = vi.hoisted(() => {
     mockHashPassword: vi.fn((password: string) => Promise.resolve(`hashed:${password}`)),
     mockCompanyUserFindUnique: vi.fn(),
     mockCompanyFindFirst: vi.fn(),
+    mockCompanyFindMany: vi.fn(),
     mockCompanyCreate: vi.fn(),
     mockPlanFindUnique: vi.fn(),
     mockAuditCreate: vi.fn(),
@@ -29,7 +30,7 @@ vi.mock('@dossipv/db', async () => {
     db: {
       ...actual.db,
       companyUser: { findUnique: m.mockCompanyUserFindUnique },
-      company: { findFirst: m.mockCompanyFindFirst, create: m.mockCompanyCreate },
+      company: { findFirst: m.mockCompanyFindFirst, findMany: m.mockCompanyFindMany, create: m.mockCompanyCreate },
       plan: { findUnique: m.mockPlanFindUnique },
       adminAuditLog: { create: m.mockAuditCreate },
     },
@@ -67,11 +68,12 @@ beforeEach(() => {
   m.mockRedirect.mockReset();
   m.mockValidateSuperAdminSession.mockReset();
   m.mockValidateSuperAdminSession.mockResolvedValue({ id: 'admin-1', email: 'admin@dossipv.tn' });
-  for (const mock of [m.mockCompanyUserFindUnique, m.mockCompanyFindFirst, m.mockCompanyCreate, m.mockPlanFindUnique, m.mockAuditCreate]) {
+  for (const mock of [m.mockCompanyUserFindUnique, m.mockCompanyFindFirst, m.mockCompanyFindMany, m.mockCompanyCreate, m.mockPlanFindUnique, m.mockAuditCreate]) {
     mock.mockReset();
   }
   m.mockCompanyUserFindUnique.mockResolvedValue(null);
   m.mockCompanyFindFirst.mockResolvedValue(null);
+  m.mockCompanyFindMany.mockResolvedValue([]);
   m.mockCompanyCreate.mockResolvedValue({ id: 'company-new' });
 });
 
@@ -150,15 +152,11 @@ describe('createInstallerAction', () => {
     expect(m.mockCompanyCreate).not.toHaveBeenCalled();
   });
 
-  it('refuses an ANME code already registered, whatever its case', async () => {
-    m.mockCompanyFindFirst.mockResolvedValue({ name: 'Autre Solaire' });
+  it('refuses an ANME code already registered, whatever its case, spaces or dashes', async () => {
+    m.mockCompanyFindMany.mockResolvedValue([{ name: 'Autre Solaire', anmeCode: 'anme 2024 001' }]);
 
     const result = await createInstallerAction(undefined, form(fields));
 
-    expect(m.mockCompanyFindFirst).toHaveBeenCalledWith({
-      where: { anmeCode: { equals: 'ANME-2024-001', mode: 'insensitive' } },
-      select: { name: true },
-    });
     expect(result).toEqual({ error: 'Ce code ANME est déjà inscrit (Autre Solaire).' });
     expect(m.mockCompanyCreate).not.toHaveBeenCalled();
   });

@@ -180,7 +180,14 @@ export async function resendVerificationAction(_prevState: ResendState | undefin
   }
 
   const user = await db.companyUser.findFirst({
-    where: { email: { equals: email, mode: 'insensitive' }, emailVerifiedAt: null, disabledAt: null, company: { signupAt: { not: null } } },
+    // Also a confirmed address whose company never got its trial (the link is single-use: a failure after
+    // the confirmation would otherwise leave it with no way to start the trial).
+    where: {
+      email: { equals: email, mode: 'insensitive' },
+      disabledAt: null,
+      OR: [{ emailVerifiedAt: null }, { company: { subscription: null } }],
+      company: { signupAt: { not: null } },
+    },
     select: { id: true, email: true, fullName: true },
   });
   if (user) {

@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => {
     inverterUpdateMany: vi.fn(),
     inverterDelete: vi.fn(),
     cableUpdateMany: vi.fn(),
+    syncSuppliersCarrying: vi.fn(),
   };
 });
 
@@ -25,6 +26,7 @@ vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
   return { ...actual, validateSuperAdminSession: mocks.mockValidateSuperAdminSession };
 });
+vi.mock('../lib/sponsorship', () => ({ syncSuppliersCarrying: mocks.syncSuppliersCarrying }));
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
   return {
@@ -52,6 +54,12 @@ describe('catalog review actions', () => {
   it('publishes one draft', async () => {
     await publishCatalogItemAction('PV_MODULE', 'm1');
     expect(mocks.pvModuleUpdate).toHaveBeenCalledWith({ where: { id: 'm1', catalogStatus: 'DRAFT' }, data: { catalogStatus: 'PUBLISHED', importNotes: null } });
+    expect(mocks.syncSuppliersCarrying).toHaveBeenCalledWith('PV_MODULE', ['m1']);
+  });
+
+  it('syncs the sponsored installers of every supplier after a bulk publish', async () => {
+    await publishCleanDraftsAction('INVERTER');
+    expect(mocks.syncSuppliersCarrying).toHaveBeenCalledWith('INVERTER', 'all');
   });
 
   it('publishes every curated cable draft at once', async () => {

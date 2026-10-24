@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { db, Prisma } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
+import { syncSuppliersCarrying } from '../../../../lib/sponsorship';
 
 export type ReviewKind = 'PV_MODULE' | 'INVERTER';
 
@@ -13,6 +14,8 @@ export async function publishCatalogItemAction(kind: ReviewKind, id: string): Pr
   const args = { where: { id, catalogStatus: 'DRAFT' as const }, data: { catalogStatus: 'PUBLISHED' as const, importNotes: null } };
   if (kind === 'PV_MODULE') await db.pvModule.update(args);
   else await db.inverter.update(args);
+  // A supplier-proposed product reaches the supplier's sponsored installers once published.
+  await syncSuppliersCarrying(kind, [id]);
   revalidatePath(PATH);
 }
 
@@ -21,6 +24,7 @@ export async function publishCleanDraftsAction(kind: ReviewKind): Promise<void> 
   const args = { where: { ownerCompanyId: null, catalogStatus: 'DRAFT' as const, importNotes: null }, data: { catalogStatus: 'PUBLISHED' as const } };
   if (kind === 'PV_MODULE') await db.pvModule.updateMany(args);
   else await db.inverter.updateMany(args);
+  await syncSuppliersCarrying(kind, 'all');
   revalidatePath(PATH);
 }
 
