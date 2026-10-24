@@ -24,7 +24,7 @@ vi.mock('@dossipv/db', async () => {
   return {
     ...actual,
     db: {
-      ...actual.db,
+      ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) },
       project: { findFirst: mockProjectFindFirst },
       projectSite: { update: mockSiteUpdate },
       projectImagery: { upsert: mockImageryUpsert },

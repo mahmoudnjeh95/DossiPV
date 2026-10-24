@@ -232,6 +232,13 @@ describe('sponsored installers', () => {
     expect(m.createInvitation).not.toHaveBeenCalled();
   });
 
+  it('rejects an address that would address several recipients', async () => {
+    for (const bad of ['x,evil@b.tn', 'a@b.tn,c@d.tn', '"x"@b.tn', 'Name <a@b.tn>']) {
+      expect(await inviteInstallerAction(undefined, emailForm(bad))).toEqual({ error: expect.any(String) });
+    }
+    expect(m.createInvitation).not.toHaveBeenCalled();
+  });
+
   it('unlinks only an installer this supplier sponsors', async () => {
     m.db.company.findFirst.mockResolvedValueOnce({ id: 'inst1' });
     expect(await removeSponsoredInstallerAction('inst1')).toBeUndefined();

@@ -5,6 +5,7 @@ import { db } from '@dossipv/db';
 import { appUrl, sendEmail } from '@dossipv/email';
 import { requireSupplier } from '../../../lib/supplier-access';
 import { FormReader } from '../../../lib/form-reader';
+import { EMAIL_PATTERN } from '../../../lib/account-form';
 import { createInvitation, SponsorshipError, unlinkInstaller } from '../../../lib/sponsorship';
 
 export type InviteState = { error: string } | { sent: string } | undefined;
@@ -14,7 +15,7 @@ export async function inviteInstallerAction(_prev: InviteState, formData: FormDa
   const { supplierId, supplierName } = await requireSupplier();
   const reader = new FormReader(formData);
   const address = reader.text('email', 'Adresse e-mail', 200);
-  if (reader.hasErrors || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return { error: 'Saisissez une adresse e-mail valide.' };
+  if (reader.hasErrors || !EMAIL_PATTERN.test(address)) return { error: 'Saisissez une adresse e-mail valide.' };
 
   let invitation: { token: string; email: string };
   try {

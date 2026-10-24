@@ -41,7 +41,7 @@ vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
   return {
     ...actual,
-    db: { ...actual.db, project: { findFirst: m.mockProjectFindFirst }, $transaction: m.mockTransaction },
+    db: { ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) }, project: { findFirst: m.mockProjectFindFirst }, $transaction: m.mockTransaction },
   };
 });
 // No highlighted product here: the sponsored pass has its own tests (highlighted-proposals.test.ts).

@@ -47,7 +47,7 @@ vi.mock('@dossipv/auth', async () => {
 });
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
-  return { ...actual, db: { ...actual.db, project: { findFirst: m.mockProjectFindFirst }, $transaction: m.mockTransaction } };
+  return { ...actual, db: { ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) }, project: { findFirst: m.mockProjectFindFirst }, $transaction: m.mockTransaction } };
 });
 vi.mock('@dossipv/engine', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/engine')>('@dossipv/engine');

@@ -43,7 +43,7 @@ vi.mock('@dossipv/db', async () => {
   return {
     ...actual,
     db: {
-      ...actual.db,
+      ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) },
       project: { findFirst: mocks.projectFindFirst },
       dossierJob: { count: mocks.jobCount },
       projectClient: { findUnique: mocks.clientFindUnique, upsert: mocks.clientUpsert },
