@@ -159,7 +159,7 @@ describe('importStegBillAction', () => {
       data: { fileName: 'facture.jpg', mimeType: 'jpeg', storageKey: 'equipment/abc-facture.jpg' },
     });
     expect(m.tx.project.create).toHaveBeenCalledWith({
-      data: { companyId: 'company-1', tier: 'PREMIUM', status: 'DRAFT', flowStep: 'PROPOSALS' },
+      data: { companyId: 'company-1', tier: 'PREMIUM', with3d: true, status: 'DRAFT', flowStep: 'PROPOSALS' },
     });
     expect(createdData(m.tx.projectClient.create)).toMatchObject({
       projectId: 'project-1',

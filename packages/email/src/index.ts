@@ -37,7 +37,7 @@ export function isEmailConfigured(): boolean {
 function smtpTransport(): Transporter {
   if (transporterOverride) return transporterOverride;
   if (!transporter) {
-    const port = Number(process.env.SMTP_PORT ?? 587);
+    const port = Number(process.env.SMTP_PORT || 587); // empty in compose when unset
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port,

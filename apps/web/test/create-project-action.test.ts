@@ -85,6 +85,7 @@ describe('createProjectAction', () => {
       data: {
         companyId: 'company-1',
         tier: 'PREMIUM',
+        with3d: true,
         status: 'DRAFT',
         client: {
           create: {
