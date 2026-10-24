@@ -5,9 +5,7 @@ import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
 import { requireInstallerUser } from '../layout';
 import { catalogScope, provenanceScope } from '../../../lib/project-access';
-import { LOCKED_KINDS, isSponsored } from '../../../lib/sponsorship';
-
-export const CATALOG_LOCK_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs.';
+import { CATALOG_LOCK_MESSAGE, LOCKED_KINDS, isSponsored } from '../../../lib/sponsorship';
 
 const isLockedKind = (kind: string): boolean => (LOCKED_KINDS as readonly string[]).includes(kind);
 

@@ -221,3 +221,7 @@ export function includes3d(subscription: { plan: { tier: 'STANDARD' | 'PREMIUM' 
   if (subscription.plan.tier === 'PREMIUM') return true;
   return subscription.option3dUntil !== null && subscription.option3dUntil > now && subscription.status === 'ACTIVE' && subscription.periodEnd > now;
 }
+
+/** Refusals shown to a sponsored installer (they live here: a "use server" file can only export actions). */
+export const CATALOG_LOCK_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs.';
+export const SPONSORED_OWN_EQUIPMENT_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs : vous ne pouvez pas ajouter votre propre matériel.';

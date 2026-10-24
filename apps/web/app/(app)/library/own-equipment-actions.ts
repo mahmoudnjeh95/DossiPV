@@ -8,7 +8,7 @@ import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storag
 import { requireInstallerUser } from '../layout';
 import { readEquipmentForm } from '../../../lib/equipment-form';
 import { FormReader } from '../../../lib/form-reader';
-import { isSponsored } from '../../../lib/sponsorship';
+import { SPONSORED_OWN_EQUIPMENT_MESSAGE, isSponsored } from '../../../lib/sponsorship';
 
 export type OwnEquipmentActionState = { error: string } | undefined;
 
@@ -48,7 +48,6 @@ const KINDS: Record<EquipmentKind, KindEntry> = {
   ACCESSORY: { fk: 'accessoryId', table: (c) => c.accessory, usedBy: ['connectorFor', 'cableTrayFor', 'distributionBlockFor'] },
 };
 
-export const SPONSORED_OWN_EQUIPMENT_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs : vous ne pouvez pas ajouter votre propre matériel.';
 const INVALID_KIND_ERROR = 'Type d’équipement invalide.';
 const NOT_FOUND_ERROR = 'Équipement introuvable dans votre matériel.';
 const IN_USE_ERROR = 'Cet équipement est utilisé par au moins un projet et ne peut pas être supprimé.';
