@@ -138,3 +138,9 @@ describe('email verification of a self sign-up', () => {
     await expect(verifyEmailWithToken(link)).rejects.toBeInstanceOf(InvalidVerificationTokenError);
   });
 });
+
+describe('login email matching', () => {
+  it('ignores capitals and surrounding spaces in the typed email', async () => {
+    await expect(login(`  ${userEmail.toUpperCase()} `, TEST_PASSWORD)).resolves.toBeDefined();
+  });
+});

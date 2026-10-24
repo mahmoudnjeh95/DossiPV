@@ -94,7 +94,10 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   if (recipients.length === 0) return { sent: false, reason: 'no recipient' };
   const text = message.action ? `${message.text}\n\n${message.action.label} : ${message.action.url}` : message.text;
   if (!isEmailConfigured()) {
-    console.warn(`[email not sent: SMTP_HOST is not set] to=${recipients.join(', ')} subject="${message.subject}"\n${text}`);
+    // Without SMTP (development) the body is logged so a reset link can be followed by hand; in
+    // production it would put live one-time links in the logs, so only the fact is logged.
+    const body = process.env.NODE_ENV === 'production' ? '' : `\n${text}`;
+    console.warn(`[email not sent: SMTP_HOST is not set] to=${recipients.join(', ')} subject="${message.subject}"${body}`);
     return { sent: false, reason: 'SMTP is not configured' };
   }
   try {

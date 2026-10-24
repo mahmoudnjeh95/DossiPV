@@ -70,7 +70,9 @@ export interface LoginResult {
  */
 export const DUMMY_PASSWORD_HASH = '$2b$12$CwTycUXWue0Thq9StjUM0uJ8r6zQ1qg5ZYzgKfOjQ5Z2XqUxOR8Vq';
 
-export async function login(email: string, plainPassword: string): Promise<LoginResult> {
+export async function login(typedEmail: string, plainPassword: string): Promise<LoginResult> {
+  // One key per address whatever the capitals typed, or varying them would dodge the lockout.
+  const email = typedEmail.trim().toLowerCase();
   // Fast-path rejection before touching the database at all. The authoritative check is each
   // recordFailure() call's own return value below — this isLocked() call only avoids the
   // wasted work of a DB lookup + bcrypt compare for a key that's already locked; it is not
@@ -80,7 +82,8 @@ export async function login(email: string, plainPassword: string): Promise<Login
     throw new TooManyAttemptsError();
   }
 
-  const user = await db.companyUser.findUnique({ where: { email }, include: { company: { select: { signupAt: true } } } });
+  // Typed capitals or a trailing space must not lock a user out: emails are matched ignoring case.
+  const user = await db.companyUser.findFirst({ where: { email: { equals: email, mode: 'insensitive' } }, include: { company: { select: { signupAt: true } } } });
 
   // Always run bcrypt.compare(), even for an unknown email, against a fixed dummy hash — see
   // DUMMY_PASSWORD_HASH's own comment for why this matters beyond just the error message.
