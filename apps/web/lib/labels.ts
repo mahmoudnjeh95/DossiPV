@@ -157,6 +157,8 @@ export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'supplier.unhighlight': 'Mise en avant retirée',
   'subscription.option3d': 'Option 3D modifiée',
   'settings.option3dPrice': 'Prix de l’option 3D modifié',
+  'settings.invoicing': 'Paramètres de facturation modifiés',
+  'invoice.issue': 'Facture émise',
 };
 
 export const PLAN_AUDIENCE_LABELS: Record<string, string> = {
