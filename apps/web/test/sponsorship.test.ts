@@ -202,6 +202,7 @@ describe('invitations and linking', () => {
 
   it('works one time only: a second click on the same link finds it already claimed', async () => {
     m.invitationFindUnique.mockResolvedValue(invitation);
+    m.subscriptionFindUnique.mockResolvedValue(null);
     m.invitationUpdateMany.mockResolvedValue({ count: 0 });
 
     await expect(acceptInvitation('raw', 'installer-1')).rejects.toThrow('n’est plus valide');
