@@ -1,12 +1,18 @@
 'use client';
 
-import { useActionState } from 'react';
+import { use, useActionState } from 'react';
 import Link from 'next/link';
 import { loginAction } from './actions';
 import { BrandMark } from '../../components/brand-mark';
 
-export default function LoginPage(): React.JSX.Element {
+interface LoginPageProps {
+  searchParams: Promise<{ reinitialise?: string | string[] }>;
+}
+
+export default function LoginPage({ searchParams }: LoginPageProps): React.JSX.Element {
   const [state, formAction, pending] = useActionState(loginAction, undefined);
+  // Set by /reinitialiser-mot-de-passe after a successful reset.
+  const passwordWasReset = use(searchParams).reinitialise === '1';
 
   return (
     <main className="login-page">
@@ -32,6 +38,9 @@ export default function LoginPage(): React.JSX.Element {
           <p className="eyebrow login-eyebrow">CONNEXION</p>
           <h2 id="login-title">Ravi de vous revoir.</h2>
           <p className="login-intro">Connectez-vous pour retrouver votre espace et vos dossiers.</p>
+          {passwordWasReset && !state?.error && (
+            <p className="login-notice" role="status">Votre mot de passe a été changé : connectez-vous.</p>
+          )}
           <form action={formAction} className="login-form">
             <label htmlFor="email">
               Adresse e-mail
@@ -47,6 +56,7 @@ export default function LoginPage(): React.JSX.Element {
               {!pending && <span aria-hidden="true">→</span>}
             </button>
           </form>
+          <Link href="/mot-de-passe-oublie" className="login-forgot-link">Mot de passe oublié ?</Link>
           <p className="login-help">Un problème d’accès ? Contactez le responsable de votre compte.</p>
           <Link href="/" className="login-back-link"><span aria-hidden="true">←</span> Retour à l’accueil</Link>
         </div>
