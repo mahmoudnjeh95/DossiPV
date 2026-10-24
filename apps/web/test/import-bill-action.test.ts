@@ -12,6 +12,7 @@ const m = vi.hoisted(() => {
     mockValidateSession: vi.fn(),
     mockSubscriptionFindUnique: vi.fn(),
     mockProjectFindFirst: vi.fn(),
+    mockJobFindMany: vi.fn(),
     mockTransaction: vi.fn(),
     tx: {
       file: { create: vi.fn() },
@@ -46,6 +47,7 @@ vi.mock('@dossipv/db', async () => {
       ...actual.db,
       subscription: { findUnique: m.mockSubscriptionFindUnique },
       project: { findFirst: m.mockProjectFindFirst },
+      dossierJob: { findMany: m.mockJobFindMany },
       $transaction: m.mockTransaction,
     },
   };
@@ -107,6 +109,7 @@ beforeEach(() => {
   m.tx.billImportAttempt.count.mockResolvedValue(0);
   m.tx.billImportAttempt.create.mockResolvedValue({ id: 'attempt-1' });
   m.mockProjectFindFirst.mockResolvedValue(null);
+  m.mockJobFindMany.mockResolvedValue([]);
   m.mockReadStegBill.mockResolvedValue({ ...testBill, governorate: 'Gafsa' });
   m.mockSaveFile.mockResolvedValue({ storageKey: 'equipment/abc-facture.jpg' });
   m.mockDeleteFile.mockResolvedValue(undefined);
@@ -330,6 +333,77 @@ describe('importStegBillAction', () => {
 
     expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Enregistrement impossible, réessayez.' });
     expect(m.mockDeleteFile).toHaveBeenCalledWith('equipment/abc-facture.jpg');
+  });
+});
+
+describe('importStegBillAction — free trial', () => {
+  const periodStart = new Date('2026-08-01T00:00:00Z');
+  const trialSubscription = {
+    status: 'ACTIVE',
+    periodStart,
+    periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    plan: { name: 'Essai gratuit', monthlyDossierLimit: 3, tier: 'STANDARD', isTrial: true },
+  };
+
+  beforeEach(() => {
+    m.mockSubscriptionFindUnique.mockResolvedValue(trialSubscription);
+  });
+
+  it('caps the imports at 10 in total since the period start, before calling Claude', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValue(10);
+
+    const result = await importStegBillAction(undefined, billForm());
+
+    expect(result?.error).toMatch(/^Limite de 10 factures importées pendant l'essai atteinte : contactez DossiPV/);
+    expect(m.tx.billImportAttempt.count).toHaveBeenCalledWith({ where: { companyId: 'company-1', createdAt: { gte: periodStart } } });
+    expect(m.tx.billImportAttempt.create).not.toHaveBeenCalled();
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+  });
+
+  it('accepts the 10th import of the trial', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValue(9);
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(m.tx.billImportAttempt.create).toHaveBeenCalledWith({ data: { companyId: 'company-1' } });
+  });
+
+  it('applies the daily cap on top of the trial cap', async () => {
+    m.tx.billImportAttempt.count.mockResolvedValueOnce(2).mockResolvedValueOnce(30);
+
+    expect(await importStegBillAction(undefined, billForm())).toEqual({ error: 'Limite de 30 factures importées par jour atteinte.' });
+  });
+
+  it('refuses once the trial is over, before reading the file or calling Claude', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ ...trialSubscription, periodEnd: new Date('2026-09-01T00:00:00Z') });
+
+    const result = await importStegBillAction(undefined, billForm());
+
+    expect(result?.error).toMatch(/^Essai gratuit expiré : contactez DossiPV/);
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+    expect(m.mockTransaction).not.toHaveBeenCalled();
+  });
+
+  it('refuses once the 3 dossiers of the trial are used', async () => {
+    m.mockJobFindMany.mockResolvedValue(
+      ['a', 'b', 'c'].map((projectId) => ({ projectId, status: 'SUCCEEDED', startedAt: new Date('2026-08-20T00:00:00Z') })),
+    );
+
+    const result = await importStegBillAction(undefined, billForm());
+
+    expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez DossiPV/);
+    expect(m.mockJobFindMany.mock.calls[0]?.[0]).toMatchObject({ where: { startedAt: { gte: periodStart } } });
+    expect(m.mockReadStegBill).not.toHaveBeenCalled();
+  });
+
+  it('does not count the trial cap for a regular plan', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue(activeSubscription);
+    m.tx.billImportAttempt.count.mockResolvedValue(20);
+
+    await redirectTarget(importStegBillAction(undefined, billForm()));
+
+    expect(m.tx.billImportAttempt.count).toHaveBeenCalledTimes(1);
+    expect(m.mockJobFindMany).not.toHaveBeenCalled();
   });
 });
 

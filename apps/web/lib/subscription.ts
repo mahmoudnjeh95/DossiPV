@@ -6,14 +6,19 @@ import { db } from '@dossipv/db';
  */
 export interface SubscriptionLike {
   status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  periodStart?: Date;
   periodEnd: Date;
-  plan: { name: string; monthlyDossierLimit: number; tier: 'STANDARD' | 'PREMIUM' };
+  plan: { name: string; monthlyDossierLimit: number; tier: 'STANDARD' | 'PREMIUM'; isTrial?: boolean };
 }
 
 export interface SubscriptionSummary {
   planName: string;
   tier: 'STANDARD' | 'PREMIUM';
   monthlyDossierLimit: number;
+  /** The free trial: its dossiers (and bill imports) are counted over the whole period, not per month. */
+  isTrial: boolean;
+  /** Start of the period; where a trial's counting begins. Null when the row carries none. */
+  periodStart: Date | null;
   periodEnd: Date;
   daysLeft: number;
   /** Status computed from periodEnd as well as the stored status: an ACTIVE row past its end is treated as expired. */
@@ -37,6 +42,8 @@ export function summarizeSubscription(subscription: SubscriptionLike | null, now
     planName: subscription.plan.name,
     tier: subscription.plan.tier,
     monthlyDossierLimit: subscription.plan.monthlyDossierLimit,
+    isTrial: subscription.plan.isTrial === true,
+    periodStart: subscription.periodStart ?? null,
     periodEnd: subscription.periodEnd,
     daysLeft,
     effectiveStatus,
@@ -56,12 +63,32 @@ export function monthStart(now: Date): Date {
 }
 
 /**
- * Spec §5 quota rule: one project counts once against the monthly limit however many times it
- * is regenerated, and a FAILED job never consumes quota. Returns the set of project ids that
- * already consumed a slot this month.
+ * Where the quota counting starts: the calendar month, except for the free trial, which counts
+ * over its whole period (spec 2026-10-23 §7).
  */
-export function projectsCountedThisMonth(jobs: QuotaJobLike[], now: Date): Set<string> {
-  const start = monthStart(now);
+export function quotaWindowStart(subscription: SubscriptionSummary | null, now: Date): Date {
+  return subscription?.isTrial && subscription.periodStart ? subscription.periodStart : monthStart(now);
+}
+
+/** The company's dossier jobs inside the quota window of its subscription. */
+export function quotaJobs(
+  companyId: string,
+  subscription: SubscriptionSummary | null,
+  now: Date,
+): Promise<QuotaJobLike[]> {
+  return db.dossierJob.findMany({
+    where: { project: { companyId }, startedAt: { gte: quotaWindowStart(subscription, now) } },
+    select: { projectId: true, status: true, startedAt: true },
+  });
+}
+
+/**
+ * Spec §5 quota rule: one project counts once against the limit however many times it is
+ * regenerated, and a FAILED job never consumes quota. Returns the set of project ids that already
+ * consumed a slot since `since` (the start of the month unless a trial counts from its period start).
+ */
+export function projectsCountedThisMonth(jobs: QuotaJobLike[], now: Date, since: Date = monthStart(now)): Set<string> {
+  const start = since;
   const counted = new Set<string>();
   for (const job of jobs) {
     if (job.status !== 'FAILED' && job.startedAt >= start) {
@@ -78,8 +105,14 @@ export interface QuotaCheck {
   blocked: boolean;
 }
 
-export function checkQuota(jobs: QuotaJobLike[], limit: number, projectId: string, now: Date): QuotaCheck {
-  const counted = projectsCountedThisMonth(jobs, now);
+export function checkQuota(
+  jobs: QuotaJobLike[],
+  limit: number,
+  projectId: string,
+  now: Date,
+  since: Date = monthStart(now),
+): QuotaCheck {
+  const counted = projectsCountedThisMonth(jobs, now, since);
   const used = counted.size;
   const needsNewSlot = !counted.has(projectId);
   return { used, limit, blocked: needsNewSlot && used >= limit };

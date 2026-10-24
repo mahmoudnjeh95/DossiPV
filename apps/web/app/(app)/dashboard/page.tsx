@@ -4,7 +4,8 @@ import { requireAuthenticatedCompanyUser } from '../layout';
 import {
   summarizeSubscription,
   projectsCountedThisMonth,
-  monthStart,
+  quotaJobs,
+  quotaWindowStart,
 } from '../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
@@ -15,15 +16,13 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
   const now = new Date();
 
-  const [company, jobsThisMonth, recentProjects, projectCount] = await Promise.all([
-    db.company.findUnique({
-      where: { id: user.companyId },
-      include: { subscription: { include: { plan: true } } },
-    }),
-    db.dossierJob.findMany({
-      where: { project: { companyId: user.companyId }, startedAt: { gte: monthStart(now) } },
-      select: { projectId: true, status: true, startedAt: true },
-    }),
+  const company = await db.company.findUnique({
+    where: { id: user.companyId },
+    include: { subscription: { include: { plan: true } } },
+  });
+  const subscription = summarizeSubscription(company?.subscription ?? null, now);
+  const [jobsInWindow, recentProjects, projectCount] = await Promise.all([
+    quotaJobs(user.companyId, subscription, now),
     db.project.findMany({
       where: { companyId: user.companyId },
       include: { client: true },
@@ -33,8 +32,7 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
     db.project.count({ where: { companyId: user.companyId } }),
   ]);
 
-  const subscription = summarizeSubscription(company?.subscription ?? null, now);
-  const used = projectsCountedThisMonth(jobsThisMonth, now).size;
+  const used = projectsCountedThisMonth(jobsInWindow, now, quotaWindowStart(subscription, now)).size;
 
   return (
     <main>
@@ -43,13 +41,13 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
         Bienvenue, {user.fullName}
       </h1>
 
-      <SubscriptionBanner subscription={subscription} />
+      <SubscriptionBanner subscription={subscription} trialUsed={used} />
 
       <div className="card-grid" style={{ marginBottom: 16 }}>
         <StatsCard icon={Projects} label="Projets" value={projectCount} />
         <StatsCard
           icon={ChartBar}
-          label="Dossiers ce mois"
+          label={subscription?.isTrial ? 'Dossiers (essai)' : 'Dossiers ce mois'}
           value={subscription ? `${used} / ${subscription.monthlyDossierLimit}` : String(used)}
         />
         {subscription && (
