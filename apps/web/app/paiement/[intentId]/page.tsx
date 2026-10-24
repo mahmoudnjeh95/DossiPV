@@ -7,6 +7,7 @@ import { chatSnapshot, markReadByCompany } from '../../../lib/payments/chat';
 import { cancelIntentAction } from '../actions';
 import { PayerChat } from './payer-chat';
 import { DeclareForm } from './declare-form';
+import { CopyButton } from '../../../components/copy-button';
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 
@@ -82,12 +83,15 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
             {provider ? (
               <>
                 <p>
-                  Depuis votre application {provider.label}, envoyez <strong>{money(Number(intent.amountTnd))}</strong> au numéro{' '}
+                  Depuis votre application {provider.label}, envoyez <strong>{money(Number(intent.amountTnd))}</strong>
+                  <CopyButton value={Number(intent.amountTnd).toFixed(2)} label="le montant" /> au numéro{' '}
                   <strong>{provider.number}</strong>
+                  <CopyButton value={provider.number.replace(/s+/g, '')} label={`le numéro ${provider.label}`} />
                   {settings.accountHolder ? ` (${settings.accountHolder})` : ''}.
                 </p>
                 <p>
                   Écrivez cette référence dans le commentaire du transfert : <strong>{reference}</strong>
+                  <CopyButton value={reference} label="la référence" />
                 </p>
                 {settings.instructions && <p className="hint" style={{ whiteSpace: 'pre-line' }}>{settings.instructions}</p>}
               </>
