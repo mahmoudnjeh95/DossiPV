@@ -181,6 +181,14 @@ describe('computeProjectProposals', () => {
     expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
   });
 
+  it('does not size while the company profile is the sign-up placeholder (its ANME validity would fail C22)', async () => {
+    const project = billProject();
+    const computed = await computeProjectProposals({ ...project, company: { ...project.company, profileComplete: false } }, NOW);
+
+    expect(computed).toMatchObject({ ok: false, blockedReasons: [expect.stringContaining('Complétez le profil') as string] });
+    expect(m.mockGetSpecificYield).not.toHaveBeenCalled();
+  });
+
   it('does not size when the library lacks a kind of equipment', async () => {
     m.mockLoadSizingCatalog.mockResolvedValue({ ...sizingCatalog, acBreakers: [] });
 

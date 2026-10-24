@@ -62,10 +62,9 @@ export async function createInstallerAction(
   if (await db.companyUser.findUnique({ where: { email: ownerEmail } })) {
     return { error: 'Cet email de connexion est déjà utilisé par un autre compte.' };
   }
-  const sameAnme = await db.company.findFirst({
-    where: { anmeCode: { equals: company.anmeCode, mode: 'insensitive' } },
-    select: { name: true },
-  });
+  // Compared ignoring case, spaces and dashes, like the sign-up and Paramètres checks.
+  const anmeKey = (code: string): string => code.replace(/[\s\-‐-―]/g, '').toLowerCase();
+  const sameAnme = (await db.company.findMany({ select: { name: true, anmeCode: true } })).find((other) => anmeKey(other.anmeCode) === anmeKey(company.anmeCode));
   if (sameAnme) {
     return { error: `Ce code ANME est déjà inscrit (${sameAnme.name}).` };
   }

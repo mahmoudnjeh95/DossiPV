@@ -66,8 +66,19 @@ export interface QuotaJobLike {
   startedAt: Date;
 }
 
+/** Tunisia is UTC+1 all year (no daylight saving since 2009): quota months and days follow it, not the server's zone. */
+const TUNIS_OFFSET_MS = 60 * 60 * 1000;
+
+/** Midnight (Africa/Tunis) of the 1st of the month containing `now`. */
 export function monthStart(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth(), 1);
+  const local = new Date(now.getTime() + TUNIS_OFFSET_MS);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - TUNIS_OFFSET_MS);
+}
+
+/** Midnight (Africa/Tunis) of the day containing `now`. */
+export function dayStart(now: Date): Date {
+  const local = new Date(now.getTime() + TUNIS_OFFSET_MS);
+  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - TUNIS_OFFSET_MS);
 }
 
 /**

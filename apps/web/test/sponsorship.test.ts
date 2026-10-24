@@ -8,6 +8,7 @@ const m = vi.hoisted(() => ({
   companyUpdateMany: vi.fn(),
   companyUserFindUnique: vi.fn(),
   subscriptionFindUnique: vi.fn(),
+  subscriptionDeleteMany: vi.fn(),
   productFindMany: vi.fn(),
   libraryDeleteMany: vi.fn(),
   libraryCreateMany: vi.fn(),
@@ -22,7 +23,7 @@ vi.mock('@dossipv/db', () => ({
   db: {
     company: { findUnique: m.companyFindUnique, findMany: m.companyFindMany, count: m.companyCount, update: m.companyUpdate, updateMany: m.companyUpdateMany },
     companyUser: { findUnique: m.companyUserFindUnique },
-    subscription: { findUnique: m.subscriptionFindUnique },
+    subscription: { findUnique: m.subscriptionFindUnique, deleteMany: m.subscriptionDeleteMany },
     supplierProduct: { findMany: m.productFindMany },
     libraryItem: { deleteMany: m.libraryDeleteMany, createMany: m.libraryCreateMany },
     supplierInvitation: { findUnique: m.invitationFindUnique, deleteMany: m.invitationDeleteMany, create: m.invitationCreate, updateMany: m.invitationUpdateMany },
@@ -40,6 +41,7 @@ import {
   SponsorshipError,
   syncSponsoredLibrary,
   syncSupplierInstallers,
+  syncSuppliersCarrying,
   unlinkInstaller,
 } from '../lib/sponsorship';
 
@@ -201,6 +203,27 @@ describe('invitations and linking', () => {
   it('unlinks an installer, freeing its seat', async () => {
     await unlinkInstaller('installer-1');
     expect(m.companyUpdateMany).toHaveBeenCalledWith({ where: { id: 'installer-1', sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
+  });
+
+  it('drops the suspended row that only held the 3D option, so the direct installer has no stale suspended plan', async () => {
+    m.companyUpdateMany.mockResolvedValue({ count: 1 });
+    await unlinkInstaller('installer-1');
+    expect(m.subscriptionDeleteMany).toHaveBeenCalledWith({ where: { companyId: 'installer-1', status: 'SUSPENDED', option3dUntil: { not: null } } });
+  });
+
+  it('touches no subscription when the installer was not sponsored', async () => {
+    m.companyUpdateMany.mockResolvedValue({ count: 0 });
+    await unlinkInstaller('installer-1');
+    expect(m.subscriptionDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it('re-syncs each supplier carrying a published item once', async () => {
+    m.productFindMany.mockResolvedValue([{ supplierCompanyId: 's1' }, { supplierCompanyId: 's1' }]);
+    m.companyFindMany.mockResolvedValue([{ id: 'a' }]);
+    m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: 's1' });
+    await syncSuppliersCarrying('PV_MODULE', ['m1']);
+    expect(m.productFindMany.mock.calls[0]![0]).toMatchObject({ where: { pvModuleId: { in: ['m1'] } } });
+    expect(m.companyFindMany).toHaveBeenCalledTimes(1);
   });
 });
 

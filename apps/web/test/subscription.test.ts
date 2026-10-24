@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeSubscription, checkQuota, projectsCountedThisMonth, addMonths, extendedPeriodEnd } from '../lib/subscription';
+import { monthStart, dayStart, summarizeSubscription, checkQuota, projectsCountedThisMonth, addMonths, extendedPeriodEnd } from '../lib/subscription';
 
 const now = new Date('2026-10-15T12:00:00Z');
 const plan = { name: 'Standard', monthlyDossierLimit: 2, tier: 'STANDARD' as const };
@@ -89,5 +89,19 @@ describe('extendedPeriodEnd', () => {
   it('counts from today once the subscription has ended, so a late payment does not pay for past days', () => {
     const today = new Date(2026, 9, 15);
     expect(extendedPeriodEnd(new Date(2026, 8, 1), today, 1)).toEqual(addMonths(today, 1));
+  });
+});
+
+describe('Tunis month and day boundaries', () => {
+  it('starts the month at midnight Africa/Tunis whatever the server zone', () => {
+    // 2026-10-31 23:30 UTC is already 1 November in Tunis (UTC+1).
+    expect(monthStart(new Date('2026-10-31T23:30:00Z')).toISOString()).toBe('2026-10-31T23:00:00.000Z');
+    expect(monthStart(new Date('2026-10-31T22:59:00Z')).toISOString()).toBe('2026-09-30T23:00:00.000Z');
+    expect(monthStart(new Date('2026-01-01T00:30:00Z')).toISOString()).toBe('2025-12-31T23:00:00.000Z');
+  });
+
+  it('starts the day at midnight Africa/Tunis', () => {
+    expect(dayStart(new Date('2026-10-15T23:30:00Z')).toISOString()).toBe('2026-10-15T23:00:00.000Z');
+    expect(dayStart(new Date('2026-10-15T12:00:00Z')).toISOString()).toBe('2026-10-14T23:00:00.000Z');
   });
 });

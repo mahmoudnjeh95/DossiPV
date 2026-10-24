@@ -53,6 +53,16 @@ export async function syncSponsoredLibrary(installerCompanyId: string): Promise<
   ]);
 }
 
+/** Call after catalog items a supplier may carry were published: every supplier carrying one re-syncs its installers. */
+export async function syncSuppliersCarrying(kind: 'PV_MODULE' | 'INVERTER', itemIds: string[] | 'all'): Promise<void> {
+  const link = kind === 'PV_MODULE' ? 'pvModuleId' : 'inverterId';
+  const products = await db.supplierProduct.findMany({
+    where: itemIds === 'all' ? { [link]: { not: null } } : { [link]: { in: itemIds } },
+    select: { supplierCompanyId: true },
+  });
+  for (const supplierId of new Set(products.map((p) => p.supplierCompanyId))) await syncSupplierInstallers(supplierId);
+}
+
 /** Call after a supplier's carried products change: every installer it sponsors follows. */
 export async function syncSupplierInstallers(supplierId: string): Promise<void> {
   const installers = await db.company.findMany({ where: { sponsorCompanyId: supplierId }, select: { id: true } });
@@ -168,8 +178,14 @@ export async function acceptInvitation(rawToken: string, installerCompanyId: str
  * pays Premium itself (§5.3). The installer becomes a direct installer: its library keeps what it
  * has (projects stay valid), and it can add any shared item again. Its seat is freed.
  */
-export async function unlinkInstaller(installerCompanyId: string, client: Pick<typeof db, 'company'> = db): Promise<void> {
-  await client.company.updateMany({ where: { id: installerCompanyId, sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
+export async function unlinkInstaller(installerCompanyId: string, client: Pick<typeof db, 'company' | 'subscription'> = db): Promise<void> {
+  const unlinked = await client.company.updateMany({ where: { id: installerCompanyId, sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
+  if ((unlinked?.count ?? 0) > 0) {
+    // The SUSPENDED row that only held the 3D option (see extendOption3dUntil) must not outlive the
+    // sponsoring: left in place it would show the direct installer as "suspended" and an admin
+    // assigning it a plan would change the plan of a row that stays suspended.
+    await client.subscription.deleteMany({ where: { companyId: installerCompanyId, status: 'SUSPENDED', option3dUntil: { not: null } } });
+  }
 }
 
 /** True when the company is limited to a supplier's panels and inverters. */

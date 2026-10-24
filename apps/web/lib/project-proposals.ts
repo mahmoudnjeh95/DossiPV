@@ -1,4 +1,5 @@
 import { proposeInstallations, type Proposal, type ProposeResult, type SizingCatalog, type SizingContext } from '@dossipv/engine';
+import { PROFILE_INCOMPLETE_MESSAGE } from './labels';
 import { loadHighlightedProducts } from './highlight';
 import { toIsoDate, type ProjectForEngine } from './project-engine-input';
 import { isSponsored } from './sponsorship';
@@ -70,6 +71,8 @@ export async function computeProjectProposals(
   const blockedReasons: string[] = [];
   if (site && site.phases !== 1) blockedReasons.push(NOT_SINGLE_PHASE);
   if (site?.lightningRod) blockedReasons.push(LIGHTNING_ROD);
+  // The ANME validity of a self sign-up is a placeholder (2000-01-01) until Paramètres is filled: proposals would all fail C22.
+  if (company.profileComplete === false) blockedReasons.push(PROFILE_INCOMPLETE_MESSAGE);
 
   const catalog = await loadSizingCatalog(project.companyId);
   const lacking = missingLibraryKinds(catalog);

@@ -21,6 +21,7 @@ import { requireInstallerUser } from '../layout';
 import {
   summarizeSubscription,
   quotaJobs,
+  dayStart,
   quotaWindowStart,
   projectsCountedThisMonth,
 } from '../../../lib/subscription';
@@ -64,7 +65,7 @@ async function reserveBillReading(
   /** The start of the free trial's period: its imports are capped in total since then, on top of the daily cap. */
   trialSince: Date | null,
 ): Promise<ImportBillState | null> {
-  const since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const since = dayStart(now);
   try {
     return await db.$transaction(
       async (tx) => {

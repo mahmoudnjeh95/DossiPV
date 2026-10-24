@@ -247,7 +247,7 @@ describe('resendVerificationAction', () => {
     expect(result.sent).toBe(true);
     expect(m.mockUserFindFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: objectWith({ email: { equals: 'ali@solaire.tn', mode: 'insensitive' }, emailVerifiedAt: null, company: { signupAt: { not: null } } }),
+        where: objectWith({ email: { equals: 'ali@solaire.tn', mode: 'insensitive' }, disabledAt: null, OR: [{ emailVerifiedAt: null }, { company: { subscription: null } }], company: { signupAt: { not: null } } }),
       }),
     );
     expect(m.mockCreateToken).toHaveBeenCalledWith('u1');
