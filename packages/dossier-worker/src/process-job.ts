@@ -743,10 +743,11 @@ export async function processJob(jobId: string): Promise<void> {
       }
     }
 
-    // Without an AI rectangle, Claude still picks where the array stands on a drawn roof (3D view).
-    // Indicative only: any failure keeps the 3D view's own placement and never fails the dossier.
+    // Without an AI rectangle, Claude still picks where the array stands on a drawn roof (3D view,
+    // so only for a dossier with one: spec 2026-10-23 §2.1). Indicative only: any failure keeps the
+    // 3D view's own placement and never fails the dossier.
     let placement: RoofPlacement | null = null;
-    if (!layout && roofPixels && page37Image) {
+    if (snapshot.with3d && !layout && roofPixels && page37Image) {
       try {
         placement = await withRetry(
           () =>
@@ -775,7 +776,7 @@ export async function processJob(jobId: string): Promise<void> {
     const dcFormula = gps.technicalRoom ? formatRunLengthFormula(groundDistanceM(field, gps.technicalRoom), dcRun.lengthM, site.floors, 'DC') : null;
     const acFormula = gps.technicalRoom && gps.meter ? formatRunLengthFormula(groundDistanceM(gps.technicalRoom, gps.meter), acRun.lengthM, site.floors, 'AC') : null;
     // The 3D view is drawn on page 37's own photo, so the AI panel rectangle needs no conversion.
-    if (page37Image) {
+    if (snapshot.with3d && page37Image) {
       roof3dInput = {
         image: { buffer: page37Image.print, widthPx: implantationView.widthPx, heightPx: implantationView.heightPx, metersPerPixel: implantationMetersPerPixel },
         field: pixelPoints.field!,
@@ -834,7 +835,8 @@ export async function processJob(jobId: string): Promise<void> {
     return fail(jobId, 'map-pages', error);
   }
 
-  // Annex N°5, second sheet: the 3D view of the array on the roof. Never fails the dossier.
+  // Annex N°5, second sheet: the 3D view of the array on the roof, for a dossier with 3D (Premium).
+  // Never fails the dossier.
   if (roof3dInput && drawingCartouche) {
     try {
       const roof3d = await renderRoof3dView({ ...roof3dInput, cartouche: drawingCartouche });
@@ -843,7 +845,7 @@ export async function processJob(jobId: string): Promise<void> {
       console.warn(`processJob: job ${jobId}: the 3D roof view could not be drawn.`, error);
       warnings.push(ROOF_3D_MISSING_WARNING);
     }
-  } else if (sitePlanData) {
+  } else if (sitePlanData && snapshot.with3d) {
     warnings.push(ROOF_3D_MISSING_WARNING);
   }
 

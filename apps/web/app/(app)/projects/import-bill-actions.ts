@@ -17,7 +17,7 @@ import {
 } from '@dossipv/bill-reader';
 import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/pdf-locate';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { summarizeSubscription } from '../../../lib/subscription';
+import { summarizeSubscription, tierIncludes3d } from '../../../lib/subscription';
 import { CLIENT_NAME_PLACEHOLDER } from '../../../lib/client-identity';
 
 export interface ImportBillState {
@@ -220,7 +220,7 @@ export async function importStegBillAction(
     projectId = await db.$transaction(async (tx) => {
       const file = await tx.file.create({ data: { fileName: storedName, mimeType: storedMimeType, storageKey } });
       const project = await tx.project.create({
-        data: { companyId: user.companyId, tier, status: 'DRAFT', flowStep: 'PROPOSALS' },
+        data: { companyId: user.companyId, tier, with3d: tierIncludes3d(tier), status: 'DRAFT', flowStep: 'PROPOSALS' },
       });
       await tx.projectClient.create({
         data: {

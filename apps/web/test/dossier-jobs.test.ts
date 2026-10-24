@@ -24,6 +24,7 @@ function fixtureSnapshot(): DossierJobSnapshotV1 {
     version: 1,
     projectId: project.id,
     companyId: project.companyId,
+    with3d: project.with3d,
     tier: project.tier,
     dossierNumber: project.dossierNumber ?? null,
     dossierDate: (project.dossierDate ?? FIXTURE_NOW).toISOString(),

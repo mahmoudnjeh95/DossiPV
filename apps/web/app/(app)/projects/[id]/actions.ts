@@ -41,6 +41,8 @@ export interface DossierJobSnapshotV1 {
   projectId: string;
   companyId: string;
   tier: 'STANDARD' | 'PREMIUM';
+  /** The dossier gets the 3D view of the array on the roof (Project.with3d). */
+  with3d: boolean;
   dossierNumber: string | null;
   dossierDate: string;
   capturedAt: string;
@@ -155,6 +157,7 @@ export async function generateDossierAction(
       projectId: project.id,
       companyId: project.companyId,
       tier: project.tier,
+      with3d: project.with3d,
       dossierNumber,
       dossierDate: dossierDate.toISOString(),
       capturedAt: now.toISOString(),

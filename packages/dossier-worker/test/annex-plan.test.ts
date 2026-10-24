@@ -16,6 +16,7 @@ function snapshot(overrides: Partial<WorkerJobSnapshot> = {}): WorkerJobSnapshot
     version: 1,
     projectId: 'project-1',
     companyId: 'company-1',
+    with3d: false,
     tier: 'STANDARD',
     dossierNumber: null,
     dossierDate: null,

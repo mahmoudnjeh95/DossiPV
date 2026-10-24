@@ -97,6 +97,8 @@ export interface WorkerJobSnapshot {
   projectId: string;
   companyId: string;
   tier: 'STANDARD' | 'PREMIUM';
+  /** The dossier gets the 3D view of the array on the roof (annex N°5, sheet 2). */
+  with3d: boolean;
   dossierNumber: string | null;
   dossierDate: string | null;
   engineInput: RunEngineInput;
@@ -236,6 +238,8 @@ export function parseJobSnapshot(value: unknown): WorkerJobSnapshot | null {
     projectId: value.projectId,
     companyId: value.companyId,
     tier,
+    // Snapshots queued before the flag existed: the 3D view went with Premium.
+    with3d: typeof value.with3d === 'boolean' ? value.with3d : tier === 'PREMIUM',
     dossierNumber: optionalString(value.dossierNumber),
     dossierDate: optionalString(value.dossierDate),
     engineInput: value.engineInput as unknown as RunEngineInput,

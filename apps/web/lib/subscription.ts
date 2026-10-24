@@ -113,3 +113,11 @@ export async function companyProjectTier(companyId: string): Promise<'STANDARD' 
   const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
   return subscription?.plan.tier ?? 'STANDARD';
 }
+
+/**
+ * Spec 2026-10-23 §2.1: the dossier's 3D view of the array on the roof is a Premium feature (later
+ * also the paid 3D option of sponsored installers). Recorded on the project at creation, like its tier.
+ */
+export function tierIncludes3d(tier: 'STANDARD' | 'PREMIUM'): boolean {
+  return tier === 'PREMIUM';
+}

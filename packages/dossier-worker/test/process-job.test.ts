@@ -129,7 +129,7 @@ vi.mock('fs/promises', async () => {
 
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { computeRunLengthsM, formatRunLengthFormula, groundDistanceM, polygonAreaM2 } from '@dossipv/engine';
-import { processJob, IMPLANTATION_VIEW_OPTIONS, INSTALLER_PHOTO_POINTS_WARNING, INSTALLER_PHOTO_UNREADABLE_WARNING } from '../src/process-job';
+import { processJob, IMPLANTATION_VIEW_OPTIONS, INSTALLER_PHOTO_POINTS_WARNING, INSTALLER_PHOTO_UNREADABLE_WARNING, ROOF_3D_MISSING_WARNING } from '../src/process-job';
 import { encodeJpegBitmap } from '../src/image-enhance';
 import type { ProductionSimulation } from '../src/run-simulation';
 import { planImplantationView, planSituationView, projectToImage, isInsideImage, metersPerPixel, MapboxAuthError, TileHttpError, type SatelliteView } from '../src/fetch-satellite-image';
@@ -143,6 +143,7 @@ const validSnapshot = {
   version: 1,
   projectId: 'project-1',
   companyId: 'company-1',
+  with3d: true,
   engineInput: {
     dossierDate: '2026-10-03',
     array: [{ inverter: { pacW: 4000, vdcMaxV: 1000, mpptMinV: 80, mpptMaxV: 550 }, mppts: [{ stringsInParallel: 1, modulesPerString: 5 }] }],
@@ -679,6 +680,16 @@ describe('processJob — where the array stands on a drawn roof (3D view)', () =
     mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...premiumSnapshot, site: { ...premiumSnapshot.site, roofOutline: DRAWN_ROOF } } });
     await processJob('job-1');
     expect(mocks.generateRoofPlacement).not.toHaveBeenCalled();
+  });
+
+  it('draws no 3D view, and asks Claude nothing for it, in a dossier without 3D (Standard)', async () => {
+    mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: { ...standardWithRoof, with3d: false } });
+
+    await processJob('job-1');
+
+    expect(mocks.generateRoofPlacement).not.toHaveBeenCalled();
+    expect(mocks.renderRoof3dView).not.toHaveBeenCalled();
+    expect(warningsOfTheJob()).not.toContain(ROOF_3D_MISSING_WARNING);
   });
 });
 
