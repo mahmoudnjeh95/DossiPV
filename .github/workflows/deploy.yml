@@ -111,15 +111,18 @@ jobs:
           $SSH "umask 077 && cat > /home/debian/dossipv/.env" <<EOF
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
           ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
-          APP_URL=$APP_URL
-          SMTP_HOST=$SMTP_HOST
-          SMTP_PORT=${SMTP_PORT:-587}
-          SMTP_USER=$SMTP_USER
-          SMTP_PASSWORD=$SMTP_PASSWORD
-          SMTP_FROM=$SMTP_FROM
-          ADMIN_EMAIL=$ADMIN_EMAIL
-          SENTRY_DSN=$SENTRY_DSN
-          MAPBOX_ACCESS_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
+          # Single quotes keep a value literal for Docker Compose: an address like
+          # DossiPV <noreply@dossipv.tn> or a password with a space would otherwise break the file.
+          # (A value must therefore not contain a single quote, a dollar sign or a line break.)
+          APP_URL='$APP_URL'
+          SMTP_HOST='$SMTP_HOST'
+          SMTP_PORT='${SMTP_PORT:-587}'
+          SMTP_USER='$SMTP_USER'
+          SMTP_PASSWORD='$SMTP_PASSWORD'
+          SMTP_FROM='$SMTP_FROM'
+          ADMIN_EMAIL='$ADMIN_EMAIL'
+          SENTRY_DSN='$SENTRY_DSN'
+          MAPBOX_ACCESS_TOKEN='$NEXT_PUBLIC_MAPBOX_TOKEN'
           IMAGE_TAG=${{ github.sha }}
           EOF
 
