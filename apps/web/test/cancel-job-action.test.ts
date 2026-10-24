@@ -19,7 +19,7 @@ vi.mock('@dossipv/auth', async () => {
 });
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
-  return { ...actual, db: { ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) }, dossierJob: { updateMany: mocks.jobUpdateMany } } };
+  return { ...actual, db: { ...actual.db, company: { findUnique: (): Promise<{ kind: string }> => Promise.resolve({ kind: 'INSTALLER' }) }, dossierJob: { updateMany: mocks.jobUpdateMany } } };
 });
 
 import { cancelJobAction } from '../app/(app)/projects/[id]/jobs/[jobId]/actions';

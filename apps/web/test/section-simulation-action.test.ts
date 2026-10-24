@@ -35,7 +35,7 @@ vi.mock('@dossipv/db', async () => {
   return {
     ...actual,
     db: {
-      ...actual.db, company: { findUnique: () => Promise.resolve({ kind: 'INSTALLER' }) },
+      ...actual.db, company: { findUnique: (): Promise<{ kind: string }> => Promise.resolve({ kind: 'INSTALLER' }) },
       project: { findFirst: mockProjectFindFirst },
       projectSimulation: { findUnique: mockSimulationFindUnique, upsert: mockSimulationUpsert },
       file: { create: mockFileCreate, findUnique: mockFileFindUnique, delete: mockFileDelete },

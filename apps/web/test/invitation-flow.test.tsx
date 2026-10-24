@@ -249,9 +249,9 @@ describe('acceptPendingInvitationAction (who may accept)', () => {
   it('refuses a support session and a non-owner', async () => {
     m.invitationFindUnique.mockResolvedValue(invitationRow({ email: 'a@b.com' }));
     m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER', impersonatedBySuperAdminId: 'admin-1' });
-    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) });
+    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) as unknown });
     m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'MEMBER' });
-    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) });
+    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) as unknown });
     expect(m.companyUpdate).not.toHaveBeenCalled();
   });
 });
