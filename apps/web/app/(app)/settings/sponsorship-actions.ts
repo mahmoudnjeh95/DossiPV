@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { SponsorshipError, linkInstaller, normalizeEmail } from '../../../lib/sponsorship';
+import { SponsorshipError, consumeInvitation, normalizeEmail } from '../../../lib/sponsorship';
 
 export type SponsorshipActionState = { error: string } | undefined;
 
@@ -16,16 +16,11 @@ export async function acceptPendingInvitationAction(invitationId: string): Promi
     return { error: 'Cette invitation n’est plus valide.' };
   }
   try {
-    await linkInstaller(user.companyId, invitation.supplierCompanyId);
+    await consumeInvitation(invitation.id, invitation.supplierCompanyId, user.companyId);
   } catch (error) {
     if (error instanceof SponsorshipError) return { error: error.message };
     throw error;
   }
-  const used = await db.supplierInvitation.updateMany({
-    where: { id: invitation.id, acceptedAt: null },
-    data: { acceptedAt: new Date(), acceptedCompanyId: user.companyId },
-  });
-  if (used.count !== 1) return { error: 'Cette invitation n’est plus valide.' };
   revalidatePath('/settings');
   return undefined;
 }

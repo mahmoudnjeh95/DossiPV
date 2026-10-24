@@ -285,7 +285,7 @@ describe('assignPlanAction', () => {
   });
 
   describe('a sponsored installer taking Premium itself (spec 2026-10-23 §5.3)', () => {
-    const premium = { id: 'plan-premium', name: 'Premium', tier: 'PREMIUM', isTrial: false, archivedAt: null };
+    const premium = { id: 'plan-premium', name: 'Premium', audience: 'INSTALLER', tier: 'PREMIUM', isTrial: false, archivedAt: null };
 
     it('leaves its sponsor and loses the 3D option', async () => {
       m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
@@ -302,7 +302,7 @@ describe('assignPlanAction', () => {
     it("turns the suspended row that only held its 3D option into the installer's own active plan", async () => {
       m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard', status: 'SUSPENDED' });
       m.mockPlanFindUnique.mockResolvedValue(premium);
-      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1', kind: 'INSTALLER' });
+      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1' });
 
       await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium', periodEnd: '2099-01-31' }));
 

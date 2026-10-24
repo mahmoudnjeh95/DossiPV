@@ -169,14 +169,14 @@ describe('invitations and linking', () => {
     expect(await acceptInvitation('raw', 'installer-1')).toEqual({ supplierName: 'SolarTN' });
 
     expect(m.companyUpdate).toHaveBeenCalledWith({ where: { id: 'installer-1' }, data: { sponsorCompanyId: 'supplier-1' } });
-    expect(m.invitationUpdateMany).toHaveBeenCalledWith({ where: { id: 'inv-1', acceptedAt: null }, data: { acceptedAt: expect.any(Date), acceptedCompanyId: 'installer-1' } });
+    expect(m.invitationUpdateMany).toHaveBeenCalledWith({ where: { id: 'inv-1', acceptedAt: null, expiresAt: { gt: expect.any(Date) as unknown } }, data: { acceptedAt: expect.any(Date) as unknown, acceptedCompanyId: 'installer-1' } });
   });
 
   it('refuses a used-up invitation, a supplier as installer, a second sponsor and a full pack', async () => {
     m.invitationFindUnique.mockResolvedValue(null);
     await expect(acceptInvitation('raw', 'installer-1')).rejects.toBeInstanceOf(SponsorshipError);
 
-    const company = (kind: string, sponsor: string | null) => ({ kind, sponsorCompanyId: sponsor });
+    const company = (kind: string, sponsor: string | null): { kind: string; sponsorCompanyId: string | null } => ({ kind, sponsorCompanyId: sponsor });
     m.companyFindUnique.mockImplementation(({ where }: { where: { id: string } }) => Promise.resolve(where.id === 'supplier-1' ? company('SUPPLIER', null) : company('SUPPLIER', null)));
     await expect(linkInstaller('x', 'supplier-1')).rejects.toThrow('Installateur introuvable');
 
@@ -187,6 +187,14 @@ describe('invitations and linking', () => {
     m.companyCount.mockResolvedValue(2);
     m.subscriptionFindUnique.mockResolvedValue(PACK);
     await expect(linkInstaller('x', 'supplier-1')).rejects.toThrow('pack est complet');
+    expect(m.companyUpdate).not.toHaveBeenCalled();
+  });
+
+  it('works one time only: a second click on the same link finds it already claimed', async () => {
+    m.invitationFindUnique.mockResolvedValue(invitation);
+    m.invitationUpdateMany.mockResolvedValue({ count: 0 });
+
+    await expect(acceptInvitation('raw', 'installer-1')).rejects.toThrow('n’est plus valide');
     expect(m.companyUpdate).not.toHaveBeenCalled();
   });
 

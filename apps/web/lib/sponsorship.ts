@@ -135,13 +135,31 @@ export async function linkInstaller(installerCompanyId: string, supplierId: stri
   await syncSponsoredLibrary(installerCompanyId);
 }
 
+/**
+ * Uses an invitation up for this installer, once (a link works one time only), and puts the
+ * installer under the supplier. The invitation is CLAIMED first, atomically, so two clicks racing
+ * on the same link cannot both link; if linking is then refused (pack full, already sponsored…),
+ * the claim is released so the installer can try again after the problem is fixed.
+ */
+export async function consumeInvitation(invitationId: string, supplierCompanyId: string, installerCompanyId: string): Promise<void> {
+  const claimed = await db.supplierInvitation.updateMany({
+    where: { id: invitationId, acceptedAt: null, expiresAt: { gt: new Date() } },
+    data: { acceptedAt: new Date(), acceptedCompanyId: installerCompanyId },
+  });
+  if (claimed.count !== 1) throw new SponsorshipError('Cette invitation n’est plus valide.');
+  try {
+    await linkInstaller(installerCompanyId, supplierCompanyId);
+  } catch (error) {
+    await db.supplierInvitation.updateMany({ where: { id: invitationId, acceptedCompanyId: installerCompanyId }, data: { acceptedAt: null, acceptedCompanyId: null } });
+    throw error;
+  }
+}
+
 /** An installer accepts an invitation (from the link, signed in as that installer's company). */
 export async function acceptInvitation(rawToken: string, installerCompanyId: string): Promise<{ supplierName: string }> {
   const invitation = await findValidInvitation(rawToken);
   if (!invitation) throw new SponsorshipError('Cette invitation n’est plus valide.');
-  await linkInstaller(installerCompanyId, invitation.supplierCompanyId);
-  const used = await db.supplierInvitation.updateMany({ where: { id: invitation.id, acceptedAt: null }, data: { acceptedAt: new Date(), acceptedCompanyId: installerCompanyId } });
-  if (used.count !== 1) throw new SponsorshipError('Cette invitation n’est plus valide.');
+  await consumeInvitation(invitation.id, invitation.supplierCompanyId, installerCompanyId);
   return { supplierName: invitation.supplierName };
 }
 

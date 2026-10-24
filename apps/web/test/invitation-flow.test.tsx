@@ -144,7 +144,8 @@ describe('acceptInvitationAction', () => {
     m.companyCount.mockResolvedValue(5);
     const result = await acceptInvitationAction(TOKEN);
     expect(result?.error).toMatch(/pack est complet/);
-    expect(m.invitationUpdateMany).not.toHaveBeenCalled();
+    // The link is claimed first, then released because linking was refused: it stays usable.
+    expect(m.invitationUpdateMany).toHaveBeenLastCalledWith({ where: { id: 'inv-1', acceptedCompanyId: 'company-1' }, data: { acceptedAt: null, acceptedCompanyId: null } });
   });
 
   it('shows the already-sponsored message', async () => {
@@ -156,7 +157,7 @@ describe('acceptInvitationAction', () => {
   it('links the installer, uses the invitation up and goes to the dashboard', async () => {
     await expect(acceptInvitationAction(TOKEN)).rejects.toThrow('NEXT_REDIRECT:/dashboard');
     expect(m.companyUpdate).toHaveBeenCalledWith({ where: { id: 'company-1' }, data: { sponsorCompanyId: 'supplier-1' } });
-    expect(m.invitationUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv-1', acceptedAt: null } }));
+    expect(m.invitationUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'inv-1', acceptedAt: null, expiresAt: { gt: expect.any(Date) as unknown } } }));
   });
 });
 
@@ -225,7 +226,7 @@ describe('createAccountFromInvitationAction', () => {
     });
     expect(m.companyUpdate).toHaveBeenCalledWith({ where: { id: 'company-new' }, data: { sponsorCompanyId: 'supplier-1' } });
     expect(m.invitationUpdateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: 'inv-1', acceptedAt: null }, data: expect.objectContaining({ acceptedCompanyId: 'company-new' }) as unknown }),
+      expect.objectContaining({ where: { id: 'inv-1', acceptedAt: null, expiresAt: { gt: expect.any(Date) as unknown } }, data: expect.objectContaining({ acceptedCompanyId: 'company-new' }) as unknown }),
     );
   });
 });
