@@ -1,6 +1,8 @@
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from './layout';
 import { AdminStatsCard } from './components/admin-stats-card';
+import Link from 'next/link';
+import { countSignupsToContact } from '../../../lib/admin-signups';
 import { Users, ChartBar, Revenue, Payment } from '@dossipv/icons';
 
 export function getMonthStart(now: Date): Date {
@@ -37,7 +39,7 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
   // is here even though the (protected) layout already guards this route.
   await requireAuthenticatedSuperAdmin();
 
-  const stats = await computeDashboardStats(new Date());
+  const [stats, signupsToContact] = await Promise.all([computeDashboardStats(new Date()), countSignupsToContact()]);
 
   return (
     <main>
@@ -56,6 +58,9 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
           label="Revenu total"
           value={`${stats.totalRevenueTnd.toFixed(2)} TND`}
         />
+        <Link href="/admin/inscriptions" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard icon={Users} label="Inscriptions à contacter" value={signupsToContact} />
+        </Link>
       </div>
     </main>
   );

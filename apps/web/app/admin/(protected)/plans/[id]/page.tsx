@@ -18,7 +18,7 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
       <h1>Modifier le plan {plan.name}</h1>
       <PlanForm
         action={updatePlanAction.bind(null, plan.id)}
-        plan={{ name: plan.name, tier: plan.tier, monthlyDossierLimit: plan.monthlyDossierLimit, priceTnd: Number(plan.priceTnd) }}
+        plan={{ name: plan.name, tier: plan.tier, monthlyDossierLimit: plan.monthlyDossierLimit, priceTnd: Number(plan.priceTnd), isTrial: plan.isTrial }}
       />
     </main>
   );

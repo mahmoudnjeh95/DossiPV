@@ -272,6 +272,32 @@ describe('assignPlanAction', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
   });
 
+  it('replaces a trial with a paid plan: fresh period from today, ends on the typed date, trial kept in the log', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-trial', plan: { id: 'plan-trial', name: 'Essai gratuit', isTrial: true } });
+    m.mockPlanFindUnique.mockResolvedValue({ ...plan, isTrial: false, archivedAt: null });
+
+    await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium', periodEnd: '2027-01-01' }));
+
+    expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+      where: { companyId: 'company-1' },
+      data: { planId: 'plan-premium', status: 'ACTIVE', periodStart: expect.any(Date) as unknown, periodEnd: new Date('2027-01-01') },
+    });
+    expect(auditEntries()).toEqual([
+      ['subscription.changePlan', 'company-1', { planId: 'plan-premium', planName: 'Premium', from: 'Essai gratuit', periodEnd: '2027-01-01T00:00:00.000Z' }],
+    ]);
+  });
+
+  it('requires an end date to leave the trial', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-trial', plan: { id: 'plan-trial', name: 'Essai gratuit', isTrial: true } });
+    m.mockPlanFindUnique.mockResolvedValue({ ...plan, isTrial: false, archivedAt: null });
+
+    const result = await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium' }));
+
+    expect(result?.error).toContain('Fin de période');
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
+  });
+
   it('creates an active subscription ending on the typed date when the company has none', async () => {
     m.mockSubscriptionFindUnique.mockResolvedValue(null);
     m.mockPlanFindUnique.mockResolvedValue(plan);

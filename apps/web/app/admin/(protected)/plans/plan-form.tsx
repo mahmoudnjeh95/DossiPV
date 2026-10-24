@@ -8,6 +8,7 @@ export interface PlanFormValues {
   tier: 'STANDARD' | 'PREMIUM';
   monthlyDossierLimit: number;
   priceTnd: number;
+  isTrial: boolean;
 }
 
 export function PlanForm({
@@ -42,6 +43,13 @@ export function PlanForm({
           <input type="number" name="priceTnd" defaultValue={plan?.priceTnd} min={0} step="0.001" required />
         </label>
       </div>
+      <label>
+        <input type="checkbox" name="isTrial" defaultChecked={plan?.isTrial ?? false} /> Essai gratuit
+      </label>
+      <p className="hint">
+        La limite de dossiers vaut pour toute la durée de l&apos;essai (pas par mois). Un seul plan d&apos;essai non archivé à la fois ; les
+        inscriptions ont besoin d&apos;un plan d&apos;essai actif.
+      </p>
       <button type="submit" disabled={pending}>
         Enregistrer
       </button>

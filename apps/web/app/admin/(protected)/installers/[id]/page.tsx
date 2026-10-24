@@ -7,6 +7,8 @@ import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndA
 import { RecordPaymentForm } from './record-payment-form';
 import { AddUserForm, AssignPlanForm, ResetPasswordForm } from './account-forms';
 import { ChangeEmailForm, UserActionButton } from './user-forms';
+import { markSignupUncontactedAction } from '../../inscriptions/actions';
+import { MarkContactedForm } from '../../inscriptions/signup-forms';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
 
 const AUDIT_LOG_ROWS = 30;
@@ -42,7 +44,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
     .filter((plan) => plan.archivedAt === null || plan.id === currentPlanId)
     .map((plan) => ({
       id: plan.id,
-      label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND${plan.archivedAt ? ' (archivé)' : ''}`,
+      label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND${plan.isTrial ? ' (essai)' : ''}${plan.archivedAt ? ' (archivé)' : ''}`,
     }));
   const enabledOwnerCount = company.users.filter((user) => user.role === 'OWNER' && user.disabledAt === null).length;
 
@@ -58,6 +60,30 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
           Code ANME : {company.anmeCode} ({company.anmeCategory})
         </p>
       </section>
+
+      {company.signupAt && (
+        <section>
+          <h2>Inscription</h2>
+          <p>Inscrit le {company.signupAt.toLocaleDateString('fr-FR')}</p>
+          <p>Contact : {company.signupContactName ?? '—'}</p>
+          <p>Gouvernorat : {company.signupGovernorate ?? '—'}</p>
+          <p>Code ANME : {company.anmeCode}</p>
+          <p>Profil complété : {company.profileComplete ? 'oui' : 'non'}</p>
+          <p>
+            Contacté :{' '}
+            {company.signupContactedAt ? `oui, le ${company.signupContactedAt.toLocaleDateString('fr-FR')}` : 'non'}
+          </p>
+          {company.signupNote && <p>Note : {company.signupNote}</p>}
+          <MarkContactedForm companyId={company.id} note={company.signupNote} />
+          {company.signupContactedAt && (
+            <form action={markSignupUncontactedAction.bind(null, company.id)}>
+              <button type="submit" className="secondary small">
+                Remettre à contacter
+              </button>
+            </form>
+          )}
+        </section>
+      )}
 
       <section>
         <h2>Abonnement</h2>
@@ -87,7 +113,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         ) : (
           <p>Aucun abonnement</p>
         )}
-        <AssignPlanForm companyId={company.id} plans={planOptions} currentPlanId={currentPlanId} />
+        <AssignPlanForm companyId={company.id} plans={planOptions} currentPlanId={currentPlanId} onTrial={company.subscription?.plan.isTrial ?? false} />
       </section>
 
       {company.subscription && (

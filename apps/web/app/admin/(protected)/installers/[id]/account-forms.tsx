@@ -12,10 +12,12 @@ export function AssignPlanForm({
   companyId,
   plans,
   currentPlanId,
+  onTrial = false,
 }: {
   companyId: string;
   plans: PlanOption[];
   currentPlanId: string | null;
+  onTrial?: boolean;
 }): React.JSX.Element {
   const [state, formAction, pending] = useActionState<InstallerActionState | undefined, FormData>(
     assignPlanAction.bind(null, companyId),
@@ -37,7 +39,7 @@ export function AssignPlanForm({
           ))}
         </select>
       </label>
-      {currentPlanId === null && (
+      {(currentPlanId === null || onTrial) && (
         <label>
           Fin de période
           <input type="date" name="periodEnd" required />
@@ -46,7 +48,13 @@ export function AssignPlanForm({
       <button type="submit" disabled={pending}>
         {currentPlanId === null ? "Créer l'abonnement" : 'Changer de plan'}
       </button>
-      {currentPlanId !== null && <p className="hint">La fin de période et les dossiers déjà générés ce mois-ci sont conservés.</p>}
+      {onTrial && (
+        <p className="hint">
+          Pour passer de l&apos;essai à un plan payant, la fin de période est obligatoire : l&apos;essai est remplacé par une nouvelle période qui
+          commence aujourd&apos;hui (son historique reste dans le journal).
+        </p>
+      )}
+      {currentPlanId !== null && !onTrial && <p className="hint">La fin de période et les dossiers déjà générés ce mois-ci sont conservés.</p>}
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );
