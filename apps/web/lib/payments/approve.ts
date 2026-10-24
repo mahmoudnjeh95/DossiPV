@@ -1,21 +1,17 @@
 import { db, type Prisma } from '@dossipv/db';
-import { issueInvoiceForPayment } from '../invoices';
+import { logAdminAction } from '../admin-audit';
 import { unlinkInstaller } from '../sponsorship';
 import { addMonths } from '../subscription';
 import { extendOption3dUntil, periodExtensionData } from '../subscription-extension';
-import { getProvider } from './registry';
-
-export interface SettlementResult {
-  status: 'PAID' | 'PENDING' | 'FAILED' | 'CANCELLED' | 'NOT_FOUND';
-  /** Set when the provider could not be asked just now (the intent stays PENDING). */
-  unreachable?: boolean;
-}
+import { PAYMENT_METHOD_LABELS, paymentReference } from './p2p';
 
 type Tx = Prisma.TransactionClient;
 type SettledIntent = { id: string; companyId: string; purpose: 'SUBSCRIPTION' | 'OPTION_3D'; planId: string | null; months: number };
 
+export type DecisionResult = { ok: true } | { ok: false; error: string };
+
 /**
- * Gives the company what an intent paid for. Runs inside the settlement transaction.
+ * Gives the company what an intent paid for. Runs inside the approval transaction.
  * SUBSCRIPTION: the same extension rule as the admin's payment (from the later of the period end and
  * now, by `months`), the plan changed when it differs, the status ACTIVE. A trial, or the suspended
  * row that only held a sponsored installer's 3D option, starts a fresh period from today instead.
@@ -59,60 +55,66 @@ async function applyIntent(tx: Tx, intent: SettledIntent, now: Date): Promise<vo
 }
 
 /**
- * Settles an online payment, at most once. It never trusts the browser or the webhook body: it asks
- * the provider for the status. When PAID, one transaction marks the intent PAID (a conditional update
- * on PENDING, so two concurrent calls settle once), records the Payment and gives the company what
- * it bought. The invoice is issued afterwards and a failure there never undoes the settlement.
+ * The admin confirms a declared P2P payment, at most once. One transaction marks the intent PAID
+ * (a conditional update on PENDING, so two concurrent approvals settle once), records the Payment
+ * and gives the company what it bought. The screenshot is never read here.
  */
-export async function settlePaymentIntent(intentId: string, now: Date = new Date()): Promise<SettlementResult> {
-  const intent = await db.paymentIntent.findUnique({ where: { id: intentId } });
-  if (!intent) return { status: 'NOT_FOUND' };
-  if (intent.status !== 'PENDING') return { status: intent.status };
+export async function approveIntent(intentId: string, adminId: string, now: Date = new Date()): Promise<DecisionResult> {
+  const intent = await db.paymentIntent.findUnique({
+    where: { id: intentId },
+    select: { id: true, companyId: true, purpose: true, planId: true, months: true, amountTnd: true, provider: true, providerReference: true, status: true, declaredAt: true },
+  });
+  if (!intent) return { ok: false, error: 'Paiement introuvable.' };
+  if (intent.status !== 'PENDING') return { ok: false, error: 'Ce paiement est déjà traité.' };
+  if (!intent.declaredAt) return { ok: false, error: 'Le client n’a pas encore déclaré ce paiement.' };
 
-  const provider = getProvider(intent.provider);
-  if (!provider || !intent.providerReference) return { status: 'PENDING' };
-
-  let verified: Awaited<ReturnType<typeof provider.verify>>;
-  try {
-    verified = await provider.verify(intent.providerReference);
-  } catch (error) {
-    console.error(`payments: verify failed for intent ${intent.id}`, error);
-    return { status: 'PENDING', unreachable: true };
-  }
-
-  if (verified === 'PENDING') return { status: 'PENDING' };
-  if (verified === 'FAILED') {
-    await db.paymentIntent.updateMany({
-      where: { id: intent.id, status: 'PENDING' },
-      data: { status: 'FAILED', failureReason: 'Paiement refusé, annulé ou expiré chez le fournisseur.' },
+  const settled = await db.$transaction(async (tx) => {
+    const claimed = await tx.paymentIntent.updateMany({
+      where: { id: intent.id, status: 'PENDING', declaredAt: { not: null } },
+      data: { status: 'PAID', paidAt: now },
     });
-    const current = await db.paymentIntent.findUnique({ where: { id: intent.id }, select: { status: true } });
-    return { status: current?.status ?? 'FAILED' };
-  }
-
-  const paymentId = await db.$transaction(async (tx) => {
-    const claimed = await tx.paymentIntent.updateMany({ where: { id: intent.id, status: 'PENDING' }, data: { status: 'PAID', paidAt: now } });
-    if (claimed.count !== 1) return null; // another call settled it first
+    if (claimed.count !== 1) return false; // another call decided it first
     const payment = await tx.payment.create({
       data: {
         companyId: intent.companyId,
         amountTnd: intent.amountTnd,
         method: intent.provider,
         gatewayReference: intent.providerReference,
-        recordedByAdmin: false,
+        note: `Paiement P2P ${PAYMENT_METHOD_LABELS[intent.provider]}, référence ${paymentReference(intent.id)}`,
+        recordedByAdmin: true,
       },
     });
     await tx.paymentIntent.update({ where: { id: intent.id }, data: { paymentId: payment.id } });
     await applyIntent(tx, intent, now);
-    return payment.id;
+    return true;
   });
+  if (!settled) return { ok: false, error: 'Ce paiement est déjà traité.' };
 
-  if (paymentId !== null) {
-    try {
-      await issueInvoiceForPayment(paymentId);
-    } catch (error) {
-      console.error(`payments: invoice for payment ${paymentId} not issued`, error);
-    }
-  }
-  return { status: 'PAID' };
+  await logAdminAction(adminId, 'payment.p2pApprove', intent.companyId, {
+    intentId: intent.id,
+    amountTnd: Number(intent.amountTnd),
+    method: intent.provider,
+    months: intent.months,
+  });
+  return { ok: true };
+}
+
+/** The admin rejects a declared P2P payment, with the reason the payer will read. */
+export async function rejectIntent(intentId: string, adminId: string, reason: string): Promise<DecisionResult> {
+  const trimmed = reason.trim();
+  if (trimmed === '') return { ok: false, error: 'Indiquez le motif du refus.' };
+  if (trimmed.length > 300) return { ok: false, error: 'Motif trop long (300 caractères au plus).' };
+  const result = await db.paymentIntent.updateMany({
+    where: { id: intentId, status: 'PENDING' },
+    data: { status: 'FAILED', failureReason: trimmed },
+  });
+  if (result.count !== 1) return { ok: false, error: 'Ce paiement est déjà traité ou introuvable.' };
+  const intent = await db.paymentIntent.findUnique({ where: { id: intentId }, select: { companyId: true, amountTnd: true, provider: true } });
+  await logAdminAction(adminId, 'payment.p2pReject', intent?.companyId ?? null, {
+    intentId,
+    amountTnd: intent ? Number(intent.amountTnd) : 0,
+    method: intent?.provider ?? '',
+    reason: trimmed,
+  });
+  return { ok: true };
 }

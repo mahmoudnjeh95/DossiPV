@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { SolarixProLogo, Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
 import { logoutAdminAction } from '../app/admin/(protected)/actions';
 import { countSignupsToContact } from '../lib/admin-signups';
+import { countDeclaredIntents } from '../lib/payments/admin';
 
 export interface AdminShellProps {
   children: ReactNode;
@@ -20,7 +21,7 @@ const ADMIN_NAV_LINKS: NavLink[] = [
   { href: '/admin/fournisseurs', label: 'Fournisseurs', icon: Users },
   { href: '/admin/inscriptions', label: 'Inscriptions', icon: Users },
   { href: '/admin/plans', label: 'Plans', icon: Subscription },
-  { href: '/admin/factures', label: 'Factures', icon: Subscription },
+  { href: '/admin/paiements', label: 'Paiements', icon: Subscription },
   { href: '/admin/equipment', label: 'Équipements', icon: Database },
   { href: '/admin/audit', label: 'Journal', icon: Shield },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
@@ -29,6 +30,7 @@ const ADMIN_NAV_LINKS: NavLink[] = [
 export async function AdminShell({ children }: AdminShellProps): Promise<React.JSX.Element> {
   // A failing count must not take the whole admin down: the badge is just left out.
   const signupsToContact = await countSignupsToContact().catch(() => 0);
+  const paymentsToCheck = await countDeclaredIntents().catch(() => 0);
   return (
     <>
       <header className="app-header">
@@ -45,6 +47,7 @@ export async function AdminShell({ children }: AdminShellProps): Promise<React.J
                   <Icon size="sm" color="inherit" />
                   {link.label}
                   {link.href === '/admin/inscriptions' && signupsToContact > 0 && <span className="badge badge-warn">{signupsToContact}</span>}
+                  {link.href === '/admin/paiements' && paymentsToCheck > 0 && <span className="badge badge-warn">{paymentsToCheck}</span>}
                 </Link>
               );
             })}

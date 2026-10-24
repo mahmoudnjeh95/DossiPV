@@ -1,14 +1,15 @@
 import { db } from '@dossipv/db';
 import { loadEffectiveSubscription } from '../sponsorship';
 import { summarizeSubscription, type SubscriptionSummary } from '../subscription';
-import { CHECKOUT_MONTHS, computePrice, loadPlatformPricing, planPurchaseError, type PaymentPurposeName, type PriceBreakdown } from './pricing';
-import { listProviders, type ProviderListing } from './registry';
+import { intentDisplayStatus, loadP2pSettings, offeredProviders, paymentReference, type IntentDisplayStatus, type OfferedProvider } from './p2p';
+import { CHECKOUT_MONTHS, computeAmount, loadOption3dPrice, planPurchaseError, type PaymentPurposeName } from './pricing';
 
-export interface OfferOption extends PriceBreakdown {
+export interface OfferOption {
   months: number;
+  amountTnd: number;
 }
 
-/** One thing the company can buy online, with its price for each duration. */
+/** One thing the company can buy, with its amount for each duration. */
 export interface BillingOffer {
   key: string;
   purpose: PaymentPurposeName;
@@ -16,8 +17,7 @@ export interface BillingOffer {
   title: string;
   buttonLabel: string;
   note: string | null;
-  /** Monthly price excluding VAT. */
-  monthlyHtTnd: number;
+  monthlyTnd: number;
   options: OfferOption[];
 }
 
@@ -26,15 +26,18 @@ export interface BillingPayment {
   createdAt: Date;
   amountTnd: number;
   method: string;
-  invoiceId: string | null;
-  invoiceNumber: string | null;
 }
 
-export interface BillingPendingIntent {
+export interface BillingIntent {
   id: string;
   createdAt: Date;
   amountTnd: number;
   provider: string;
+  months: number;
+  reference: string;
+  status: IntentDisplayStatus;
+  failureReason: string | null;
+  hasProof: boolean;
 }
 
 export interface BillingView {
@@ -43,34 +46,32 @@ export interface BillingView {
   subscription: SubscriptionSummary | null;
   option3dUntil: Date | null;
   offers: BillingOffer[];
-  providers: ProviderListing[];
+  providers: OfferedProvider[];
   payments: BillingPayment[];
-  pendingIntents: BillingPendingIntent[];
-  vatRatePct: number;
-  stampDutyTnd: number;
+  intents: BillingIntent[];
 }
 
-/** Intents opened in the last day and not settled yet: the ones worth re-checking by hand. */
-const PENDING_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PAYMENT_ROWS = 20;
+const INTENT_ROWS = 10;
 
-/** Everything the billing page (installer or supplier) shows for a company. */
+/** Everything the « Abonnement et paiement » page (installer or supplier) shows for a company. */
 export async function loadBilling(companyId: string, now: Date = new Date()): Promise<BillingView> {
-  const [company, effective, pricing, plans] = await Promise.all([
+  const [company, effective, option3dPrice, plans, p2p] = await Promise.all([
     db.company.findUnique({
       where: { id: companyId },
       select: { kind: true, sponsorCompanyId: true, subscription: { select: { planId: true } } },
     }),
     loadEffectiveSubscription(companyId),
-    loadPlatformPricing(),
+    loadOption3dPrice(),
     db.plan.findMany({ where: { archivedAt: null, isTrial: false }, orderBy: { priceTnd: 'asc' } }),
+    loadP2pSettings(),
   ]);
   if (!company) throw new Error(`Société ${companyId} introuvable`);
   const buyer = { kind: company.kind, sponsored: company.sponsorCompanyId !== null };
   const currentPlanId = company.subscription?.planId ?? null;
 
-  const priceFor = (unitPriceTnd: number): OfferOption[] =>
-    CHECKOUT_MONTHS.map((months) => ({ months, ...computePrice({ unitPriceTnd, months, vatRatePct: pricing.vatRatePct, stampDutyTnd: pricing.stampDutyTnd }) }));
+  const optionsFor = (unitPriceTnd: number): OfferOption[] =>
+    CHECKOUT_MONTHS.map((months) => ({ months, amountTnd: computeAmount(unitPriceTnd, months) }));
 
   const offers: BillingOffer[] = [];
   for (const plan of plans) {
@@ -84,13 +85,13 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       title: plan.name,
       buttonLabel: isCurrent ? 'Renouveler' : plan.tier === 'PREMIUM' ? 'Passer à Premium' : 'Passer à Standard',
       note: buyer.sponsored ? 'Vous quittez le parrainage de votre fournisseur : vos panneaux et onduleurs ne sont plus limités.' : null,
-      monthlyHtTnd: unit,
-      options: priceFor(unit),
+      monthlyTnd: unit,
+      options: optionsFor(unit),
     });
   }
   // The current plan first, then the others by price.
   offers.sort((a, b) => Number(b.planId === currentPlanId) - Number(a.planId === currentPlanId));
-  if (buyer.kind === 'INSTALLER' && buyer.sponsored && pricing.option3dPriceTnd !== null && pricing.option3dPriceTnd > 0) {
+  if (buyer.kind === 'INSTALLER' && buyer.sponsored && option3dPrice !== null && option3dPrice > 0) {
     offers.push({
       key: 'option-3d',
       purpose: 'OPTION_3D',
@@ -98,17 +99,19 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       title: 'Option 3D',
       buttonLabel: 'Acheter l’option 3D',
       note: 'La vue 3D du champ sur le toit dans vos dossiers, en plus du Standard offert par votre fournisseur.',
-      monthlyHtTnd: pricing.option3dPriceTnd,
-      options: priceFor(pricing.option3dPriceTnd),
+      monthlyTnd: option3dPrice,
+      options: optionsFor(option3dPrice),
     });
   }
 
-  const [payments, pendingIntents] = await Promise.all([
-    db.payment.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' }, take: PAYMENT_ROWS, include: { invoice: { select: { id: true, number: true } } } }),
+  // The screenshot itself is never selected here: only the capture routes read it.
+  const [payments, intents] = await Promise.all([
+    db.payment.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' }, take: PAYMENT_ROWS }),
     db.paymentIntent.findMany({
-      where: { companyId, status: 'PENDING', providerReference: { not: null }, createdAt: { gt: new Date(now.getTime() - PENDING_WINDOW_MS) } },
+      where: { companyId },
       orderBy: { createdAt: 'desc' },
-      take: 5,
+      take: INTENT_ROWS,
+      select: { id: true, createdAt: true, amountTnd: true, provider: true, months: true, status: true, declaredAt: true, failureReason: true, proofMime: true },
     }),
   ]);
 
@@ -118,17 +121,18 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
     subscription: summarizeSubscription(effective, now),
     option3dUntil: effective?.option3dUntil ?? null,
     offers,
-    providers: listProviders(),
-    payments: payments.map((p) => ({
-      id: p.id,
-      createdAt: p.createdAt,
-      amountTnd: Number(p.amountTnd),
-      method: p.method,
-      invoiceId: p.invoice?.id ?? null,
-      invoiceNumber: p.invoice?.number ?? null,
+    providers: offeredProviders(p2p),
+    payments: payments.map((p) => ({ id: p.id, createdAt: p.createdAt, amountTnd: Number(p.amountTnd), method: p.method })),
+    intents: intents.map((i) => ({
+      id: i.id,
+      createdAt: i.createdAt,
+      amountTnd: Number(i.amountTnd),
+      provider: i.provider,
+      months: i.months,
+      reference: paymentReference(i.id),
+      status: intentDisplayStatus(i),
+      failureReason: i.failureReason,
+      hasProof: i.proofMime !== null,
     })),
-    pendingIntents: pendingIntents.map((i) => ({ id: i.id, createdAt: i.createdAt, amountTnd: Number(i.amountTnd), provider: i.provider })),
-    vatRatePct: pricing.vatRatePct,
-    stampDutyTnd: pricing.stampDutyTnd,
   };
 }

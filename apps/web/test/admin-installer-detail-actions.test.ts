@@ -23,12 +23,10 @@ const m = vi.hoisted(() => {
     mockSessionDeleteMany: vi.fn(),
     mockAuditCreate: vi.fn(),
     mockCompanyUpdateMany: vi.fn(),
-    mockIssueInvoice: vi.fn(),
   };
 });
 const { mockGet, mockRedirect, mockValidateSuperAdminSession, mockSubscriptionUpdate, mockPaymentCreate } = m;
 
-vi.mock('../lib/invoices', () => ({ issueInvoiceForPayment: m.mockIssueInvoice }));
 vi.mock('next/headers', () => ({ cookies: m.mockCookies }));
 vi.mock('next/navigation', () => ({ redirect: m.mockRedirect }));
 vi.mock('@dossipv/auth', async () => {
@@ -97,8 +95,6 @@ beforeEach(() => {
   }
   m.mockCompanyFindUnique.mockResolvedValue({ kind: 'INSTALLER' });
   mockPaymentCreate.mockResolvedValue({ id: 'pay-default' });
-  m.mockIssueInvoice.mockReset();
-  m.mockIssueInvoice.mockResolvedValue({ invoiceId: 'inv-1', number: '2026-0001' });
 });
 
 function form(fields: Record<string, string>): FormData {
@@ -163,27 +159,9 @@ describe('recordPaymentAction', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
   });
 
-  it('issues the invoice of the new payment and logs its number', async () => {
+  it('extends the subscription and logs the payment', async () => {
     mockPaymentCreate.mockResolvedValue({ id: 'pay-1' });
-    const formData = new FormData();
-    formData.set('amountTnd', '119');
-    formData.set('method', 'MANUAL');
-    formData.set('extendMonths', '0');
-
-    await recordPaymentAction('company-1', undefined, formData);
-
-    expect(m.mockIssueInvoice).toHaveBeenCalledWith('pay-1');
-    expect(m.mockAuditCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: '2026-0001' }) as unknown }) as unknown,
-    });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
-  });
-
-  it('keeps the payment and the subscription extension when the invoice fails, and warns on redirect', async () => {
-    mockPaymentCreate.mockResolvedValue({ id: 'pay-1' });
-    m.mockIssueInvoice.mockRejectedValue(new Error('boom'));
     m.mockSubscriptionFindUnique.mockResolvedValue({ periodEnd: new Date('2026-12-01'), status: 'ACTIVE' });
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const formData = new FormData();
     formData.set('amountTnd', '119');
     formData.set('method', 'MANUAL');
@@ -192,12 +170,11 @@ describe('recordPaymentAction', () => {
     const result = await recordPaymentAction('company-1', undefined, formData);
 
     expect(result).toBeUndefined();
-    expect(mockPaymentCreate).toHaveBeenCalled();
     expect(mockSubscriptionUpdate).toHaveBeenCalled();
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: null }) as unknown }) as unknown,
+      data: expect.objectContaining({ action: 'payment.record' }) as unknown,
     });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1?invoice=failed');
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
   });
 
   it('rejects a non-numeric amount without creating a Payment row', async () => {

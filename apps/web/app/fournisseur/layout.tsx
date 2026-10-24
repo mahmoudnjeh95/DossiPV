@@ -8,7 +8,7 @@ const NAV_LINKS = [
   { href: '/fournisseur/produits', label: 'Produits' },
   { href: '/fournisseur/installateurs', label: 'Installateurs' },
   { href: '/fournisseur/statistiques', label: 'Statistiques' },
-  { href: '/fournisseur/facturation', label: 'Facturation' },
+  { href: '/fournisseur/facturation', label: 'Abonnement et paiement' },
 ];
 
 /** Chrome of the supplier space; refuses anonymous visitors (/login) and installers (/dashboard). */

@@ -1,20 +1,19 @@
 import Link from 'next/link';
 import { SubscriptionBanner } from '../subscription-banner';
 import type { BillingView } from '../../lib/payments/billing';
-import { PAYMENT_METHOD_LABELS } from '../../lib/payments/registry';
+import { INTENT_DISPLAY_LABELS, PAYMENT_METHOD_LABELS } from '../../lib/payments/p2p';
 import { CheckoutOffer } from './checkout-offer';
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 
-/** The « Facturation » page body, shared by the installer app and the supplier space. */
+/** The « Abonnement et paiement » page body, shared by the installer app and the supplier space. */
 export function BillingPageView({ billing, canPay }: { billing: BillingView; canPay: boolean }): React.JSX.Element {
-  const enabledProviders = billing.providers.filter((p) => p.enabled);
   const { subscription } = billing;
   const isSupplier = billing.kind === 'SUPPLIER';
 
   return (
     <main>
-      <h1>Facturation</h1>
+      <h1>Abonnement et paiement</h1>
       <SubscriptionBanner subscription={subscription} />
 
       <section className="card">
@@ -39,40 +38,60 @@ export function BillingPageView({ billing, canPay }: { billing: BillingView; can
         )}
       </section>
 
-      {billing.pendingIntents.length > 0 && (
-        <section className="card">
-          <h2>Paiements en attente</h2>
-          <ul>
-            {billing.pendingIntents.map((intent) => (
-              <li key={intent.id}>
-                {money(intent.amountTnd)} via {PAYMENT_METHOD_LABELS[intent.provider as keyof typeof PAYMENT_METHOD_LABELS]} le {intent.createdAt.toLocaleDateString('fr-FR')} :{' '}
-                <Link href={`/paiement/retour?intent=${intent.id}`}>vérifier le paiement</Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <section>
-        <h2>Payer en ligne</h2>
+        <h2>Payer par Flouci, izi ou D17</h2>
         <p className="hint">
-          Les prix des plans sont hors taxes (HT) : la TVA ({billing.vatRatePct.toLocaleString('fr-FR')} %) et le timbre fiscal (
-          {money(billing.stampDutyTnd)}) s’ajoutent au total affiché.
+          Vous envoyez le montant depuis votre application au numéro de DossiPV, puis vous déclarez le paiement avec une capture d’écran.
+          DossiPV vérifie la capture et prolonge votre abonnement.
         </p>
-        {enabledProviders.length === 0 ? (
+        {billing.providers.length === 0 ? (
           <div className="banner banner-warn" role="status">
-            Paiement en ligne indisponible : contactez DossiPV.
+            Paiement indisponible : contactez DossiPV.
           </div>
         ) : billing.offers.length === 0 ? (
-          <p className="muted">Aucune offre en ligne pour votre compte : contactez DossiPV.</p>
+          <p className="muted">Aucune offre pour votre compte : contactez DossiPV.</p>
         ) : (
-          billing.offers.map((offer) => <CheckoutOffer key={offer.key} offer={offer} providers={enabledProviders} canPay={canPay} />)
+          billing.offers.map((offer) => <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay} />)
         )}
-        {!canPay && enabledProviders.length > 0 && <p className="hint">Seul le responsable du compte peut payer en ligne.</p>}
-        {billing.providers.some((p) => !p.enabled) && (
-          <p className="hint">Non configuré : {billing.providers.filter((p) => !p.enabled).map((p) => p.label).join(', ')}.</p>
-        )}
+        {!canPay && billing.providers.length > 0 && <p className="hint">Seul le responsable du compte peut payer.</p>}
       </section>
+
+      {billing.intents.length > 0 && (
+        <section>
+          <h2>Vos paiements déclarés</h2>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Montant</th>
+                  <th>Moyen</th>
+                  <th>Référence</th>
+                  <th>Statut</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {billing.intents.map((intent) => (
+                  <tr key={intent.id}>
+                    <td>{intent.createdAt.toLocaleDateString('fr-FR')}</td>
+                    <td>{money(intent.amountTnd)}</td>
+                    <td>{PAYMENT_METHOD_LABELS[intent.provider as keyof typeof PAYMENT_METHOD_LABELS] ?? intent.provider}</td>
+                    <td>{intent.reference}</td>
+                    <td>
+                      {INTENT_DISPLAY_LABELS[intent.status]}
+                      {intent.status === 'REJECTED' && intent.failureReason ? ` : ${intent.failureReason}` : ''}
+                    </td>
+                    <td>
+                      <Link href={`/paiement/${intent.id}`}>{intent.status === 'TO_DECLARE' ? 'Déclarer' : 'Voir'}</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section>
         <h2>Historique des paiements</h2>
@@ -86,7 +105,6 @@ export function BillingPageView({ billing, canPay }: { billing: BillingView; can
                   <th>Date</th>
                   <th>Montant</th>
                   <th>Méthode</th>
-                  <th>Facture</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,7 +113,6 @@ export function BillingPageView({ billing, canPay }: { billing: BillingView; can
                     <td>{payment.createdAt.toLocaleDateString('fr-FR')}</td>
                     <td>{money(payment.amountTnd)}</td>
                     <td>{PAYMENT_METHOD_LABELS[payment.method as keyof typeof PAYMENT_METHOD_LABELS] ?? payment.method}</td>
-                    <td>{payment.invoiceId ? <Link href={`/factures/${payment.invoiceId}`}>{payment.invoiceNumber}</Link> : '—'}</td>
                   </tr>
                 ))}
               </tbody>
