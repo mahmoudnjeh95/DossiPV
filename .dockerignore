@@ -21,3 +21,9 @@ build
 *.tsbuildinfo
 docs
 *.pdf
+
+# One-off local scripts (debugging, password resets) never ship in the production image.
+*-temp.mjs
+*-temp.ts
+**/*-temp.ts
+change_pwd.mjs

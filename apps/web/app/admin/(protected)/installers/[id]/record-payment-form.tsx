@@ -24,6 +24,11 @@ export function RecordPaymentForm({ companyId }: { companyId: string }): React.J
         Note
         <input type="text" name="note" />
       </label>
+      <label>
+        Prolonger l&apos;abonnement de (mois)
+        <input type="number" name="extendMonths" defaultValue={1} min={0} max={24} step={1} />
+        <span className="hint">Compté depuis la fin actuelle, ou depuis aujourd&apos;hui si l&apos;abonnement est terminé. 0 : ne pas prolonger.</span>
+      </label>
       <button type="submit">Enregistrer</button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>

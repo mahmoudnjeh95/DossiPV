@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeSubscription, checkQuota, projectsCountedThisMonth } from '../lib/subscription';
+import { summarizeSubscription, checkQuota, projectsCountedThisMonth, addMonths, extendedPeriodEnd } from '../lib/subscription';
 
 const now = new Date('2026-10-15T12:00:00Z');
 const plan = { name: 'Standard', monthlyDossierLimit: 2, tier: 'STANDARD' as const };
@@ -62,5 +62,32 @@ describe('quota', () => {
   it('blocks a new project once the limit is reached', () => {
     expect(checkQuota(jobs, 1, 'p9', now)).toEqual({ used: 1, limit: 1, blocked: true });
     expect(checkQuota(jobs, 2, 'p9', now)).toEqual({ used: 1, limit: 2, blocked: false });
+  });
+});
+
+describe('addMonths', () => {
+  const ymd = (date: Date): [number, number, number] => [date.getFullYear(), date.getMonth() + 1, date.getDate()];
+
+  it('keeps the day of the month', () => {
+    expect(ymd(addMonths(new Date(2026, 9, 15), 1))).toEqual([2026, 11, 15]);
+    expect(ymd(addMonths(new Date(2026, 10, 15), 3))).toEqual([2027, 2, 15]);
+  });
+
+  it('stops at the last day of a shorter month instead of spilling into the next one', () => {
+    expect(ymd(addMonths(new Date(2027, 0, 31), 1))).toEqual([2027, 2, 28]);
+    expect(ymd(addMonths(new Date(2028, 0, 31), 1))).toEqual([2028, 2, 29]);
+    expect(ymd(addMonths(new Date(2026, 7, 31), 1))).toEqual([2026, 9, 30]);
+  });
+});
+
+describe('extendedPeriodEnd', () => {
+  it('counts from the current end while the subscription still runs', () => {
+    const periodEnd = new Date(2026, 11, 1);
+    expect(extendedPeriodEnd(periodEnd, new Date(2026, 9, 15), 2)).toEqual(addMonths(periodEnd, 2));
+  });
+
+  it('counts from today once the subscription has ended, so a late payment does not pay for past days', () => {
+    const today = new Date(2026, 9, 15);
+    expect(extendedPeriodEnd(new Date(2026, 8, 1), today, 1)).toEqual(addMonths(today, 1));
   });
 });

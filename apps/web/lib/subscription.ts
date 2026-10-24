@@ -85,6 +85,26 @@ export function checkQuota(jobs: QuotaJobLike[], limit: number, projectId: strin
   return { used, limit, blocked: needsNewSlot && used >= limit };
 }
 
+/** `date` moved by whole calendar months, the day kept within the target month (31 Jan + 1 → end of Feb). */
+export function addMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  const day = result.getDate();
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, lastDay));
+  return result;
+}
+
+/**
+ * The periodEnd after a payment covering `months` more months: counted from the current end while
+ * the subscription still runs, from today once it has ended, so a late payment never pays for days
+ * that already passed.
+ */
+export function extendedPeriodEnd(periodEnd: Date, now: Date, months: number): Date {
+  return addMonths(periodEnd > now ? periodEnd : now, months);
+}
+
 /**
  * Spec §1: a project's tier comes from the company's current plan, never from the request.
  * Companies without a subscription fall back to STANDARD.

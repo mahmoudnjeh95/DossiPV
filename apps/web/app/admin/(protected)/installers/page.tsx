@@ -68,6 +68,9 @@ export default async function InstallerListPage(): Promise<React.JSX.Element> {
   return (
     <main>
       <h1>Installateurs</h1>
+      <p>
+        <Link href="/admin/installers/new">Nouvel installateur</Link>
+      </p>
       <table>
         <thead>
           <tr>
