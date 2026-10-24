@@ -8,7 +8,7 @@ import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
 import { AcceptInvitationButton } from './pending-invitations';
 import { loadSponsor } from '../../../lib/sponsor-info';
-import { PAYMENT_METHOD_LABELS } from '../../../lib/payments/registry';
+import { PAYMENT_METHOD_LABELS } from '../../../lib/payments/p2p';
 import Link from 'next/link';
 
 function toDateInput(date: Date): string {
@@ -71,7 +71,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p className="muted">Aucun abonnement.</p>
         )}
         <p className="hint">
-          Renouvelez ou changez d&apos;offre en ligne depuis la page <Link href="/facturation">Facturation</Link>. Le changement
+          Renouvelez ou changez d&apos;offre depuis la page <Link href="/facturation">Abonnement et paiement</Link>. Le changement
           d&apos;email ou de mot de passe se fait auprès de DossiPV.
         </p>
         {company.payments.length > 0 && (

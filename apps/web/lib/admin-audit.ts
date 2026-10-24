@@ -35,6 +35,8 @@ const DETAIL_LABELS: Record<string, string> = {
   tier: 'niveau',
   monthlyDossierLimit: 'dossiers / mois',
   priceTnd: 'prix (TND)',
+  reason: 'motif',
+  months: 'mois',
 };
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+Z)?$/;
 const MAX_DETAILS_LENGTH = 200;

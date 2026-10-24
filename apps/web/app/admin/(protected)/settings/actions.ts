@@ -6,7 +6,7 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
 import { logAdminAction } from '../../../../lib/admin-audit';
 import { PLATFORM_SETTINGS_ID } from '../../../../lib/platform-settings';
-import { readInvoicingSettings } from './invoicing-validation';
+import { readP2pSettings } from './p2p-validation';
 
 export interface SettingsActionState {
   error?: string;
@@ -36,15 +36,15 @@ export async function updateOption3dPriceAction(
   return { saved: true };
 }
 
-/** Sets the seller details, VAT rate, stamp duty and footer printed on every invoice (spec 2026-10-23 §8). */
-export async function updateInvoicingSettingsAction(
+/** Sets the P2P payment details shown to the installer who pays: account holder, one number per app, instructions. */
+export async function updateP2pSettingsAction(
   _prevState: SettingsActionState | undefined,
   formData: FormData,
 ): Promise<SettingsActionState | undefined> {
   const admin = await requireAuthenticatedSuperAdmin();
 
   const reader = new FormReader(formData);
-  const input = readInvoicingSettings(reader);
+  const input = readP2pSettings(reader);
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
   }
@@ -54,11 +54,12 @@ export async function updateInvoicingSettingsAction(
     create: { id: PLATFORM_SETTINGS_ID, ...input },
     update: input,
   });
-  await logAdminAction(admin.id, 'settings.invoicing', null, {
-    sellerLegalName: input.sellerLegalName,
-    sellerTaxId: input.sellerTaxId,
-    vatRatePct: input.vatRatePct,
-    stampDutyTnd: input.stampDutyTnd,
+  // The numbers are the platform's own, not personal data; the instructions text stays out of the log.
+  await logAdminAction(admin.id, 'settings.p2p', null, {
+    accountHolder: input.p2pAccountHolder,
+    flouci: input.p2pFlouciNumber !== null,
+    izi: input.p2pIziNumber !== null,
+    d17: input.p2pD17Number !== null,
   });
   revalidatePath('/admin/settings');
   return { saved: true };

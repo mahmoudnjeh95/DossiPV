@@ -1,39 +1,77 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import type { PaymentMethod } from '@dossipv/db';
+import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedCompanyUser } from '../(app)/layout';
-import { startCheckout } from '../../lib/payments/checkout';
-import { ONLINE_PROVIDER_IDS } from '../../lib/payments/registry';
-import { CheckoutError } from '../../lib/payments/types';
+import { cancelIntent, createIntent, declareIntent } from '../../lib/payments/intents';
+import { P2P_PROVIDER_IDS, PaymentError, payerRefusal, type P2pProviderId } from '../../lib/payments/p2p';
 
-export interface StartCheckoutState {
-  error: string;
+export interface PaymentActionState {
+  error?: string;
+  saved?: boolean;
 }
 
 /**
- * Opens the online checkout of the signed-in company (installer or supplier) and sends the browser
- * to the provider. Only the company's owner pays; a super admin in a support session cannot.
+ * Opens a payment of the signed-in company (installer or supplier) and sends the browser to its
+ * payment page. Only the company's owner pays; a super admin in a support session cannot.
  * Returns the French refusal when there is one.
  */
-export async function startCheckoutAction(
+export async function createIntentAction(
   purpose: 'SUBSCRIPTION' | 'OPTION_3D',
   planId: string | null,
   months: number,
-  provider: PaymentMethod,
-): Promise<StartCheckoutState | undefined> {
+  provider: string,
+): Promise<PaymentActionState | undefined> {
   const user = await requireAuthenticatedCompanyUser();
-  if (user.impersonatedBySuperAdminId) return { error: 'Mode support : le paiement en ligne est désactivé.' };
-  if (user.role !== 'OWNER') return { error: 'Seul le responsable du compte peut payer l’abonnement.' };
+  const refusal = payerRefusal(user);
+  if (refusal) return { error: refusal };
   if (purpose !== 'SUBSCRIPTION' && purpose !== 'OPTION_3D') return { error: 'Achat inconnu.' };
-  if (!(ONLINE_PROVIDER_IDS as readonly string[]).includes(provider)) return { error: 'Moyen de paiement inconnu.' };
+  if (!(P2P_PROVIDER_IDS as readonly string[]).includes(provider)) return { error: 'Moyen de paiement inconnu.' };
 
-  let checkoutUrl: string;
+  let intentId: string;
   try {
-    ({ checkoutUrl } = await startCheckout(user.companyId, { purpose, planId: typeof planId === 'string' ? planId : null, months: Number(months), provider }));
+    ({ intentId } = await createIntent(user.companyId, { purpose, planId: typeof planId === 'string' ? planId : null, months: Number(months), provider: provider as P2pProviderId }));
   } catch (error) {
-    if (error instanceof CheckoutError) return { error: error.message };
+    if (error instanceof PaymentError) return { error: error.message };
     throw error;
   }
-  redirect(checkoutUrl);
+  redirect(`/paiement/${intentId}`);
+}
+
+/** The payer declares the transfer: screenshot and sender number or reference. Can be repeated until the admin decides. */
+export async function declareIntentAction(
+  intentId: string,
+  _prevState: PaymentActionState | undefined,
+  formData: FormData,
+): Promise<PaymentActionState | undefined> {
+  const user = await requireAuthenticatedCompanyUser();
+  const refusal = payerRefusal(user);
+  if (refusal) return { error: refusal };
+
+  const field = formData.get('proof');
+  const reference = formData.get('reference');
+  const file = field instanceof File && field.size > 0 ? { buffer: Buffer.from(await field.arrayBuffer()), type: field.type, size: field.size } : null;
+  try {
+    await declareIntent(user.companyId, intentId, { file, reference: typeof reference === 'string' ? reference : '' });
+  } catch (error) {
+    if (error instanceof PaymentError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath(`/paiement/${intentId}`);
+  revalidatePath('/facturation');
+  revalidatePath('/fournisseur/facturation');
+  return { saved: true };
+}
+
+/** The payer cancels its own open payment. */
+export async function cancelIntentAction(intentId: string): Promise<void> {
+  const user = await requireAuthenticatedCompanyUser();
+  if (payerRefusal(user)) return;
+  try {
+    await cancelIntent(user.companyId, intentId);
+  } catch (error) {
+    if (!(error instanceof PaymentError)) throw error;
+  }
+  revalidatePath(`/paiement/${intentId}`);
+  redirect(`/paiement/${intentId}`);
 }

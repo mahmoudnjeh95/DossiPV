@@ -14,8 +14,7 @@ const m = vi.hoisted(() => ({
   companyUpdateMany: vi.fn(),
   planFindUnique: vi.fn(),
   planFindFirst: vi.fn(),
-  verify: vi.fn(),
-  issueInvoice: vi.fn(),
+  auditCreate: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -26,27 +25,27 @@ vi.mock('@dossipv/db', async () => {
     subscription: { findUnique: m.subFindUnique, create: m.subCreate, update: m.subUpdate, updateMany: m.subUpdateMany },
     company: { findUnique: m.companyFindUnique, updateMany: m.companyUpdateMany },
     plan: { findUnique: m.planFindUnique, findFirst: m.planFindFirst },
+    adminAuditLog: { create: m.auditCreate },
   };
   return { ...actual, db: { ...actual.db, ...tables, $transaction: (cb: (tx: typeof tables) => Promise<unknown>) => cb(tables) } };
 });
-vi.mock('../lib/payments/registry', () => ({ getProvider: () => ({ verify: m.verify }) }));
-vi.mock('../lib/invoices', () => ({ issueInvoiceForPayment: m.issueInvoice }));
 
-import { settlePaymentIntent } from '../lib/payments/settle';
+import { approveIntent, rejectIntent } from '../lib/payments/approve';
 
 const NOW = new Date('2026-10-24T10:00:00Z');
 const day = (n: number): Date => new Date(NOW.getTime() + n * 86_400_000);
 
 const intent = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
-  id: 'i1',
+  id: '1a2b3c4d-0000-0000-0000-000000000000',
   companyId: 'c1',
   purpose: 'SUBSCRIPTION',
   planId: 'plan-std',
   months: 3,
-  amountTnd: 358,
+  amountTnd: 150,
   provider: 'FLOUCI',
   status: 'PENDING',
-  providerReference: 'ref-1',
+  providerReference: '20 123 456',
+  declaredAt: day(-1),
   ...over,
 });
 
@@ -55,30 +54,45 @@ beforeEach(() => {
   m.intentFindUnique.mockResolvedValue(intent());
   m.intentUpdateMany.mockResolvedValue({ count: 1 });
   m.paymentCreate.mockResolvedValue({ id: 'pay1' });
-  m.verify.mockResolvedValue('PAID');
-  m.issueInvoice.mockResolvedValue({ invoiceId: 'inv1', number: '2026-0001' });
   m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: null });
   m.planFindUnique.mockResolvedValue({ id: 'plan-std', tier: 'STANDARD' });
   m.subFindUnique.mockResolvedValue({ planId: 'plan-std', status: 'ACTIVE', periodEnd: day(10), plan: { isTrial: false } });
 });
 
-describe('settlePaymentIntent', () => {
-  it('records the payment, extends the period from the current end and issues the invoice', async () => {
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'PAID' });
-    expect(m.paymentCreate).toHaveBeenCalledWith({
-      data: { companyId: 'c1', amountTnd: 358, method: 'FLOUCI', gatewayReference: 'ref-1', recordedByAdmin: false },
+describe('approveIntent', () => {
+  it('records the payment as an admin P2P payment, claims the intent and extends the period from the current end', async () => {
+    expect(await approveIntent('i1', 'admin-1', NOW)).toEqual({ ok: true });
+    expect(m.intentUpdateMany).toHaveBeenCalledWith({
+      where: { id: '1a2b3c4d-0000-0000-0000-000000000000', status: 'PENDING', declaredAt: { not: null } },
+      data: { status: 'PAID', paidAt: NOW },
     });
-    expect(m.intentUpdate).toHaveBeenCalledWith({ where: { id: 'i1' }, data: { paymentId: 'pay1' } });
+    expect(m.paymentCreate).toHaveBeenCalledWith({
+      data: {
+        companyId: 'c1',
+        amountTnd: 150,
+        method: 'FLOUCI',
+        gatewayReference: '20 123 456',
+        note: 'Paiement P2P Flouci, référence DPV-1A2B3C',
+        recordedByAdmin: true,
+      },
+    });
+    expect(m.intentUpdate).toHaveBeenCalledWith({ where: { id: '1a2b3c4d-0000-0000-0000-000000000000' }, data: { paymentId: 'pay1' } });
     const update = m.subUpdate.mock.calls[0]![0] as { data: { periodEnd: Date } };
     // 10 days left + 3 months: counted from the current end, not from today
     expect(update.data.periodEnd.getTime()).toBeGreaterThan(day(10 + 85).getTime());
     expect(update.data.periodEnd.getTime()).toBeLessThan(day(10 + 93).getTime());
-    expect(m.issueInvoice).toHaveBeenCalledWith('pay1');
+  });
+
+  it('logs payment.p2pApprove without any screenshot data', async () => {
+    await approveIntent('i1', 'admin-1', NOW);
+    const data = (m.auditCreate.mock.calls[0]![0] as { data: Record<string, unknown> }).data;
+    expect(data).toMatchObject({ superAdminId: 'admin-1', action: 'payment.p2pApprove', targetCompanyId: 'c1' });
+    expect(JSON.stringify(data)).not.toMatch(/proof/i);
   });
 
   it('counts from today for a subscription that already ended, and reactivates it', async () => {
     m.subFindUnique.mockResolvedValue({ planId: 'plan-std', status: 'EXPIRED', periodEnd: day(-30), plan: { isTrial: false } });
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     const update = m.subUpdate.mock.calls[0]![0] as { data: { periodEnd: Date; status: string } };
     expect(update.data.status).toBe('ACTIVE');
     expect(update.data.periodEnd.getTime()).toBeGreaterThan(day(85).getTime());
@@ -88,23 +102,27 @@ describe('settlePaymentIntent', () => {
   it('changes the plan when the paid plan differs', async () => {
     m.planFindUnique.mockResolvedValue({ id: 'plan-pre', tier: 'PREMIUM' });
     m.intentFindUnique.mockResolvedValue(intent({ planId: 'plan-pre' }));
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     expect((m.subUpdate.mock.calls[0]![0] as { data: { planId: string } }).data.planId).toBe('plan-pre');
     expect(m.companyUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('settles once when two calls race: the second finds the intent already claimed', async () => {
+  it('settles once when two approvals race: the second finds the intent already claimed', async () => {
     m.intentUpdateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 });
-    await Promise.all([settlePaymentIntent('i1', NOW), settlePaymentIntent('i1', NOW)]);
+    const results = await Promise.all([approveIntent('i1', 'admin-1', NOW), approveIntent('i1', 'admin-1', NOW)]);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(m.paymentCreate).toHaveBeenCalledTimes(1);
     expect(m.subUpdate).toHaveBeenCalledTimes(1);
-    expect(m.issueInvoice).toHaveBeenCalledTimes(1);
+    expect(m.auditCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('does nothing for an intent that is already settled, without asking the provider', async () => {
+  it('refuses an intent that is already decided or not declared yet', async () => {
     m.intentFindUnique.mockResolvedValue(intent({ status: 'PAID' }));
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'PAID' });
-    expect(m.verify).not.toHaveBeenCalled();
+    expect(await approveIntent('i1', 'admin-1', NOW)).toMatchObject({ ok: false });
+    m.intentFindUnique.mockResolvedValue(intent({ declaredAt: null }));
+    expect(await approveIntent('i1', 'admin-1', NOW)).toMatchObject({ ok: false, error: expect.stringMatching(/pas encore déclaré/) });
+    m.intentFindUnique.mockResolvedValue(null);
+    expect(await approveIntent('nope', 'admin-1', NOW)).toMatchObject({ ok: false });
     expect(m.paymentCreate).not.toHaveBeenCalled();
   });
 
@@ -113,7 +131,7 @@ describe('settlePaymentIntent', () => {
     m.planFindUnique.mockResolvedValue({ id: 'plan-pre', tier: 'PREMIUM' });
     m.intentFindUnique.mockResolvedValue(intent({ planId: 'plan-pre', months: 1 }));
     m.subFindUnique.mockResolvedValue({ planId: 'plan-std', status: 'SUSPENDED', periodEnd: day(200), plan: { isTrial: false } });
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     expect(m.companyUpdateMany).toHaveBeenCalledWith({ where: { id: 'c1', sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
     expect(m.subUpdateMany).toHaveBeenCalledWith({ where: { companyId: 'c1' }, data: { option3dUntil: null } });
     // the suspended row only held the option: a fresh month from today, not from its date
@@ -122,16 +140,26 @@ describe('settlePaymentIntent', () => {
     expect(update.data.periodEnd.getTime()).toBeLessThan(day(40).getTime());
   });
 
+  it('starts a fresh period from today for a trial', async () => {
+    m.subFindUnique.mockResolvedValue({ planId: 'plan-trial', status: 'ACTIVE', periodEnd: day(20), plan: { isTrial: true } });
+    await approveIntent('i1', 'admin-1', NOW);
+    const update = m.subUpdate.mock.calls[0]![0] as { data: { planId: string; status: string; periodStart: Date; periodEnd: Date } };
+    expect(update.data.planId).toBe('plan-std');
+    expect(update.data.periodStart).toEqual(NOW);
+    expect(update.data.periodEnd.getTime()).toBeLessThan(day(95).getTime());
+    expect(update.data.periodEnd.getTime()).toBeGreaterThan(day(85).getTime());
+  });
+
   it('creates the subscription of a company that has none', async () => {
     m.subFindUnique.mockResolvedValue(null);
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     expect(m.subCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ companyId: 'c1', planId: 'plan-std', status: 'ACTIVE' }) });
   });
 
   it('extends option3dUntil from the later of its end and now', async () => {
-    m.intentFindUnique.mockResolvedValue(intent({ purpose: 'OPTION_3D', planId: null, months: 2 }));
+    m.intentFindUnique.mockResolvedValue(intent({ purpose: 'OPTION_3D', planId: null, months: 2, provider: 'D17' }));
     m.subFindUnique.mockResolvedValue({ option3dUntil: day(20) });
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     const update = m.subUpdate.mock.calls[0]![0] as { data: { option3dUntil: Date } };
     expect(update.data.option3dUntil.getTime()).toBeGreaterThan(day(20 + 55).getTime());
     expect(update.data.option3dUntil.getTime()).toBeLessThan(day(20 + 63).getTime());
@@ -142,42 +170,35 @@ describe('settlePaymentIntent', () => {
     m.intentFindUnique.mockResolvedValue(intent({ purpose: 'OPTION_3D', planId: null, months: 1 }));
     m.subFindUnique.mockResolvedValue(null);
     m.planFindFirst.mockResolvedValue({ id: 'plan-std' });
-    await settlePaymentIntent('i1', NOW);
+    await approveIntent('i1', 'admin-1', NOW);
     const created = m.subCreate.mock.calls[0]![0] as { data: { status: string; option3dUntil: Date } };
     expect(created.data.status).toBe('SUSPENDED');
     expect(created.data.option3dUntil.getTime()).toBeGreaterThan(day(27).getTime());
     expect(created.data.option3dUntil.getTime()).toBeLessThan(day(32).getTime());
   });
+});
 
-  it('keeps the settlement when the invoice cannot be issued', async () => {
-    m.issueInvoice.mockRejectedValue(new Error('not implemented'));
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'PAID' });
-    expect(m.paymentCreate).toHaveBeenCalledTimes(1);
+describe('rejectIntent', () => {
+  beforeEach(() => {
+    m.intentFindUnique.mockResolvedValue({ companyId: 'c1', amountTnd: 150, provider: 'IZI' });
   });
 
-  it('marks the intent FAILED when the provider says so, and records no payment', async () => {
-    m.verify.mockResolvedValue('FAILED');
-    m.intentFindUnique.mockResolvedValueOnce(intent()).mockResolvedValueOnce({ status: 'FAILED' });
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'FAILED' });
-    expect(m.intentUpdateMany).toHaveBeenCalledWith({
-      where: { id: 'i1', status: 'PENDING' },
-      data: expect.objectContaining({ status: 'FAILED', failureReason: expect.any(String) }),
-    });
+  it('requires a reason', async () => {
+    expect(await rejectIntent('i1', 'admin-1', '   ')).toEqual({ ok: false, error: 'Indiquez le motif du refus.' });
+    expect(m.intentUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('marks the open intent FAILED with the reason, records no payment and logs payment.p2pReject', async () => {
+    expect(await rejectIntent('i1', 'admin-1', ' Montant incorrect ')).toEqual({ ok: true });
+    expect(m.intentUpdateMany).toHaveBeenCalledWith({ where: { id: 'i1', status: 'PENDING' }, data: { status: 'FAILED', failureReason: 'Montant incorrect' } });
     expect(m.paymentCreate).not.toHaveBeenCalled();
+    const data = (m.auditCreate.mock.calls[0]![0] as { data: Record<string, unknown> }).data;
+    expect(data).toMatchObject({ action: 'payment.p2pReject', targetCompanyId: 'c1' });
   });
 
-  it('stays pending while the provider says pending or cannot be reached', async () => {
-    m.verify.mockResolvedValue('PENDING');
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'PENDING' });
-    m.verify.mockRejectedValue(new Error('network'));
-    vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    expect(await settlePaymentIntent('i1', NOW)).toEqual({ status: 'PENDING', unreachable: true });
-    expect(m.paymentCreate).not.toHaveBeenCalled();
-  });
-
-  it('reports an unknown intent', async () => {
-    m.intentFindUnique.mockResolvedValue(null);
-    expect(await settlePaymentIntent('nope', NOW)).toEqual({ status: 'NOT_FOUND' });
+  it('refuses an intent that is already decided', async () => {
+    m.intentUpdateMany.mockResolvedValue({ count: 0 });
+    expect(await rejectIntent('i1', 'admin-1', 'x')).toMatchObject({ ok: false });
+    expect(m.auditCreate).not.toHaveBeenCalled();
   });
 });

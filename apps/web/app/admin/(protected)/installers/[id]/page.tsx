@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS, TIER_LABELS } from '../../../../../lib/labels';
-import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction, clearOption3dAction, issueInvoiceAction } from './actions';
+import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction, clearOption3dAction } from './actions';
 import { Option3dForm } from './option3d-form';
 import { getOption3dPriceTnd } from '../../../../../lib/platform-settings';
 import { RecordPaymentForm } from './record-payment-form';
@@ -12,30 +12,23 @@ import { ChangeEmailForm, UserActionButton } from './user-forms';
 import { markSignupUncontactedAction } from '../../inscriptions/actions';
 import { MarkContactedForm } from '../../inscriptions/signup-forms';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
-import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/registry';
+import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/p2p';
 
 const AUDIT_LOG_ROWS = 30;
 
-const INTENT_STATUS_LABELS = { PENDING: 'En attente', PAID: 'Payé', FAILED: 'Échoué', CANCELLED: 'Annulé' } as const;
+const INTENT_STATUS_LABELS = { PENDING: 'En attente', PAID: 'Confirmé', FAILED: 'Refusé', CANCELLED: 'Annulé' } as const;
 
-export default async function InstallerDetailPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams?: Promise<{ invoice?: string }>;
-}): Promise<React.JSX.Element> {
+export default async function InstallerDetailPage({ params }: { params: Promise<{ id: string }> }): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
 
   const { id } = await params;
-  const invoiceFailed = (await searchParams)?.invoice === 'failed';
 
   const [company, plans, option3dPrice] = await Promise.all([
     db.company.findUnique({
       where: { id },
       include: {
         subscription: { include: { plan: true } },
-        payments: { orderBy: { createdAt: 'desc' }, include: { invoice: { select: { id: true, number: true } } } },
+        payments: { orderBy: { createdAt: 'desc' } },
         paymentIntents: { orderBy: { createdAt: 'desc' }, take: 10 },
         users: { orderBy: { createdAt: 'asc' } },
         adminAuditLogs: { orderBy: { createdAt: 'desc' }, take: AUDIT_LOG_ROWS, include: { superAdmin: { select: { email: true } } } },
@@ -181,9 +174,6 @@ export default async function InstallerDetailPage({
 
       <section>
         <h2>Historique des paiements</h2>
-        {invoiceFailed && (
-          <p role="alert">Le paiement est enregistré, mais sa facture n&apos;a pas pu être émise. Utilisez « Émettre la facture » dans l&apos;historique.</p>
-        )}
         <table>
           <thead>
             <tr>
@@ -191,7 +181,6 @@ export default async function InstallerDetailPage({
               <th>Montant</th>
               <th>Méthode</th>
               <th>Note</th>
-              <th>Facture</th>
             </tr>
           </thead>
           <tbody>
@@ -201,17 +190,6 @@ export default async function InstallerDetailPage({
                 <td>{payment.amountTnd.toString()} TND</td>
                 <td>{payment.method}</td>
                 <td>{payment.note ?? '—'}</td>
-                <td>
-                  {payment.invoice ? (
-                    <a href={`/factures/${payment.invoice.id}`}>{payment.invoice.number}</a>
-                  ) : (
-                    <form action={issueInvoiceAction.bind(null, company.id, payment.id)}>
-                      <button type="submit" className="secondary small">
-                        Émettre la facture
-                      </button>
-                    </form>
-                  )}
-                </td>
               </tr>
             ))}
           </tbody>
@@ -219,18 +197,18 @@ export default async function InstallerDetailPage({
       </section>
 
       <section>
-        <h2>Dernières tentatives de paiement en ligne</h2>
+        <h2>Dernières déclarations de paiement P2P</h2>
         {company.paymentIntents.length === 0 ? (
-          <p className="muted">Aucune tentative.</p>
+          <p className="muted">Aucune déclaration.</p>
         ) : (
           <table>
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Fournisseur</th>
-                <th>Montant TTC</th>
+                <th>Montant</th>
                 <th>Statut</th>
-                <th>Raison de l’échec</th>
+                <th>Motif du refus</th>
               </tr>
             </thead>
             <tbody>

@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { getInvoicingSettings, getOption3dPriceTnd, isSellerComplete } from '../../../../lib/platform-settings';
+import { getOption3dPriceTnd } from '../../../../lib/platform-settings';
+import { loadP2pSettings } from '../../../../lib/payments/p2p';
 import { Option3dPriceForm } from './option3d-price-form';
-import { InvoicingForm } from './invoicing-form';
+import { P2pForm } from './p2p-form';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 
 // Mirrors the model hardcoded in packages/document-text/src/generate-dossier-text.ts.
@@ -11,12 +12,12 @@ const CLAUDE_DOSSIER_MODEL = 'claude-sonnet-5-5';
 export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
   const option3dPrice = await getOption3dPriceTnd();
-  const invoicing = await getInvoicingSettings();
+  const p2p = await loadP2pSettings();
 
   return (
     <main>
       <h1>Paramètres</h1>
-      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D et la facturation).</p>
+      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D et le paiement P2P).</p>
 
       <h2>Fournisseur de cartes</h2>
       <table>
@@ -49,22 +50,19 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
       </p>
       <Option3dPriceForm priceTnd={option3dPrice} />
 
-      <h2>Facturation</h2>
+      <h2>Paiement P2P</h2>
       <p className="hint">
-        Émetteur, TVA et droit de timbre imprimés sur chaque facture. La raison sociale et le matricule fiscal sont obligatoires avant le
-        premier paiement en ligne. Une facture déjà émise ne change pas.
+        Flouci, izi et D17 sont utilisés en virement de personne à personne : le client envoie le montant à l&apos;un de ces numéros puis
+        déclare le paiement avec une capture d&apos;écran, que vous validez dans <Link href="/admin/paiements">Paiements</Link>. Un moyen
+        sans numéro n&apos;est pas proposé ; sans aucun numéro, le paiement est indisponible.
       </p>
-      {!isSellerComplete(invoicing) && <p role="alert">Émetteur à compléter : raison sociale et matricule fiscal.</p>}
-      <InvoicingForm
+      <P2pForm
         values={{
-          sellerLegalName: invoicing.sellerLegalName ?? '',
-          sellerTaxId: invoicing.sellerTaxId ?? '',
-          sellerAddress: invoicing.sellerAddress ?? '',
-          sellerPhone: invoicing.sellerPhone ?? '',
-          sellerEmail: invoicing.sellerEmail ?? '',
-          vatRatePct: String(invoicing.vatRatePct),
-          stampDutyTnd: String(invoicing.stampDutyTnd),
-          invoiceFooter: invoicing.invoiceFooter ?? '',
+          p2pAccountHolder: p2p.accountHolder ?? '',
+          p2pFlouciNumber: p2p.numbers.FLOUCI ?? '',
+          p2pIziNumber: p2p.numbers.IZI ?? '',
+          p2pD17Number: p2p.numbers.D17 ?? '',
+          p2pInstructions: p2p.instructions ?? '',
         }}
       />
 

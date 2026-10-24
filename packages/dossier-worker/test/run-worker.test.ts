@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   updateMany: vi.fn(),
   sendExpiryReminders: vi.fn(),
+  erasePaymentProofs: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -13,7 +14,16 @@ vi.mock('@dossipv/db', async () => {
 
 vi.mock('../src/send-expiry-reminders', () => ({ sendExpiryReminders: mocks.sendExpiryReminders }));
 
-import { claimNextJob, resetExpiryReminderScheduleForTests, resetStaleRunningJobs, runExpiryRemindersIfDue } from '../src/run-worker';
+vi.mock('../src/erase-payment-proofs', () => ({ erasePaymentProofs: mocks.erasePaymentProofs }));
+
+import {
+  claimNextJob,
+  resetExpiryReminderScheduleForTests,
+  resetProofErasureScheduleForTests,
+  resetStaleRunningJobs,
+  runExpiryRemindersIfDue,
+  runProofErasureIfDue,
+} from '../src/run-worker';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -95,6 +105,49 @@ describe('runExpiryRemindersIfDue', () => {
 
     expect(mocks.sendExpiryReminders).toHaveBeenCalledTimes(1);
     expect(error).toHaveBeenCalledWith('Expiry reminders check failed:', expect.any(Error));
+    error.mockRestore();
+  });
+});
+
+describe('runProofErasureIfDue', () => {
+  const START = new Date('2026-10-24T08:00:00.000Z');
+  const minutesLater = (minutes: number): Date => new Date(START.getTime() + minutes * 60_000);
+
+  beforeEach(() => {
+    resetProofErasureScheduleForTests();
+    mocks.erasePaymentProofs.mockResolvedValue(0);
+  });
+
+  it('runs on the first call (startup), then at most once an hour', async () => {
+    await runProofErasureIfDue(START);
+    await runProofErasureIfDue(minutesLater(1));
+    await runProofErasureIfDue(minutesLater(59));
+    expect(mocks.erasePaymentProofs).toHaveBeenCalledTimes(1);
+
+    await runProofErasureIfDue(minutesLater(60));
+    expect(mocks.erasePaymentProofs).toHaveBeenCalledTimes(2);
+    expect(mocks.erasePaymentProofs).toHaveBeenLastCalledWith(minutesLater(60));
+  });
+
+  it('logs a one-line count when screenshots were erased', async () => {
+    mocks.erasePaymentProofs.mockResolvedValue(3);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await runProofErasureIfDue(START);
+
+    expect(warn).toHaveBeenCalledWith('Payment proofs: 3 screenshot(s) erased.');
+    warn.mockRestore();
+  });
+
+  it('never throws when the erasure fails, and waits an hour before trying again', async () => {
+    mocks.erasePaymentProofs.mockRejectedValue(new Error('database unreachable'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(runProofErasureIfDue(START)).resolves.toBeUndefined();
+    await runProofErasureIfDue(minutesLater(5));
+
+    expect(mocks.erasePaymentProofs).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith('Payment proofs erasure failed:', expect.any(Error));
     error.mockRestore();
   });
 });

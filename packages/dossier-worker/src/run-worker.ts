@@ -2,6 +2,7 @@ import { pathToFileURL } from 'url';
 import { db } from '@dossipv/db';
 import { processJob } from './process-job';
 import { sendExpiryReminders } from './send-expiry-reminders';
+import { erasePaymentProofs } from './erase-payment-proofs';
 import { reportError } from './monitoring';
 
 const POLL_INTERVAL_MS = Number(process.env.DOSSIER_WORKER_POLL_INTERVAL_MS ?? 5000);
@@ -63,6 +64,35 @@ export async function runExpiryRemindersIfDue(now: Date = new Date()): Promise<v
   }
 }
 
+const PROOF_ERASURE_INTERVAL_MS = 60 * 60 * 1000;
+let lastProofErasureRunAt: number | null = null;
+
+/** Tests start each case from a worker that has not erased payment screenshots yet. */
+export function resetProofErasureScheduleForTests(): void {
+  lastProofErasureRunAt = null;
+}
+
+/**
+ * Erases the expired P2P payment screenshots, at most once an hour from the poll loop (and once at
+ * startup). Like the reminders, the run time is recorded first and nothing here can throw: a
+ * database problem must not stop dossier generation.
+ */
+export async function runProofErasureIfDue(now: Date = new Date()): Promise<void> {
+  if (lastProofErasureRunAt !== null && now.getTime() - lastProofErasureRunAt < PROOF_ERASURE_INTERVAL_MS) {
+    return;
+  }
+  lastProofErasureRunAt = now.getTime();
+  try {
+    const erased = await erasePaymentProofs(now);
+    if (erased > 0) {
+      console.warn(`Payment proofs: ${erased} screenshot(s) erased.`);
+    }
+  } catch (error) {
+    console.error('Payment proofs erasure failed:', error);
+    reportError(error, { task: 'payment-proofs-erasure' });
+  }
+}
+
 let shuttingDown = false;
 
 async function pollOnce(): Promise<void> {
@@ -92,9 +122,11 @@ export async function main(): Promise<void> {
 
   // Once at startup, then at most hourly from the loop.
   await runExpiryRemindersIfDue();
+  await runProofErasureIfDue();
 
   while (!shuttingDown) {
     await runExpiryRemindersIfDue();
+    await runProofErasureIfDue();
     await pollOnce();
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
