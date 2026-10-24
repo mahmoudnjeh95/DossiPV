@@ -446,9 +446,36 @@ model PaymentIntent {
   createdAt         DateTime            @default(now())
   paidAt            DateTime?
 
+  messages PaymentMessage[]
+
   @@index([companyId, createdAt])
   @@index([providerReference])
   @@map("payment_intent")
+}
+
+enum PaymentMessageAuthor {
+  /// The paying company (any of its users who may see the payment).
+  COMPANY
+  /// The super admin handling the payment.
+  ADMIN
+}
+
+/// The chat of a payment: the payer and the admin talk about it until it is decided (and after).
+/// readByCompanyAt / readByAdminAt tell what the other side has not seen yet.
+model PaymentMessage {
+  id               String               @id @default(uuid())
+  intentId         String
+  intent           PaymentIntent        @relation(fields: [intentId], references: [id], onDelete: Cascade)
+  author           PaymentMessageAuthor
+  /// Who wrote it, for display: the company user's name or "DossiPV".
+  authorName       String
+  body             String
+  createdAt        DateTime             @default(now())
+  readByCompanyAt  DateTime?
+  readByAdminAt    DateTime?
+
+  @@index([intentId, createdAt])
+  @@map("payment_message")
 }
 
 model PvModule {
