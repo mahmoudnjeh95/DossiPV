@@ -26,6 +26,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
     id: 'project-1',
     companyId: 'company-1',
     tier: 'STANDARD',
+    with3d: false,
     dossierNumber: null,
     dossierDate: null,
     status: 'DRAFT',

@@ -24,13 +24,26 @@ export class TooManyAttemptsError extends Error {
   }
 }
 
+/** The right password for an account the admin disabled. */
+export class AccountDisabledError extends Error {
+  constructor() {
+    super('This account is disabled.');
+    this.name = 'AccountDisabledError';
+  }
+}
+
 export interface AuthenticatedCompanyUser {
   id: string;
   companyId: string;
   email: string;
   fullName: string;
   role: 'OWNER' | 'MEMBER';
+  /** Set when a super admin opened this session to see the app as the installer (support). */
+  impersonatedBySuperAdminId?: string | null;
 }
+
+/** How long a support session opened by a super admin lasts. */
+export const IMPERSONATION_LIFETIME_MS = 60 * 60 * 1000; // 1 hour
 
 export interface LoginResult {
   user: AuthenticatedCompanyUser;
@@ -74,13 +87,17 @@ export async function login(email: string, plainPassword: string): Promise<Login
 
   loginRateLimiter.clear(email);
 
-  const activeSessionCount = await db.session.count({
-    where: { companyUser: { companyId: user.companyId }, expiresAt: { gt: new Date() } },
-  });
+  if (user.disabledAt) {
+    throw new AccountDisabledError();
+  }
+
+  // The installer's own sessions: a support session opened by the admin neither counts nor is evicted.
+  const ownActiveSessions = { companyUser: { companyId: user.companyId }, expiresAt: { gt: new Date() }, impersonatedBySuperAdminId: null };
+  const activeSessionCount = await db.session.count({ where: ownActiveSessions });
 
   if (activeSessionCount >= MAX_CONCURRENT_SESSIONS_PER_COMPANY) {
     const oldest = await db.session.findFirst({
-      where: { companyUser: { companyId: user.companyId }, expiresAt: { gt: new Date() } },
+      where: ownActiveSessions,
       orderBy: { createdAt: 'asc' },
     });
     if (oldest) {
@@ -113,12 +130,37 @@ export async function validateSession(rawToken: string): Promise<AuthenticatedCo
     include: { companyUser: true },
   });
 
-  if (!session || session.expiresAt <= new Date()) {
+  if (!session || session.expiresAt <= new Date() || session.companyUser.disabledAt) {
     return null;
   }
 
   await db.session.update({ where: { id: session.id }, data: { lastSeenAt: new Date() } });
 
   const user = session.companyUser;
-  return { id: user.id, companyId: user.companyId, email: user.email, fullName: user.fullName, role: user.role };
+  return {
+    id: user.id,
+    companyId: user.companyId,
+    email: user.email,
+    fullName: user.fullName,
+    role: user.role,
+    impersonatedBySuperAdminId: session.impersonatedBySuperAdminId,
+  };
+}
+
+/**
+ * Opens a support session for a super admin as this installer user ("Se connecter en tant que"):
+ * a normal session token, marked with the admin and limited to IMPERSONATION_LIFETIME_MS. It is
+ * ended with `logout` like any session. Returns the raw token for the session cookie.
+ */
+export async function createImpersonationSession(superAdminId: string, companyUserId: string): Promise<string> {
+  const rawToken = generateToken();
+  await db.session.create({
+    data: {
+      companyUserId,
+      tokenHash: hashToken(rawToken),
+      expiresAt: new Date(Date.now() + IMPERSONATION_LIFETIME_MS),
+      impersonatedBySuperAdminId: superAdminId,
+    },
+  });
+  return rawToken;
 }

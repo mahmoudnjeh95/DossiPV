@@ -144,10 +144,27 @@ model CompanyUser {
   fullName     String
   role         CompanyUserRole @default(MEMBER)
   createdAt    DateTime        @default(now())
+  /// Set by the admin: a disabled user cannot log in and its sessions stop working.
+  disabledAt   DateTime?
 
   sessions Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("company_user")
+}
+
+/// A one-time link to choose a new password, sent by email (forgotten password or admin reset).
+model PasswordResetToken {
+  id            String      @id @default(uuid())
+  companyUserId String
+  companyUser   CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  tokenHash     String      @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([companyUserId])
+  @@map("password_reset_token")
 }
 
 enum CompanyUserRole {
@@ -163,6 +180,9 @@ model Session {
   createdAt     DateTime    @default(now())
   lastSeenAt    DateTime    @default(now())
   expiresAt     DateTime
+  /// Set when a super admin opened this session to see the app as the installer (support).
+  impersonatedBySuperAdminId String?
+  impersonatedBy             SuperAdmin? @relation(fields: [impersonatedBySuperAdminId], references: [id], onDelete: Cascade)
 
   @@map("session")
 }
@@ -174,8 +194,26 @@ model SuperAdmin {
   createdAt    DateTime @default(now())
 
   sessions SuperAdminSession[]
+  impersonationSessions Session[]
+  auditLogs             AdminAuditLog[]
 
   @@map("super_admin")
+}
+
+/// Every change a super admin makes from /admin, and every impersonation, for accountability.
+model AdminAuditLog {
+  id              String     @id @default(uuid())
+  superAdminId    String
+  superAdmin      SuperAdmin @relation(fields: [superAdminId], references: [id])
+  /// A short stable key, e.g. `company.create`, `subscription.suspend`, `impersonation.start`.
+  action          String
+  targetCompanyId String?
+  details         Json       @default("{}")
+  createdAt       DateTime   @default(now())
+
+  @@index([createdAt])
+  @@index([targetCompanyId, createdAt])
+  @@map("admin_audit_log")
 }
 
 model SuperAdminSession {
@@ -197,6 +235,8 @@ model Plan {
   priceTnd            Decimal     @db.Decimal(10, 2)
   tier                ProjectTier
   createdAt           DateTime    @default(now())
+  /// An archived plan is no longer offered; companies already on it keep it.
+  archivedAt          DateTime?
 
   subscriptions Subscription[]
 
@@ -214,7 +254,28 @@ model Subscription {
   periodEnd   DateTime
   createdAt   DateTime           @default(now())
 
+  reminders SubscriptionReminder[]
+
   @@map("subscription")
+}
+
+/// An expiry email already sent for one period end, so the worker sends each one once.
+model SubscriptionReminder {
+  id             String                   @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription             @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  periodEnd      DateTime
+  kind           SubscriptionReminderKind
+  sentAt         DateTime                 @default(now())
+
+  @@unique([subscriptionId, periodEnd, kind])
+  @@map("subscription_reminder")
+}
+
+enum SubscriptionReminderKind {
+  EXPIRES_IN_7_DAYS
+  EXPIRES_IN_1_DAY
+  EXPIRED
 }
 
 enum SubscriptionStatus {
@@ -578,6 +639,9 @@ model Project {
   companyId       String
   company         Company       @relation(fields: [companyId], references: [id])
   tier            ProjectTier   @default(STANDARD)
+  /// The dossier gets the 3D view of the array on the roof: set at creation from the company's
+  /// subscription (Premium today; the 3D option later), like `tier`.
+  with3d        Boolean       @default(false)
   dossierNumber   String?
   dossierDate     DateTime?
   status          ProjectStatus @default(DRAFT)
