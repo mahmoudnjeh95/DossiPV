@@ -1,6 +1,7 @@
 import { db } from '@dossipv/db';
 import { loadEffectiveSubscription } from '../sponsorship';
 import { summarizeSubscription, type SubscriptionSummary } from '../subscription';
+import { unreadForCompany } from './chat';
 import { intentDisplayStatus, loadP2pSettings, offeredProviders, paymentReference, type IntentDisplayStatus, type OfferedProvider } from './p2p';
 import { CHECKOUT_MONTHS, computeAmount, loadOption3dPrice, planPurchaseError, type PaymentPurposeName } from './pricing';
 
@@ -38,6 +39,8 @@ export interface BillingIntent {
   status: IntentDisplayStatus;
   failureReason: string | null;
   hasProof: boolean;
+  /** Messages from DossiPV the payer has not read yet. */
+  unreadMessages: number;
 }
 
 export interface BillingView {
@@ -105,7 +108,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
   }
 
   // The screenshot itself is never selected here: only the capture routes read it.
-  const [payments, intents] = await Promise.all([
+  const [payments, intents, unread] = await Promise.all([
     db.payment.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' }, take: PAYMENT_ROWS }),
     db.paymentIntent.findMany({
       where: { companyId },
@@ -113,6 +116,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       take: INTENT_ROWS,
       select: { id: true, createdAt: true, amountTnd: true, provider: true, months: true, status: true, declaredAt: true, failureReason: true, proofMime: true },
     }),
+    unreadForCompany(companyId),
   ]);
 
   return {
@@ -133,6 +137,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       status: intentDisplayStatus(i),
       failureReason: i.failureReason,
       hasProof: i.proofMime !== null,
+      unreadMessages: unread.get(i.id) ?? 0,
     })),
   };
 }

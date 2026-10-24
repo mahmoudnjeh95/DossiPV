@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
+import { unreadForAdmin } from '../../../../lib/payments/chat';
 import { PAYMENT_METHOD_LABELS, paymentReference } from '../../../../lib/payments/p2p';
 
 const ROWS = 200;
@@ -9,8 +10,10 @@ const ROWS = 200;
 export default async function AdminPaymentsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
   // No proofImage here: the screenshot is read only by the capture route.
+  // A payment with an unread payer message is listed too, declared or not.
+  const unread = await unreadForAdmin();
   const intents = await db.paymentIntent.findMany({
-    where: { status: 'PENDING', declaredAt: { not: null } },
+    where: { OR: [{ status: 'PENDING', declaredAt: { not: null } }, { id: { in: [...unread.keys()] } }] },
     orderBy: { declaredAt: 'asc' },
     take: ROWS,
     select: {
@@ -63,6 +66,11 @@ export default async function AdminPaymentsPage(): Promise<React.JSX.Element> {
                   <td>{intent.providerReference}</td>
                   <td>
                     <Link href={`/admin/paiements/${intent.id}`}>Examiner</Link>
+                    {(unread.get(intent.id) ?? 0) > 0 && (
+                      <span className="badge badge-warn" style={{ marginLeft: 8 }}>
+                        {unread.get(intent.id)} message{unread.get(intent.id) === 1 ? '' : 's'} non lu{unread.get(intent.id) === 1 ? '' : 's'}
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
