@@ -1,22 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { mockGet, mockCookies, mockRedirect, mockValidateSuperAdminSession, mockSubscriptionUpdate, mockPaymentCreate } = vi.hoisted(() => {
+const m = vi.hoisted(() => {
   const mockGet = vi.fn();
   return {
     mockGet,
     mockCookies: vi.fn(() => Promise.resolve({ get: mockGet })),
     mockRedirect: vi.fn(),
     mockValidateSuperAdminSession: vi.fn(),
+    mockHashPassword: vi.fn((password: string) => Promise.resolve(`hashed:${password}`)),
     mockSubscriptionUpdate: vi.fn(),
+    mockSubscriptionFindUnique: vi.fn(),
+    mockSubscriptionCreate: vi.fn(),
     mockPaymentCreate: vi.fn(),
+    mockPlanFindUnique: vi.fn(),
+    mockCompanyUserFindUnique: vi.fn(),
+    mockCompanyUserFindFirst: vi.fn(),
+    mockCompanyUserCreate: vi.fn(),
+    mockCompanyUserUpdate: vi.fn(),
+    mockSessionDeleteMany: vi.fn(),
+    mockAuditCreate: vi.fn(),
   };
 });
+const { mockGet, mockRedirect, mockValidateSuperAdminSession, mockSubscriptionUpdate, mockPaymentCreate } = m;
 
-vi.mock('next/headers', () => ({ cookies: mockCookies }));
-vi.mock('next/navigation', () => ({ redirect: mockRedirect }));
+vi.mock('next/headers', () => ({ cookies: m.mockCookies }));
+vi.mock('next/navigation', () => ({ redirect: m.mockRedirect }));
 vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
-  return { ...actual, validateSuperAdminSession: mockValidateSuperAdminSession };
+  return { ...actual, validateSuperAdminSession: m.mockValidateSuperAdminSession, hashPassword: m.mockHashPassword };
 });
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
@@ -24,8 +35,17 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      subscription: { update: mockSubscriptionUpdate },
-      payment: { create: mockPaymentCreate },
+      subscription: { update: m.mockSubscriptionUpdate, findUnique: m.mockSubscriptionFindUnique, create: m.mockSubscriptionCreate },
+      payment: { create: m.mockPaymentCreate },
+      plan: { findUnique: m.mockPlanFindUnique },
+      companyUser: {
+        findUnique: m.mockCompanyUserFindUnique,
+        findFirst: m.mockCompanyUserFindFirst,
+        create: m.mockCompanyUserCreate,
+        update: m.mockCompanyUserUpdate,
+      },
+      session: { deleteMany: m.mockSessionDeleteMany },
+      adminAuditLog: { create: m.mockAuditCreate },
     },
   };
 });
@@ -35,7 +55,11 @@ import {
   activateSubscriptionAction,
   recordPaymentAction,
   updatePeriodEndAction,
+  assignPlanAction,
+  addCompanyUserAction,
+  resetCompanyUserPasswordAction,
 } from '../app/admin/(protected)/installers/[id]/actions';
+import { addMonths } from '../lib/subscription';
 
 beforeEach(() => {
   mockGet.mockReset();
@@ -43,9 +67,45 @@ beforeEach(() => {
   mockRedirect.mockClear();
   mockValidateSuperAdminSession.mockReset();
   mockValidateSuperAdminSession.mockResolvedValue({ id: 'admin-1', email: 'admin@dossipv.tn' });
-  mockSubscriptionUpdate.mockClear();
-  mockPaymentCreate.mockClear();
+  for (const mock of [
+    mockSubscriptionUpdate,
+    mockPaymentCreate,
+    m.mockSubscriptionFindUnique,
+    m.mockSubscriptionCreate,
+    m.mockPlanFindUnique,
+    m.mockCompanyUserFindUnique,
+    m.mockCompanyUserFindFirst,
+    m.mockCompanyUserCreate,
+    m.mockCompanyUserUpdate,
+    m.mockSessionDeleteMany,
+    m.mockAuditCreate,
+  ]) {
+    mock.mockReset();
+  }
 });
+
+function form(fields: Record<string, string>): FormData {
+  const formData = new FormData();
+  for (const [name, value] of Object.entries(fields)) formData.set(name, value);
+  return formData;
+}
+
+interface AuditRow {
+  superAdminId: string;
+  action: string;
+  targetCompanyId: string | null;
+  details?: unknown;
+}
+
+/** The AdminAuditLog rows written. */
+function auditRows(): AuditRow[] {
+  return m.mockAuditCreate.mock.calls.map((call) => (call[0] as { data: AuditRow }).data);
+}
+
+/** The AdminAuditLog rows written, as [action, targetCompanyId, details]. */
+function auditEntries(): [string, string | null, unknown][] {
+  return auditRows().map((row) => [row.action, row.targetCompanyId, row.details]);
+}
 
 describe('suspendSubscriptionAction', () => {
   it('sets the subscription status to SUSPENDED and redirects back to the detail page', async () => {
@@ -126,6 +186,181 @@ describe('updatePeriodEndAction', () => {
   });
 });
 
+describe('recordPaymentAction — extending the subscription', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('moves a running subscription end by the months paid, from its current end', async () => {
+    const periodEnd = new Date('2027-01-15T00:00:00Z');
+    m.mockSubscriptionFindUnique.mockResolvedValue({ periodEnd, status: 'ACTIVE' });
+
+    await recordPaymentAction('company-1', undefined, form({ amountTnd: '400', method: 'MANUAL', extendMonths: '2' }));
+
+    expect(mockPaymentCreate).toHaveBeenCalledTimes(1);
+    expect(mockSubscriptionUpdate).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { periodEnd: addMonths(periodEnd, 2) } });
+    expect(auditEntries()).toEqual([
+      ['payment.record', 'company-1', expect.objectContaining({ amountTnd: 400, extendMonths: 2, periodEnd: addMonths(periodEnd, 2).toISOString() })],
+    ]);
+  });
+
+  it('counts from today and reactivates an expired subscription', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const now = new Date('2026-10-23T12:00:00Z');
+    vi.setSystemTime(now);
+    m.mockSubscriptionFindUnique.mockResolvedValue({ periodEnd: new Date('2026-09-01T00:00:00Z'), status: 'EXPIRED' });
+
+    await recordPaymentAction('company-1', undefined, form({ amountTnd: '200', method: 'MANUAL', extendMonths: '1' }));
+
+    expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+      where: { companyId: 'company-1' },
+      data: { periodEnd: addMonths(now, 1), status: 'ACTIVE' },
+    });
+  });
+
+  it('leaves a suspended subscription suspended', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ periodEnd: new Date('2027-01-15T00:00:00Z'), status: 'SUSPENDED' });
+
+    await recordPaymentAction('company-1', undefined, form({ amountTnd: '200', method: 'MANUAL', extendMonths: '1' }));
+
+    expect((mockSubscriptionUpdate.mock.calls[0]?.[0] as { data: object }).data).not.toHaveProperty('status');
+  });
+
+  it('does not touch the subscription when 0 months are paid', async () => {
+    await recordPaymentAction('company-1', undefined, form({ amountTnd: '50', method: 'MANUAL', extendMonths: '0' }));
+
+    expect(m.mockSubscriptionFindUnique).not.toHaveBeenCalled();
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown payment method and more than 24 months', async () => {
+    const result = await recordPaymentAction('company-1', undefined, form({ amountTnd: '50', method: 'CASH', extendMonths: '30' }));
+
+    expect(result?.error).toContain('Méthode');
+    expect(result?.error).toContain('≤ 24');
+    expect(mockPaymentCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('subscription changes are written to the audit log', () => {
+  it('logs suspend, activate and a new period end under the acting super-admin', async () => {
+    await suspendSubscriptionAction('company-1');
+    await activateSubscriptionAction('company-1');
+    await updatePeriodEndAction('company-1', form({ periodEnd: '2027-01-01' }));
+
+    expect(auditEntries()).toEqual([
+      ['subscription.suspend', 'company-1', undefined],
+      ['subscription.activate', 'company-1', undefined],
+      ['subscription.periodEnd', 'company-1', { periodEnd: '2027-01-01' }],
+    ]);
+    expect(auditRows().every((row) => row.superAdminId === 'admin-1')).toBe(true);
+  });
+});
+
+describe('assignPlanAction', () => {
+  const plan = { id: 'plan-premium', name: 'Premium' };
+
+  it("changes the plan of an existing subscription and keeps its end date", async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
+    m.mockPlanFindUnique.mockResolvedValue(plan);
+
+    await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium' }));
+
+    expect(mockSubscriptionUpdate).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { planId: 'plan-premium' } });
+    expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
+    expect(auditEntries()).toEqual([['subscription.changePlan', 'company-1', { planId: 'plan-premium', planName: 'Premium' }]]);
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+  });
+
+  it('creates an active subscription ending on the typed date when the company has none', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue(null);
+    m.mockPlanFindUnique.mockResolvedValue(plan);
+
+    await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium', periodEnd: '2027-01-01' }));
+
+    expect(m.mockSubscriptionCreate).toHaveBeenCalledWith({
+      data: { companyId: 'company-1', planId: 'plan-premium', status: 'ACTIVE', periodStart: expect.any(Date) as unknown, periodEnd: new Date('2027-01-01') },
+    });
+    expect(auditEntries()[0]![0]).toBe('subscription.create');
+  });
+
+  it('requires an end date for a new subscription', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue(null);
+
+    const result = await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium' }));
+
+    expect(result?.error).toContain('Fin de période');
+    expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unknown plan', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
+    m.mockPlanFindUnique.mockResolvedValue(null);
+
+    const result = await assignPlanAction('company-1', undefined, form({ planId: 'nope' }));
+
+    expect(result).toEqual({ error: 'Plan introuvable.' });
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('addCompanyUserAction', () => {
+  const fields = { fullName: 'Fatma Trabelsi', email: '  Fatma@SolarPro.tn ', password: 'un-mot-de-passe', role: 'MEMBER' };
+
+  it('creates the login with a lower-cased email and a hashed password, and logs it without the password', async () => {
+    m.mockCompanyUserFindUnique.mockResolvedValue(null);
+
+    await addCompanyUserAction('company-1', undefined, form(fields));
+
+    expect(m.mockCompanyUserCreate).toHaveBeenCalledWith({
+      data: { companyId: 'company-1', email: 'fatma@solarpro.tn', fullName: 'Fatma Trabelsi', role: 'MEMBER', passwordHash: 'hashed:un-mot-de-passe' },
+    });
+    expect(auditEntries()).toEqual([['user.create', 'company-1', { email: 'fatma@solarpro.tn', fullName: 'Fatma Trabelsi', role: 'MEMBER' }]]);
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+  });
+
+  it('refuses an email that already logs in to an account', async () => {
+    m.mockCompanyUserFindUnique.mockResolvedValue({ id: 'user-9' });
+
+    const result = await addCompanyUserAction('company-1', undefined, form(fields));
+
+    expect(result).toEqual({ error: 'Cet email est déjà utilisé par un autre compte.' });
+    expect(m.mockCompanyUserCreate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a password shorter than 10 characters and an invalid email', async () => {
+    const result = await addCompanyUserAction('company-1', undefined, form({ ...fields, email: 'pas-un-email', password: 'court' }));
+
+    expect(result?.error).toContain('10 caractères minimum');
+    expect(result?.error).toContain('adresse invalide');
+    expect(m.mockCompanyUserFindUnique).not.toHaveBeenCalled();
+  });
+});
+
+describe('resetCompanyUserPasswordAction', () => {
+  it("sets the new hash, ends the user's sessions and logs it", async () => {
+    m.mockCompanyUserFindFirst.mockResolvedValue({ id: 'user-1', email: 'owner@solarpro.tn' });
+
+    await resetCompanyUserPasswordAction('company-1', 'user-1', undefined, form({ password: 'nouveau-secret' }));
+
+    expect(m.mockCompanyUserFindFirst).toHaveBeenCalledWith({ where: { id: 'user-1', companyId: 'company-1' } });
+    expect(m.mockCompanyUserUpdate).toHaveBeenCalledWith({ where: { id: 'user-1' }, data: { passwordHash: 'hashed:nouveau-secret' } });
+    expect(m.mockSessionDeleteMany).toHaveBeenCalledWith({ where: { companyUserId: 'user-1' } });
+    expect(auditEntries()).toEqual([['user.resetPassword', 'company-1', { email: 'owner@solarpro.tn' }]]);
+  });
+
+  it("never touches a user of another company", async () => {
+    m.mockCompanyUserFindFirst.mockResolvedValue(null);
+
+    const result = await resetCompanyUserPasswordAction('company-1', 'user-of-company-2', undefined, form({ password: 'nouveau-secret' }));
+
+    expect(result).toEqual({ error: 'Utilisateur introuvable.' });
+    expect(m.mockCompanyUserUpdate).not.toHaveBeenCalled();
+    expect(m.mockSessionDeleteMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('authorization — no action may mutate data without a valid super-admin session', () => {
   class FakeNextRedirect extends Error {}
 
@@ -178,5 +413,21 @@ describe('authorization — no action may mutate data without a valid super-admi
 
     expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith('/admin/login');
+  });
+
+  it('assignPlanAction, addCompanyUserAction and resetCompanyUserPasswordAction redirect to /admin/login and write nothing', async () => {
+    await expect(assignPlanAction('company-1', undefined, form({ planId: 'plan-1', periodEnd: '2027-01-01' }))).rejects.toThrow(FakeNextRedirect);
+    await expect(
+      addCompanyUserAction('company-1', undefined, form({ fullName: 'X', email: 'x@y.tn', password: 'un-mot-de-passe', role: 'OWNER' })),
+    ).rejects.toThrow(FakeNextRedirect);
+    await expect(resetCompanyUserPasswordAction('company-1', 'user-1', undefined, form({ password: 'nouveau-secret' }))).rejects.toThrow(
+      FakeNextRedirect,
+    );
+
+    expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(m.mockCompanyUserCreate).not.toHaveBeenCalled();
+    expect(m.mockCompanyUserUpdate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
   });
 });

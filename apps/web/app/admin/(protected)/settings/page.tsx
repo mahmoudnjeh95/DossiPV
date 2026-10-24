@@ -1,4 +1,4 @@
-import { db } from '@dossipv/db';
+import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 
@@ -7,8 +7,6 @@ const CLAUDE_DOSSIER_MODEL = 'claude-sonnet-5-5';
 
 export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
-
-  const plans = await db.plan.findMany({ orderBy: { priceTnd: 'asc' } });
 
   return (
     <main>
@@ -40,30 +38,9 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
       </table>
 
       <h2>Plans</h2>
-      {plans.length === 0 ? (
-        <p>Aucun plan défini.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Nom</th>
-              <th>Niveau</th>
-              <th>Dossiers / mois</th>
-              <th>Prix (TND)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {plans.map((plan) => (
-              <tr key={plan.id}>
-                <td>{plan.name}</td>
-                <td>{plan.tier}</td>
-                <td>{plan.monthlyDossierLimit}</td>
-                <td>{Number(plan.priceTnd).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <p>
+        Les plans se gèrent dans <Link href="/admin/plans">Plans</Link>.
+      </p>
     </main>
   );
 }

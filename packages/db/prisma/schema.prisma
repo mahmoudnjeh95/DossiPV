@@ -120,6 +120,7 @@ model Company {
   projects     Project[]
   libraryItems LibraryItem[]
   billImportAttempts BillImportAttempt[]
+  adminAuditLogs AdminAuditLog[]
 
   @@map("company")
 }
@@ -173,9 +174,29 @@ model SuperAdmin {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  sessions SuperAdminSession[]
+  sessions  SuperAdminSession[]
+  auditLogs AdminAuditLog[]
 
   @@map("super_admin")
+}
+
+/// One row per super-admin change (plan, subscription, payment, account), so a dispute with an
+/// installer can be answered with who changed what and when.
+model AdminAuditLog {
+  id              String     @id @default(uuid())
+  superAdminId    String
+  superAdmin      SuperAdmin @relation(fields: [superAdminId], references: [id])
+  /// What was done, e.g. `plan.update` or `subscription.suspend`.
+  action          String
+  /// The installer the change concerns; null for platform-wide changes such as a plan's price.
+  targetCompanyId String?
+  targetCompany   Company?   @relation(fields: [targetCompanyId], references: [id], onDelete: SetNull)
+  /// The values the change wrote (never a password or its hash).
+  details         Json?
+  createdAt       DateTime   @default(now())
+
+  @@index([targetCompanyId, createdAt])
+  @@map("admin_audit_log")
 }
 
 model SuperAdminSession {

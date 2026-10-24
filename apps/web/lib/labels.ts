@@ -117,6 +117,32 @@ export const TIER_LABELS: Record<string, string> = {
   PREMIUM: 'Premium',
 };
 
+export const SUBSCRIPTION_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Actif',
+  EXPIRED: 'Expiré',
+  SUSPENDED: 'Suspendu',
+};
+
+export const COMPANY_USER_ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Responsable',
+  MEMBER: 'Membre',
+};
+
+/** AdminAuditLog.action as the super-admin reads it in the installer's history. */
+export const ADMIN_ACTION_LABELS: Record<string, string> = {
+  'company.create': 'Compte créé',
+  'subscription.create': 'Abonnement créé',
+  'subscription.changePlan': 'Plan changé',
+  'subscription.suspend': 'Abonnement suspendu',
+  'subscription.activate': 'Abonnement activé',
+  'subscription.periodEnd': 'Fin de période modifiée',
+  'payment.record': 'Paiement enregistré',
+  'user.create': 'Utilisateur ajouté',
+  'user.resetPassword': 'Mot de passe réinitialisé',
+  'plan.create': 'Plan créé',
+  'plan.update': 'Plan modifié',
+};
+
 export function labelFor(options: Option<string | number>[], value: string | number | null | undefined): string {
   if (value === null || value === undefined) {
     return '—';

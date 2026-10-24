@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { SolarixProLogo, Dashboard, Users, Database, Settings, Logout } from '@dossipv/icons';
+import { SolarixProLogo, Dashboard, Users, Subscription, Database, Settings, Logout } from '@dossipv/icons';
 import { logoutAdminAction } from '../app/admin/(protected)/actions';
 
 export interface AdminShellProps {
@@ -16,6 +16,7 @@ interface NavLink {
 const ADMIN_NAV_LINKS: NavLink[] = [
   { href: '/admin', label: 'Tableau de bord', icon: Dashboard },
   { href: '/admin/installers', label: 'Installateurs', icon: Users },
+  { href: '/admin/plans', label: 'Plans', icon: Subscription },
   { href: '/admin/equipment', label: 'Équipements', icon: Database },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },
 ];
