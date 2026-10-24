@@ -13,6 +13,9 @@ const m = vi.hoisted(() => {
     mockSubscriptionCreate: vi.fn(),
     mockPaymentCreate: vi.fn(),
     mockPlanFindUnique: vi.fn(),
+    mockPlanFindFirst: vi.fn(),
+    mockCompanyFindUnique: vi.fn(),
+    mockSubscriptionUpdateMany: vi.fn(),
     mockCompanyUserFindUnique: vi.fn(),
     mockCompanyUserFindFirst: vi.fn(),
     mockCompanyUserCreate: vi.fn(),
@@ -35,9 +38,10 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      subscription: { update: m.mockSubscriptionUpdate, findUnique: m.mockSubscriptionFindUnique, create: m.mockSubscriptionCreate },
+      subscription: { updateMany: m.mockSubscriptionUpdateMany, update: m.mockSubscriptionUpdate, findUnique: m.mockSubscriptionFindUnique, create: m.mockSubscriptionCreate },
       payment: { create: m.mockPaymentCreate },
-      plan: { findUnique: m.mockPlanFindUnique },
+      plan: { findUnique: m.mockPlanFindUnique, findFirst: m.mockPlanFindFirst },
+      company: { findUnique: m.mockCompanyFindUnique },
       companyUser: {
         findUnique: m.mockCompanyUserFindUnique,
         findFirst: m.mockCompanyUserFindFirst,
@@ -73,6 +77,9 @@ beforeEach(() => {
     m.mockSubscriptionFindUnique,
     m.mockSubscriptionCreate,
     m.mockPlanFindUnique,
+    m.mockPlanFindFirst,
+    m.mockCompanyFindUnique,
+    m.mockSubscriptionUpdateMany,
     m.mockCompanyUserFindUnique,
     m.mockCompanyUserFindFirst,
     m.mockCompanyUserCreate,
@@ -82,6 +89,7 @@ beforeEach(() => {
   ]) {
     mock.mockReset();
   }
+  m.mockCompanyFindUnique.mockResolvedValue({ kind: 'INSTALLER' });
 });
 
 function form(fields: Record<string, string>): FormData {
@@ -258,7 +266,7 @@ describe('subscription changes are written to the audit log', () => {
 });
 
 describe('assignPlanAction', () => {
-  const plan = { id: 'plan-premium', name: 'Premium' };
+  const plan = { id: 'plan-premium', name: 'Premium', audience: 'INSTALLER' };
 
   it("changes the plan of an existing subscription and keeps its end date", async () => {
     m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
@@ -347,7 +355,7 @@ describe('assignPlanAction', () => {
 
   it('lets a company already on an archived plan keep it', async () => {
     m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-old' });
-    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', name: 'Ancien', archivedAt: new Date('2026-09-01') });
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', name: 'Ancien', audience: 'INSTALLER', archivedAt: new Date('2026-09-01') });
 
     const result = await assignPlanAction('company-1', undefined, form({ planId: 'plan-old' }));
 

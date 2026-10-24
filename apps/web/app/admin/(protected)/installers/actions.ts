@@ -7,6 +7,7 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
 import { logAdminAction } from '../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../lib/account-form';
+import { audienceMismatchError } from '../../../../lib/plan-audience';
 
 export interface CreateInstallerActionState {
   error: string;
@@ -75,6 +76,10 @@ export async function createInstallerAction(
     }
     if (plan.archivedAt) {
       return { error: "Ce plan est archivé : il n'est plus proposé." };
+    }
+    const mismatch = audienceMismatchError('INSTALLER', plan.audience);
+    if (mismatch) {
+      return { error: mismatch };
     }
   }
 

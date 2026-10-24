@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
+import { getOption3dPriceTnd } from '../../../../lib/platform-settings';
+import { Option3dPriceForm } from './option3d-price-form';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 
 // Mirrors the model hardcoded in packages/document-text/src/generate-dossier-text.ts.
@@ -7,11 +9,12 @@ const CLAUDE_DOSSIER_MODEL = 'claude-sonnet-5-5';
 
 export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
+  const option3dPrice = await getOption3dPriceTnd();
 
   return (
     <main>
       <h1>Paramètres</h1>
-      <p>Configuration actuelle de la plateforme (lecture seule).</p>
+      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D).</p>
 
       <h2>Fournisseur de cartes</h2>
       <table>
@@ -36,6 +39,13 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
           </tr>
         </tbody>
       </table>
+
+      <h2>Option 3D</h2>
+      <p className="hint">
+        Prix mensuel de l&apos;option 3D que les installateurs parrainés peuvent acheter seule. La durée payée se règle sur la fiche de
+        l&apos;installateur.
+      </p>
+      <Option3dPriceForm priceTnd={option3dPrice} />
 
       <h2>Plans</h2>
       <p>
