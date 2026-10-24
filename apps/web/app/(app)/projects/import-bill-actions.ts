@@ -17,7 +17,19 @@ import {
 } from '@dossipv/bill-reader';
 import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/pdf-locate';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { summarizeSubscription, tierIncludes3d } from '../../../lib/subscription';
+import {
+  summarizeSubscription,
+  tierIncludes3d,
+  quotaJobs,
+  quotaWindowStart,
+  projectsCountedThisMonth,
+} from '../../../lib/subscription';
+import {
+  TRIAL_BILL_IMPORT_LIMIT,
+  inactiveSubscriptionMessage,
+  trialBillImportLimitMessage,
+  trialQuotaMessage,
+} from '../../../lib/trial';
 import { CLIENT_NAME_PLACEHOLDER } from '../../../lib/client-identity';
 
 export interface ImportBillState {
@@ -46,11 +58,22 @@ const THREE_PHASE_OR_MV_TARIFF = /\btri|\bMT\b|moyenne tension/i;
  * reading then succeeds or not; the serializable transaction stops concurrent requests from both
  * passing the check.
  */
-async function reserveBillReading(companyId: string, now: Date): Promise<ImportBillState | null> {
+async function reserveBillReading(
+  companyId: string,
+  now: Date,
+  /** The start of the free trial's period: its imports are capped in total since then, on top of the daily cap. */
+  trialSince: Date | null,
+): Promise<ImportBillState | null> {
   const since = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   try {
     return await db.$transaction(
       async (tx) => {
+        if (trialSince) {
+          const attemptsInTrial = await tx.billImportAttempt.count({ where: { companyId, createdAt: { gte: trialSince } } });
+          if (attemptsInTrial >= TRIAL_BILL_IMPORT_LIMIT) {
+            return { error: trialBillImportLimitMessage() };
+          }
+        }
         const attemptsToday = await tx.billImportAttempt.count({ where: { companyId, createdAt: { gte: since } } });
         if (attemptsToday >= DAILY_BILL_IMPORT_LIMIT) {
           return { error: `Limite de ${DAILY_BILL_IMPORT_LIMIT} factures importées par jour atteinte.` };
@@ -125,7 +148,18 @@ export async function importStegBillAction(
     now,
   );
   if (!subscription || !subscription.canGenerate) {
-    return { error: "Votre abonnement n'est pas actif : import de facture impossible." };
+    return { error: inactiveSubscriptionMessage(subscription, 'import de facture') };
+  }
+  // A trial whose dossiers are all used keeps its projects but no longer spends paid Claude calls.
+  if (subscription.isTrial) {
+    const used = projectsCountedThisMonth(
+      await quotaJobs(user.companyId, subscription, now),
+      now,
+      quotaWindowStart(subscription, now),
+    ).size;
+    if (used >= subscription.monthlyDossierLimit) {
+      return { error: trialQuotaMessage(subscription.monthlyDossierLimit) };
+    }
   }
 
   const field = formData.get('bill');
@@ -154,7 +188,11 @@ export async function importStegBillAction(
   }
   const storedMimeType = validation.mimeType === 'webp' ? 'jpeg' : validation.mimeType;
 
-  const refused = await reserveBillReading(user.companyId, now);
+  const refused = await reserveBillReading(
+    user.companyId,
+    now,
+    subscription.isTrial ? (subscription.periodStart ?? new Date(0)) : null,
+  );
   if (refused) {
     return refused;
   }

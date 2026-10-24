@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const {
   mockGet, mockCookies, mockRedirect, mockValidateSession,
-  mockCompanyFindUnique, mockCompanyUpdate,
+  mockCompanyFindUnique, mockCompanyUpdate, mockCompanyFindMany,
   mockFileCreate, mockFileFindUnique, mockFileDelete,
   mockSaveFile, mockDeleteFile, mockValidateUploadedFile,
 } = vi.hoisted(() => {
@@ -14,6 +14,7 @@ const {
     mockValidateSession: vi.fn(),
     mockCompanyFindUnique: vi.fn(),
     mockCompanyUpdate: vi.fn(),
+    mockCompanyFindMany: vi.fn(),
     mockFileCreate: vi.fn(),
     mockFileFindUnique: vi.fn(),
     mockFileDelete: vi.fn(),
@@ -35,7 +36,7 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      company: { findUnique: mockCompanyFindUnique, update: mockCompanyUpdate },
+      company: { findUnique: mockCompanyFindUnique, update: mockCompanyUpdate, findMany: mockCompanyFindMany },
       file: { create: mockFileCreate, findUnique: mockFileFindUnique, delete: mockFileDelete },
     },
   };
@@ -55,6 +56,8 @@ beforeEach(() => {
   mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com' });
   mockCompanyFindUnique.mockClear();
   mockCompanyUpdate.mockClear();
+  mockCompanyFindMany.mockReset();
+  mockCompanyFindMany.mockResolvedValue([]);
   mockFileCreate.mockClear();
   mockFileFindUnique.mockReset();
   mockFileDelete.mockClear();
@@ -68,7 +71,7 @@ function buildFormData(overrides: Record<string, string> = {}): FormData {
   const defaults: Record<string, string> = {
     name: 'SolarPro', address: '12 Rue de la Paix', phone: '20123456', email: 'contact@solarpro.tn',
     legalRepFullName: 'Ahmed Ben Ali', legalRepRole: 'Gérant', anmeCode: 'ANME-001',
-    anmeCategory: 'BT', anmeValidFrom: '2026-01-01', anmeValidTo: '2027-01-01',
+    anmeCategory: 'BT', anmeValidFrom: '2026-01-01', anmeValidTo: '2099-01-01',
     defaultTMinC: '-10', defaultTMaxC: '85', defaultMaxVoltageDropPct: '3', defaultMaxAcVoltageDropPct: '1',
     defaultDesignWindSpeedKmh: '120', defaultCosPhi: '0.95',
   };

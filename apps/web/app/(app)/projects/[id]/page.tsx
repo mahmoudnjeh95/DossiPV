@@ -5,7 +5,7 @@ import { runEngine, type EngineResult } from '@dossipv/engine';
 import { requireAuthenticatedCompanyUser } from '../../layout';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput } from '../../../../lib/project-engine-input';
 import { computeSectionStatuses } from '../../../../lib/project-sections';
-import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
+import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart } from '../../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../../lib/labels';
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
 import { ChecksPanel } from '../../../../components/checks-panel';
@@ -58,16 +58,11 @@ export default async function ProjectOverviewPage({
     notFound();
   }
 
-  const [subscriptionRow, jobsThisMonth] = await Promise.all([
-    db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
-    db.dossierJob.findMany({
-      where: { project: { companyId: user.companyId }, startedAt: { gte: monthStart(now) } },
-      select: { projectId: true, status: true, startedAt: true },
-    }),
-  ]);
+  const subscriptionRow = await db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } });
   const subscription = summarizeSubscription(subscriptionRow, now);
+  const jobsInWindow = await quotaJobs(user.companyId, subscription, now);
   const quota = subscription
-    ? checkQuota(jobsThisMonth, subscription.monthlyDossierLimit, project.id, now)
+    ? checkQuota(jobsInWindow, subscription.monthlyDossierLimit, project.id, now, quotaWindowStart(subscription, now))
     : null;
 
   const sections = computeSectionStatuses(project);
@@ -89,10 +84,14 @@ export default async function ProjectOverviewPage({
   let generateReason: string | null = null;
   if (locationsPending(project.flowStep)) {
     generateReason = 'Placez les points avant de générer.';
+  } else if (!project.company.profileComplete) {
+    generateReason = 'Complétez le profil de votre société dans Paramètres.';
   } else if (!subscription || !subscription.canGenerate) {
     generateReason = 'Abonnement inactif.';
   } else if (quota?.blocked) {
-    generateReason = `Quota mensuel atteint (${quota.used}/${quota.limit}).`;
+    generateReason = subscription?.isTrial
+      ? `Essai gratuit terminé (${quota.limit} dossiers utilisés).`
+      : `Quota mensuel atteint (${quota.used}/${quota.limit}).`;
   } else if (activeJob) {
     generateReason = 'Génération en cours.';
   } else if (!engineInput.ok) {
@@ -129,7 +128,7 @@ export default async function ProjectOverviewPage({
         </div>
       )}
       {saved && <div className="banner banner-ok">Section enregistrée.</div>}
-      <SubscriptionBanner subscription={subscription} />
+      <SubscriptionBanner subscription={subscription} trialUsed={quota?.used ?? 0} />
 
       <div className="card-grid" style={{ alignItems: 'start' }}>
         <section className="card">

@@ -10,7 +10,7 @@ import {
   type ProjectForEngine,
 } from '../../../../../lib/project-engine-input';
 import { unsourcedEquipment } from '../../../../../lib/project-access';
-import { summarizeSubscription, checkQuota, monthStart, projectsCountedThisMonth } from '../../../../../lib/subscription';
+import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart, projectsCountedThisMonth } from '../../../../../lib/subscription';
 import {
   LOCATIONS_PENDING_MESSAGE,
   isUploadableStegPiece,
@@ -60,17 +60,15 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const [subscriptionRow, jobsThisMonth, anmeListCount] = await Promise.all([
+  const [subscriptionRow, anmeListCount] = await Promise.all([
     db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
-    db.dossierJob.findMany({
-      where: { project: { companyId: user.companyId }, startedAt: { gte: monthStart(now) } },
-      select: { projectId: true, status: true, startedAt: true },
-    }),
     db.catalogSourceDocument.count({ where: { kind: 'ANME_PANEL_LIST' } }),
   ]);
   const subscription = summarizeSubscription(subscriptionRow, now);
-  const quota = subscription ? checkQuota(jobsThisMonth, subscription.monthlyDossierLimit, project.id, now) : null;
-  const hasPlace = projectsCountedThisMonth(jobsThisMonth, now).has(project.id);
+  const jobsInWindow = await quotaJobs(user.companyId, subscription, now);
+  const windowStart = quotaWindowStart(subscription, now);
+  const quota = subscription ? checkQuota(jobsInWindow, subscription.monthlyDossierLimit, project.id, now, windowStart) : null;
+  const hasPlace = projectsCountedThisMonth(jobsInWindow, now, windowStart).has(project.id);
 
   const engineInput = buildEngineInput(project, now);
   let engineResult: EngineResult | null = null;
@@ -93,6 +91,8 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   let generateReason: string | null = null;
   if (pending) {
     generateReason = 'Placez les points avant de générer.';
+  } else if (!project.company.profileComplete) {
+    generateReason = 'Complétez le profil de votre société dans Paramètres.';
   } else if (!project.company.anmeCertificateFileId) {
     generateReason = "Ajoutez l'attestation d'agrément ANME dans Paramètres.";
   } else if (unsourced.length > 0) {
@@ -100,7 +100,9 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   } else if (!subscription || !subscription.canGenerate) {
     generateReason = 'Abonnement inactif.';
   } else if (quota?.blocked) {
-    generateReason = `Quota mensuel atteint (${quota.used}/${quota.limit}).`;
+    generateReason = subscription?.isTrial
+      ? `Essai gratuit terminé (${quota.limit} dossiers utilisés).`
+      : `Quota mensuel atteint (${quota.used}/${quota.limit}).`;
   } else if (activeJob) {
     generateReason = 'Génération en cours.';
   } else if (!engineInput.ok) {
@@ -239,8 +241,10 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         {quota && (
           <p className="muted">
             {hasPlace
-              ? 'Ce projet a déjà sa place ce mois-ci.'
-              : `Ce dossier utilisera 1 des ${Math.max(0, quota.limit - quota.used)} dossiers restants ce mois.`}
+              ? subscription?.isTrial
+                ? 'Ce projet a déjà sa place dans votre essai.'
+                : 'Ce projet a déjà sa place ce mois-ci.'
+              : `Ce dossier utilisera 1 des ${Math.max(0, quota.limit - quota.used)} dossiers restants ${subscription?.isTrial ? 'de votre essai' : 'ce mois'}.`}
           </p>
         )}
         {isDraft && <p>Le PDF portera la mention « BROUILLON – NON RECEVABLE ».</p>}

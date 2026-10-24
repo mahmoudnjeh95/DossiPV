@@ -11,9 +11,10 @@ import {
   type ProjectMetaForWorker,
 } from '../../../../lib/project-engine-input';
 import { unsourcedEquipment } from '../../../../lib/project-access';
-import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../../lib/labels';
+import { ANME_AGREEMENT_REQUIRED_MESSAGE, PROFILE_INCOMPLETE_MESSAGE } from '../../../../lib/labels';
+import { inactiveSubscriptionMessage, trialQuotaMessage } from '../../../../lib/trial';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
-import { summarizeSubscription, checkQuota, monthStart } from '../../../../lib/subscription';
+import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart } from '../../../../lib/subscription';
 import { assignDossierNumber } from '../../../../lib/dossier-number';
 import { LOCATIONS_PENDING_MESSAGE, locationsPending, stegCompleteness } from '../../../../lib/steg-completeness';
 
@@ -91,6 +92,11 @@ export async function generateDossierAction(
     return { error: LOCATIONS_PENDING_MESSAGE };
   }
 
+  // A self sign-up company still has placeholder identity data on its cover page and cartouche.
+  if (!project.company.profileComplete) {
+    return { error: PROFILE_INCOMPLETE_MESSAGE };
+  }
+
   // The ANME agreement opens the administrative annex: no dossier without it.
   if (!project.company.anmeCertificateFileId) {
     return { error: ANME_AGREEMENT_REQUIRED_MESSAGE };
@@ -107,16 +113,18 @@ export async function generateDossierAction(
   });
   const subscription = summarizeSubscription(subscriptionRow, now);
   if (!subscription || !subscription.canGenerate) {
-    return { error: "Votre abonnement n'est pas actif : génération impossible." };
+    return { error: inactiveSubscriptionMessage(subscription, 'génération') };
   }
 
-  const jobsThisMonth = await db.dossierJob.findMany({
-    where: { project: { companyId: user.companyId }, startedAt: { gte: monthStart(now) } },
-    select: { projectId: true, status: true, startedAt: true },
-  });
-  const quota = checkQuota(jobsThisMonth, subscription.monthlyDossierLimit, projectId, now);
+  // A trial counts over its whole period, a regular plan per calendar month.
+  const jobsInWindow = await quotaJobs(user.companyId, subscription, now);
+  const quota = checkQuota(jobsInWindow, subscription.monthlyDossierLimit, projectId, now, quotaWindowStart(subscription, now));
   if (quota.blocked) {
-    return { error: `Quota mensuel atteint (${quota.used}/${quota.limit} dossiers).` };
+    return {
+      error: subscription.isTrial
+        ? trialQuotaMessage(quota.limit)
+        : `Quota mensuel atteint (${quota.used}/${quota.limit} dossiers).`,
+    };
   }
 
   if (project.jobs.some((job) => job.status === 'PENDING' || job.status === 'RUNNING')) {

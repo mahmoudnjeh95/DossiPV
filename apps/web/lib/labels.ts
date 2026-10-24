@@ -177,3 +177,7 @@ export const RCD_TYPE_OPTIONS: Option[] = [
 
 /** No dossier without the company's uploaded ANME agreement (product owner, 2026-10-22). */
 export const ANME_AGREEMENT_REQUIRED_MESSAGE = "Ajoutez l'attestation d'agrément ANME de votre société dans Paramètres avant de générer.";
+
+/** A self sign-up company has placeholder identity data until its profile is filled in Paramètres. */
+export const PROFILE_INCOMPLETE_MESSAGE =
+  'Complétez le profil de votre société dans Paramètres : adresse, représentant légal, agrément ANME (catégorie et validité) avant de générer.';

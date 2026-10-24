@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { summarizeSubscription } from '../../../lib/subscription';
+import { summarizeSubscription, quotaJobs, quotaWindowStart, projectsCountedThisMonth } from '../../../lib/subscription';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
@@ -20,14 +20,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   if (!company) {
     notFound();
   }
-  const subscription = summarizeSubscription(company.subscription, new Date());
+  const now = new Date();
+  const subscription = summarizeSubscription(company.subscription, now);
+  // Only the trial's banner shows a dossier count.
+  const trialUsed = subscription?.isTrial
+    ? projectsCountedThisMonth(await quotaJobs(user.companyId, subscription, now), now, quotaWindowStart(subscription, now)).size
+    : 0;
 
   return (
     <main>
       <h1>Société</h1>
       {saved && <div className="banner banner-ok">Informations enregistrées.</div>}
       {company.anmeCertificateFileId === null && <div className="banner banner-danger">{ANME_AGREEMENT_REQUIRED_MESSAGE}</div>}
-      <SubscriptionBanner subscription={subscription} />
+      <SubscriptionBanner subscription={subscription} trialUsed={trialUsed} />
 
       <section className="card">
         <h2>Abonnement</h2>
@@ -35,7 +40,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <dl className="dl">
             <dt>Offre</dt>
             <dd>
-              {subscription.planName} ({TIER_LABELS[subscription.tier]}) — {subscription.monthlyDossierLimit} dossiers / mois
+              {subscription.planName} ({TIER_LABELS[subscription.tier]}) — {subscription.monthlyDossierLimit} dossiers{subscription.isTrial ? ' pendant l\'essai' : ' / mois'}
             </dd>
             <dt>Statut</dt>
             <dd>{subscription.effectiveStatus === 'ACTIVE' ? 'Actif' : subscription.effectiveStatus === 'EXPIRED' ? 'Expiré' : 'Suspendu'}</dd>
@@ -92,8 +97,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           anmeCode: company.anmeCode,
           anmeReference: company.anmeReference,
           anmeCategory: company.anmeCategory,
-          anmeValidFrom: toDateInput(company.anmeValidFrom),
-          anmeValidTo: toDateInput(company.anmeValidTo),
+          // The sign-up placeholder dates are shown empty so the installer has to enter the real ones.
+          anmeValidFrom: company.profileComplete ? toDateInput(company.anmeValidFrom) : '',
+          anmeValidTo: company.profileComplete ? toDateInput(company.anmeValidTo) : '',
           defaultTMinC: company.defaultTMinC,
           defaultTMaxC: company.defaultTMaxC,
           defaultMaxVoltageDropPct: company.defaultMaxVoltageDropPct,

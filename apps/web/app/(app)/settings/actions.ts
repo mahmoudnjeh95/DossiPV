@@ -12,6 +12,14 @@ export interface SaveCompanyActionState {
 
 const ANME_CATEGORIES = ['BT', 'MT', 'BT_MT'] as const;
 
+/** What a self sign-up company holds as ANME validity dates until its profile is filled. */
+const PLACEHOLDER_ANME_DATE = new Date('2000-01-01');
+
+/** An ANME code compared without case, spaces or dashes ("anme-001" = "ANME 001"). */
+function normalizeAnmeCode(code: string): string {
+  return code.replace(/[\s\-‐-―]/g, '').toLowerCase();
+}
+
 /** A voltage-drop limit in % : 0 < x <= 10 (FormReader bounds are inclusive, so 0 is rejected here). */
 function positiveDropPct(reader: FormReader, name: string, label: string): number {
   const value = reader.number(name, label, { max: 10 });
@@ -103,11 +111,28 @@ export async function saveCompanyAction(
   const anmeValidTo = new Date(anmeValidToRaw);
   if (Number.isNaN(anmeValidFrom.getTime()) || Number.isNaN(anmeValidTo.getTime())) {
     reader.errors.push('Dates de validité ANME invalides.');
-  } else if (anmeValidTo <= anmeValidFrom) {
-    reader.errors.push('La fin de validité ANME doit être postérieure au début.');
+  } else {
+    if (anmeValidTo <= anmeValidFrom) {
+      reader.errors.push('La fin de validité ANME doit être postérieure au début.');
+    }
+    // The sign-up placeholder (2000-01-01) is not a real agreement date.
+    if (anmeValidFrom.getTime() === PLACEHOLDER_ANME_DATE.getTime()) {
+      reader.errors.push('Début de validité ANME : saisissez la date réelle de votre agrément.');
+    }
+    if (anmeValidTo <= new Date()) {
+      reader.errors.push('Votre agrément ANME est expiré : la fin de validité doit être dans le futur.');
+    }
   }
   if (reader.hasErrors) {
     return { error: reader.errorMessage() };
+  }
+
+  // The code identifies the installer on dossiers: unique among companies, ignoring case, spaces and dashes.
+  const wanted = normalizeAnmeCode(data.anmeCode);
+  const others = await db.company.findMany({ where: { id: { not: user.companyId } }, select: { name: true, anmeCode: true } });
+  const sameAnme = others.find((other) => normalizeAnmeCode(other.anmeCode) === wanted);
+  if (sameAnme) {
+    return { error: `Ce code ANME est déjà inscrit (${sameAnme.name}).` };
   }
 
   const logoResult = await uploadIfPresent(formData, 'logo');
@@ -136,6 +161,8 @@ export async function saveCompanyAction(
       ...data,
       anmeValidFrom,
       anmeValidTo,
+      // Address, legal representative, ANME category and validity all passed above: the profile is complete.
+      profileComplete: true,
       ...(dossierCounter !== undefined ? { dossierCounter } : {}),
       ...(logoFileId ? { logoFileId } : {}),
       ...(anmeCertificateFileId ? { anmeCertificateFileId } : {}),

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { db } from '@dossipv/db';
 import { validateSession, type AuthenticatedCompanyUser } from '@dossipv/auth';
 import { AppShell } from '../../components/app-shell';
 import { endImpersonationAction } from './actions';
@@ -36,11 +38,23 @@ export default async function AppLayout({
   children: ReactNode;
 }): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { profileComplete: true } });
   return (
     <>
       {user.impersonatedBySuperAdminId && <ImpersonationBanner fullName={user.fullName} email={user.email} />}
+      {company && !company.profileComplete && <ProfileIncompleteBanner />}
       <AppShell userFullName={user.fullName}>{children}</AppShell>
     </>
+  );
+}
+
+/** Above every page until a self sign-up company has filled its profile: generation is refused meanwhile. */
+function ProfileIncompleteBanner(): React.JSX.Element {
+  return (
+    <div className="banner banner-warn" role="status" style={{ margin: 0, borderRadius: 0, textAlign: 'center' }}>
+      Complétez le profil de votre société (adresse, représentant légal, agrément ANME) pour pouvoir générer des
+      dossiers : <Link href="/settings">ouvrir les Paramètres</Link>.
+    </div>
   );
 }
 

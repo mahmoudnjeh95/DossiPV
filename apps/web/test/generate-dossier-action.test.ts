@@ -158,6 +158,81 @@ describe('generateDossierAction', () => {
     });
   });
 
+  describe('free trial', () => {
+    const periodStart = new Date('2026-08-01T00:00:00Z');
+    const trialSubscription = {
+      status: 'ACTIVE',
+      periodStart,
+      periodEnd: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      plan: { name: 'Essai gratuit', monthlyDossierLimit: 3, tier: 'STANDARD', isTrial: true },
+    };
+
+    it('counts the dossiers over the whole period: jobs from earlier months use up the quota', async () => {
+      mocks.subscriptionFindUnique.mockResolvedValue(trialSubscription);
+      const jobs = ['a', 'b', 'c'].map((projectId) => ({ projectId, status: 'SUCCEEDED', startedAt: new Date('2026-08-15T00:00:00Z') }));
+      mocks.jobFindMany.mockResolvedValue(jobs);
+
+      const result = await generateDossierAction('project-1', undefined);
+
+      expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez DossiPV/);
+      expect(mocks.jobFindMany.mock.calls[0]?.[0]).toMatchObject({
+        where: { project: { companyId: 'company-1' }, startedAt: { gte: periodStart } },
+      });
+      expect(mocks.jobCreate).not.toHaveBeenCalled();
+    });
+
+    it('lets an already counted project be regenerated when the trial quota is used', async () => {
+      mocks.subscriptionFindUnique.mockResolvedValue(trialSubscription);
+      mocks.jobFindMany.mockResolvedValue(
+        ['project-1', 'b', 'c'].map((projectId) => ({ projectId, status: 'SUCCEEDED', startedAt: new Date('2026-08-15T00:00:00Z') })),
+      );
+
+      await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+    });
+
+    it('does not count failed jobs', async () => {
+      mocks.subscriptionFindUnique.mockResolvedValue(trialSubscription);
+      mocks.jobFindMany.mockResolvedValue(
+        ['a', 'b', 'c'].map((projectId) => ({ projectId, status: 'FAILED', startedAt: new Date('2026-08-15T00:00:00Z') })),
+      );
+
+      await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+    });
+
+    it('a regular plan still counts per calendar month', async () => {
+      await generateDossierAction('project-1', undefined).catch(() => undefined);
+
+      const where = (mocks.jobFindMany.mock.calls[0]?.[0] as { where: { startedAt: { gte: Date } } }).where;
+      const first = new Date();
+      expect(where.startedAt.gte).toEqual(new Date(first.getFullYear(), first.getMonth(), 1));
+    });
+
+    it('refuses once the trial period is over, with the trial wording', async () => {
+      mocks.subscriptionFindUnique.mockResolvedValue({ ...trialSubscription, periodEnd: new Date('2026-09-01T00:00:00Z') });
+
+      const result = await generateDossierAction('project-1', undefined);
+
+      expect(result?.error).toMatch(/^Essai gratuit expiré : contactez DossiPV/);
+      expect(mocks.jobCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('incomplete company profile', () => {
+    it('refuses to generate and points to Paramètres', async () => {
+      const project = buildFullProject();
+      mocks.projectFindFirst.mockResolvedValue({ ...project, company: { ...project.company, profileComplete: false } });
+
+      const result = await generateDossierAction('project-1', undefined);
+
+      expect(result?.error).toMatch(/^Complétez le profil de votre société dans Paramètres : adresse, représentant légal, agrément ANME/);
+      expect(mocks.jobCreate).not.toHaveBeenCalled();
+    });
+
+    it('generates once the profile is complete', async () => {
+      await expect(generateDossierAction('project-1', undefined)).rejects.toThrow(JOB_PAGE);
+    });
+  });
+
   it('refuses while a job is already pending for the project', async () => {
     mocks.projectFindFirst.mockResolvedValue(
       buildFullProject({
