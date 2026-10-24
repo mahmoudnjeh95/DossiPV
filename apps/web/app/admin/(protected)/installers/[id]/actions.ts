@@ -7,7 +7,8 @@ import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../../lib/account-form';
-import { addMonths, extendedPeriodEnd } from '../../../../../lib/subscription';
+import { addMonths } from '../../../../../lib/subscription';
+import { extendOption3dUntil, periodExtensionData } from '../../../../../lib/subscription-extension';
 import { audienceMismatchError } from '../../../../../lib/plan-audience';
 import { isSponsored, unlinkInstaller } from '../../../../../lib/sponsorship';
 
@@ -77,11 +78,9 @@ export async function recordPaymentAction(
   if (extendMonths > 0) {
     const subscription = await db.subscription.findUnique({ where: { companyId } });
     if (subscription) {
-      periodEnd = extendedPeriodEnd(subscription.periodEnd, new Date(), extendMonths);
-      await db.subscription.update({
-        where: { companyId },
-        data: { periodEnd, ...(subscription.status === 'EXPIRED' ? { status: 'ACTIVE' as const } : {}) },
-      });
+      const extension = periodExtensionData(subscription, new Date(), extendMonths, 'expired');
+      periodEnd = extension.periodEnd;
+      await db.subscription.update({ where: { companyId }, data: extension });
     }
   }
   await logAdminAction(admin.id, 'payment.record', companyId, {
@@ -294,21 +293,11 @@ export async function extendOption3dAction(
     return { error: 'L’option 3D est réservée aux installateurs parrainés : un installateur direct passe au plan Premium, qui inclut la 3D.' };
   }
 
-  const now = new Date();
-  const option3dUntil = extendedPeriodEnd(company.subscription?.option3dUntil ?? now, now, months);
-  if (company.subscription) {
-    await db.subscription.update({ where: { companyId }, data: { option3dUntil } });
-  } else {
-    const standard = await db.plan.findFirst({
-      where: { audience: 'INSTALLER', tier: 'STANDARD', isTrial: false },
-      orderBy: { createdAt: 'asc' },
-    });
-    if (!standard) {
-      return { error: 'Aucun plan Standard installateur : créez-le dans Plans avant de vendre l’option 3D.' };
-    }
-    await db.subscription.create({
-      data: { companyId, planId: standard.id, status: 'SUSPENDED', periodStart: now, periodEnd: option3dUntil, option3dUntil },
-    });
+  let option3dUntil: Date;
+  try {
+    option3dUntil = await extendOption3dUntil(db, companyId, months, new Date(), company.subscription?.option3dUntil, company.subscription !== null);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Impossible d’enregistrer l’option 3D.' };
   }
   await logAdminAction(admin.id, 'subscription.option3d', companyId, { months, option3dUntil: option3dUntil.toISOString() });
   redirect(`/admin/installers/${companyId}`);

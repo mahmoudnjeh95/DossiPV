@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { SubscriptionSummary } from '../lib/subscription';
 import { SPONSOR_LAPSED_MESSAGE, contactDossipv, trialDossiersLeft } from '../lib/trial';
 
@@ -41,7 +42,8 @@ export function SubscriptionBanner({
     return (
       <div className="banner banner-danger" role="status">
         Votre abonnement a expiré le {subscription.periodEnd.toLocaleDateString('fr-FR')}. Vous pouvez consulter vos
-        projets mais plus générer de dossier tant qu&apos;il n&apos;est pas renouvelé.
+        projets mais plus générer de dossier tant qu&apos;il n&apos;est pas renouvelé.{' '}
+        <Link href="/facturation">Renouveler</Link>
       </div>
     );
   }
@@ -49,7 +51,8 @@ export function SubscriptionBanner({
     return (
       <div className="banner banner-warn" role="status">
         Votre abonnement expire dans {subscription.daysLeft} jour{subscription.daysLeft > 1 ? 's' : ''} (le{' '}
-        {subscription.periodEnd.toLocaleDateString('fr-FR')}). Pensez à le renouveler.
+        {subscription.periodEnd.toLocaleDateString('fr-FR')}). Pensez à le renouveler.{' '}
+        <Link href="/facturation">Renouveler</Link>
       </div>
     );
   }

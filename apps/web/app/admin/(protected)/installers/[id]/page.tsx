@@ -12,8 +12,11 @@ import { ChangeEmailForm, UserActionButton } from './user-forms';
 import { markSignupUncontactedAction } from '../../inscriptions/actions';
 import { MarkContactedForm } from '../../inscriptions/signup-forms';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
+import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/registry';
 
 const AUDIT_LOG_ROWS = 30;
+
+const INTENT_STATUS_LABELS = { PENDING: 'En attente', PAID: 'Payé', FAILED: 'Échoué', CANCELLED: 'Annulé' } as const;
 
 export default async function InstallerDetailPage({ params }: { params: Promise<{ id: string }> }): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -26,6 +29,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
       include: {
         subscription: { include: { plan: true } },
         payments: { orderBy: { createdAt: 'desc' } },
+        paymentIntents: { orderBy: { createdAt: 'desc' }, take: 10 },
         users: { orderBy: { createdAt: 'asc' } },
         adminAuditLogs: { orderBy: { createdAt: 'desc' }, take: AUDIT_LOG_ROWS, include: { superAdmin: { select: { email: true } } } },
       },
@@ -190,6 +194,36 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
             ))}
           </tbody>
         </table>
+      </section>
+
+      <section>
+        <h2>Dernières tentatives de paiement en ligne</h2>
+        {company.paymentIntents.length === 0 ? (
+          <p className="muted">Aucune tentative.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Fournisseur</th>
+                <th>Montant TTC</th>
+                <th>Statut</th>
+                <th>Raison de l’échec</th>
+              </tr>
+            </thead>
+            <tbody>
+              {company.paymentIntents.map((intent) => (
+                <tr key={intent.id}>
+                  <td>{intent.createdAt.toLocaleString('fr-FR')}</td>
+                  <td>{PAYMENT_METHOD_LABELS[intent.provider]}</td>
+                  <td>{intent.amountTnd.toString()} TND</td>
+                  <td>{INTENT_STATUS_LABELS[intent.status]}</td>
+                  <td>{intent.failureReason ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       <section>
