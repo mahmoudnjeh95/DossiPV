@@ -8,6 +8,7 @@ import { requireSupplier } from '../../../lib/supplier-access';
 import { readEquipmentForm } from '../../../lib/equipment-form';
 import { FormReader } from '../../../lib/form-reader';
 import { syncSupplierInstallers } from '../../../lib/sponsorship';
+import { highlightEligibility, MAX_HIGHLIGHTED_PRODUCTS } from '../../../lib/supplier-highlight';
 
 export type SupplierProductActionState = { error: string } | undefined;
 
@@ -45,6 +46,32 @@ export async function removeSupplierProductAction(productId: string): Promise<Su
   const removed = await db.supplierProduct.deleteMany({ where: { id: productId, supplierCompanyId: supplierId } });
   if (removed.count === 0) return { error: 'Produit introuvable.' };
   await syncSupplierInstallers(supplierId);
+  revalidatePath('/fournisseur/produits');
+  return undefined;
+}
+
+/**
+ * Marks a carried product as highlighted (shown and proposed first to direct installers) or not.
+ * Highlighting needs an active subscription whose pack includes it and a published product; it does
+ * not change the sponsored installers' libraries, so nothing is synced. Un-highlighting is always allowed.
+ */
+export async function setProductHighlightedAction(productId: string, highlighted: boolean): Promise<SupplierProductActionState> {
+  const { supplierId } = await requireSupplier();
+  const product = await db.supplierProduct.findFirst({
+    where: { id: productId, supplierCompanyId: supplierId },
+    select: { id: true, pvModule: { select: { catalogStatus: true } }, inverter: { select: { catalogStatus: true } } },
+  });
+  if (!product) return { error: 'Produit introuvable.' };
+
+  if (highlighted) {
+    const eligibility = await highlightEligibility(supplierId);
+    if (!eligibility.ok) return { error: `${eligibility.reason}.` };
+    const status = (product.pvModule ?? product.inverter)?.catalogStatus;
+    if (status !== 'PUBLISHED') return { error: 'Ce produit est en attente de validation : il pourra être mis en avant une fois publié.' };
+    const count = await db.supplierProduct.count({ where: { supplierCompanyId: supplierId, highlighted: true, id: { not: productId } } });
+    if (count >= MAX_HIGHLIGHTED_PRODUCTS) return { error: `Vous pouvez mettre en avant ${MAX_HIGHLIGHTED_PRODUCTS} produits au maximum.` };
+  }
+  await db.supplierProduct.updateMany({ where: { id: productId, supplierCompanyId: supplierId }, data: { highlighted } });
   revalidatePath('/fournisseur/produits');
   return undefined;
 }

@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireSupplier } from '../../../lib/supplier-access';
 import { ActionButton } from '../action-button';
-import { addSupplierProductAction, removeSupplierProductAction } from './actions';
+import { highlightEligibility, MAX_HIGHLIGHTED_PRODUCTS } from '../../../lib/supplier-highlight';
+import { addSupplierProductAction, removeSupplierProductAction, setProductHighlightedAction } from './actions';
 
 const CATALOG_LIMIT = 50;
 
@@ -14,6 +15,7 @@ export default async function SupplierProductsPage({
   const { q, proposed } = await searchParams;
   const { supplierId } = await requireSupplier();
   const search = (q ?? '').trim();
+  const eligibility = await highlightEligibility(supplierId);
 
   const carried = await db.supplierProduct.findMany({
     where: { supplierCompanyId: supplierId },
@@ -42,6 +44,11 @@ export default async function SupplierProductsPage({
         catalogue DossiPV, avec leur fiche technique sourcée, leur sont ouverts : un produit proposé reste en attente jusqu’à sa
         validation. Pensez à l’homologation ANME des produits que vous référencez.
       </p>
+      <p className="hint">
+        La mise en avant (réservée aux packs qui l’incluent) place vos produits publiés en tête des catalogues et des propositions des
+        installateurs directs, avec la mention « Sponsorisé » ({MAX_HIGHLIGHTED_PRODUCTS} produits au maximum). Elle ne change rien à la
+        bibliothèque de vos installateurs parrainés.
+      </p>
       {proposed && <div className="banner banner-ok">Produit proposé : il sera disponible pour vos installateurs dès sa validation par DossiPV.</div>}
 
       <section className="card table-wrap">
@@ -56,6 +63,7 @@ export default async function SupplierProductsPage({
                 <th>Marque et modèle</th>
                 <th>Puissance</th>
                 <th>Statut</th>
+                <th>Mise en avant</th>
                 <th />
               </tr>
             </thead>
@@ -73,6 +81,22 @@ export default async function SupplierProductsPage({
                     <td>{power}</td>
                     <td>
                       {item.catalogStatus === 'PUBLISHED' ? <span className="badge badge-ok">Publié</span> : <span className="badge">En attente de validation</span>}
+                    </td>
+                    <td>
+                      {p.highlighted && <span className="badge badge-ok">Sponsorisé</span>}
+                      {item.catalogStatus !== 'PUBLISHED' ? (
+                        <span className="muted">en attente de validation</span>
+                      ) : (
+                        <>
+                          <ActionButton
+                            action={setProductHighlightedAction.bind(null, p.id, !p.highlighted)}
+                            label={p.highlighted ? 'Retirer la mise en avant' : 'Mettre en avant'}
+                            secondary={p.highlighted}
+                            disabled={!p.highlighted && !eligibility.ok}
+                          />
+                          {!p.highlighted && !eligibility.ok && <span className="muted">{eligibility.reason}</span>}
+                        </>
+                      )}
                     </td>
                     <td>
                       <ActionButton action={removeSupplierProductAction.bind(null, p.id)} label="Retirer" secondary confirmMessage="Retirer ce produit ? Vos installateurs parrainés ne pourront plus l’utiliser." />

@@ -8,11 +8,13 @@ export function ActionButton({
   label,
   confirmMessage,
   secondary,
+  disabled,
 }: {
   action: () => Promise<{ error: string } | undefined>;
   label: string;
   confirmMessage?: string;
   secondary?: boolean;
+  disabled?: boolean;
 }): React.JSX.Element {
   const [state, formAction, pending] = useActionState<{ error: string } | undefined>(action, undefined);
   return (
@@ -22,7 +24,7 @@ export function ActionButton({
         if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
       }}
     >
-      <button type="submit" className={secondary ? 'secondary small' : 'small'} disabled={pending}>
+      <button type="submit" className={secondary ? 'secondary small' : 'small'} disabled={pending || disabled}>
         {label}
       </button>
       {state?.error && <p role="alert">{state.error}</p>}

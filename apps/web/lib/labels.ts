@@ -154,6 +154,7 @@ export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'supplier.create': 'Fournisseur créé',
   'supplier.linkInstaller': 'Installateur parrainé',
   'supplier.unlinkInstaller': 'Parrainage retiré',
+  'supplier.unhighlight': 'Mise en avant retirée',
   'subscription.option3d': 'Option 3D modifiée',
   'settings.option3dPrice': 'Prix de l’option 3D modifié',
 };

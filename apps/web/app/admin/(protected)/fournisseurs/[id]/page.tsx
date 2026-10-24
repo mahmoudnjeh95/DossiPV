@@ -10,7 +10,7 @@ import { RecordPaymentForm } from '../../installers/[id]/record-payment-form';
 import { AddUserForm, AssignPlanForm, ResetPasswordForm } from '../../installers/[id]/account-forms';
 import { ChangeEmailForm, UserActionButton } from '../../installers/[id]/user-forms';
 import { packLabel } from '../pack-label';
-import { unlinkInstallerAction } from './actions';
+import { unlinkInstallerAction, unhighlightProductAction } from './actions';
 import { LinkInstallerForm } from './link-installer-form';
 
 const AUDIT_LOG_ROWS = 30;
@@ -183,6 +183,10 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
 
       <section>
         <h2>Produits distribués</h2>
+        <p>
+          Mise en avant : {company.subscription?.plan.includesHighlight ? 'incluse dans le pack' : 'non incluse dans le pack'} ·{' '}
+          {company.supplierProducts.filter((product) => product.highlighted).length} produit(s) mis en avant
+        </p>
         {company.supplierProducts.length === 0 ? (
           <p>Le fournisseur n&apos;a pas encore choisi de produits.</p>
         ) : (
@@ -193,6 +197,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 <th>Marque</th>
                 <th>Modèle</th>
                 <th>Mis en avant</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -204,6 +209,15 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     <td>{item?.brand ?? '—'}</td>
                     <td>{item?.model ?? '—'}</td>
                     <td>{product.highlighted ? 'oui' : 'non'}</td>
+                    <td>
+                      {product.highlighted && (
+                        <form action={unhighlightProductAction.bind(null, company.id, product.id)}>
+                          <button type="submit" className="secondary small">
+                            Retirer la mise en avant
+                          </button>
+                        </form>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

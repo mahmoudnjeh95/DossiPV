@@ -38,6 +38,23 @@ export async function linkInstallerAction(
   redirect(`/admin/fournisseurs/${supplierId}`);
 }
 
+/** Moderation: switches off the highlighting of one of this supplier's products (the supplier can switch it on again). */
+export async function unhighlightProductAction(supplierId: string, productId: string): Promise<void> {
+  const admin = await requireAuthenticatedSuperAdmin();
+
+  // Only a product this supplier really carries, whatever id the form carries.
+  const product = await db.supplierProduct.findFirst({
+    where: { id: productId, supplierCompanyId: supplierId, highlighted: true },
+    select: { pvModule: { select: { brand: true, model: true } }, inverter: { select: { brand: true, model: true } } },
+  });
+  if (product) {
+    await db.supplierProduct.update({ where: { id: productId }, data: { highlighted: false } });
+    const item = product.pvModule ?? product.inverter;
+    await logAdminAction(admin.id, 'supplier.unhighlight', supplierId, { productId, product: item ? `${item.brand} ${item.model}` : '' });
+  }
+  redirect(`/admin/fournisseurs/${supplierId}`);
+}
+
 /** Ends an installer's sponsoring: it becomes a direct installer and the seat is freed. */
 export async function unlinkInstallerAction(supplierId: string, installerId: string): Promise<void> {
   const admin = await requireAuthenticatedSuperAdmin();
