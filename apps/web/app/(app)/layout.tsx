@@ -38,7 +38,12 @@ export default async function AppLayout({
   children: ReactNode;
 }): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
-  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { profileComplete: true } });
+  const company = await db.company.findUnique({ where: { id: user.companyId }, select: { profileComplete: true, kind: true } });
+  // A supplier company has its own space: the installer app is not for it.
+  if (company?.kind === 'SUPPLIER') {
+    redirect('/fournisseur');
+    return undefined as never;
+  }
   return (
     <>
       {user.impersonatedBySuperAdminId && <ImpersonationBanner fullName={user.fullName} email={user.email} />}

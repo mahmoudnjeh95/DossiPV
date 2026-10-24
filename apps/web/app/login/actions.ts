@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { db } from '@dossipv/db';
 import { login, AccountDisabledError, EmailNotVerifiedError, InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
 import { shouldUseSecureCookie } from '../../lib/cookie-secure';
 
@@ -26,9 +27,11 @@ export async function loginAction(
   // Only the login() call is inside this try — redirect() below runs outside any catch that
   // could intercept its internal throw.
   let token: string;
+  let companyId: string;
   try {
     const result = await login(emailField, passwordField);
     token = result.token;
+    companyId = result.user.companyId;
   } catch (error) {
     if (error instanceof InvalidCredentialsError) {
       return { error: 'Email ou mot de passe incorrect.' };
@@ -54,5 +57,7 @@ export async function loginAction(
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
 
-  redirect('/dashboard');
+  // A supplier company lands in its own space, an installer on its dashboard.
+  const company = await db.company.findUnique({ where: { id: companyId }, select: { kind: true } });
+  redirect(company?.kind === 'SUPPLIER' ? '/fournisseur' : '/dashboard');
 }
