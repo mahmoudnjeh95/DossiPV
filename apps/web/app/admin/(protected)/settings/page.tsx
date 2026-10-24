@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { getOption3dPriceTnd } from '../../../../lib/platform-settings';
+import { getInvoicingSettings, getOption3dPriceTnd, isSellerComplete } from '../../../../lib/platform-settings';
 import { Option3dPriceForm } from './option3d-price-form';
+import { InvoicingForm } from './invoicing-form';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 
 // Mirrors the model hardcoded in packages/document-text/src/generate-dossier-text.ts.
@@ -10,11 +11,12 @@ const CLAUDE_DOSSIER_MODEL = 'claude-sonnet-5-5';
 export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
   const option3dPrice = await getOption3dPriceTnd();
+  const invoicing = await getInvoicingSettings();
 
   return (
     <main>
       <h1>Paramètres</h1>
-      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D).</p>
+      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D et la facturation).</p>
 
       <h2>Fournisseur de cartes</h2>
       <table>
@@ -46,6 +48,25 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
         l&apos;installateur.
       </p>
       <Option3dPriceForm priceTnd={option3dPrice} />
+
+      <h2>Facturation</h2>
+      <p className="hint">
+        Émetteur, TVA et droit de timbre imprimés sur chaque facture. La raison sociale et le matricule fiscal sont obligatoires avant le
+        premier paiement en ligne. Une facture déjà émise ne change pas.
+      </p>
+      {!isSellerComplete(invoicing) && <p role="alert">Émetteur à compléter : raison sociale et matricule fiscal.</p>}
+      <InvoicingForm
+        values={{
+          sellerLegalName: invoicing.sellerLegalName ?? '',
+          sellerTaxId: invoicing.sellerTaxId ?? '',
+          sellerAddress: invoicing.sellerAddress ?? '',
+          sellerPhone: invoicing.sellerPhone ?? '',
+          sellerEmail: invoicing.sellerEmail ?? '',
+          vatRatePct: String(invoicing.vatRatePct),
+          stampDutyTnd: String(invoicing.stampDutyTnd),
+          invoiceFooter: invoicing.invoiceFooter ?? '',
+        }}
+      />
 
       <h2>Plans</h2>
       <p>

@@ -20,6 +20,7 @@ const ADMIN_NAV_LINKS: NavLink[] = [
   { href: '/admin/fournisseurs', label: 'Fournisseurs', icon: Users },
   { href: '/admin/inscriptions', label: 'Inscriptions', icon: Users },
   { href: '/admin/plans', label: 'Plans', icon: Subscription },
+  { href: '/admin/factures', label: 'Factures', icon: Subscription },
   { href: '/admin/equipment', label: 'Équipements', icon: Database },
   { href: '/admin/audit', label: 'Journal', icon: Shield },
   { href: '/admin/settings', label: 'Paramètres', icon: Settings },

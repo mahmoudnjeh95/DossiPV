@@ -10,6 +10,7 @@ import { readLoginEmail, readNewPassword } from '../../../../../lib/account-form
 import { addMonths, extendedPeriodEnd } from '../../../../../lib/subscription';
 import { audienceMismatchError } from '../../../../../lib/plan-audience';
 import { isSponsored, unlinkInstaller } from '../../../../../lib/sponsorship';
+import { issueInvoiceForPayment } from '../../../../../lib/invoices';
 
 export interface RecordPaymentActionState {
   error: string;
@@ -69,7 +70,7 @@ export async function recordPaymentAction(
   }
   const note = typeof noteField === 'string' && noteField.length > 0 ? noteField : null;
 
-  await db.payment.create({
+  const payment = await db.payment.create({
     data: { companyId, amountTnd, method, note, recordedByAdmin: true },
   });
 
@@ -84,14 +85,43 @@ export async function recordPaymentAction(
       });
     }
   }
+  // The payment stands even when its invoice cannot be issued: the page then warns, and the
+  // invoice can be issued again later (issueInvoiceForPayment is idempotent).
+  let invoiceNumber: string | null = null;
+  try {
+    invoiceNumber = (await issueInvoiceForPayment(payment.id)).number;
+  } catch (error) {
+    console.error(`[invoices] Facture du paiement ${payment.id} non émise :`, error);
+  }
   await logAdminAction(admin.id, 'payment.record', companyId, {
     amountTnd,
     method,
     note,
     extendMonths,
     periodEnd: periodEnd?.toISOString() ?? null,
+    invoiceNumber,
   });
 
+  redirect(invoiceNumber ? `/admin/installers/${companyId}` : `/admin/installers/${companyId}?invoice=failed`);
+}
+
+/** Issues the invoice of a payment that has none (its first attempt failed, or it predates invoices). */
+export async function issueInvoiceAction(companyId: string, paymentId: string): Promise<void> {
+  const admin = await requireAuthenticatedSuperAdmin();
+  // Scoped to the company in the URL, so a payment of another company is never invoiced from here.
+  const payment = await db.payment.findFirst({ where: { id: paymentId, companyId }, select: { id: true } });
+  if (!payment) {
+    redirect(`/admin/installers/${companyId}`);
+    return;
+  }
+  try {
+    const { number } = await issueInvoiceForPayment(paymentId);
+    await logAdminAction(admin.id, 'invoice.issue', companyId, { paymentId, invoiceNumber: number });
+  } catch (error) {
+    console.error(`[invoices] Facture du paiement ${paymentId} non émise :`, error);
+    redirect(`/admin/installers/${companyId}?invoice=failed`);
+    return;
+  }
   redirect(`/admin/installers/${companyId}`);
 }
 
