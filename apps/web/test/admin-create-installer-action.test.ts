@@ -114,6 +114,16 @@ describe('createInstallerAction', () => {
     });
   });
 
+  it('refuses an archived plan', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', archivedAt: new Date('2026-09-01') });
+
+    const result = await createInstallerAction(undefined, form({ ...fields, planId: 'plan-old', periodEnd: '2027-01-01' }));
+
+    expect(result).toEqual({ error: "Ce plan est archivé : il n'est plus proposé." });
+    expect(m.mockCompanyCreate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
+  });
+
   it('requires an end date when a plan is chosen', async () => {
     const result = await createInstallerAction(undefined, form({ ...fields, planId: 'plan-1' }));
 

@@ -128,7 +128,7 @@ export const COMPANY_USER_ROLE_LABELS: Record<string, string> = {
   MEMBER: 'Membre',
 };
 
-/** AdminAuditLog.action as the super-admin reads it in the installer's history. */
+/** AdminAuditLog.action as the super-admin reads it in the installer's history and the Journal. */
 export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'company.create': 'Compte créé',
   'subscription.create': 'Abonnement créé',
@@ -139,8 +139,16 @@ export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'payment.record': 'Paiement enregistré',
   'user.create': 'Utilisateur ajouté',
   'user.resetPassword': 'Mot de passe réinitialisé',
+  'user.disable': 'Utilisateur désactivé',
+  'user.enable': 'Utilisateur réactivé',
+  'user.changeEmail': 'Email de connexion modifié',
+  'user.sendResetLink': 'Lien de réinitialisation envoyé',
+  'impersonation.start': 'Connexion en tant que (début)',
+  'impersonation.end': 'Connexion en tant que (fin)',
   'plan.create': 'Plan créé',
   'plan.update': 'Plan modifié',
+  'plan.archive': 'Plan archivé',
+  'plan.unarchive': 'Plan désarchivé',
 };
 
 export function labelFor(options: Option<string | number>[], value: string | number | null | undefined): string {

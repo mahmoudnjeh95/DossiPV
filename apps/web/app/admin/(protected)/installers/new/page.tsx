@@ -6,7 +6,7 @@ import { NewInstallerForm } from './new-installer-form';
 export default async function NewInstallerPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
 
-  const plans = await db.plan.findMany({ orderBy: { priceTnd: 'asc' } });
+  const plans = await db.plan.findMany({ where: { archivedAt: null }, orderBy: { priceTnd: 'asc' } });
 
   return (
     <main>

@@ -68,8 +68,14 @@ export async function createInstallerAction(
   if (sameAnme) {
     return { error: `Ce code ANME est déjà inscrit (${sameAnme.name}).` };
   }
-  if (planId !== null && !(await db.plan.findUnique({ where: { id: planId } }))) {
-    return { error: 'Plan introuvable.' };
+  if (planId !== null) {
+    const plan = await db.plan.findUnique({ where: { id: planId } });
+    if (!plan) {
+      return { error: 'Plan introuvable.' };
+    }
+    if (plan.archivedAt) {
+      return { error: "Ce plan est archivé : il n'est plus proposé." };
+    }
   }
 
   const created = await db.company.create({

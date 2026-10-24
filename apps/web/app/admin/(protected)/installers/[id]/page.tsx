@@ -1,23 +1,15 @@
 import { notFound } from 'next/navigation';
-import { db, type Prisma } from '@dossipv/db';
+import Link from 'next/link';
+import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS, TIER_LABELS } from '../../../../../lib/labels';
 import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction } from './actions';
 import { RecordPaymentForm } from './record-payment-form';
 import { AddUserForm, AssignPlanForm, ResetPasswordForm } from './account-forms';
+import { ChangeEmailForm, UserActionButton } from './user-forms';
+import { describeAuditDetails } from '../../../../../lib/admin-audit';
 
 const AUDIT_LOG_ROWS = 30;
-
-/** `key : value` pairs of an audit entry's details, for a one-line summary. */
-function describeDetails(details: Prisma.JsonValue | null): string {
-  if (details === null || typeof details !== 'object' || Array.isArray(details)) {
-    return '—';
-  }
-  return Object.entries(details)
-    .filter(([, value]) => value !== null)
-    .map(([key, value]) => `${key} : ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`)
-    .join(', ');
-}
 
 export default async function InstallerDetailPage({ params }: { params: Promise<{ id: string }> }): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -44,10 +36,15 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
   const boundSuspend = suspendSubscriptionAction.bind(null, company.id);
   const boundActivate = activateSubscriptionAction.bind(null, company.id);
   const boundUpdatePeriodEnd = updatePeriodEndAction.bind(null, company.id);
-  const planOptions = plans.map((plan) => ({
-    id: plan.id,
-    label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND`,
-  }));
+  // Archived plans are no longer offered, except the one the company is already on.
+  const currentPlanId = company.subscription?.planId ?? null;
+  const planOptions = plans
+    .filter((plan) => plan.archivedAt === null || plan.id === currentPlanId)
+    .map((plan) => ({
+      id: plan.id,
+      label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND${plan.archivedAt ? ' (archivé)' : ''}`,
+    }));
+  const enabledOwnerCount = company.users.filter((user) => user.role === 'OWNER' && user.disabledAt === null).length;
 
   return (
     <main>
@@ -90,7 +87,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         ) : (
           <p>Aucun abonnement</p>
         )}
-        <AssignPlanForm companyId={company.id} plans={planOptions} currentPlanId={company.subscription?.planId ?? null} />
+        <AssignPlanForm companyId={company.id} plans={planOptions} currentPlanId={currentPlanId} />
       </section>
 
       {company.subscription && (
@@ -134,29 +131,56 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
               <th>Rôle</th>
               <th>Créé le</th>
               <th>Mot de passe</th>
+              <th>Accès</th>
             </tr>
           </thead>
           <tbody>
-            {company.users.map((user) => (
-              <tr key={user.id}>
-                <td>{user.fullName}</td>
-                <td>{user.email}</td>
-                <td>{COMPANY_USER_ROLE_LABELS[user.role] ?? user.role}</td>
-                <td>{user.createdAt.toLocaleDateString('fr-FR')}</td>
-                <td>
-                  <ResetPasswordForm companyId={company.id} userId={user.id} />
-                </td>
-              </tr>
-            ))}
+            {company.users.map((user) => {
+              const disabled = user.disabledAt !== null;
+              const lastOwner = !disabled && user.role === 'OWNER' && enabledOwnerCount <= 1;
+              return (
+                <tr key={user.id} className={disabled ? 'muted' : undefined}>
+                  <td>
+                    {user.fullName} {disabled && <span className="badge">désactivé</span>}
+                  </td>
+                  <td>
+                    <ChangeEmailForm companyId={company.id} userId={user.id} email={user.email} />
+                  </td>
+                  <td>{COMPANY_USER_ROLE_LABELS[user.role] ?? user.role}</td>
+                  <td>{user.createdAt.toLocaleDateString('fr-FR')}</td>
+                  <td>
+                    <ResetPasswordForm companyId={company.id} userId={user.id} />
+                    {!disabled && <UserActionButton companyId={company.id} userId={user.id} kind="sendResetLink" />}
+                  </td>
+                  <td>
+                    {disabled ? (
+                      <UserActionButton companyId={company.id} userId={user.id} kind="enable" />
+                    ) : (
+                      <>
+                        <UserActionButton companyId={company.id} userId={user.id} kind="impersonate" />
+                        {!lastOwner && <UserActionButton companyId={company.id} userId={user.id} kind="disable" />}
+                      </>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        <p className="hint">Réinitialiser un mot de passe déconnecte cet utilisateur de tous ses appareils.</p>
+        <p className="hint">
+          Réinitialiser un mot de passe ou désactiver un utilisateur le déconnecte de tous ses appareils. Le lien de réinitialisation est
+          valable 7 jours. « Se connecter en tant que » ouvre l&apos;application installateur dans ce navigateur pendant 1 heure au plus.
+          Le dernier responsable actif ne peut pas être désactivé.
+        </p>
         <h3>Ajouter un utilisateur</h3>
         <AddUserForm companyId={company.id} />
       </section>
 
       <section>
         <h2>Historique des actions admin</h2>
+        <p>
+          <Link href={`/admin/audit?company=${company.id}`}>Tout l&apos;historique de cette société dans le journal</Link>
+        </p>
         {company.adminAuditLogs.length === 0 ? (
           <p>Aucune action enregistrée.</p>
         ) : (
@@ -175,7 +199,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
                   <td>{entry.createdAt.toLocaleString('fr-FR')}</td>
                   <td>{ADMIN_ACTION_LABELS[entry.action] ?? entry.action}</td>
                   <td>{entry.superAdmin.email}</td>
-                  <td>{describeDetails(entry.details)}</td>
+                  <td>{describeAuditDetails(entry.details)}</td>
                 </tr>
               ))}
             </tbody>
