@@ -5,6 +5,7 @@ import { runEngine, type EngineResult } from '@dossipv/engine';
 import { requireAuthenticatedCompanyUser } from '../../layout';
 import { PROJECT_ENGINE_INCLUDE, buildEngineInput } from '../../../../lib/project-engine-input';
 import { computeSectionStatuses } from '../../../../lib/project-sections';
+import { loadEffectiveSubscription } from '../../../../lib/sponsorship';
 import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart } from '../../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../../lib/labels';
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
@@ -58,7 +59,7 @@ export default async function ProjectOverviewPage({
     notFound();
   }
 
-  const subscriptionRow = await db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } });
+  const subscriptionRow = await loadEffectiveSubscription(user.companyId);
   const subscription = summarizeSubscription(subscriptionRow, now);
   const jobsInWindow = await quotaJobs(user.companyId, subscription, now);
   const quota = subscription

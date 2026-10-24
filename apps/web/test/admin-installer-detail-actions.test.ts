@@ -22,6 +22,7 @@ const m = vi.hoisted(() => {
     mockCompanyUserUpdate: vi.fn(),
     mockSessionDeleteMany: vi.fn(),
     mockAuditCreate: vi.fn(),
+    mockCompanyUpdateMany: vi.fn(),
   };
 });
 const { mockGet, mockRedirect, mockValidateSuperAdminSession, mockSubscriptionUpdate, mockPaymentCreate } = m;
@@ -38,10 +39,10 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
+      company: { findUnique: m.mockCompanyFindUnique, updateMany: m.mockCompanyUpdateMany },
       subscription: { updateMany: m.mockSubscriptionUpdateMany, update: m.mockSubscriptionUpdate, findUnique: m.mockSubscriptionFindUnique, create: m.mockSubscriptionCreate },
       payment: { create: m.mockPaymentCreate },
       plan: { findUnique: m.mockPlanFindUnique, findFirst: m.mockPlanFindFirst },
-      company: { findUnique: m.mockCompanyFindUnique },
       companyUser: {
         findUnique: m.mockCompanyUserFindUnique,
         findFirst: m.mockCompanyUserFindFirst,
@@ -86,6 +87,9 @@ beforeEach(() => {
     m.mockCompanyUserUpdate,
     m.mockSessionDeleteMany,
     m.mockAuditCreate,
+    m.mockCompanyFindUnique,
+    m.mockCompanyUpdateMany,
+    m.mockSubscriptionUpdateMany,
   ]) {
     mock.mockReset();
   }
@@ -278,6 +282,50 @@ describe('assignPlanAction', () => {
     expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
     expect(auditEntries()).toEqual([['subscription.changePlan', 'company-1', { planId: 'plan-premium', planName: 'Premium' }]]);
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+  });
+
+  describe('a sponsored installer taking Premium itself (spec 2026-10-23 §5.3)', () => {
+    const premium = { id: 'plan-premium', name: 'Premium', tier: 'PREMIUM', isTrial: false, archivedAt: null };
+
+    it('leaves its sponsor and loses the 3D option', async () => {
+      m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
+      m.mockPlanFindUnique.mockResolvedValue(premium);
+      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1' });
+
+      await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium' }));
+
+      expect(m.mockCompanyUpdateMany).toHaveBeenCalledWith({ where: { id: 'company-1', sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
+      expect(m.mockSubscriptionUpdateMany).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { option3dUntil: null } });
+      expect(auditEntries()).toEqual([['subscription.changePlan', 'company-1', { planId: 'plan-premium', planName: 'Premium', leftSponsor: true }]]);
+    });
+
+    it("turns the suspended row that only held its 3D option into the installer's own active plan", async () => {
+      m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard', status: 'SUSPENDED' });
+      m.mockPlanFindUnique.mockResolvedValue(premium);
+      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1', kind: 'INSTALLER' });
+
+      await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium', periodEnd: '2099-01-31' }));
+
+      expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
+        where: { companyId: 'company-1' },
+        data: { planId: 'plan-premium', status: 'ACTIVE', periodStart: expect.any(Date), periodEnd: new Date('2099-01-31') },
+      });
+    });
+
+    it('does not touch the sponsoring of a direct installer, nor when the new plan is not Premium', async () => {
+      m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
+      m.mockPlanFindUnique.mockResolvedValue(premium);
+      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: null });
+      await assignPlanAction('company-1', undefined, form({ planId: 'plan-premium' }));
+
+      m.mockPlanFindUnique.mockResolvedValue({ ...premium, id: 'plan-std', name: 'Standard', tier: 'STANDARD' });
+      m.mockCompanyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1' });
+      await assignPlanAction('company-1', undefined, form({ planId: 'plan-std' }));
+
+      expect(m.mockCompanyUpdateMany).not.toHaveBeenCalled();
+      expect(m.mockSubscriptionUpdateMany).not.toHaveBeenCalled();
+      expect(auditRows().every((row) => !('leftSponsor' in (row.details as object)))).toBe(true);
+    });
   });
 
   it('replaces a trial with a paid plan: fresh period from today, ends on the typed date, trial kept in the log', async () => {

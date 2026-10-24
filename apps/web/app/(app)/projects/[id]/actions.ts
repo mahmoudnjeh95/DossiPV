@@ -14,6 +14,7 @@ import { unsourcedEquipment } from '../../../../lib/project-access';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE, PROFILE_INCOMPLETE_MESSAGE } from '../../../../lib/labels';
 import { inactiveSubscriptionMessage, trialQuotaMessage } from '../../../../lib/trial';
 import { buildSnapshotConsumption, type SnapshotConsumption } from '../../../../lib/snapshot-consumption';
+import { loadEffectiveSubscription } from '../../../../lib/sponsorship';
 import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart } from '../../../../lib/subscription';
 import { assignDossierNumber } from '../../../../lib/dossier-number';
 import { LOCATIONS_PENDING_MESSAGE, locationsPending, stegCompleteness } from '../../../../lib/steg-completeness';
@@ -107,10 +108,7 @@ export async function generateDossierAction(
     return { error: `Équipement sans fiche technique : ${unsourced.join(', ')}. Remplacez-le avant de générer.` };
   }
 
-  const subscriptionRow = await db.subscription.findUnique({
-    where: { companyId: user.companyId },
-    include: { plan: true },
-  });
+  const subscriptionRow = await loadEffectiveSubscription(user.companyId);
   const subscription = summarizeSubscription(subscriptionRow, now);
   if (!subscription || !subscription.canGenerate) {
     return { error: inactiveSubscriptionMessage(subscription, 'génération') };

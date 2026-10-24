@@ -10,6 +10,7 @@ import {
   type ProjectForEngine,
 } from '../../../../../lib/project-engine-input';
 import { unsourcedEquipment } from '../../../../../lib/project-access';
+import { loadEffectiveSubscription } from '../../../../../lib/sponsorship';
 import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart, projectsCountedThisMonth } from '../../../../../lib/subscription';
 import {
   LOCATIONS_PENDING_MESSAGE,
@@ -61,7 +62,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
   }
 
   const [subscriptionRow, anmeListCount] = await Promise.all([
-    db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
+    loadEffectiveSubscription(user.companyId),
     db.catalogSourceDocument.count({ where: { kind: 'ANME_PANEL_LIST' } }),
   ]);
   const subscription = summarizeSubscription(subscriptionRow, now);

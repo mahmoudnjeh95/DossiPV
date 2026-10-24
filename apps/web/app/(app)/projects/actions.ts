@@ -5,7 +5,7 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { FormReader } from '../../../lib/form-reader';
 import { CIVILITY_OPTIONS, CLIENT_KIND_OPTIONS } from '../../../lib/labels';
-import { companyProjectTier, tierIncludes3d } from '../../../lib/subscription';
+import { newProjectSettings } from '../../../lib/subscription';
 
 export interface CreateProjectActionState {
   error: string;
@@ -40,13 +40,13 @@ export async function createProjectAction(
     return { error: reader.errorMessage() };
   }
 
-  const tier = await companyProjectTier(user.companyId);
+  const { tier, with3d } = await newProjectSettings(user.companyId, new Date());
 
   const project = await db.project.create({
     data: {
       companyId: user.companyId,
       tier,
-      with3d: tierIncludes3d(tier),
+      with3d,
       status: 'DRAFT',
       client: { create: { fullName, civility, clientKind, stegReference } },
     },

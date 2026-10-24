@@ -7,8 +7,9 @@ import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../../lib/account-form';
-import { extendedPeriodEnd } from '../../../../../lib/subscription';
+import { addMonths, extendedPeriodEnd } from '../../../../../lib/subscription';
 import { audienceMismatchError } from '../../../../../lib/plan-audience';
+import { isSponsored, unlinkInstaller } from '../../../../../lib/sponsorship';
 
 export interface RecordPaymentActionState {
   error: string;
@@ -154,7 +155,11 @@ export async function assignPlanAction(
     return { error: mismatch };
   }
 
-  if (subscription &&subscription.plan?.isTrial && !plan.isTrial) {
+  // Spec 2026-10-23 §5.3: paying Premium itself ends a sponsored installer's sponsoring.
+  const leavesSponsor = plan.tier === 'PREMIUM' && (await isSponsored(companyId));
+  const sponsorDetails = leavesSponsor ? { leftSponsor: true } : {};
+
+  if (subscription && subscription.plan?.isTrial && !plan.isTrial) {
     // Trial to paid plan: the trial subscription is replaced by a fresh period (the trial's
     // dossiers no longer count) and the audit entry keeps the trial plan it came from.
     const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
@@ -171,15 +176,27 @@ export async function assignPlanAction(
       planName: plan.name,
       from: subscription.plan.name,
       periodEnd: newPeriodEnd.toISOString(),
+      ...sponsorDetails,
     });
+  } else if (subscription && leavesSponsor && subscription.status === 'SUSPENDED') {
+    // The row only held the 3D option while the installer was sponsored (suspended, so it granted
+    // nothing): it becomes the installer's own active plan, for the date given or one month.
+    const requested = new Date(String(formData.get('periodEnd') ?? ''));
+    const newPeriodEnd = Number.isNaN(requested.getTime()) ? addMonths(new Date(), 1) : requested;
+    await db.subscription.update({ where: { companyId }, data: { planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: newPeriodEnd } });
+    await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name, periodEnd: newPeriodEnd.toISOString(), ...sponsorDetails });
   } else if (subscription) {
     await db.subscription.update({ where: { companyId }, data: { planId } });
-    await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name });
+    await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name, ...sponsorDetails });
   } else {
     await db.subscription.create({
       data: { companyId, planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: periodEnd! },
     });
-    await logAdminAction(admin.id, 'subscription.create', companyId, { planId, planName: plan.name, periodEnd: periodEnd!.toISOString() });
+    await logAdminAction(admin.id, 'subscription.create', companyId, { planId, planName: plan.name, periodEnd: periodEnd!.toISOString(), ...sponsorDetails });
+  }
+  if (leavesSponsor) {
+    await unlinkInstaller(companyId);
+    await db.subscription.updateMany({ where: { companyId }, data: { option3dUntil: null } });
   }
   redirect(`/admin/installers/${companyId}`);
 }

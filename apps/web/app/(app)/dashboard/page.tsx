@@ -7,6 +7,7 @@ import {
   quotaJobs,
   quotaWindowStart,
 } from '../../../lib/subscription';
+import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { StatsCard } from './stats-card';
@@ -16,11 +17,7 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
   const now = new Date();
 
-  const company = await db.company.findUnique({
-    where: { id: user.companyId },
-    include: { subscription: { include: { plan: true } } },
-  });
-  const subscription = summarizeSubscription(company?.subscription ?? null, now);
+  const subscription = summarizeSubscription(await loadEffectiveSubscription(user.companyId), now);
   const [jobsInWindow, recentProjects, projectCount] = await Promise.all([
     quotaJobs(user.companyId, subscription, now),
     db.project.findMany({

@@ -1,4 +1,5 @@
 import { db } from '@dossipv/db';
+import { includes3d, loadEffectiveSubscription } from './sponsorship';
 
 /**
  * Pure helpers for the installer-facing subscription banner and quota — no I/O, so they can be
@@ -9,6 +10,10 @@ export interface SubscriptionLike {
   periodStart?: Date;
   periodEnd: Date;
   plan: { name: string; monthlyDossierLimit: number; tier: 'STANDARD' | 'PREMIUM'; isTrial?: boolean };
+  /** Set by `loadEffectiveSubscription`; wins over `plan.isTrial` (a sponsored installer is never on a trial). */
+  isTrial?: boolean;
+  /** The installer is sponsored: the subscription is its supplier's. */
+  sponsored?: boolean;
 }
 
 export interface SubscriptionSummary {
@@ -17,6 +22,8 @@ export interface SubscriptionSummary {
   monthlyDossierLimit: number;
   /** The free trial: its dossiers (and bill imports) are counted over the whole period, not per month. */
   isTrial: boolean;
+  /** Sponsored installer: the subscription is its supplier's (the banner says so when it lapses). */
+  sponsored: boolean;
   /** Start of the period; where a trial's counting begins. Null when the row carries none. */
   periodStart: Date | null;
   periodEnd: Date;
@@ -42,7 +49,8 @@ export function summarizeSubscription(subscription: SubscriptionLike | null, now
     planName: subscription.plan.name,
     tier: subscription.plan.tier,
     monthlyDossierLimit: subscription.plan.monthlyDossierLimit,
-    isTrial: subscription.plan.isTrial === true,
+    isTrial: subscription.isTrial ?? subscription.plan.isTrial === true,
+    sponsored: subscription.sponsored === true,
     periodStart: subscription.periodStart ?? null,
     periodEnd: subscription.periodEnd,
     daysLeft,
@@ -143,8 +151,14 @@ export function extendedPeriodEnd(periodEnd: Date, now: Date, months: number): D
  * Companies without a subscription fall back to STANDARD.
  */
 export async function companyProjectTier(companyId: string): Promise<'STANDARD' | 'PREMIUM'> {
-  const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
+  const subscription = await loadEffectiveSubscription(companyId);
   return subscription?.plan.tier ?? 'STANDARD';
+}
+
+/** Tier and 3D flag of a new project of this company (see `companyProjectTier`, `includes3d`). */
+export async function newProjectSettings(companyId: string, now: Date): Promise<{ tier: 'STANDARD' | 'PREMIUM'; with3d: boolean }> {
+  const subscription = await loadEffectiveSubscription(companyId);
+  return { tier: subscription?.plan.tier ?? 'STANDARD', with3d: subscription ? includes3d(subscription, now) : false };
 }
 
 /**

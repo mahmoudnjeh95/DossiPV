@@ -16,6 +16,8 @@ const m = vi.hoisted(() => {
     createMany: vi.fn(),
     deleteMany: vi.fn(),
     updateMany: vi.fn(),
+    companyFindUnique: vi.fn(),
+    libraryItemFindFirst: vi.fn(),
   };
 });
 
@@ -34,7 +36,8 @@ vi.mock('@dossipv/db', async () => {
       ...actual.db,
       inverter: { findFirst: m.inverterFindFirst },
       spd: { findMany: m.spdFindMany },
-      libraryItem: { upsert: m.upsert, createMany: m.createMany, deleteMany: m.deleteMany, updateMany: m.updateMany },
+      company: { findUnique: m.companyFindUnique },
+      libraryItem: { findFirst: m.libraryItemFindFirst, upsert: m.upsert, createMany: m.createMany, deleteMany: m.deleteMany, updateMany: m.updateMany },
     },
   };
 });
@@ -54,6 +57,7 @@ function priceForm(value: string): FormData {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: null });
   m.mockGet.mockReturnValue({ value: 'token' });
   m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', fullName: 'Test' });
 });

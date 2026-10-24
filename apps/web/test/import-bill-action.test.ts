@@ -46,6 +46,7 @@ vi.mock('@dossipv/db', async () => {
     db: {
       ...actual.db,
       subscription: { findUnique: m.mockSubscriptionFindUnique },
+      company: { findUnique: (): Promise<unknown> => (m.mockSubscriptionFindUnique as () => Promise<unknown>)().then((subscription) => ({ sponsorCompanyId: null, subscription })) },
       project: { findFirst: m.mockProjectFindFirst },
       dossierJob: { findMany: m.mockJobFindMany },
       $transaction: m.mockTransaction,

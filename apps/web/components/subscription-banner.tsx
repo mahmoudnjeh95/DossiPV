@@ -1,5 +1,5 @@
 import type { SubscriptionSummary } from '../lib/subscription';
-import { contactDossipv, trialDossiersLeft } from '../lib/trial';
+import { SPONSOR_LAPSED_MESSAGE, contactDossipv, trialDossiersLeft } from '../lib/trial';
 
 /**
  * Spec §8 in-app banner: shown within 7 days of periodEnd, on expiry, and while suspended.
@@ -16,7 +16,14 @@ export function SubscriptionBanner({
   if (!subscription) {
     return (
       <div className="banner banner-danger" role="status">
-        Aucun abonnement actif : la génération de dossiers est désactivée. Contactez DossiPV pour activer votre offre.
+        Aucun abonnement : {contactDossipv()} pour Standard ou Premium. La génération de dossiers est désactivée.
+      </div>
+    );
+  }
+  if (subscription.sponsored && subscription.effectiveStatus !== 'ACTIVE') {
+    return (
+      <div className="banner banner-danger" role="status">
+        {SPONSOR_LAPSED_MESSAGE}. Vous pouvez consulter vos projets mais plus générer de dossier.
       </div>
     );
   }

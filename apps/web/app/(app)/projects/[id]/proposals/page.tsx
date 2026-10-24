@@ -9,6 +9,7 @@ import { ProposalCard } from './proposal-card';
 import { CorrectionsForm } from './corrections-form';
 import { IdentityForm } from './identity-form';
 import { clientIdentityNeeds } from '../../../../../lib/client-identity';
+import { isSponsorLockedLabel, loadSponsor, sponsorMissingProductsMessage } from '../../../../../lib/sponsor-info';
 
 const fr = (value: number, decimals = 0): string =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: decimals }).format(value);
@@ -40,7 +41,11 @@ export default async function ProposalsPage({
   const warnings = [...billWarnings, ...(computed.ok && computed.yieldWarning ? [computed.yieldWarning] : [])];
 
   const missing = computed.ok ? [] : computed.missing;
-  const missingLibraryKinds = computed.ok ? [] : computed.missingLibraryKinds;
+  const allMissingKinds = computed.ok ? [] : computed.missingLibraryKinds;
+  // A sponsored installer's panels and inverters are its supplier's: say so when the supplier carries none.
+  const sponsor = allMissingKinds.length > 0 ? await loadSponsor(user.companyId) : null;
+  const sponsorMessage = sponsor ? sponsorMissingProductsMessage(allMissingKinds) : null;
+  const missingLibraryKinds = sponsorMessage ? allMissingKinds.filter((kind) => !isSponsorLockedLabel(kind)) : allMissingKinds;
   const blockedReasons = computed.ok ? [] : computed.blockedReasons;
   const proposals = computed.ok ? computed.result.proposals : [];
 
@@ -125,6 +130,12 @@ export default async function ProposalsPage({
           <Link className="button" href={`/projects/${id}/sections/site`}>
             Modifier le site
           </Link>
+        </div>
+      )}
+
+      {sponsorMessage && (
+        <div className="banner banner-warn" role="status">
+          {sponsorMessage}
         </div>
       )}
 

@@ -6,13 +6,16 @@ import { loginAction } from './actions';
 import { BrandMark } from '../../components/brand-mark';
 
 interface LoginPageProps {
-  searchParams: Promise<{ reinitialise?: string | string[] }>;
+  searchParams: Promise<{ reinitialise?: string | string[]; compte?: string | string[] }>;
 }
 
 export default function LoginPage({ searchParams }: LoginPageProps): React.JSX.Element {
   const [state, formAction, pending] = useActionState(loginAction, undefined);
   // Set by /reinitialiser-mot-de-passe after a successful reset.
-  const passwordWasReset = use(searchParams).reinitialise === '1';
+  const query = use(searchParams);
+  const passwordWasReset = query.reinitialise === '1';
+  // Set by /invitation after an installer created its account from a supplier's invitation.
+  const accountWasCreated = query.compte === 'cree';
 
   return (
     <main className="login-page">
@@ -41,6 +44,7 @@ export default function LoginPage({ searchParams }: LoginPageProps): React.JSX.E
           {passwordWasReset && !state?.error && (
             <p className="login-notice" role="status">Votre mot de passe a été changé : connectez-vous.</p>
           )}
+          {accountWasCreated && !state?.error && <p className="login-notice" role="status">Compte créé, connectez-vous.</p>}
           <form action={formAction} className="login-form">
             <label htmlFor="email">
               Adresse e-mail

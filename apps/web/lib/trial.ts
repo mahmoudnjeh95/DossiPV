@@ -4,6 +4,8 @@ import type { SubscriptionSummary } from './subscription';
 /** Spec 2026-10-23 §7: each bill import is a paid Claude call, so the trial gets a fixed number in total. */
 export const TRIAL_BILL_IMPORT_LIMIT = 10;
 
+export const SPONSOR_LAPSED_MESSAGE = 'L’abonnement de votre fournisseur a expiré : payez Standard ou Premium vous-même';
+
 /** « contactez DossiPV », with the admin address when one is configured. */
 export function contactDossipv(): string {
   const email = adminEmailAddress();
@@ -26,6 +28,9 @@ export function trialExpiredMessage(): string {
 export function inactiveSubscriptionMessage(subscription: SubscriptionSummary | null, action: string): string {
   if (subscription?.isTrial && subscription.effectiveStatus === 'EXPIRED') {
     return trialExpiredMessage();
+  }
+  if (subscription?.sponsored) {
+    return `${SPONSOR_LAPSED_MESSAGE} (${action} impossible).`;
   }
   return `Votre abonnement n'est pas actif : ${action} impossible.`;
 }
