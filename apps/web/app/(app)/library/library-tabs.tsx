@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export type LibraryTab = 'mine' | 'catalogue' | 'new';
 
-export function LibraryTabs({ active }: { active: LibraryTab }): React.JSX.Element {
+export function LibraryTabs({ active, sponsored = false }: { active: LibraryTab; sponsored?: boolean }): React.JSX.Element {
   return (
     <nav aria-label="Bibliothèque" style={{ display: 'flex', gap: '1rem', margin: '1rem 0' }}>
       <Link
@@ -19,13 +19,15 @@ export function LibraryTabs({ active }: { active: LibraryTab }): React.JSX.Eleme
       >
         Catalogue partagé
       </Link>
-      <Link
-        href="/library/new"
-        aria-current={active === 'new' ? 'page' : undefined}
-        style={{ fontWeight: active === 'new' ? 700 : 400 }}
-      >
-        Ajouter mon matériel
-      </Link>
+      {!sponsored && (
+        <Link
+          href="/library/new"
+          aria-current={active === 'new' ? 'page' : undefined}
+          style={{ fontWeight: active === 'new' ? 700 : 400 }}
+        >
+          Ajouter mon matériel
+        </Link>
+      )}
     </nav>
   );
 }

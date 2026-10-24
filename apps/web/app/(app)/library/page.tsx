@@ -5,6 +5,10 @@ import { LibraryTabs } from './library-tabs';
 import { AddAllButton, AddButton, DeleteOwnButton, RemoveButton } from './library-buttons';
 import { ownEquipmentSlug } from './own-equipment-kinds';
 import { PriceForm } from './price-form';
+import { loadSponsor } from '../../../lib/sponsor-info';
+import { LOCKED_KINDS } from '../../../lib/sponsorship';
+
+const isLocked = (kind: string): boolean => (LOCKED_KINDS as readonly string[]).includes(kind);
 
 type SearchParams = Promise<{ tab?: string; q?: string }>;
 type BulkKind = 'SPD' | 'DC_SWITCH' | 'DC_FUSE' | 'AC_BREAKER' | 'AC_ISOLATOR' | 'CABLE';
@@ -19,13 +23,24 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
   const params = await searchParams;
   const catalogue = params.tab === 'catalogue';
   const q = (params.q ?? '').slice(0, 100);
-  const sections = await loadSections(user.companyId, catalogue ? 'catalogue' : 'library', catalogue ? q : '');
+  const [allSections, sponsor] = await Promise.all([
+    loadSections(user.companyId, catalogue ? 'catalogue' : 'library', catalogue ? q : ''),
+    loadSponsor(user.companyId),
+  ]);
+  const sponsored = sponsor !== null;
+  // A sponsored installer cannot add panels or inverters: they are not offered from the shared catalog.
+  const sections = sponsored && catalogue ? allSections.filter((s) => !isLocked(s.kind)) : allSections;
   const total = sections.reduce((sum, s) => sum + s.rows.length, 0);
 
   return (
     <main>
       <h1>Ma bibliothèque</h1>
-      <LibraryTabs active={catalogue ? 'catalogue' : 'mine'} />
+      <LibraryTabs active={catalogue ? 'catalogue' : 'mine'} sponsored={sponsored} />
+      {sponsor && (
+        <p className="banner banner-ok" role="status">
+          Panneaux et onduleurs fournis par {sponsor.name}
+        </p>
+      )}
 
       {catalogue && (
         <form method="get" className="card">
@@ -41,12 +56,12 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
       {!catalogue && total === 0 && (
         <section className="card">
           <p>
-            Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé, ou saisissez
-            votre propre matériel.
+            Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé
+            {sponsored ? '.' : ', ou saisissez votre propre matériel.'}
           </p>
           <div className="actions">
             <Link href="/library?tab=catalogue">Ouvrir le catalogue partagé</Link>
-            <Link href="/library/new">Ajouter mon matériel</Link>
+            {!sponsored && <Link href="/library/new">Ajouter mon matériel</Link>}
           </div>
         </section>
       )}
@@ -81,7 +96,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                         <td>
                           <div className="actions">
                             {r.own && <Link href={`/library/edit/${ownEquipmentSlug(s.kind)}/${r.itemId}`}>Modifier</Link>}
-                            {r.libraryItemId && <RemoveButton libraryItemId={r.libraryItemId} />}
+                            {r.libraryItemId && !(sponsored && isLocked(s.kind)) && <RemoveButton libraryItemId={r.libraryItemId} />}
                             {r.own && <DeleteOwnButton kind={s.kind} itemId={r.itemId} />}
                           </div>
                         </td>

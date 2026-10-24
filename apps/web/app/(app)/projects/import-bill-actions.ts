@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import sharp from 'sharp';
 import { redirect } from 'next/navigation';
 import { db, Prisma } from '@dossipv/db';
+import { includes3d, loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import {
   BILL_READER_MODEL,
@@ -19,7 +20,6 @@ import { extractTextBoxes, isBrowserPrintedBill } from '@dossipv/dossier-worker/
 import { requireAuthenticatedCompanyUser } from '../layout';
 import {
   summarizeSubscription,
-  tierIncludes3d,
   quotaJobs,
   quotaWindowStart,
   projectsCountedThisMonth,
@@ -143,10 +143,8 @@ export async function importStegBillAction(
   const user = await requireAuthenticatedCompanyUser();
   const now = new Date();
 
-  const subscription = summarizeSubscription(
-    await db.subscription.findUnique({ where: { companyId: user.companyId }, include: { plan: true } }),
-    now,
-  );
+  const effectiveSubscription = await loadEffectiveSubscription(user.companyId);
+  const subscription = summarizeSubscription(effectiveSubscription, now);
   if (!subscription || !subscription.canGenerate) {
     return { error: inactiveSubscriptionMessage(subscription, 'import de facture') };
   }
@@ -258,7 +256,7 @@ export async function importStegBillAction(
     projectId = await db.$transaction(async (tx) => {
       const file = await tx.file.create({ data: { fileName: storedName, mimeType: storedMimeType, storageKey } });
       const project = await tx.project.create({
-        data: { companyId: user.companyId, tier, with3d: tierIncludes3d(tier), status: 'DRAFT', flowStep: 'PROPOSALS' },
+        data: { companyId: user.companyId, tier, with3d: effectiveSubscription ? includes3d(effectiveSubscription, now) : false, status: 'DRAFT', flowStep: 'PROPOSALS' },
       });
       await tx.projectClient.create({
         data: {

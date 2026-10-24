@@ -5,6 +5,11 @@ import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { catalogScope, provenanceScope } from '../../../lib/project-access';
+import { LOCKED_KINDS, isSponsored } from '../../../lib/sponsorship';
+
+export const CATALOG_LOCK_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs.';
+
+const isLockedKind = (kind: string): boolean => (LOCKED_KINDS as readonly string[]).includes(kind);
 
 export type LibraryActionState = { error: string } | undefined;
 
@@ -37,6 +42,9 @@ export async function addToLibraryAction(kind: EquipmentKind, itemId: string): P
   const entry = KINDS[kind] as (typeof KINDS)[EquipmentKind] | undefined;
   if (!entry) {
     return { error: 'Équipement introuvable dans le catalogue.' };
+  }
+  if (isLockedKind(kind) && (await isSponsored(user.companyId))) {
+    return { error: CATALOG_LOCK_MESSAGE };
   }
   const found = await entry
     .catalog()
@@ -86,6 +94,12 @@ export async function addAllOfKindAction(kind: BulkKind): Promise<LibraryActionS
 
 export async function removeFromLibraryAction(libraryItemId: string): Promise<LibraryActionState> {
   const user = await requireAuthenticatedCompanyUser();
+  if (await isSponsored(user.companyId)) {
+    const item = await db.libraryItem.findFirst({ where: { id: libraryItemId, companyId: user.companyId }, select: { kind: true } });
+    if (item && isLockedKind(item.kind)) {
+      return { error: CATALOG_LOCK_MESSAGE };
+    }
+  }
   const { count } = await db.libraryItem.deleteMany({ where: { id: libraryItemId, companyId: user.companyId } });
   if (count === 0) {
     return { error: 'Élément introuvable.' };

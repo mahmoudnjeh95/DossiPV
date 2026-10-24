@@ -8,6 +8,7 @@ import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../../lib/account-form';
 import { extendedPeriodEnd } from '../../../../../lib/subscription';
+import { isSponsored, unlinkInstaller } from '../../../../../lib/sponsorship';
 
 export interface RecordPaymentActionState {
   error: string;
@@ -144,6 +145,10 @@ export async function assignPlanAction(
     return { error: "Ce plan est archivé : il n'est plus proposé." };
   }
 
+  // Spec 2026-10-23 §5.3: paying Premium itself ends a sponsored installer's sponsoring.
+  const leavesSponsor = plan.tier === 'PREMIUM' && (await isSponsored(companyId));
+  const sponsorDetails = leavesSponsor ? { leftSponsor: true } : {};
+
   if (subscription && subscription.plan?.isTrial && !plan.isTrial) {
     // Trial to paid plan: the trial subscription is replaced by a fresh period (the trial's
     // dossiers no longer count) and the audit entry keeps the trial plan it came from.
@@ -161,15 +166,20 @@ export async function assignPlanAction(
       planName: plan.name,
       from: subscription.plan.name,
       periodEnd: newPeriodEnd.toISOString(),
+      ...sponsorDetails,
     });
   } else if (subscription) {
     await db.subscription.update({ where: { companyId }, data: { planId } });
-    await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name });
+    await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name, ...sponsorDetails });
   } else {
     await db.subscription.create({
       data: { companyId, planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: periodEnd! },
     });
-    await logAdminAction(admin.id, 'subscription.create', companyId, { planId, planName: plan.name, periodEnd: periodEnd!.toISOString() });
+    await logAdminAction(admin.id, 'subscription.create', companyId, { planId, planName: plan.name, periodEnd: periodEnd!.toISOString(), ...sponsorDetails });
+  }
+  if (leavesSponsor) {
+    await unlinkInstaller(companyId);
+    await db.subscription.updateMany({ where: { companyId }, data: { option3dUntil: null } });
   }
   redirect(`/admin/installers/${companyId}`);
 }

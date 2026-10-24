@@ -1,11 +1,17 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { isSponsored } from '../../../../lib/sponsorship';
 import { requireAuthenticatedCompanyUser } from '../../layout';
 import { LibraryTabs } from '../library-tabs';
 import { OWN_EQUIPMENT_KINDS } from '../own-equipment-kinds';
 
 /** Choice of the equipment type the installer adds as its own (absent from the shared catalog). */
 export default async function NewOwnEquipmentIndexPage(): Promise<React.JSX.Element> {
-  await requireAuthenticatedCompanyUser();
+  const user = await requireAuthenticatedCompanyUser();
+  // A sponsored installer uses its supplier's panels and inverters: no own equipment.
+  if (await isSponsored(user.companyId)) {
+    redirect('/library');
+  }
 
   return (
     <main>

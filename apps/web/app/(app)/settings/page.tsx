@@ -1,10 +1,13 @@
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
+import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { summarizeSubscription, quotaJobs, quotaWindowStart, projectsCountedThisMonth } from '../../../lib/subscription';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE, TIER_LABELS } from '../../../lib/labels';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
+import { AcceptInvitationButton } from './pending-invitations';
+import { loadSponsor } from '../../../lib/sponsor-info';
 
 function toDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -15,13 +18,26 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const user = await requireAuthenticatedCompanyUser();
   const company = await db.company.findUnique({
     where: { id: user.companyId },
-    include: { subscription: { include: { plan: true } }, payments: { orderBy: { createdAt: 'desc' }, take: 10 } },
+    include: { payments: { orderBy: { createdAt: 'desc' }, take: 10 } },
   });
   if (!company) {
     notFound();
   }
   const now = new Date();
-  const subscription = summarizeSubscription(company.subscription, now);
+  // Sponsoring: who pays for this installer, or the invitations it can still accept.
+  const sponsor = await loadSponsor(user.companyId);
+  const pendingInvitations = sponsor
+    ? []
+    : await db.supplierInvitation.findMany({
+        where: {
+          acceptedAt: null,
+          expiresAt: { gt: now },
+          email: { in: (await db.companyUser.findMany({ where: { companyId: user.companyId }, select: { email: true } })).map((u) => u.email.toLowerCase()) },
+        },
+        include: { supplierCompany: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+      });
+  const subscription = summarizeSubscription(await loadEffectiveSubscription(user.companyId), now);
   // Only the trial's banner shows a dossier count.
   const trialUsed = subscription?.isTrial
     ? projectsCountedThisMonth(await quotaJobs(user.companyId, subscription, now), now, quotaWindowStart(subscription, now)).size
@@ -81,6 +97,24 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
         )}
       </section>
+
+      {(sponsor || pendingInvitations.length > 0) && (
+        <section className="card">
+          <h2>Parrainage</h2>
+          {sponsor ? (
+            <p>Vous êtes parrainé par {sponsor.name} : vos panneaux et onduleurs sont ceux de ce fournisseur.</p>
+          ) : (
+            <ul>
+              {pendingInvitations.map((invitation) => (
+                <li key={invitation.id}>
+                  {invitation.supplierCompany.name} vous invite à utiliser DossiPV.
+                  <AcceptInvitationButton invitationId={invitation.id} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <CompanyForm
         company={{

@@ -25,6 +25,7 @@ const m = vi.hoisted(() => {
     saveFile: vi.fn(),
     deleteFile: vi.fn(),
     validateUploadedFile: vi.fn(),
+    companyFindUnique: vi.fn(),
   };
 });
 
@@ -42,6 +43,7 @@ vi.mock('@dossipv/db', async () => {
     cable: { findFirst: m.cableFindFirst, update: m.cableUpdate, delete: m.cableDelete },
     cableSection: { deleteMany: m.sectionDeleteMany, createMany: m.sectionCreateMany },
     libraryItem: { create: m.libraryItemCreate },
+    company: { findUnique: m.companyFindUnique },
     file: { create: m.fileCreate, findUnique: m.fileFindUnique, delete: m.fileDelete },
   };
   return {
@@ -85,6 +87,7 @@ function pdf(name: string): File {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: null });
   m.mockGet.mockReturnValue({ value: 'token' });
   m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', fullName: 'Test' });
   m.validateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
