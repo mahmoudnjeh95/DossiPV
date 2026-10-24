@@ -303,6 +303,31 @@ describe('assignPlanAction', () => {
     expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
     expect(m.mockAuditCreate).not.toHaveBeenCalled();
   });
+
+  it('refuses moving a company onto an archived plan, or creating a subscription on one', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', name: 'Ancien', archivedAt: new Date('2026-09-01') });
+
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-standard' });
+    const change = await assignPlanAction('company-1', undefined, form({ planId: 'plan-old' }));
+    m.mockSubscriptionFindUnique.mockResolvedValue(null);
+    const create = await assignPlanAction('company-1', undefined, form({ planId: 'plan-old', periodEnd: '2027-01-01' }));
+
+    expect(change).toEqual({ error: "Ce plan est archivé : il n'est plus proposé." });
+    expect(create).toEqual({ error: "Ce plan est archivé : il n'est plus proposé." });
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+    expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
+  });
+
+  it('lets a company already on an archived plan keep it', async () => {
+    m.mockSubscriptionFindUnique.mockResolvedValue({ planId: 'plan-old' });
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', name: 'Ancien', archivedAt: new Date('2026-09-01') });
+
+    const result = await assignPlanAction('company-1', undefined, form({ planId: 'plan-old' }));
+
+    expect(result).toBeUndefined();
+    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+  });
 });
 
 describe('addCompanyUserAction', () => {

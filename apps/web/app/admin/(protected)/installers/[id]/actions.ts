@@ -139,6 +139,10 @@ export async function assignPlanAction(
   if (!plan) {
     return { error: 'Plan introuvable.' };
   }
+  // A company already on an archived plan keeps it; nobody else is moved onto one.
+  if (plan.archivedAt && subscription?.planId !== planId) {
+    return { error: "Ce plan est archivé : il n'est plus proposé." };
+  }
 
   if (subscription) {
     await db.subscription.update({ where: { companyId }, data: { planId } });

@@ -57,3 +57,27 @@ export async function updatePlanAction(
   await logAdminAction(admin.id, 'plan.update', null, { planId, ...plan });
   redirect('/admin/plans');
 }
+
+/**
+ * An archived plan is no longer offered for a new subscription or a plan change; companies
+ * already on it keep it. Plans are never deleted, so past subscriptions and payments keep theirs.
+ */
+export async function archivePlanAction(planId: string): Promise<void> {
+  const admin = await requireAuthenticatedSuperAdmin();
+  const plan = await db.plan.findUnique({ where: { id: planId } });
+  if (plan && !plan.archivedAt) {
+    await db.plan.update({ where: { id: planId }, data: { archivedAt: new Date() } });
+    await logAdminAction(admin.id, 'plan.archive', null, { planId, name: plan.name });
+  }
+  redirect('/admin/plans');
+}
+
+export async function unarchivePlanAction(planId: string): Promise<void> {
+  const admin = await requireAuthenticatedSuperAdmin();
+  const plan = await db.plan.findUnique({ where: { id: planId } });
+  if (plan?.archivedAt) {
+    await db.plan.update({ where: { id: planId }, data: { archivedAt: null } });
+    await logAdminAction(admin.id, 'plan.unarchive', null, { planId, name: plan.name });
+  }
+  redirect('/admin/plans');
+}

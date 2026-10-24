@@ -9,6 +9,7 @@ const m = vi.hoisted(() => {
     mockValidateSuperAdminSession: vi.fn(),
     mockPlanCreate: vi.fn(),
     mockPlanUpdate: vi.fn(),
+    mockPlanFindUnique: vi.fn(),
     mockAuditCreate: vi.fn(),
   };
 });
@@ -25,13 +26,13 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      plan: { create: m.mockPlanCreate, update: m.mockPlanUpdate },
+      plan: { create: m.mockPlanCreate, update: m.mockPlanUpdate, findUnique: m.mockPlanFindUnique },
       adminAuditLog: { create: m.mockAuditCreate },
     },
   };
 });
 
-import { createPlanAction, updatePlanAction } from '../app/admin/(protected)/plans/actions';
+import { archivePlanAction, createPlanAction, unarchivePlanAction, updatePlanAction } from '../app/admin/(protected)/plans/actions';
 
 function form(fields: Record<string, string>): FormData {
   const formData = new FormData();
@@ -49,6 +50,7 @@ beforeEach(() => {
   m.mockValidateSuperAdminSession.mockResolvedValue({ id: 'admin-1', email: 'admin@dossipv.tn' });
   m.mockPlanCreate.mockReset();
   m.mockPlanUpdate.mockReset();
+  m.mockPlanFindUnique.mockReset();
   m.mockAuditCreate.mockReset();
 });
 
@@ -96,6 +98,42 @@ describe('updatePlanAction', () => {
   });
 });
 
+describe('archivePlanAction / unarchivePlanAction', () => {
+  it('archives an offered plan and logs it', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-1', name: 'Premium', archivedAt: null });
+
+    await archivePlanAction('plan-1');
+
+    expect(m.mockPlanUpdate).toHaveBeenCalledWith({ where: { id: 'plan-1' }, data: { archivedAt: expect.any(Date) as unknown } });
+    expect(m.mockAuditCreate).toHaveBeenCalledWith({
+      data: { superAdminId: 'admin-1', action: 'plan.archive', targetCompanyId: null, details: { planId: 'plan-1', name: 'Premium' } },
+    });
+    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/plans');
+  });
+
+  it('unarchives an archived plan and logs it', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-1', name: 'Premium', archivedAt: new Date('2026-09-01') });
+
+    await unarchivePlanAction('plan-1');
+
+    expect(m.mockPlanUpdate).toHaveBeenCalledWith({ where: { id: 'plan-1' }, data: { archivedAt: null } });
+    expect((m.mockAuditCreate.mock.calls[0]?.[0] as { data: object }).data).toMatchObject({ action: 'plan.unarchive' });
+  });
+
+  it('writes nothing for an unknown plan or one already in the wanted state', async () => {
+    m.mockPlanFindUnique.mockResolvedValueOnce(null);
+    await archivePlanAction('nope');
+    m.mockPlanFindUnique.mockResolvedValueOnce({ id: 'plan-1', name: 'Premium', archivedAt: new Date('2026-09-01') });
+    await archivePlanAction('plan-1');
+    m.mockPlanFindUnique.mockResolvedValueOnce({ id: 'plan-2', name: 'Standard', archivedAt: null });
+    await unarchivePlanAction('plan-2');
+
+    expect(m.mockPlanUpdate).not.toHaveBeenCalled();
+    expect(m.mockAuditCreate).not.toHaveBeenCalled();
+    expect(m.mockRedirect).toHaveBeenCalledTimes(3);
+  });
+});
+
 describe('authorization', () => {
   class FakeNextRedirect extends Error {}
 
@@ -114,6 +152,9 @@ describe('authorization', () => {
   it('redirects to /admin/login and never writes a plan', async () => {
     await expect(createPlanAction(undefined, form(premium))).rejects.toThrow(FakeNextRedirect);
     await expect(updatePlanAction('plan-1', undefined, form(premium))).rejects.toThrow(FakeNextRedirect);
+    await expect(archivePlanAction('plan-1')).rejects.toThrow(FakeNextRedirect);
+    await expect(unarchivePlanAction('plan-1')).rejects.toThrow(FakeNextRedirect);
+    expect(m.mockPlanFindUnique).not.toHaveBeenCalled();
 
     expect(m.mockPlanCreate).not.toHaveBeenCalled();
     expect(m.mockPlanUpdate).not.toHaveBeenCalled();
