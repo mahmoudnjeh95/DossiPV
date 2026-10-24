@@ -32,6 +32,80 @@ function isoOrNull(date: Date | null): string | null {
   return date ? toIsoDate(date) : null;
 }
 
+type ModuleRow = Awaited<ReturnType<typeof db.pvModule.findMany>>[number];
+type InverterRow = Awaited<ReturnType<typeof db.inverter.findMany>>[number];
+
+function toCatalogModule(row: ModuleRow): CatalogModule {
+  return {
+    id: row.id,
+    brand: row.brand,
+    model: row.model,
+    homologationValidTo: isoOrNull(row.homologationValidTo),
+    pmaxW: row.pmaxW,
+    vmpV: row.vmpV,
+    impA: row.impA,
+    vocV: row.vocV,
+    iscA: row.iscA,
+    tempCoeffVocPct: row.tempCoeffVocPct,
+    tempCoeffIscPct: row.tempCoeffIscPct,
+    tempCoeffPmaxPct: row.tempCoeffPmaxPct,
+    ...(row.tempCoeffVmpPct !== null ? { tempCoeffVmpPct: row.tempCoeffVmpPct } : {}),
+    irmA: row.irmA,
+    maxSystemVoltageV: row.maxSystemVoltageV,
+    bifacial: row.bifacial,
+    ...(row.bifacialGainPct !== null ? { bifacialGainPct: row.bifacialGainPct } : {}),
+    lengthMm: row.lengthMm,
+    widthMm: row.widthMm,
+    weightKg: row.weightKg,
+    ...(row.noctC !== null ? { noctC: row.noctC } : {}),
+  };
+}
+
+/** A phase count other than 1 or 3 is one the engine cannot read: no inverter. */
+function toCatalogInverters(row: InverterRow): CatalogInverter[] {
+  if (row.phases !== 1 && row.phases !== 3) return [];
+  return [
+    {
+      id: row.id,
+      brand: row.brand,
+      model: row.model,
+      homologationValidTo: isoOrNull(row.homologationValidTo),
+      phases: row.phases,
+      pacW: row.pacW,
+      sacVA: row.sacVA,
+      vdcMaxV: row.vdcMaxV,
+      mpptMinV: row.mpptMinV,
+      mpptMaxV: row.mpptMaxV,
+      startUpV: row.startUpV,
+      mpptCount: row.mpptCount,
+      inputsPerMppt: row.inputsPerMppt,
+      idcMaxPerMpptA: row.idcMaxPerMpptA,
+      iscMaxPerMpptA: row.iscMaxPerMpptA,
+      vacNomV: row.vacNomV,
+      iacMaxA: row.iacMaxA,
+      stegApproved: row.stegApproved,
+    },
+  ];
+}
+
+/**
+ * The highlighted panels and inverters the sponsored sizing pass uses, whether or not they are in
+ * the company's library: a shared item must be published and sourced, like in `loadSizingCatalog`,
+ * and the engine must be able to read it. Ordered by id so the same set always yields the same proposals.
+ */
+export async function loadHighlightedSizingItems(
+  moduleIds: string[],
+  inverterIds: string[],
+): Promise<Pick<SizingCatalog, 'modules' | 'inverters'>> {
+  const shared = { ownerCompanyId: null, catalogStatus: 'PUBLISHED' as const, datasheetSourceUrl: { not: null } };
+  const orderBy = { id: 'asc' as const };
+  const [modules, inverters] = await Promise.all([
+    moduleIds.length > 0 ? db.pvModule.findMany({ where: { id: { in: moduleIds }, ...shared }, orderBy }) : [],
+    inverterIds.length > 0 ? db.inverter.findMany({ where: { id: { in: inverterIds }, ...shared }, orderBy }) : [],
+  ]);
+  return { modules: modules.map(toCatalogModule), inverters: inverters.flatMap(toCatalogInverters) };
+}
+
 /**
  * The equipment the sizing may propose: only the company's library, and never a shared draft.
  * Rows are ordered by id so the same library always yields the same proposals (the proposal the
@@ -51,57 +125,8 @@ export async function loadSizingCatalog(companyId: string): Promise<SizingCatalo
   ]);
 
   return {
-    modules: modules.map(
-      (row): CatalogModule => ({
-        id: row.id,
-        brand: row.brand,
-        model: row.model,
-        homologationValidTo: isoOrNull(row.homologationValidTo),
-        pmaxW: row.pmaxW,
-        vmpV: row.vmpV,
-        impA: row.impA,
-        vocV: row.vocV,
-        iscA: row.iscA,
-        tempCoeffVocPct: row.tempCoeffVocPct,
-        tempCoeffIscPct: row.tempCoeffIscPct,
-        tempCoeffPmaxPct: row.tempCoeffPmaxPct,
-        ...(row.tempCoeffVmpPct !== null ? { tempCoeffVmpPct: row.tempCoeffVmpPct } : {}),
-        irmA: row.irmA,
-        maxSystemVoltageV: row.maxSystemVoltageV,
-        bifacial: row.bifacial,
-        ...(row.bifacialGainPct !== null ? { bifacialGainPct: row.bifacialGainPct } : {}),
-        lengthMm: row.lengthMm,
-        widthMm: row.widthMm,
-        weightKg: row.weightKg,
-        ...(row.noctC !== null ? { noctC: row.noctC } : {}),
-      }),
-    ),
-    inverters: inverters.flatMap((row): CatalogInverter[] =>
-      row.phases === 1 || row.phases === 3
-        ? [
-            {
-              id: row.id,
-              brand: row.brand,
-              model: row.model,
-              homologationValidTo: isoOrNull(row.homologationValidTo),
-              phases: row.phases,
-              pacW: row.pacW,
-              sacVA: row.sacVA,
-              vdcMaxV: row.vdcMaxV,
-              mpptMinV: row.mpptMinV,
-              mpptMaxV: row.mpptMaxV,
-              startUpV: row.startUpV,
-              mpptCount: row.mpptCount,
-              inputsPerMppt: row.inputsPerMppt,
-              idcMaxPerMpptA: row.idcMaxPerMpptA,
-              iscMaxPerMpptA: row.iscMaxPerMpptA,
-              vacNomV: row.vacNomV,
-              iacMaxA: row.iacMaxA,
-              stegApproved: row.stegApproved,
-            },
-          ]
-        : [],
-    ),
+    modules: modules.map(toCatalogModule),
+    inverters: inverters.flatMap(toCatalogInverters),
     dcSwitches: dcSwitches.map((row) => ({
       id: row.id,
       brand: row.brand,

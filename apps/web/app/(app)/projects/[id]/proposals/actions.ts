@@ -9,6 +9,7 @@ import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input'
 import { storeAnnexFiles } from '../../../../../lib/annex-upload';
 import { CLIENT_NAME_PLACEHOLDER } from '../../../../../lib/client-identity';
 import { FormReader } from '../../../../../lib/form-reader';
+import { recordProductStat } from '../../../../../lib/highlight';
 import { computeProjectProposals, type EquipmentSelection } from '../../../../../lib/project-proposals';
 import { structureDataFor, EARTHING_FIXED_VALUES } from '../../../../../lib/section-defaults';
 
@@ -26,6 +27,7 @@ export async function applyProposalAction(
   projectId: string,
   proposalKey: string,
   selection: EquipmentSelection = {},
+  sponsored = false,
 ): Promise<{ error: string } | undefined> {
   let owned: Awaited<ReturnType<typeof requireOwnedProject>>;
   try {
@@ -43,7 +45,13 @@ export async function applyProposalAction(
 
   const computed = await computeProjectProposals(project, new Date(), selection);
   if (!computed.ok && computed.blockedReasons.length > 0) return { error: computed.blockedReasons.join(' ') };
-  const proposal = computed.ok ? computed.result.proposals.find((p) => p.key === proposalKey) : undefined;
+  // The sponsored proposal can share its key with a normal one: `sponsored` says which list it comes from.
+  const sponsoredProposal = computed.ok && sponsored && computed.sponsored?.proposal.key === proposalKey ? computed.sponsored : undefined;
+  const proposal = sponsored
+    ? sponsoredProposal?.proposal
+    : computed.ok
+      ? computed.result.proposals.find((p) => p.key === proposalKey)
+      : undefined;
   if (!computed.ok || !proposal) return { error: PROPOSALS_CHANGED };
   const { context } = computed;
   const { candidate } = proposal;
@@ -86,6 +94,20 @@ export async function applyProposalAction(
   };
 
   await db.$transaction(async (tx) => {
+    // A sponsored proposal may use a panel or inverter the installer does not have yet (shared, published and
+    // sourced by construction, like addToLibraryAction requires): it joins the library, then the proposal applies as usual.
+    if (sponsoredProposal) {
+      await tx.libraryItem.upsert({
+        where: { companyId_pvModuleId: { companyId: owned.companyId, pvModuleId: candidate.module.id } },
+        create: { companyId: owned.companyId, kind: 'PV_MODULE', pvModuleId: candidate.module.id },
+        update: {},
+      });
+      await tx.libraryItem.upsert({
+        where: { companyId_inverterId: { companyId: owned.companyId, inverterId: candidate.inverter.id } },
+        create: { companyId: owned.companyId, kind: 'INVERTER', inverterId: candidate.inverter.id },
+        update: {},
+      });
+    }
     const existingArray = await tx.projectArrayConfig.findUnique({ where: { projectId }, select: { id: true } });
     if (existingArray) {
       await tx.projectArrayMppt.deleteMany({ where: { arrayInverter: { arrayConfigId: existingArray.id } } });
@@ -154,6 +176,14 @@ export async function applyProposalAction(
     await tx.projectSimulation.upsert({ where: { projectId }, create: { projectId, ...simulation }, update: simulation });
     await tx.project.update({ where: { id: projectId }, data: { flowStep: 'LOCATIONS' } });
   });
+
+  if (sponsoredProposal) {
+    try {
+      await recordProductStat(sponsoredProposal.productIds, 'applied');
+    } catch {
+      // Statistics never block an installer who has just applied a proposal.
+    }
+  }
 
   redirect(`/projects/${projectId}/locations`);
 }
