@@ -5,7 +5,8 @@ export { MIN_PASSWORD_LENGTH } from '@dossipv/auth';
 import { MIN_PASSWORD_LENGTH } from '@dossipv/auth';
 /** bcrypt ignores everything past 72 bytes, so a longer password would not be what it seems. */
 const MAX_PASSWORD_LENGTH = 72;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** No whitespace, comma, semicolon, angle bracket, quote or bracket: nodemailer would read those as several recipients or a display name. */
+export const EMAIL_PATTERN = /^[^\s@,;<>"'()\[\]]+@[^\s@,;<>"'()\[\]]+\.[^\s@,;<>"'()\[\]]+$/;
 
 /** A login email as stored: trimmed and lower-cased, so one address can never become two accounts. */
 export function readLoginEmail(reader: FormReader, name: string, label: string): string {

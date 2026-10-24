@@ -10,6 +10,8 @@ export type SponsorshipActionState = { error: string } | undefined;
 /** An installer accepts a pending invitation addressed to one of its users (the Paramètres block). */
 export async function acceptPendingInvitationAction(invitationId: string): Promise<SponsorshipActionState> {
   const user = await requireInstallerUser();
+  // Changing who sponsors the company is the owner's decision, never a support session's.
+  if (user.impersonatedBySuperAdminId || user.role !== 'OWNER') return { error: 'Seul le responsable du compte peut accepter une invitation.' };
   const invitation = await db.supplierInvitation.findUnique({ where: { id: invitationId } });
   const addressedToUs = invitation !== null && normalizeEmail(invitation.email) === normalizeEmail(user.email);
   if (!invitation || !addressedToUs || invitation.acceptedAt || invitation.expiresAt <= new Date()) {

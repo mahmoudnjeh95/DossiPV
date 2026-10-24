@@ -106,7 +106,7 @@ const GOOD_FORM = {
 beforeEach(() => {
   vi.clearAllMocks();
   m.mockGet.mockReturnValue({ value: 'token' });
-  m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A' });
+  m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER' });
   m.mockRedirect.mockImplementation((url: string) => {
     throw new Error(`NEXT_REDIRECT:${url}`);
   });
@@ -242,6 +242,17 @@ describe('acceptPendingInvitationAction (Paramètres)', () => {
     m.invitationFindUnique.mockResolvedValue(invitationRow({ email: 'a@b.com' }));
     expect(await acceptPendingInvitationAction('inv-1')).toBeUndefined();
     expect(m.companyUpdate).toHaveBeenCalledWith({ where: { id: 'company-1' }, data: { sponsorCompanyId: 'supplier-1' } });
+  });
+});
+
+describe('acceptPendingInvitationAction (who may accept)', () => {
+  it('refuses a support session and a non-owner', async () => {
+    m.invitationFindUnique.mockResolvedValue(invitationRow({ email: 'a@b.com' }));
+    m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER', impersonatedBySuperAdminId: 'admin-1' });
+    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) });
+    m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'MEMBER' });
+    expect(await acceptPendingInvitationAction('inv-1')).toEqual({ error: expect.any(String) });
+    expect(m.companyUpdate).not.toHaveBeenCalled();
   });
 });
 
