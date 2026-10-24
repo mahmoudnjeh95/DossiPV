@@ -44,6 +44,15 @@ vi.mock('@dossipv/db', async () => {
     db: { ...actual.db, project: { findFirst: m.mockProjectFindFirst }, $transaction: m.mockTransaction },
   };
 });
+// No highlighted product here: the sponsored pass has its own tests (highlighted-proposals.test.ts).
+vi.mock('../lib/highlight', async () => {
+  const actual = await vi.importActual<typeof import('../lib/highlight')>('../lib/highlight');
+  return { ...actual, loadHighlightedProducts: vi.fn().mockResolvedValue({ moduleIds: [], inverterIds: [], suppliers: {}, productIds: {} }) };
+});
+vi.mock('../lib/sponsorship', async () => {
+  const actual = await vi.importActual<typeof import('../lib/sponsorship')>('../lib/sponsorship');
+  return { ...actual, isSponsored: vi.fn().mockResolvedValue(false) };
+});
 vi.mock('../lib/specific-yield', () => ({ getSpecificYield: m.mockGetSpecificYield }));
 vi.mock('../lib/sizing-catalog', async () => {
   const actual = await vi.importActual<typeof import('../lib/sizing-catalog')>('../lib/sizing-catalog');

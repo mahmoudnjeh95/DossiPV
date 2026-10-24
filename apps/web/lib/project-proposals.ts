@@ -1,6 +1,8 @@
-import { proposeInstallations, type ProposeResult, type SizingContext } from '@dossipv/engine';
+import { proposeInstallations, type Proposal, type ProposeResult, type SizingCatalog, type SizingContext } from '@dossipv/engine';
+import { loadHighlightedProducts } from './highlight';
 import { toIsoDate, type ProjectForEngine } from './project-engine-input';
-import { loadSizingCatalog, missingLibraryKinds } from './sizing-catalog';
+import { isSponsored } from './sponsorship';
+import { loadHighlightedSizingItems, loadSizingCatalog, missingLibraryKinds } from './sizing-catalog';
 import { getSpecificYield } from './specific-yield';
 
 /** Line reactance used for every proposal (the cabling form's default). */
@@ -21,9 +23,19 @@ export interface EquipmentChoice {
   label: string;
 }
 
+/** The "Proposition sponsorisée": the RECOMMENDED result of the sizing run on the highlighted products. */
+export interface SponsoredProposal {
+  proposal: Proposal;
+  /** The suppliers highlighting its panel or inverter, for the label. */
+  suppliers: string[];
+  /** Their SupplierProduct ids, to count the display and the application. */
+  productIds: string[];
+}
+
 export type ProjectProposalsResult =
   | {
       ok: true;
+      sponsored?: SponsoredProposal;
       result: ProposeResult;
       context: SizingContext;
       yieldWarning: string | null;
@@ -110,5 +122,63 @@ export async function computeProjectProposals(
     inverters: inverters.length > 0 ? inverters : catalog.inverters,
   };
 
-  return { ok: true, result: proposeInstallations(narrowed, context), context, yieldWarning: specificYield.warning, choices };
+  const sponsored = await computeSponsoredProposal(project.companyId, catalog, selection, context);
+
+  return {
+    ok: true,
+    result: proposeInstallations(narrowed, context),
+    context,
+    yieldWarning: specificYield.warning,
+    choices,
+    ...(sponsored ? { sponsored } : {}),
+  };
+}
+
+/**
+ * The sponsored pass (spec §6.2) for a direct installer: panels and inverters are the products
+ * highlighted right now (in the installer's library or not), every other kind comes from the library.
+ * Highlighted products from several suppliers go through ONE sizing, so the best technical fit wins
+ * and no supplier buys a ranking against another. Only a RECOMMENDED result is returned: the engine
+ * checks are the same as for any proposal, and a failing pass shows nothing sponsored.
+ * A panel or inverter the installer fixed is respected only when it is highlighted, else the pass is skipped.
+ */
+async function computeSponsoredProposal(
+  companyId: string,
+  catalog: SizingCatalog,
+  selection: EquipmentSelection,
+  context: SizingContext,
+): Promise<SponsoredProposal | null> {
+  try {
+    if (await isSponsored(companyId)) return null;
+    const highlighted = await loadHighlightedProducts();
+    if (highlighted.moduleIds.length === 0 && highlighted.inverterIds.length === 0) return null;
+    if (selection.moduleId && !highlighted.moduleIds.includes(selection.moduleId)) return null;
+    if (selection.inverterId && !highlighted.inverterIds.includes(selection.inverterId)) return null;
+
+    const items = await loadHighlightedSizingItems(
+      selection.moduleId ? [selection.moduleId] : highlighted.moduleIds,
+      selection.inverterId ? [selection.inverterId] : highlighted.inverterIds,
+    );
+    if (items.modules.length === 0 && items.inverters.length === 0) return null;
+    // A kind nobody highlights (or whose highlighted items the engine cannot read) stays the library's.
+    const result = proposeInstallations(
+      {
+        ...catalog,
+        modules: items.modules.length > 0 ? items.modules : catalog.modules,
+        inverters: items.inverters.length > 0 ? items.inverters : catalog.inverters,
+      },
+      context,
+    );
+    const proposal = result.proposals.find((p) => p.kinds.includes('RECOMMENDED'));
+    if (!proposal) return null;
+
+    const ids = [proposal.candidate.module.id, proposal.candidate.inverter.id];
+    const suppliers = [...new Set(ids.flatMap((id) => highlighted.suppliers[id] ?? []))];
+    // Neither its panel nor its inverter is highlighted: the library's own result, nothing to label as sponsored.
+    if (suppliers.length === 0) return null;
+    return { proposal, suppliers, productIds: [...new Set(ids.flatMap((id) => highlighted.productIds[id] ?? []))] };
+  } catch {
+    // The sponsored proposal is a bonus: a failure here never hides the installer's own proposals.
+    return null;
+  }
 }

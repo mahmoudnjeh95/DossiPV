@@ -4,6 +4,9 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../../../../layout';
 import { equipmentChoiceScope, isClientIdentityLocked } from '../../../../../../lib/project-access';
 import { acBreakerRating } from '../../../../../../lib/labels';
+import { highlightedFirst, loadHighlightedProducts } from '../../../../../../lib/highlight';
+import { SPONSORED_OPTION_PREFIX } from '../../../../../../components/sponsored-badge';
+import { isSponsored } from '../../../../../../lib/sponsorship';
 import { ClientForm } from '../forms/client-form';
 import { SiteForm } from '../forms/site-form';
 import { ProtectionsForm } from '../forms/protections-form';
@@ -74,10 +77,20 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
       body = <SiteForm projectId={project.id} site={project.site} />;
       break;
     case 'array': {
-      const [modules, inverters] = await Promise.all([
+      const [foundModules, foundInverters, highlighted] = await Promise.all([
         db.pvModule.findMany({ where: choiceScope(project.arrayConfig?.moduleId), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
         db.inverter.findMany({ where: choiceScope(...(project.arrayConfig?.inverters.map((i) => i.inverterId) ?? [])), include: inLibrary, orderBy: [{ brand: 'asc' }, { model: 'asc' }] }),
+        // Highlighted products of the library come first, for direct installers only (spec §6.1).
+        (await isSponsored(companyId)) ? null : loadHighlightedProducts(),
       ]);
+      const inLib = (item: { libraryItems: unknown[] }): boolean => item.libraryItems.length > 0;
+      const sponsoredIds = (ids: string[] | undefined, items: { id: string; libraryItems: unknown[] }[]): string[] =>
+        (ids ?? []).filter((id) => items.some((item) => item.id === id && inLib(item)));
+      const moduleIds = sponsoredIds(highlighted?.moduleIds, foundModules);
+      const inverterIds = sponsoredIds(highlighted?.inverterIds, foundInverters);
+      const modules = highlightedFirst(foundModules, moduleIds);
+      const inverters = highlightedFirst(foundInverters, inverterIds);
+      const star = (ids: string[], id: string, label: string): string => (ids.includes(id) ? `${SPONSORED_OPTION_PREFIX}${label}` : label);
       body = (
         <ArrayForm
           projectId={project.id}
@@ -86,7 +99,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           sitePhases={project.site?.phases ?? null}
           modules={modules.map((m) => ({
             id: m.id,
-            label: tag(`${m.brand} ${m.model} — ${m.pmaxW} Wc`, m),
+            label: star(moduleIds, m.id, tag(`${m.brand} ${m.model} — ${m.pmaxW} Wc`, m)),
             isPrivate: m.ownerCompanyId !== null,
             spec: {
               pmaxW: m.pmaxW, vmpV: m.vmpV, impA: m.impA, vocV: m.vocV, iscA: m.iscA,
@@ -97,7 +110,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
           }))}
           inverters={inverters.map((i) => ({
             id: i.id,
-            label: tag(`${i.brand} ${i.model} — ${i.pacW / 1000} kW, ${i.phases === 3 ? 'tri' : 'mono'}`, i),
+            label: star(inverterIds, i.id, tag(`${i.brand} ${i.model} — ${i.pacW / 1000} kW, ${i.phases === 3 ? 'tri' : 'mono'}`, i)),
             isPrivate: i.ownerCompanyId !== null,
             spec: {
               phases: i.phases === 3 ? 3 : 1,

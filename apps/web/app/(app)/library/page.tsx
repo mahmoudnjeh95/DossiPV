@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { requireAuthenticatedCompanyUser } from '../layout';
-import { loadSections } from './library-data';
+import { loadSections, withHighlights } from './library-data';
+import { loadHighlightedProducts } from '../../../lib/highlight';
+import { SponsoredBadge } from '../../../components/sponsored-badge';
 import { LibraryTabs } from './library-tabs';
 import { AddAllButton, AddButton, DeleteOwnButton, RemoveButton } from './library-buttons';
 import { ownEquipmentSlug } from './own-equipment-kinds';
@@ -29,7 +31,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
   ]);
   const sponsored = sponsor !== null;
   // A sponsored installer cannot add panels or inverters: they are not offered from the shared catalog.
-  const sections = sponsored && catalogue ? allSections.filter((s) => !isLocked(s.kind)) : allSections;
+  const visible = sponsored && catalogue ? allSections.filter((s) => !isLocked(s.kind)) : allSections;
+  // Highlighted panels and inverters come first in the shared catalog, for direct installers only.
+  const sections = catalogue && !sponsored ? withHighlights(visible, await loadHighlightedProducts()) : visible;
   const total = sections.reduce((sum, s) => sum + s.rows.length, 0);
 
   return (
@@ -80,6 +84,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                   <tr key={r.itemId}>
                     <td>
                       {r.label} {r.own && <span className="badge">Mon matériel</span>}
+                      {r.sponsoredBy && <SponsoredBadge suppliers={r.sponsoredBy} />}
                     </td>
                     <td>{r.figures}</td>
                     {catalogue ? (

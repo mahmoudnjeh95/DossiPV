@@ -20,12 +20,15 @@ export function ProposalCard({
   proposal,
   selection = {},
   choices,
+  sponsoredBy,
 }: {
   projectId: string;
   proposal: Proposal;
   selection?: EquipmentSelection;
   /** The library items the installer may swap in; without them the equipment is shown as plain text. */
   choices?: { modules: EquipmentChoice[]; inverters: EquipmentChoice[] };
+  /** The suppliers highlighting this proposal's equipment: set means "Proposition sponsorisée", always labelled as such. */
+  sponsoredBy?: string[];
 }): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -44,14 +47,27 @@ export function ProposalCard({
     if (!window.confirm('Le client a validé cette installation ?')) return;
     setError(null);
     startTransition(async () => {
-      const result = await applyProposalAction(projectId, proposal.key, selection);
+      const result = await applyProposalAction(projectId, proposal.key, selection, sponsoredBy !== undefined);
       if (result?.error) setError(result.error);
     });
   }
 
   return (
     <section className="card">
+      {sponsoredBy && (
+        <>
+          <h2>Proposition sponsorisée</h2>
+          <p className="muted">
+            Mis en avant par {sponsoredBy.join(', ')} ; les vérifications techniques sont identiques.
+          </p>
+        </>
+      )}
       <div className="actions" style={{ marginBottom: 8 }}>
+        {sponsoredBy && (
+          <span className="badge badge-warn" title={`Mis en avant par ${sponsoredBy.join(', ')}`}>
+            Sponsorisé
+          </span>
+        )}
         {proposal.kinds.map((kind) => (
           <span key={kind} className={kind === 'RECOMMENDED' ? 'badge badge-ok' : 'badge'}>
             {KIND_LABELS[kind]}

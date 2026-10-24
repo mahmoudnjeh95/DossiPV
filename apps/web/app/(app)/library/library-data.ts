@@ -2,6 +2,7 @@ import { db } from '@dossipv/db';
 import type { EquipmentKind } from '@dossipv/db';
 import { provenanceScope } from '../../../lib/project-access';
 import { acBreakerRating } from '../../../lib/labels';
+import { highlightedFirst, type HighlightedProducts } from '../../../lib/highlight';
 
 export interface LibraryRow {
   itemId: string;
@@ -12,6 +13,8 @@ export interface LibraryRow {
   priceTnd: number;
   /** The company's own item (not from the shared catalog): it may edit or delete it. */
   own: boolean;
+  /** The suppliers highlighting this panel or inverter ("Sponsorisé" badge); absent when it is not highlighted. */
+  sponsoredBy?: string[];
 }
 
 export interface LibrarySection {
@@ -63,6 +66,23 @@ function row(item: Owned, figures: string): LibraryRow {
     priceTnd: item.libraryItems[0]?.purchasePriceTnd ?? 0,
     own: item.ownerCompanyId !== null,
   };
+}
+
+/**
+ * Highlighted panels and inverters (spec §6.1) come first in their section and carry the suppliers
+ * that highlight them; every other row keeps its order. Direct installers only: the caller passes
+ * nothing for a sponsored installer.
+ */
+export function withHighlights(sections: LibrarySection[], highlighted: HighlightedProducts): LibrarySection[] {
+  const idsByKind: Partial<Record<EquipmentKind, string[]>> = { PV_MODULE: highlighted.moduleIds, INVERTER: highlighted.inverterIds };
+  return sections.map((section) => {
+    const ids = idsByKind[section.kind];
+    if (!ids || ids.length === 0) return section;
+    const rows = highlightedFirst(section.rows.map((r) => ({ ...r, id: r.itemId })), ids).map(({ id, ...r }) =>
+      ids.includes(id) ? { ...r, sponsoredBy: highlighted.suppliers[id] ?? [] } : r,
+    );
+    return { ...section, rows };
+  });
 }
 
 /**

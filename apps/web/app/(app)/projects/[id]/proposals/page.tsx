@@ -4,6 +4,7 @@ import { db } from '@dossipv/db';
 import type { StegBillReading } from '@dossipv/bill-reader';
 import { requireAuthenticatedCompanyUser } from '../../../layout';
 import { PROJECT_ENGINE_INCLUDE } from '../../../../../lib/project-engine-input';
+import { recordProductStat } from '../../../../../lib/highlight';
 import { computeProjectProposals } from '../../../../../lib/project-proposals';
 import { ProposalCard } from './proposal-card';
 import { CorrectionsForm } from './corrections-form';
@@ -48,6 +49,9 @@ export default async function ProposalsPage({
   const missingLibraryKinds = sponsorMessage ? allMissingKinds.filter((kind) => !isSponsorLockedLabel(kind)) : allMissingKinds;
   const blockedReasons = computed.ok ? [] : computed.blockedReasons;
   const proposals = computed.ok ? computed.result.proposals : [];
+  const sponsored = computed.ok ? computed.sponsored : undefined;
+  // Counted once per page render, aggregates only (no installer recorded).
+  if (sponsored) await recordProductStat(sponsored.productIds, 'shown').catch(() => undefined);
 
   const identityNeeds = client
     ? clientIdentityNeeds({ fullName: client.fullName, reading })
@@ -185,8 +189,17 @@ export default async function ProposalsPage({
         </section>
       )}
 
-      {computed.ok && proposals.length > 0 && (
+      {computed.ok && (proposals.length > 0 || sponsored) && (
         <div className="card-grid" style={{ alignItems: 'start' }}>
+          {sponsored && (
+            <ProposalCard
+              key={`sponsored|${sponsored.proposal.key}`}
+              projectId={id}
+              proposal={sponsored.proposal}
+              selection={selection}
+              sponsoredBy={sponsored.suppliers}
+            />
+          )}
           {proposals.map((proposal) => (
             <ProposalCard key={proposal.key} projectId={id} proposal={proposal} selection={selection} choices={computed.choices} />
           ))}

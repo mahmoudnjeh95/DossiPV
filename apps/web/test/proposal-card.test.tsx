@@ -44,6 +44,21 @@ describe('ProposalCard', () => {
     expect(screen.queryByText(/Économie estimée/)).toBeNull();
   });
 
+  it('applies a sponsored proposal as such, and a normal one not', async () => {
+    const { applyProposalAction } = await import('../app/(app)/projects/[id]/proposals/actions');
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const { fireEvent } = await import('@testing-library/react');
+
+    render(<ProposalCard projectId="p1" proposal={proposal()} sponsoredBy={['SolarTN']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Choisir cette installation' }));
+    expect(applyProposalAction).toHaveBeenLastCalledWith('p1', 'm1|i1|8x1', {}, true);
+
+    cleanup();
+    render(<ProposalCard projectId="p1" proposal={proposal()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Choisir cette installation' }));
+    expect(applyProposalAction).toHaveBeenLastCalledWith('p1', 'm1|i1|8x1', {}, false);
+  });
+
   it('shows one badge per objective won', () => {
     render(<ProposalCard projectId="p1" proposal={proposal({ kinds: ['RECOMMENDED', 'ECONOMIC'] })} />);
     expect(screen.getByText('Recommandée')).toBeTruthy();
