@@ -11,18 +11,58 @@ export interface PlanActionState {
 }
 
 const TIERS = ['STANDARD', 'PREMIUM'] as const;
+const AUDIENCES = ['INSTALLER', 'SUPPLIER'] as const;
 
-function readPlan(
-  formData: FormData,
-): { error: string } | { name: string; tier: (typeof TIERS)[number]; monthlyDossierLimit: number; priceTnd: number; isTrial: boolean } {
+interface PlanData {
+  name: string;
+  tier: (typeof TIERS)[number];
+  monthlyDossierLimit: number;
+  priceTnd: number;
+  isTrial: boolean;
+  audience: (typeof AUDIENCES)[number];
+  maxSponsoredInstallers: number | null;
+  dossiersPerInstallerPerMonth: number;
+  includesHighlight: boolean;
+}
+
+/**
+ * An installer plan has a tier, a monthly limit and maybe the trial flag; a supplier pack has a
+ * price, a number of installer accounts, a per-installer monthly quota and the highlight flag. The
+ * fields that do not apply are stored neutral (tier STANDARD and limit 0 for a pack; no pack
+ * figures for an installer plan), whatever the form sent.
+ */
+function readPlan(formData: FormData): { error: string } | PlanData {
   const reader = new FormReader(formData);
-  const plan = {
-    name: reader.text('name', 'Nom', 100),
-    tier: reader.oneOf('tier', 'Niveau', TIERS),
-    monthlyDossierLimit: reader.integer('monthlyDossierLimit', 'Dossiers par mois', { min: 1, max: 1000 }),
-    priceTnd: reader.number('priceTnd', 'Prix (TND)', { min: 0, max: 100_000 }),
-    isTrial: reader.boolean('isTrial'),
-  };
+  const audience = reader.optionalOneOf('audience', 'Public', AUDIENCES) ?? 'INSTALLER';
+  const name = reader.text('name', 'Nom', 100);
+  const priceTnd = reader.number('priceTnd', 'Prix (TND)', { min: 0, max: 100_000 });
+  let plan: PlanData;
+  if (audience === 'SUPPLIER') {
+    plan = {
+      name,
+      tier: 'STANDARD',
+      monthlyDossierLimit: 0,
+      priceTnd,
+      isTrial: false,
+      audience,
+      maxSponsoredInstallers: reader.integer('maxSponsoredInstallers', 'Nombre de comptes installateurs', { min: 1, max: 10_000 }),
+      dossiersPerInstallerPerMonth:
+        reader.optionalInteger('dossiersPerInstallerPerMonth', 'Dossiers par installateur et par mois', { min: 1, max: 1000 }) ?? 5,
+      includesHighlight: reader.boolean('includesHighlight'),
+    };
+  } else {
+    plan = {
+      name,
+      tier: reader.oneOf('tier', 'Niveau', TIERS),
+      monthlyDossierLimit: reader.integer('monthlyDossierLimit', 'Dossiers par mois', { min: 1, max: 1000 }),
+      priceTnd,
+      isTrial: reader.boolean('isTrial'),
+      audience,
+      maxSponsoredInstallers: null,
+      dossiersPerInstallerPerMonth: 5,
+      includesHighlight: false,
+    };
+  }
   return reader.hasErrors ? { error: reader.errorMessage() } : plan;
 }
 
@@ -73,6 +113,12 @@ export async function updatePlanAction(
 
   if (plan.isTrial && (await otherTrialExists(planId))) {
     return { error: SECOND_TRIAL_ERROR };
+  }
+
+  // A plan keeps its audience once companies hold it: an installer plan never becomes a pack under them.
+  const existing = await db.plan.findUnique({ where: { id: planId }, include: { _count: { select: { subscriptions: true } } } });
+  if (existing && existing.audience !== plan.audience && existing._count.subscriptions > 0) {
+    return { error: 'Ce plan a déjà des sociétés abonnées : son public ne peut plus changer.' };
   }
 
   await db.plan.update({ where: { id: planId }, data: plan });

@@ -1,9 +1,11 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS, TIER_LABELS } from '../../../../../lib/labels';
-import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction } from './actions';
+import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction, clearOption3dAction } from './actions';
+import { Option3dForm } from './option3d-form';
+import { getOption3dPriceTnd } from '../../../../../lib/platform-settings';
 import { RecordPaymentForm } from './record-payment-form';
 import { AddUserForm, AssignPlanForm, ResetPasswordForm } from './account-forms';
 import { ChangeEmailForm, UserActionButton } from './user-forms';
@@ -18,7 +20,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
 
   const { id } = await params;
 
-  const [company, plans] = await Promise.all([
+  const [company, plans, option3dPrice] = await Promise.all([
     db.company.findUnique({
       where: { id },
       include: {
@@ -28,12 +30,20 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         adminAuditLogs: { orderBy: { createdAt: 'desc' }, take: AUDIT_LOG_ROWS, include: { superAdmin: { select: { email: true } } } },
       },
     }),
-    db.plan.findMany({ orderBy: { priceTnd: 'asc' } }),
+    db.plan.findMany({ where: { audience: 'INSTALLER' }, orderBy: { priceTnd: 'asc' } }),
+    getOption3dPriceTnd(),
   ]);
 
   if (!company) {
     notFound();
   }
+  // The admin actions shared with suppliers come back here: a supplier has its own page.
+  if (company.kind === 'SUPPLIER') {
+    redirect(`/admin/fournisseurs/${company.id}`);
+  }
+  const sponsor = company.sponsorCompanyId
+    ? await db.company.findUnique({ where: { id: company.sponsorCompanyId }, select: { id: true, name: true } })
+    : null;
 
   const boundSuspend = suspendSubscriptionAction.bind(null, company.id);
   const boundActivate = activateSubscriptionAction.bind(null, company.id);
@@ -50,7 +60,14 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
 
   return (
     <main>
-      <h1>{company.name}</h1>
+      <h1>
+        {company.name}{' '}
+        {sponsor && (
+          <span className="badge">
+            Parrainé par <Link href={`/admin/fournisseurs/${sponsor.id}`}>{sponsor.name}</Link>
+          </span>
+        )}
+      </h1>
       <section>
         <h2>Informations</h2>
         <p>Adresse : {company.address}</p>
@@ -115,6 +132,34 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         )}
         <AssignPlanForm companyId={company.id} plans={planOptions} currentPlanId={currentPlanId} onTrial={company.subscription?.plan.isTrial ?? false} />
       </section>
+
+      {sponsor ? (
+        <section>
+          <h2>Option 3D</h2>
+          <p>Son plan Standard est payé par {sponsor.name}. La vue 3D est une option payante propre à l&apos;installateur.</p>
+          <p>
+            {company.subscription?.option3dUntil && company.subscription.option3dUntil > new Date()
+              ? `Option 3D active jusqu'au ${company.subscription.option3dUntil.toLocaleDateString('fr-FR')}`
+              : company.subscription?.option3dUntil
+                ? `Option 3D terminée le ${company.subscription.option3dUntil.toLocaleDateString('fr-FR')}`
+                : 'Pas d’option 3D'}
+            {option3dPrice !== null && ` (${option3dPrice.toFixed(3)} TND / mois)`}
+          </p>
+          <Option3dForm companyId={company.id} />
+          {company.subscription?.option3dUntil && (
+            <form action={clearOption3dAction.bind(null, company.id)}>
+              <button type="submit" className="secondary small">
+                Supprimer l&apos;option 3D
+              </button>
+            </form>
+          )}
+        </section>
+      ) : (
+        <section>
+          <h2>Option 3D</h2>
+          <p className="hint">L&apos;option 3D est réservée aux installateurs parrainés. Un installateur direct passe au plan Premium, qui inclut la 3D.</p>
+        </section>
+      )}
 
       {company.subscription && (
         <section>

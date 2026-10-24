@@ -42,6 +42,18 @@ function form(fields: Record<string, string>): FormData {
 }
 
 const premium = { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: '20', priceTnd: '349.5' };
+/** What an installer plan stores: the pack columns stay neutral. */
+const premiumData = {
+  name: 'Premium',
+  tier: 'PREMIUM',
+  monthlyDossierLimit: 20,
+  priceTnd: 349.5,
+  isTrial: false,
+  audience: 'INSTALLER',
+  maxSponsoredInstallers: null,
+  dossiersPerInstallerPerMonth: 5,
+  includesHighlight: false,
+};
 
 beforeEach(() => {
   m.mockGet.mockReset();
@@ -63,7 +75,7 @@ describe('createPlanAction', () => {
 
     await createPlanAction(undefined, form(premium));
 
-    const plan = { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 20, priceTnd: 349.5, isTrial: false };
+    const plan = { ...premiumData, monthlyDossierLimit: 20 };
     expect(m.mockPlanCreate).toHaveBeenCalledWith({ data: plan });
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: { superAdminId: 'admin-1', action: 'plan.create', targetCompanyId: null, details: { planId: 'plan-1', ...plan } },
@@ -86,6 +98,65 @@ describe('createPlanAction', () => {
 
     expect(result?.error).toContain('nombre entier');
     expect(m.mockPlanCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe('supplier packs', () => {
+  const pack = { audience: 'SUPPLIER', name: 'Pack 50', priceTnd: '500', maxSponsoredInstallers: '50', dossiersPerInstallerPerMonth: '8', includesHighlight: 'on' };
+
+  it('stores the pack fields with neutral tier and monthly limit, ignoring installer-only fields', async () => {
+    m.mockPlanCreate.mockResolvedValue({ id: 'pack-1' });
+
+    await createPlanAction(undefined, form({ ...pack, tier: 'PREMIUM', monthlyDossierLimit: '99', isTrial: 'on' }));
+
+    expect(m.mockPlanCreate).toHaveBeenCalledWith({
+      data: {
+        name: 'Pack 50',
+        tier: 'STANDARD',
+        monthlyDossierLimit: 0,
+        priceTnd: 500,
+        isTrial: false,
+        audience: 'SUPPLIER',
+        maxSponsoredInstallers: 50,
+        dossiersPerInstallerPerMonth: 8,
+        includesHighlight: true,
+      },
+    });
+    expect(m.mockPlanFindFirst).not.toHaveBeenCalled();
+    expect((m.mockAuditCreate.mock.calls[0]?.[0] as { data: object }).data).toMatchObject({ action: 'plan.create' });
+  });
+
+  it('defaults to 5 dossiers per installer and no highlight', async () => {
+    m.mockPlanCreate.mockResolvedValue({ id: 'pack-1' });
+
+    await createPlanAction(undefined, form({ audience: 'SUPPLIER', name: 'Pack 100', priceTnd: '900', maxSponsoredInstallers: '100' }));
+
+    expect(m.mockPlanCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ dossiersPerInstallerPerMonth: 5, includesHighlight: false, maxSponsoredInstallers: 100 }) as unknown,
+    });
+  });
+
+  it('requires the number of installer accounts and refuses a zero quota', async () => {
+    const result = await createPlanAction(undefined, form({ ...pack, maxSponsoredInstallers: '', dossiersPerInstallerPerMonth: '0' }));
+
+    expect(result?.error).toContain('Nombre de comptes installateurs');
+    expect(result?.error).toContain('Dossiers par installateur');
+    expect(m.mockPlanCreate).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unknown audience', async () => {
+    const result = await createPlanAction(undefined, form({ ...premium, audience: 'ADMIN' }));
+
+    expect(result?.error).toContain('Public');
+  });
+
+  it('refuses to switch the audience of a plan companies already hold', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-1', audience: 'INSTALLER', _count: { subscriptions: 2 } });
+
+    const result = await updatePlanAction('plan-1', undefined, form(pack));
+
+    expect(result?.error).toContain('public ne peut plus changer');
+    expect(m.mockPlanUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -141,7 +212,7 @@ describe('updatePlanAction', () => {
 
     expect(m.mockPlanUpdate).toHaveBeenCalledWith({
       where: { id: 'plan-1' },
-      data: { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 25, priceTnd: 349.5, isTrial: false },
+      data: { ...premiumData, monthlyDossierLimit: 25 },
     });
     expect((m.mockAuditCreate.mock.calls[0]?.[0] as { data: object }).data).toMatchObject({ action: 'plan.update', details: { planId: 'plan-1', monthlyDossierLimit: 25 } });
   });

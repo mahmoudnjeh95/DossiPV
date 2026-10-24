@@ -14,16 +14,20 @@ export interface DashboardStats {
   dossiersThisMonth: number;
   claudeCostThisMonthUsd: number;
   totalRevenueTnd: number;
+  suppliers: number;
+  sponsoredInstallers: number;
 }
 
 export async function computeDashboardStats(now: Date): Promise<DashboardStats> {
   const monthStart = getMonthStart(now);
 
-  const [activeInstallers, dossiersThisMonth, claudeCostAgg, revenueAgg] = await Promise.all([
-    db.company.count(),
+  const [activeInstallers, dossiersThisMonth, claudeCostAgg, revenueAgg, suppliers, sponsoredInstallers] = await Promise.all([
+    db.company.count({ where: { kind: 'INSTALLER' } }),
     db.dossierJob.count({ where: { startedAt: { gte: monthStart } } }),
     db.claudeUsageLog.aggregate({ _sum: { costUsd: true }, where: { createdAt: { gte: monthStart } } }),
     db.payment.aggregate({ _sum: { amountTnd: true } }),
+    db.company.count({ where: { kind: 'SUPPLIER' } }),
+    db.company.count({ where: { kind: 'INSTALLER', sponsorCompanyId: { not: null } } }),
   ]);
 
   return {
@@ -31,6 +35,8 @@ export async function computeDashboardStats(now: Date): Promise<DashboardStats> 
     dossiersThisMonth,
     claudeCostThisMonthUsd: Number(claudeCostAgg._sum.costUsd ?? 0),
     totalRevenueTnd: Number(revenueAgg._sum.amountTnd ?? 0),
+    suppliers,
+    sponsoredInstallers,
   };
 }
 
@@ -58,6 +64,10 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
           label="Revenu total"
           value={`${stats.totalRevenueTnd.toFixed(2)} TND`}
         />
+        <Link href="/admin/fournisseurs" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard icon={Users} label="Fournisseurs" value={stats.suppliers} />
+        </Link>
+        <AdminStatsCard icon={Users} label="Installateurs parrainés" value={stats.sponsoredInstallers} />
         <Link href="/admin/inscriptions" style={{ textDecoration: 'none', color: 'inherit' }}>
           <AdminStatsCard icon={Users} label="Inscriptions à contacter" value={signupsToContact} />
         </Link>

@@ -8,6 +8,7 @@ export interface CompanyWithRelationsForList {
   subscription: { status: string; periodEnd: Date; plan: { name: string } } | null;
   users: { sessions: { createdAt: Date }[] }[];
   projects: { jobs: { startedAt: Date }[] }[];
+  sponsor?: { name: string } | null;
 }
 
 export interface InstallerRow {
@@ -19,6 +20,7 @@ export interface InstallerRow {
   isExpiringOrExpired: boolean;
   dossiersThisMonth: number;
   lastLogin: Date | null;
+  sponsorName: string | null;
 }
 
 const EXPIRY_WARNING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -45,6 +47,7 @@ export function shapeInstallerRow(company: CompanyWithRelationsForList, now: Dat
     isExpiringOrExpired,
     dossiersThisMonth,
     lastLogin,
+    sponsorName: company.sponsor?.name ?? null,
   };
 }
 
@@ -55,10 +58,12 @@ export default async function InstallerListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
 
   const companies = await db.company.findMany({
+    where: { kind: 'INSTALLER' },
     include: {
       subscription: { include: { plan: true } },
       users: { include: { sessions: { orderBy: { createdAt: 'desc' }, take: 1 } } },
       projects: { include: { jobs: true } },
+      sponsor: { select: { name: true } },
     },
     orderBy: { name: 'asc' },
   });
@@ -87,6 +92,12 @@ export default async function InstallerListPage(): Promise<React.JSX.Element> {
             <tr key={row.id} style={row.isExpiringOrExpired ? { background: '#ffe5e5' } : undefined}>
               <td>
                 <Link href={`/admin/installers/${row.id}`}>{row.name}</Link>
+                {row.sponsorName && (
+                  <>
+                    {' '}
+                    <span className="badge">Parrainé par {row.sponsorName}</span>
+                  </>
+                )}
               </td>
               <td>{row.planName}</td>
               <td>{row.subscriptionStatus ?? '—'}</td>

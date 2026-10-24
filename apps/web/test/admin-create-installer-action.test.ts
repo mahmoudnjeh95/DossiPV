@@ -105,7 +105,7 @@ describe('createInstallerAction', () => {
   });
 
   it('creates an active subscription when a plan is chosen', async () => {
-    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-1' });
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-1', audience: 'INSTALLER' });
 
     await createInstallerAction(undefined, form({ ...fields, planId: 'plan-1', periodEnd: '2027-01-01' }));
 
@@ -122,6 +122,15 @@ describe('createInstallerAction', () => {
     expect(result).toEqual({ error: "Ce plan est archivé : il n'est plus proposé." });
     expect(m.mockCompanyCreate).not.toHaveBeenCalled();
     expect(m.mockAuditCreate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a supplier pack for an installer', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'pack-1', audience: 'SUPPLIER', archivedAt: null });
+
+    const result = await createInstallerAction(undefined, form({ ...fields, planId: 'pack-1', periodEnd: '2027-01-01' }));
+
+    expect(result?.error).toContain('plan installateur');
+    expect(m.mockCompanyCreate).not.toHaveBeenCalled();
   });
 
   it('requires an end date when a plan is chosen', async () => {

@@ -151,6 +151,16 @@ export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'plan.unarchive': 'Plan désarchivé',
   'signup.contacted': 'Inscription marquée comme contactée',
   'signup.uncontacted': 'Inscription remise à contacter',
+  'supplier.create': 'Fournisseur créé',
+  'supplier.linkInstaller': 'Installateur parrainé',
+  'supplier.unlinkInstaller': 'Parrainage retiré',
+  'subscription.option3d': 'Option 3D modifiée',
+  'settings.option3dPrice': 'Prix de l’option 3D modifié',
+};
+
+export const PLAN_AUDIENCE_LABELS: Record<string, string> = {
+  INSTALLER: 'Installateur',
+  SUPPLIER: 'Pack fournisseur',
 };
 
 export function labelFor(options: Option<string | number>[], value: string | number | null | undefined): string {
