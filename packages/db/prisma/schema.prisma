@@ -104,6 +104,17 @@ model Company {
   /// The last dossier number used; the next first generation takes dossierCounter + 1.
   dossierCounter           Int       @default(0)
   createdAt                DateTime  @default(now())
+  /// False for a self sign-up until the installer has filled in its company profile (address,
+  /// legal representative, ANME category and validity): the columns above hold placeholders and
+  /// dossier generation is refused until then.
+  profileComplete          Boolean   @default(true)
+  /// Self sign-up (/inscription) details; null for companies the admin created.
+  signupAt                 DateTime?
+  signupContactName        String?
+  signupGovernorate        String?
+  /// When the admin got in touch with a self sign-up, and what was said.
+  signupContactedAt        DateTime?
+  signupNote               String?
 
   users        CompanyUser[]
   subscription Subscription?
@@ -147,11 +158,29 @@ model CompanyUser {
   createdAt    DateTime        @default(now())
   /// Set by the admin: a disabled user cannot log in and its sessions stop working.
   disabledAt   DateTime?
+  /// When the user proved it owns its email (sign-up link); logging in needs it. Users that
+  /// existed before sign-up was introduced are marked verified.
+  emailVerifiedAt DateTime?
 
   sessions Session[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("company_user")
+}
+
+/// A one-time link that confirms the email of a self sign-up (valid 48 h).
+model EmailVerificationToken {
+  id            String      @id @default(uuid())
+  companyUserId String
+  companyUser   CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  tokenHash     String      @unique
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([companyUserId])
+  @@map("email_verification_token")
 }
 
 /// A one-time link to choose a new password, sent by email (forgotten password or admin reset).
@@ -242,6 +271,9 @@ model Plan {
   createdAt           DateTime    @default(now())
   /// An archived plan is no longer offered; companies already on it keep it.
   archivedAt          DateTime?
+  /// The free trial: its dossier limit counts over the whole subscription period, not per month,
+  /// and bill imports are capped in total (spec 2026-10-23 §7).
+  isTrial             Boolean     @default(false)
 
   subscriptions Subscription[]
 

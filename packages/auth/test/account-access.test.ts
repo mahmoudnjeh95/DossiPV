@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { db } from '@dossipv/db';
 import { hashPassword, verifyPassword } from '../src/password';
 import { hashToken } from '../src/tokens';
-import { AccountDisabledError, createImpersonationSession, login, MAX_CONCURRENT_SESSIONS_PER_COMPANY, validateSession } from '../src/company-session';
+import { createEmailVerificationToken, InvalidVerificationTokenError, verifyEmailWithToken } from '../src/email-verification';
+import { AccountDisabledError, EmailNotVerifiedError, createImpersonationSession, login, MAX_CONCURRENT_SESSIONS_PER_COMPANY, validateSession } from '../src/company-session';
 import {
   ACCOUNT_SETUP_LIFETIME_MS,
   createPasswordResetToken,
@@ -45,6 +46,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await db.session.deleteMany({ where: { companyUser: { companyId } } });
   await db.passwordResetToken.deleteMany({ where: { companyUser: { companyId } } });
+  await db.emailVerificationToken.deleteMany({ where: { companyUser: { companyId } } });
   await db.companyUser.deleteMany({ where: { companyId } });
   await db.company.delete({ where: { id: companyId } });
   await db.superAdmin.delete({ where: { id: superAdminId } });
@@ -108,5 +110,31 @@ describe('impersonation sessions', () => {
 
     expect(await validateSession(support)).not.toBeNull();
     expect(await db.session.count({ where: { companyUserId: userId, impersonatedBySuperAdminId: null } })).toBe(MAX_CONCURRENT_SESSIONS_PER_COMPANY);
+  });
+});
+
+describe('email verification of a self sign-up', () => {
+  const selfSignUp = async (): Promise<void> => {
+    await db.company.update({ where: { id: companyId }, data: { signupAt: new Date() } });
+  };
+
+  it('keeps an unverified self sign-up out until its link is used, once', async () => {
+    await selfSignUp();
+    await expect(login(userEmail, TEST_PASSWORD)).rejects.toBeInstanceOf(EmailNotVerifiedError);
+
+    const link = await createEmailVerificationToken(userId);
+    expect(await verifyEmailWithToken(link)).toEqual({ companyUserId: userId, companyId, email: userEmail });
+
+    await expect(login(userEmail, TEST_PASSWORD)).resolves.toBeDefined();
+    await expect(verifyEmailWithToken(link)).rejects.toBeInstanceOf(InvalidVerificationTokenError);
+  });
+
+  it('does not hold back accounts the admin created, and refuses an expired link', async () => {
+    await expect(login(userEmail, TEST_PASSWORD)).resolves.toBeDefined();
+
+    await selfSignUp();
+    const link = await createEmailVerificationToken(userId);
+    await db.emailVerificationToken.updateMany({ where: { companyUserId: userId }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await expect(verifyEmailWithToken(link)).rejects.toBeInstanceOf(InvalidVerificationTokenError);
   });
 });

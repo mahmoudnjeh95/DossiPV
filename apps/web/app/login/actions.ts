@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { login, AccountDisabledError, InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
+import { login, AccountDisabledError, EmailNotVerifiedError, InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
 import { shouldUseSecureCookie } from '../../lib/cookie-secure';
 
 const SESSION_COOKIE_NAME = 'dossipv_session';
@@ -35,6 +35,9 @@ export async function loginAction(
     }
     if (error instanceof TooManyAttemptsError) {
       return { error: 'Trop de tentatives échouées. Réessayez plus tard.' };
+    }
+    if (error instanceof EmailNotVerifiedError) {
+      return { error: "Confirmez votre adresse email : cliquez sur le lien reçu à l'inscription." };
     }
     if (error instanceof AccountDisabledError) {
       return { error: 'Ce compte est désactivé. Contactez DossiPV pour le réactiver.' };

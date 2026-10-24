@@ -62,6 +62,12 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       defaultCosPhi: 0.8,
       dossierPrefix: null,
       dossierCounter: 0,
+      profileComplete: true,
+      signupAt: null,
+      signupContactName: null,
+      signupGovernorate: null,
+      signupContactedAt: null,
+      signupNote: null,
       createdAt: NOW,
     },
     client: {

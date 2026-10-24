@@ -32,6 +32,14 @@ export class AccountDisabledError extends Error {
   }
 }
 
+/** The right password, but the email of a self sign-up was not confirmed yet. */
+export class EmailNotVerifiedError extends Error {
+  constructor() {
+    super('The email address is not verified yet.');
+    this.name = 'EmailNotVerifiedError';
+  }
+}
+
 export interface AuthenticatedCompanyUser {
   id: string;
   companyId: string;
@@ -72,7 +80,7 @@ export async function login(email: string, plainPassword: string): Promise<Login
     throw new TooManyAttemptsError();
   }
 
-  const user = await db.companyUser.findUnique({ where: { email } });
+  const user = await db.companyUser.findUnique({ where: { email }, include: { company: { select: { signupAt: true } } } });
 
   // Always run bcrypt.compare(), even for an unknown email, against a fixed dummy hash — see
   // DUMMY_PASSWORD_HASH's own comment for why this matters beyond just the error message.
@@ -89,6 +97,10 @@ export async function login(email: string, plainPassword: string): Promise<Login
 
   if (user.disabledAt) {
     throw new AccountDisabledError();
+  }
+  // Only a self sign-up has to confirm its email; accounts the admin created are trusted.
+  if (user.company.signupAt && !user.emailVerifiedAt) {
+    throw new EmailNotVerifiedError();
   }
 
   // The installer's own sessions: a support session opened by the admin neither counts nor is evicted.
