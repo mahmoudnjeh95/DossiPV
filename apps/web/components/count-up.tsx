@@ -24,7 +24,7 @@ export function CountUp({ to, suffix = '' }: { to: number; suffix?: string }): R
       requestAnimationFrame(tick);
     });
     observer.observe(node);
-    return () => observer.disconnect();
+    return (): void => observer.disconnect();
   }, [to]);
 
   return <span ref={ref}>{value}{suffix}</span>;

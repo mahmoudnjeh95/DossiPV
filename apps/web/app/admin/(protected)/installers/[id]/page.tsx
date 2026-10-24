@@ -62,7 +62,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
       label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND${plan.isTrial ? ' (essai)' : ''}${plan.archivedAt ? ' (archivé)' : ''}`,
     }));
   const statusLabel = company.subscription
-    ? (() => {
+    ? ((): string => {
         const status = displayedSubscriptionStatus(company.subscription.status, company.subscription.periodEnd, new Date());
         return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
       })()

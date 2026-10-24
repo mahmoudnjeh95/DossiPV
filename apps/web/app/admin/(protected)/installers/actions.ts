@@ -46,7 +46,7 @@ export async function createInstallerAction(
   const planId = reader.optionalText('planId', 'Plan', 100);
   let periodEnd: Date | null = null;
   if (planId !== null) {
-    const parsed = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    const parsed = parseFuturePeriodEnd(String((formData.get('periodEnd') as string | null) ?? ''), new Date());
     if ('error' in parsed) {
       reader.errors.push(`${parsed.error.replace(/\.$/, '')} (obligatoire quand un plan est choisi).`);
     } else {

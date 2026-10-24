@@ -26,7 +26,6 @@ import L, {
 import 'leaflet/dist/leaflet.css';
 import { ACTIVE_MAP_PROVIDER } from '../map/esri-provider';
 import { SiteTileLayer } from '../map/site-tile-layer';
-import { SiteTileLayer } from '../map/site-tile-layer';
 import {
   POINT_STYLES,
   ROOF_OUTLINE_STYLE,

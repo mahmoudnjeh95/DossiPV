@@ -110,14 +110,14 @@ export async function updatePeriodEndAction(
 ): Promise<InstallerActionState | undefined> {
   const admin = await requireAuthenticatedSuperAdmin();
 
-  const periodEndField = formData.get('periodEnd');
-  const parsed = parseFuturePeriodEnd(typeof periodEndField === 'string' ? periodEndField : '', new Date());
+  const periodEndField = String((formData.get('periodEnd') as string | null) ?? '');
+  const parsed = parseFuturePeriodEnd(periodEndField, new Date());
   if ('error' in parsed) {
     return { error: parsed.error };
   }
 
   await db.subscription.update({ where: { companyId }, data: { periodEnd: parsed.date } });
-  await logAdminAction(admin.id, 'subscription.periodEnd', companyId, { periodEnd: String(periodEndField) });
+  await logAdminAction(admin.id, 'subscription.periodEnd', companyId, { periodEnd: periodEndField });
   redirect(withNotice(`/admin/installers/${companyId}`, 'periodEndUpdated'));
 }
 
@@ -138,7 +138,7 @@ export async function assignPlanAction(
   const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
   let periodEnd: Date | null = null;
   if (!subscription) {
-    const parsed = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    const parsed = parseFuturePeriodEnd(String((formData.get('periodEnd') as string | null) ?? ''), new Date());
     if ('error' in parsed) {
       reader.errors.push(parsed.error);
     } else {
@@ -178,7 +178,7 @@ export async function assignPlanAction(
   if (subscription && subscription.plan?.isTrial && !plan.isTrial) {
     // Trial to paid plan: the trial subscription is replaced by a fresh period (the trial's
     // dossiers no longer count) and the audit entry keeps the trial plan it came from.
-    const parsedEnd = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    const parsedEnd = parseFuturePeriodEnd(String((formData.get('periodEnd') as string | null) ?? ''), new Date());
     if ('error' in parsedEnd) {
       return { error: `${parsedEnd.error} (obligatoire pour passer de l'essai à un plan payant)` };
     }

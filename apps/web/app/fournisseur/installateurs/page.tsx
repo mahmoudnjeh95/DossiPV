@@ -3,7 +3,6 @@ import { requireSupplier, dossiersThisMonth } from '../../../lib/supplier-access
 import { supplierSeats } from '../../../lib/sponsorship';
 import { ActionButton } from '../action-button';
 import { ContactDossipv } from '../../../components/support-contact';
-import { ContactDossipv } from '../../../components/support-contact';
 import { InviteForm } from './invite-form';
 import { cancelInvitationAction, removeSponsoredInstallerAction } from './actions';
 

@@ -92,7 +92,7 @@ export default async function SupplierListPage({
                 <td>{row.packName}</td>
                 <td>
                   {row.subscriptionStatus && row.periodEnd
-                    ? (() => {
+                    ? ((): string => {
                         const status = displayedSubscriptionStatus(row.subscriptionStatus, row.periodEnd, now);
                         return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
                       })()

@@ -30,7 +30,7 @@ export function Reveal({ children, delay = 0, as: Tag = 'div', className = '' }:
       { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
     );
     observer.observe(node);
-    return () => observer.disconnect();
+    return (): void => observer.disconnect();
   }, []);
 
   return (

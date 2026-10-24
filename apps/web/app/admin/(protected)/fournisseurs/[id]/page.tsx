@@ -58,7 +58,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
     .filter((pack) => pack.archivedAt === null || pack.id === currentPlanId)
     .map((pack) => ({ id: pack.id, label: packLabel(pack) }));
   const statusLabel = company.subscription
-    ? (() => {
+    ? ((): string => {
         const status = displayedSubscriptionStatus(company.subscription.status, company.subscription.periodEnd, new Date());
         return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
       })()

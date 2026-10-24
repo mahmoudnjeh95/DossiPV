@@ -12,7 +12,7 @@ const m = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('next/headers', () => ({ cookies: () => Promise.resolve({ get: m.cookieGet }) }));
+vi.mock('next/headers', () => ({ cookies: (): Promise<unknown> => Promise.resolve({ get: m.cookieGet }) }));
 vi.mock('@dossipv/db', () => ({ db: m.db }));
 vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');

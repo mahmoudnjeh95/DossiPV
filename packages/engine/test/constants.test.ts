@@ -46,16 +46,3 @@ describe('branchementCalibre', () => {
     expect(branchementCalibre(13)).toBeNull();
   });
 });
-
-import { branchementCalibre } from '../src/constants';
-
-describe('branchementCalibre', () => {
-  it('reads the STEG single-phase ladder', () => {
-    expect(branchementCalibre(7)).toBe('30/32');
-    expect(branchementCalibre(2)).toBe('10');
-  });
-
-  it('is null off the ladder', () => {
-    expect(branchementCalibre(13)).toBeNull();
-  });
-});

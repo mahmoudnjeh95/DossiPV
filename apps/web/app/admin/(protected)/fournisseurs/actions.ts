@@ -47,7 +47,7 @@ export async function createSupplierAction(
   const planId = reader.optionalText('planId', 'Pack', 100);
   let periodEnd: Date | null = null;
   if (planId !== null) {
-    const parsed = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    const parsed = parseFuturePeriodEnd(String((formData.get('periodEnd') as string | null) ?? ''), new Date());
     if ('error' in parsed) {
       reader.errors.push(`${parsed.error.replace(/\.$/, '')} (obligatoire quand un pack est choisi).`);
     } else {

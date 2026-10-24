@@ -123,7 +123,7 @@ export default async function InstallerListPage({
               <td>{row.planName}</td>
               <td>
                 {row.subscriptionStatus && row.periodEnd
-                  ? (() => {
+                  ? ((): string => {
                       const status = displayedSubscriptionStatus(row.subscriptionStatus, row.periodEnd, now);
                       return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
                     })()
