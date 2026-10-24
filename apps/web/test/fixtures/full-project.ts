@@ -63,6 +63,8 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
       dossierPrefix: null,
       dossierCounter: 0,
       profileComplete: true,
+      kind: 'INSTALLER',
+      sponsorCompanyId: null,
       signupAt: null,
       signupContactName: null,
       signupGovernorate: null,
