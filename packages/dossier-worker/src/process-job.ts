@@ -72,6 +72,7 @@ import { dropBlankTrailingPages } from './clean-pdf-annex';
 import { highlightInverterDatasheet, highlightModuleDatasheet } from './highlight';
 import { applyDraftWatermark, DRAFT_INSERTED_PAGE_COUNT } from './draft-watermark';
 import { stampStudyPages } from './stamp-study-pages';
+import { reportError } from './monitoring';
 
 const TEMPLATE_PATH = join(import.meta.dirname, '..', '..', 'docx-template', 'template', 'dossier-template.docx');
 /** The study pages before the Word body: the cover (1) and the one-page table of contents (2). */
@@ -207,6 +208,7 @@ async function fail(jobId: string, failedStep: string, internalError: unknown, i
   // Operator-facing log of the real cause; DossierJob.failureReason itself only ever gets the
   // generic, installer-safe message below (or a fixed, installer-written `installerReason`).
   console.error(`processJob: job ${jobId} failed at step "${failedStep}":`, internalError);
+  reportError(internalError, { jobId, failedStep });
   const failureReason = installerReason ?? GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.';
   await db.dossierJob.update({
     where: { id: jobId },

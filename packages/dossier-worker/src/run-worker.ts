@@ -2,6 +2,7 @@ import { pathToFileURL } from 'url';
 import { db } from '@dossipv/db';
 import { processJob } from './process-job';
 import { sendExpiryReminders } from './send-expiry-reminders';
+import { reportError } from './monitoring';
 
 const POLL_INTERVAL_MS = Number(process.env.DOSSIER_WORKER_POLL_INTERVAL_MS ?? 5000);
 const STALE_RUNNING_MS = Number(process.env.DOSSIER_WORKER_STALE_RUNNING_MS ?? 600_000);
@@ -58,6 +59,7 @@ export async function runExpiryRemindersIfDue(now: Date = new Date()): Promise<v
     }
   } catch (error) {
     console.error('Expiry reminders check failed:', error);
+    reportError(error, { task: 'expiry-reminders' });
   }
 }
 
@@ -73,6 +75,7 @@ async function pollOnce(): Promise<void> {
       // it means something is badly wrong (e.g. the DB connection itself dropped). Log and keep
       // the worker alive rather than letting one bad job crash the whole process.
       console.error(`processJob threw unexpectedly for job ${jobId}:`, error);
+      reportError(error, { jobId });
     }
   }
 }
