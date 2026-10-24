@@ -308,7 +308,7 @@ describe('assignPlanAction', () => {
 
       expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
         where: { companyId: 'company-1' },
-        data: { planId: 'plan-premium', status: 'ACTIVE', periodStart: expect.any(Date), periodEnd: new Date('2099-01-31') },
+        data: { planId: 'plan-premium', status: 'ACTIVE', periodStart: expect.any(Date) as unknown, periodEnd: new Date('2099-01-31') },
       });
     });
 
