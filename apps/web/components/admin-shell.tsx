@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { SolarixProLogo, Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
 import { logoutAdminAction } from '../app/admin/(protected)/actions';
 import { countSignupsToContact } from '../lib/admin-signups';
-import { countDeclaredIntents } from '../lib/payments/admin';
+import { countPaymentsNeedingAttention } from '../lib/payments/admin';
 
 export interface AdminShellProps {
   children: ReactNode;
@@ -30,7 +30,7 @@ const ADMIN_NAV_LINKS: NavLink[] = [
 export async function AdminShell({ children }: AdminShellProps): Promise<React.JSX.Element> {
   // A failing count must not take the whole admin down: the badge is just left out.
   const signupsToContact = await countSignupsToContact().catch(() => 0);
-  const paymentsToCheck = await countDeclaredIntents().catch(() => 0);
+  const paymentsToCheck = await countPaymentsNeedingAttention().catch(() => 0);
   return (
     <>
       <header className="app-header">

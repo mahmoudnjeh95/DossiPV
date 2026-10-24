@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedSuperAdmin } from '../layout';
+import { postAdminMessage } from '../../../../lib/payments/chat';
 import { approveIntent, rejectIntent } from '../../../../lib/payments/approve';
 
 export interface PaymentDecisionState {
@@ -15,6 +16,13 @@ export async function approvePaymentAction(intentId: string): Promise<void> {
   const result = await approveIntent(intentId, admin.id);
   revalidatePath('/admin/paiements');
   redirect(result.ok ? '/admin/paiements' : `/admin/paiements/${intentId}`);
+}
+
+/** The admin writes in the chat of a payment; the payer sees it as "DossiPV". Nothing sensitive to audit. */
+export async function sendAdminPaymentMessageAction(intentId: string, formData: FormData): Promise<PaymentDecisionState | undefined> {
+  await requireAuthenticatedSuperAdmin();
+  const result = await postAdminMessage(intentId, formData.get('body'));
+  return result.ok ? undefined : { error: result.error };
 }
 
 /** Rejects a declared P2P payment with the reason the payer will read. */

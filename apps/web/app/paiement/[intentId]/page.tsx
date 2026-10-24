@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../../(app)/layout';
 import { INTENT_DISPLAY_LABELS, intentDisplayStatus, loadP2pSettings, offeredProviders, payerRefusal, paymentReference, PAYMENT_METHOD_LABELS, PROOF_RETENTION_DAYS } from '../../../lib/payments/p2p';
+import { chatSnapshot, markReadByCompany } from '../../../lib/payments/chat';
 import { cancelIntentAction } from '../actions';
+import { PayerChat } from './payer-chat';
 import { DeclareForm } from './declare-form';
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
@@ -15,9 +17,12 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
   // The screenshot is never selected here: only the capture route reads it.
   const intent = await db.paymentIntent.findFirst({
     where: { id: intentId, companyId: user.companyId },
-    select: { id: true, purpose: true, months: true, amountTnd: true, provider: true, status: true, declaredAt: true, providerReference: true, failureReason: true, proofMime: true, planId: true },
+    select: { id: true, purpose: true, months: true, amountTnd: true, provider: true, status: true, declaredAt: true, providerReference: true, failureReason: true, proofMime: true, planId: true, paidAt: true },
   });
   if (!intent) notFound();
+  // Messages are read first, then marked read: the admin's new ones are still shown as new once.
+  const chat = await chatSnapshot(intent);
+  if (!user.impersonatedBySuperAdminId) await markReadByCompany(intent.id);
   const [company, settings, plan] = await Promise.all([
     db.company.findUnique({ where: { id: user.companyId }, select: { kind: true } }),
     loadP2pSettings(),
@@ -62,6 +67,13 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
           </p>
         )}
       </section>
+
+      <PayerChat
+        intentId={intent.id}
+        initial={chat}
+        canWrite={canPay}
+        readOnlyHint={user.impersonatedBySuperAdminId ? 'Mode support : lecture seule.' : 'Seul le responsable du compte peut écrire.'}
+      />
 
       {open && (
         <>

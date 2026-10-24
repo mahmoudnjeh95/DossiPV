@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { requireAuthenticatedCompanyUser } from '../(app)/layout';
+import { postCompanyMessage } from '../../lib/payments/chat';
 import { cancelIntent, createIntent, declareIntent } from '../../lib/payments/intents';
 import { P2P_PROVIDER_IDS, PaymentError, payerRefusal, type P2pProviderId } from '../../lib/payments/p2p';
 
@@ -61,6 +62,16 @@ export async function declareIntentAction(
   revalidatePath('/facturation');
   revalidatePath('/fournisseur/facturation');
   return { saved: true };
+}
+
+/**
+ * The payer writes in the chat of one of its payments. Only the company's owner, never a support
+ * session; a payment of another company answers "introuvable". The panel refreshes itself after.
+ */
+export async function sendPaymentMessageAction(intentId: string, formData: FormData): Promise<PaymentActionState | undefined> {
+  const user = await requireAuthenticatedCompanyUser();
+  const result = await postCompanyMessage(user, intentId, formData.get('body'));
+  return result.ok ? { saved: true } : { error: result.error };
 }
 
 /** The payer cancels its own open payment. */

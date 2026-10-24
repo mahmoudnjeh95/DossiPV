@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { INTENT_DISPLAY_LABELS, intentDisplayStatus, PAYMENT_METHOD_LABELS, paymentReference } from '../../../../../lib/payments/p2p';
+import { chatSnapshot, markReadByAdmin } from '../../../../../lib/payments/chat';
 import { approvePaymentAction } from '../actions';
+import { AdminChat } from './admin-chat';
 import { RejectForm } from '../reject-form';
 
 /** One declared payment: its screenshot and the two decisions. */
@@ -31,6 +33,8 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
     },
   });
   if (!intent) notFound();
+  const chat = await chatSnapshot(intent);
+  await markReadByAdmin(intent.id);
   const plan = intent.planId ? await db.plan.findUnique({ where: { id: intent.planId }, select: { name: true } }) : null;
   const status = intentDisplayStatus(intent);
   const decidable = intent.status === 'PENDING' && intent.declaredAt !== null;
@@ -65,6 +69,8 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
           {intent.failureReason ? ` : ${intent.failureReason}` : ''}
         </dd>
       </dl>
+
+      <AdminChat intentId={intent.id} initial={chat} />
 
       <section>
         <h2>Capture du transfert</h2>

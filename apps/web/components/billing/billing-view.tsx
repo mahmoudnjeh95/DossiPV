@@ -84,6 +84,11 @@ export function BillingPageView({ billing, canPay }: { billing: BillingView; can
                     </td>
                     <td>
                       <Link href={`/paiement/${intent.id}`}>{intent.status === 'TO_DECLARE' ? 'Déclarer' : 'Voir'}</Link>
+                      {intent.unreadMessages > 0 && (
+                        <span className="badge badge-warn" style={{ marginLeft: 8 }}>
+                          {intent.unreadMessages} message{intent.unreadMessages === 1 ? '' : 's'} non lu{intent.unreadMessages === 1 ? '' : 's'}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
