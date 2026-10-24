@@ -13,7 +13,6 @@ model File {
   storageKey String // path/key into whatever object storage is used — decided at implementation time
   createdAt  DateTime @default(now())
 
-  invoicePdfFor            Invoice[] @relation("InvoicePdf")
   companyLogoFor           Company[] @relation("CompanyLogo")
   siteImageFor             ProjectSite[] @relation("SiteImage")
   companyAnmeCertificateFor Company[] @relation("CompanyAnmeCertificate")
@@ -124,7 +123,6 @@ model Company {
   sponsoredInstallers      Company[] @relation("Sponsorship")
   supplierProducts         SupplierProduct[]
   paymentIntents           PaymentIntent[]
-  invoices                 Invoice[]
   supplierInvitations      SupplierInvitation[]
   /// Self sign-up (/inscription) details; null for companies the admin created.
   signupAt                 DateTime?
@@ -317,57 +315,17 @@ model PlatformSettings {
   id                 String   @id
   /// Monthly price of the 3D option that sponsored installers can buy alone.
   option3dPriceTnd   Decimal? @db.Decimal(10, 2)
-  /// Who invoices (the legal entity selling DossiPV), printed on every invoice.
-  sellerLegalName    String?
-  sellerTaxId        String?
-  sellerAddress      String?
-  sellerPhone        String?
-  sellerEmail        String?
-  /// VAT rate in percent applied to plan prices (19 in Tunisia), and the fixed stamp duty (droit de timbre).
-  vatRatePct         Decimal  @default(19) @db.Decimal(5, 2)
-  stampDutyTnd       Decimal  @default(1) @db.Decimal(10, 3)
-  invoiceFooter      String?
+  /// P2P payments (spec: Flouci, izi and D17 as person-to-person transfers): who receives the money
+  /// and the number to send it to in each app, shown to the installer who pays.
+  p2pAccountHolder   String?
+  p2pFlouciNumber    String?
+  p2pIziNumber       String?
+  p2pD17Number       String?
+  /// Free text shown under the numbers (e.g. "Mettez la référence ci-dessous en commentaire").
+  p2pInstructions    String?
   updatedAt          DateTime @updatedAt
 
   @@map("platform_settings")
-}
-
-/// A numbered invoice for one payment (Tunisian invoice: matricule fiscal, VAT, timbre fiscal).
-/// Numbers are sequential per year with no gaps: 2026-0001, 2026-0002…
-model Invoice {
-  id          String   @id @default(uuid())
-  number      String   @unique
-  year        Int
-  sequence    Int
-  companyId   String
-  company     Company  @relation(fields: [companyId], references: [id])
-  paymentId   String   @unique
-  payment     Payment  @relation(fields: [paymentId], references: [id])
-  issuedAt    DateTime @default(now())
-  /// Seller and buyer as they were at issue time, and the lines: an invoice never changes afterwards.
-  seller      Json
-  buyer       Json
-  lines       Json
-  totalHtTnd  Decimal  @db.Decimal(10, 3)
-  vatRatePct  Decimal  @db.Decimal(5, 2)
-  vatTnd      Decimal  @db.Decimal(10, 3)
-  stampTnd    Decimal  @db.Decimal(10, 3)
-  totalTtcTnd Decimal  @db.Decimal(10, 3)
-  /// The generated PDF, kept as a stored file.
-  pdfFileId   String?
-  pdfFile     File?    @relation("InvoicePdf", fields: [pdfFileId], references: [id])
-
-  @@unique([year, sequence])
-  @@index([companyId, issuedAt])
-  @@map("invoice")
-}
-
-/// The last invoice number used in a year, incremented in the same transaction as the invoice.
-model InvoiceCounter {
-  year Int @id
-  last Int @default(0)
-
-  @@map("invoice_counter")
 }
 
 model Subscription {
@@ -426,8 +384,7 @@ model Payment {
   recordedByAdmin  Boolean       @default(true)
   createdAt        DateTime      @default(now())
 
-  intent  PaymentIntent?
-  invoice Invoice?
+  intent PaymentIntent?
 
   @@map("payment")
 }
@@ -455,8 +412,9 @@ enum PaymentIntentStatus {
   CANCELLED
 }
 
-/// One online checkout opened for a company: created before redirecting to the provider, settled
-/// when the provider confirms (webhook or return page), at most once.
+/// A P2P payment declared by a company: it sends the amount to the platform's Flouci, izi or D17
+/// number, then declares it here with the transfer's reference; the admin confirms (the Payment is
+/// then recorded and the subscription extended, once) or rejects it.
 model PaymentIntent {
   id                String              @id @default(uuid())
   companyId         String
@@ -470,10 +428,18 @@ model PaymentIntent {
   amountTnd         Decimal             @db.Decimal(10, 2)
   provider          PaymentMethod
   status            PaymentIntentStatus @default(PENDING)
-  /// The provider's own payment id, to verify it with the provider.
+  /// What the payer types after sending the money: the transfer's reference or the sending number.
   providerReference String?
   checkoutUrl       String?
+  /// Why the admin rejected it.
   failureReason     String?
+  /// When the payer said it had sent the money (null: not declared yet).
+  declaredAt        DateTime?
+  /// The payer's screenshot of the transfer, kept in the database for one month then erased by the
+  /// worker (proofImage and proofMime set to null; the payment itself stays).
+  proofImage        Bytes?
+  proofMime         String?
+  proofExpiresAt    DateTime?
   /// The Payment (and so the invoice) this settled into.
   paymentId         String?             @unique
   payment           Payment?            @relation(fields: [paymentId], references: [id])
