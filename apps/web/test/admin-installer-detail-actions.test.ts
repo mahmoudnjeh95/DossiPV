@@ -174,7 +174,7 @@ describe('recordPaymentAction', () => {
 
     expect(m.mockIssueInvoice).toHaveBeenCalledWith('pay-1');
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: '2026-0001' }) }),
+      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: '2026-0001' }) as unknown }) as unknown,
     });
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
   });
@@ -195,7 +195,7 @@ describe('recordPaymentAction', () => {
     expect(mockPaymentCreate).toHaveBeenCalled();
     expect(mockSubscriptionUpdate).toHaveBeenCalled();
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: null }) }),
+      data: expect.objectContaining({ action: 'payment.record', details: expect.objectContaining({ invoiceNumber: null }) as unknown }) as unknown,
     });
     expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1?invoice=failed');
   });

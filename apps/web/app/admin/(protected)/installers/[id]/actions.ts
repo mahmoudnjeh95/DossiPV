@@ -210,7 +210,7 @@ export async function assignPlanAction(
   } else if (subscription && leavesSponsor && subscription.status === 'SUSPENDED') {
     // The row only held the 3D option while the installer was sponsored (suspended, so it granted
     // nothing): it becomes the installer's own active plan, for the date given or one month.
-    const requested = new Date(String(formData.get('periodEnd') ?? ''));
+    const requested = new Date(typeof formData.get('periodEnd') === 'string' ? (formData.get('periodEnd') as string) : '');
     const newPeriodEnd = Number.isNaN(requested.getTime()) ? addMonths(new Date(), 1) : requested;
     await db.subscription.update({ where: { companyId }, data: { planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: newPeriodEnd } });
     await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name, periodEnd: newPeriodEnd.toISOString(), ...sponsorDetails });
