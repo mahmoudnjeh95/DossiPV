@@ -192,6 +192,14 @@ describe('invitations and linking', () => {
     expect(m.companyUpdate).not.toHaveBeenCalled();
   });
 
+  it('is refused while the installer pays a plan of its own, and left unclaimed', async () => {
+    m.invitationFindUnique.mockResolvedValue(invitation);
+    m.subscriptionFindUnique.mockResolvedValue({ status: 'ACTIVE', periodEnd: new Date(Date.now() + 10 * 864e5), plan: { isTrial: false } });
+
+    await expect(acceptInvitation('raw', 'installer-1')).rejects.toThrow('abonnement en cours');
+    expect(m.invitationUpdateMany).not.toHaveBeenCalled();
+  });
+
   it('works one time only: a second click on the same link finds it already claimed', async () => {
     m.invitationFindUnique.mockResolvedValue(invitation);
     m.invitationUpdateMany.mockResolvedValue({ count: 0 });

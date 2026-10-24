@@ -152,6 +152,12 @@ export async function linkInstaller(installerCompanyId: string, supplierId: stri
  * the claim is released so the installer can try again after the problem is fixed.
  */
 export async function consumeInvitation(invitationId: string, supplierCompanyId: string, installerCompanyId: string): Promise<void> {
+  // An installer paying its own plan would drop to the supplier's Standard (and lose what it paid):
+  // it joins when its plan has ended. The admin can still link it by hand.
+  const own = await db.subscription.findUnique({ where: { companyId: installerCompanyId }, include: { plan: { select: { isTrial: true } } } });
+  if (own && own.status === 'ACTIVE' && own.periodEnd > new Date() && !own.plan.isTrial) {
+    throw new SponsorshipError('Vous avez déjà un abonnement en cours : rejoignez ce fournisseur à la fin de votre abonnement, ou contactez DossiPV.');
+  }
   const claimed = await db.supplierInvitation.updateMany({
     where: { id: invitationId, acceptedAt: null, expiresAt: { gt: new Date() } },
     data: { acceptedAt: new Date(), acceptedCompanyId: installerCompanyId },

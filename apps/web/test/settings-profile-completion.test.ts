@@ -36,7 +36,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.mockGet.mockReturnValue({ value: 'valid-session-token' });
   m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com' });
-  m.mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+  m.mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null, profileComplete: false });
   m.mockCompanyFindMany.mockResolvedValue([]);
   m.mockCompanyUpdate.mockResolvedValue({ id: 'company-1' });
 });
@@ -100,7 +100,16 @@ describe('saveCompanyAction — profile completion (self sign-up)', () => {
     expect(m.mockCompanyUpdate).not.toHaveBeenCalled();
   });
 
-  it('refuses an agreement that has already expired', async () => {
+  it('lets a complete profile with an agreement that just expired save its other changes', async () => {
+    m.mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null, profileComplete: true });
+
+    const result = await saveCompanyAction(undefined, form({ anmeValidFrom: '2020-01-01', anmeValidTo: '2021-01-01', address: '5 Rue Neuve' }));
+
+    expect(result).toBeUndefined();
+    expect(m.mockCompanyUpdate).toHaveBeenCalled();
+  });
+
+  it('refuses an agreement that has already expired while the profile is being completed', async () => {
     const result = await saveCompanyAction(undefined, form({ anmeValidFrom: '2020-01-01', anmeValidTo: '2021-01-01' }));
 
     expect(result?.error).toContain('dans le futur');

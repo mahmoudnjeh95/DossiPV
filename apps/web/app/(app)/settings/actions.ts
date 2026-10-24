@@ -74,7 +74,7 @@ export async function saveCompanyAction(
 ): Promise<SaveCompanyActionState | undefined> {
   const user = await requireAuthenticatedCompanyUser();
 
-  const existing = await db.company.findUnique({ where: { id: user.companyId }, select: { logoFileId: true, anmeCertificateFileId: true } });
+  const existing = await db.company.findUnique({ where: { id: user.companyId }, select: { logoFileId: true, anmeCertificateFileId: true, profileComplete: true } });
   if (!existing) {
     return { error: 'Société introuvable.' };
   }
@@ -119,7 +119,10 @@ export async function saveCompanyAction(
     if (anmeValidFrom.getTime() === PLACEHOLDER_ANME_DATE.getTime()) {
       reader.errors.push('Début de validité ANME : saisissez la date réelle de votre agrément.');
     }
-    if (anmeValidTo <= new Date()) {
+    // A profile still to be completed needs a real, running agreement. Once complete, an agreement
+    // that has just expired must not stop the installer from editing anything else (logo, address…):
+    // the dossier's own ANME checks (C20/C22) refuse a generation under an expired agreement.
+    if (!existing.profileComplete && anmeValidTo <= new Date()) {
       reader.errors.push('Votre agrément ANME est expiré : la fin de validité doit être dans le futur.');
     }
   }
