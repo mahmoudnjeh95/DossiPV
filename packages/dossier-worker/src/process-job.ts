@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PDFDocument } from 'pdf-lib';
 import { PvgisFetchError } from '@dossipv/pvgis-client';
 import { db } from '@dossipv/db';
+import { adminEmailAddress, sendEmail } from '@dossipv/email';
 import {
   fitSiteImage,
   formatRunLengthFormula,
@@ -206,15 +207,49 @@ async function fail(jobId: string, failedStep: string, internalError: unknown, i
   // Operator-facing log of the real cause; DossierJob.failureReason itself only ever gets the
   // generic, installer-safe message below (or a fixed, installer-written `installerReason`).
   console.error(`processJob: job ${jobId} failed at step "${failedStep}":`, internalError);
+  const failureReason = installerReason ?? GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.';
   await db.dossierJob.update({
     where: { id: jobId },
-    data: {
-      status: 'FAILED',
-      failedStep,
-      failureReason: installerReason ?? GENERIC_FAILURE_REASONS[failedStep] ?? 'La génération du dossier a échoué.',
-      completedAt: new Date(),
-    },
+    data: { status: 'FAILED', failedStep, failureReason, completedAt: new Date() },
   });
+  await alertAdminOfFailedJob(jobId, failedStep, failureReason, internalError);
+}
+
+/**
+ * Launch spec §8: a failed dossier job emails the admin (ADMIN_EMAIL; skipped when unset). The
+ * email is for operators, so it carries the internal error, but only ids, the company name and
+ * the step — never the client's CIN, address or phone. Never throws: the job is already FAILED.
+ */
+async function alertAdminOfFailedJob(jobId: string, failedStep: string, failureReason: string, internalError: unknown): Promise<void> {
+  const to = adminEmailAddress();
+  if (!to) {
+    return;
+  }
+  let projectId = 'inconnu';
+  let companyName = 'société inconnue';
+  try {
+    const job = await db.dossierJob.findUnique({
+      where: { id: jobId },
+      select: { projectId: true, project: { select: { company: { select: { name: true } } } } },
+    });
+    if (job) {
+      projectId = job.projectId;
+      companyName = job.project.company.name;
+    }
+  } catch (error) {
+    console.error(`processJob: job ${jobId}: company lookup for the failure alert failed`, error);
+  }
+  const internalMessage = internalError instanceof Error ? internalError.message : String(internalError);
+  await sendEmail({
+    to,
+    subject: `Dossier en échec — ${companyName}`,
+    text: [
+      `Une génération de dossier a échoué pour ${companyName}.`,
+      `Job : ${jobId}\nProjet : ${projectId}\nÉtape : ${failedStep}`,
+      `Message affiché à l'installateur : ${failureReason}`,
+      `Erreur interne : ${internalMessage}`,
+    ].join('\n\n'),
+  }).catch((error: unknown) => console.error(`processJob: job ${jobId}: failure alert not sent`, error));
 }
 
 /**

@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   dossierJobFindUniqueOrThrow: vi.fn(),
   dossierJobUpdate: vi.fn(),
   dossierJobUpdateMany: vi.fn(),
+  dossierJobFindUnique: vi.fn(),
+  sendEmail: vi.fn(),
+  adminEmailAddress: vi.fn(),
   companyFindUnique: vi.fn(),
   projectFindUnique: vi.fn(),
   fileFindMany: vi.fn(),
@@ -50,7 +53,12 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      dossierJob: { findUniqueOrThrow: mocks.dossierJobFindUniqueOrThrow, update: mocks.dossierJobUpdate, updateMany: mocks.dossierJobUpdateMany },
+      dossierJob: {
+        findUniqueOrThrow: mocks.dossierJobFindUniqueOrThrow,
+        findUnique: mocks.dossierJobFindUnique,
+        update: mocks.dossierJobUpdate,
+        updateMany: mocks.dossierJobUpdateMany,
+      },
       company: { findUnique: mocks.companyFindUnique },
       project: { findUnique: mocks.projectFindUnique },
       file: { findMany: mocks.fileFindMany, findUnique: mocks.fileFindUnique, create: mocks.fileCreate },
@@ -121,6 +129,7 @@ vi.mock('../src/fetch-satellite-image', async () => ({
 vi.mock('../src/render-site-plan-pages', () => ({ renderSitePlanPages: mocks.renderSitePlanPages }));
 vi.mock('../src/render-toc', () => ({ renderTableOfContents: mocks.renderTableOfContents, findHeadingPages: mocks.findHeadingPages }));
 vi.mock('../src/steg-list-annex', () => ({ buildListPageAnnex: mocks.buildListPageAnnex }));
+vi.mock('@dossipv/email', () => ({ sendEmail: mocks.sendEmail, adminEmailAddress: mocks.adminEmailAddress }));
 vi.mock('@dossipv/file-storage', () => ({ saveFile: mocks.saveFile, getFilePath: mocks.getFilePath }));
 vi.mock('fs/promises', async () => {
   const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
@@ -263,6 +272,10 @@ beforeEach(async () => {
   roof3dPdf = await makePdf(1);
   simulationReportPdf = await makePdf(3);
   mocks.dossierJobFindUniqueOrThrow.mockResolvedValue({ id: 'job-1', projectId: 'project-1', inputSnapshot: validSnapshot });
+  // No ADMIN_EMAIL by default: the failure alert is covered by its own tests.
+  mocks.adminEmailAddress.mockReturnValue(null);
+  mocks.sendEmail.mockResolvedValue({ sent: true });
+  mocks.dossierJobFindUnique.mockResolvedValue({ projectId: 'project-1', project: { company: { name: 'SolarPro' } } });
   mocks.dossierJobUpdateMany.mockResolvedValue({ count: 1 });
   mocks.companyFindUnique.mockResolvedValue({ ...COMPANY, logoFileId: null, anmeCertificateFileId: 'file-anme' });
   mocks.projectFindUnique.mockResolvedValue({ annexes: null });
@@ -363,6 +376,66 @@ describe('processJob — progress', () => {
 
     expect(findSucceededUpdate()).toBeDefined();
     warn.mockRestore();
+  });
+});
+
+describe('processJob — failed-job alert to the admin', () => {
+  it('emails the admin the job, project, company, step, installer reason and internal error', async () => {
+    mocks.adminEmailAddress.mockReturnValue('admin@dossipv.tn');
+    mocks.generateDossierDocument.mockRejectedValue(new Error('Claude unavailable'));
+
+    await processJob('job-1');
+
+    expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+    const message = mocks.sendEmail.mock.calls[0]?.[0] as { to: string; subject: string; text: string };
+    expect(message.to).toBe('admin@dossipv.tn');
+    expect(message.subject).toBe('Dossier en échec — SolarPro');
+    expect(message.text).toContain('job-1');
+    expect(message.text).toContain('project-1');
+    expect(message.text).toContain('Étape : text');
+    expect(message.text).toContain('La génération du texte du dossier a échoué.');
+    expect(message.text).toContain('Claude unavailable');
+    // Operators only: nothing from the client's identity.
+    expect(message.text).not.toContain(validSnapshot.client.fullName);
+    expect(message.text).not.toContain('STEG-1');
+  });
+
+  it('sends nothing when ADMIN_EMAIL is not set', async () => {
+    mocks.generateDossierDocument.mockRejectedValue(new Error('Claude unavailable'));
+
+    await processJob('job-1');
+
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string } };
+    expect(failCall.data.status).toBe('FAILED');
+  });
+
+  it('still records the failure, and still alerts, when the company lookup fails', async () => {
+    mocks.adminEmailAddress.mockReturnValue('admin@dossipv.tn');
+    mocks.dossierJobFindUnique.mockRejectedValue(new Error('connection reset'));
+    mocks.generateDossierDocument.mockRejectedValue(new Error('Claude unavailable'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(processJob('job-1')).resolves.toBeUndefined();
+
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string; failedStep: string } };
+    expect(failCall.data).toMatchObject({ status: 'FAILED', failedStep: 'text' });
+    const message = mocks.sendEmail.mock.calls[0]?.[0] as { subject: string; text: string };
+    expect(message.subject).toBe('Dossier en échec — société inconnue');
+    expect(message.text).toContain('job-1');
+    error.mockRestore();
+  });
+
+  it('does not change the outcome when the email cannot be sent', async () => {
+    mocks.adminEmailAddress.mockReturnValue('admin@dossipv.tn');
+    mocks.sendEmail.mockResolvedValue({ sent: false, reason: 'connection refused' });
+    mocks.generateDossierDocument.mockRejectedValue(new Error('Claude unavailable'));
+
+    await expect(processJob('job-1')).resolves.toBeUndefined();
+
+    expect(mocks.dossierJobUpdate).toHaveBeenCalledTimes(1);
+    const failCall = mocks.dossierJobUpdate.mock.calls[0]?.[0] as { data: { status: string } };
+    expect(failCall.data.status).toBe('FAILED');
   });
 });
 
