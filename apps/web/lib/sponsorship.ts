@@ -168,8 +168,8 @@ export async function acceptInvitation(rawToken: string, installerCompanyId: str
  * pays Premium itself (§5.3). The installer becomes a direct installer: its library keeps what it
  * has (projects stay valid), and it can add any shared item again. Its seat is freed.
  */
-export async function unlinkInstaller(installerCompanyId: string): Promise<void> {
-  await db.company.updateMany({ where: { id: installerCompanyId, sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
+export async function unlinkInstaller(installerCompanyId: string, client: Pick<typeof db, 'company'> = db): Promise<void> {
+  await client.company.updateMany({ where: { id: installerCompanyId, sponsorCompanyId: { not: null } }, data: { sponsorCompanyId: null } });
 }
 
 /** True when the company is limited to a supplier's panels and inverters. */

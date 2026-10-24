@@ -8,6 +8,8 @@ import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
 import { AcceptInvitationButton } from './pending-invitations';
 import { loadSponsor } from '../../../lib/sponsor-info';
+import { PAYMENT_METHOD_LABELS } from '../../../lib/payments/registry';
+import Link from 'next/link';
 
 function toDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -69,8 +71,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <p className="muted">Aucun abonnement.</p>
         )}
         <p className="hint">
-          Le renouvellement en ligne (paiement Konnect) arrive prochainement ; en attendant, contactez DossiPV pour prolonger
-          votre abonnement. Le changement d&apos;email ou de mot de passe se fait également auprès de DossiPV.
+          Renouvelez ou changez d&apos;offre en ligne depuis la page <Link href="/facturation">Facturation</Link>. Le changement
+          d&apos;email ou de mot de passe se fait auprès de DossiPV.
         </p>
         {company.payments.length > 0 && (
           <div className="table-wrap">
@@ -88,7 +90,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <tr key={p.id}>
                     <td>{p.createdAt.toLocaleDateString('fr-FR')}</td>
                     <td>{Number(p.amountTnd).toLocaleString('fr-FR', { minimumFractionDigits: 2 })} TND</td>
-                    <td>{p.method === 'KONNECT' ? 'Konnect' : 'Manuel'}</td>
+                    <td>{PAYMENT_METHOD_LABELS[p.method]}</td>
                     <td>{p.note ?? '—'}</td>
                   </tr>
                 ))}
