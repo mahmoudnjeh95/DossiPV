@@ -127,7 +127,7 @@ describe('suspendSubscriptionAction', () => {
     await suspendSubscriptionAction('company-1');
 
     expect(mockSubscriptionUpdate).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { status: 'SUSPENDED' } });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 });
 
@@ -138,7 +138,7 @@ describe('activateSubscriptionAction', () => {
     await activateSubscriptionAction('company-1');
 
     expect(mockSubscriptionUpdate).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { status: 'ACTIVE' } });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 });
 
@@ -156,7 +156,7 @@ describe('recordPaymentAction', () => {
     expect(mockPaymentCreate).toHaveBeenCalledWith({
       data: { companyId: 'company-1', amountTnd: 150, method: 'MANUAL', note: 'Paiement en espèces', recordedByAdmin: true },
     });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('extends the subscription and logs the payment', async () => {
@@ -174,7 +174,7 @@ describe('recordPaymentAction', () => {
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({ action: 'payment.record' }) as unknown,
     });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('rejects a non-numeric amount without creating a Payment row', async () => {
@@ -185,7 +185,18 @@ describe('recordPaymentAction', () => {
     const result = await recordPaymentAction('company-1', undefined, formData);
 
     expect(mockPaymentCreate).not.toHaveBeenCalled();
-    expect(result).toEqual({ error: 'Montant invalide.' });
+    expect(result).toEqual({ error: 'Montant (TND) : nombre invalide.' });
+  });
+
+  it('rejects an empty amount without creating a Payment row', async () => {
+    const formData = new FormData();
+    formData.set('amountTnd', '');
+    formData.set('method', 'MANUAL');
+
+    const result = await recordPaymentAction('company-1', undefined, formData);
+
+    expect(mockPaymentCreate).not.toHaveBeenCalled();
+    expect(result).toEqual({ error: 'Montant (TND) : saisissez le montant payé.' });
   });
 
   it('rejects a negative amount without creating a Payment row', async () => {
@@ -196,7 +207,7 @@ describe('recordPaymentAction', () => {
     const result = await recordPaymentAction('company-1', undefined, formData);
 
     expect(mockPaymentCreate).not.toHaveBeenCalled();
-    expect(result).toEqual({ error: 'Montant invalide.' });
+    expect(result).toEqual({ error: 'Montant (TND) : le montant doit être supérieur à 0.' });
   });
 });
 
@@ -205,15 +216,32 @@ describe('updatePeriodEndAction', () => {
     mockSubscriptionUpdate.mockResolvedValue({});
 
     const formData = new FormData();
-    formData.set('periodEnd', '2027-01-01');
+    formData.set('periodEnd', '2099-01-01');
 
-    await updatePeriodEndAction('company-1', formData);
+    await updatePeriodEndAction('company-1', undefined, formData);
 
     expect(mockSubscriptionUpdate).toHaveBeenCalledWith({
       where: { companyId: 'company-1' },
-      data: { periodEnd: new Date('2027-01-01') },
+      data: { periodEnd: new Date('2099-01-01') },
     });
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
+  });
+
+  it('refuses a date in the past and writes nothing', async () => {
+    const formData = new FormData();
+    formData.set('periodEnd', '2020-01-01');
+
+    const result = await updatePeriodEndAction('company-1', undefined, formData);
+
+    expect(result).toEqual({ error: 'Fin de période : la date ne peut pas être dans le passé.' });
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses an empty date', async () => {
+    const result = await updatePeriodEndAction('company-1', undefined, new FormData());
+
+    expect(result).toEqual({ error: 'Fin de période : date requise.' });
+    expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -277,12 +305,12 @@ describe('subscription changes are written to the audit log', () => {
   it('logs suspend, activate and a new period end under the acting super-admin', async () => {
     await suspendSubscriptionAction('company-1');
     await activateSubscriptionAction('company-1');
-    await updatePeriodEndAction('company-1', form({ periodEnd: '2027-01-01' }));
+    await updatePeriodEndAction('company-1', undefined, form({ periodEnd: '2099-01-01' }));
 
     expect(auditEntries()).toEqual([
       ['subscription.suspend', 'company-1', undefined],
       ['subscription.activate', 'company-1', undefined],
-      ['subscription.periodEnd', 'company-1', { periodEnd: '2027-01-01' }],
+      ['subscription.periodEnd', 'company-1', { periodEnd: '2099-01-01' }],
     ]);
     expect(auditRows().every((row) => row.superAdminId === 'admin-1')).toBe(true);
   });
@@ -300,7 +328,7 @@ describe('assignPlanAction', () => {
     expect(mockSubscriptionUpdate).toHaveBeenCalledWith({ where: { companyId: 'company-1' }, data: { planId: 'plan-premium' } });
     expect(m.mockSubscriptionCreate).not.toHaveBeenCalled();
     expect(auditEntries()).toEqual([['subscription.changePlan', 'company-1', { planId: 'plan-premium', planName: 'Premium' }]]);
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   describe('a sponsored installer taking Premium itself (spec 2026-10-23 §5.3)', () => {
@@ -427,7 +455,7 @@ describe('assignPlanAction', () => {
     const result = await assignPlanAction('company-1', undefined, form({ planId: 'plan-old' }));
 
     expect(result).toBeUndefined();
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 });
 
@@ -443,7 +471,7 @@ describe('addCompanyUserAction', () => {
       data: { companyId: 'company-1', email: 'fatma@solarpro.tn', fullName: 'Fatma Trabelsi', role: 'MEMBER', passwordHash: 'hashed:un-mot-de-passe' },
     });
     expect(auditEntries()).toEqual([['user.create', 'company-1', { email: 'fatma@solarpro.tn', fullName: 'Fatma Trabelsi', role: 'MEMBER' }]]);
-    expect(mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('refuses an email that already logs in to an account', async () => {
@@ -535,7 +563,7 @@ describe('authorization — no action may mutate data without a valid super-admi
     const formData = new FormData();
     formData.set('periodEnd', '2027-01-01');
 
-    await expect(updatePeriodEndAction('company-1', formData)).rejects.toThrow(FakeNextRedirect);
+    await expect(updatePeriodEndAction('company-1', undefined, formData)).rejects.toThrow(FakeNextRedirect);
 
     expect(mockSubscriptionUpdate).not.toHaveBeenCalled();
     expect(mockRedirect).toHaveBeenCalledWith('/admin/login');

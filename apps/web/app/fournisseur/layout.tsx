@@ -18,7 +18,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
     <>
       <header className="app-header">
         <div className="app-header-inner">
-          <Link href="/fournisseur" className="app-brand" aria-label="DossiPV, espace fournisseur">
+          <Link href="/fournisseur" className="app-brand" aria-label="SolarixPro, espace fournisseur">
             <BrandMark compact />
           </Link>
           <nav className="app-nav" aria-label="Navigation fournisseur">
@@ -29,9 +29,9 @@ export default async function SupplierLayout({ children }: { children: ReactNode
             ))}
           </nav>
           <div className="app-user">
-            <span>
+            <Link href="/fournisseur/profil" title="Mon profil" aria-label={`Mon profil : ${supplierName}`}>
               {supplierName} · {user.fullName}
-            </span>
+            </Link>
             <form action={logoutAction}>
               <button type="submit" className="secondary small app-logout">
                 Déconnexion

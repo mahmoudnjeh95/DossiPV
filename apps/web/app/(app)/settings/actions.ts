@@ -5,6 +5,8 @@ import { db } from '@dossipv/db';
 import { saveFile, deleteFile, validateUploadedFile } from '@dossipv/file-storage';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { FormReader } from '../../../lib/form-reader';
+import { readTunisianPhone } from '../../../lib/account-form';
+import { documentUploadError, sniffUploadType } from '../../../lib/upload-check';
 
 export interface SaveCompanyActionState {
   error: string;
@@ -54,12 +56,14 @@ async function uploadIfPresent(formData: FormData, fieldName: string): Promise<U
   }
 
   const buffer = Buffer.from(await field.arrayBuffer());
-  const validation = validateUploadedFile(buffer, field.type, field.size);
+  // The content decides the type: a PDF renamed .png (or sent with no declared type) is still a PDF.
+  const mimeType = sniffUploadType(buffer) ?? field.type;
+  const validation = validateUploadedFile(buffer, mimeType, field.size);
   if (!validation.valid) {
-    return { error: validation.error };
+    return { error: documentUploadError(validation.error, buffer) };
   }
 
-  const { storageKey } = await saveFile(buffer, field.name, field.type);
+  const { storageKey } = await saveFile(buffer, field.name, mimeType);
   return { storageKey, mimeType: validation.mimeType, fileName: field.name };
 }
 
@@ -87,7 +91,7 @@ export async function saveCompanyAction(
     shortName: reader.optionalText('shortName', 'Nom court', 50),
     slogan: reader.optionalText('slogan', 'Slogan', 200),
     address: reader.text('address', 'Adresse', 300),
-    phone: reader.text('phone', 'Téléphone', 30),
+    phone: readTunisianPhone(reader, 'phone', 'Téléphone'),
     email: reader.text('email', 'Email de contact', 200),
     taxId: reader.optionalText('taxId', 'Matricule fiscal', 50),
     commercialRegister: reader.optionalText('commercialRegister', 'Registre de commerce', 50),

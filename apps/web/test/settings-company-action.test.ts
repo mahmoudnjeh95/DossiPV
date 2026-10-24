@@ -262,3 +262,39 @@ describe('saveCompanyAction — dossier numbering', () => {
     expect(arg.data).not.toHaveProperty('dossierCounter');
   });
 });
+
+describe('saveCompanyAction — phone and ANME certificate content', () => {
+  it('refuses a phone number that is not Tunisian, with the number format in the message', async () => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+
+    const result = await saveCompanyAction(undefined, buildFormData({ phone: '12345' }));
+
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
+    expect(result?.error).toContain('Téléphone : numéro tunisien invalide');
+  });
+
+  it('tells what to upload when the certificate is neither a PDF nor an image', async () => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockValidateUploadedFile.mockReturnValue({ valid: false, error: 'Type de fichier non autorisé.' });
+    const formData = buildFormData();
+    formData.set('anmeCertificate', new File([new Uint8Array([0x50, 0x4b, 3, 4])], 'attestation.docx', { type: 'application/msword' }));
+
+    const result = await saveCompanyAction(undefined, formData);
+
+    expect(mockCompanyUpdate).not.toHaveBeenCalled();
+    expect(result?.error).toContain('ni un PDF ni une image');
+  });
+
+  it('judges a file by its content: a PDF sent as octet-stream is validated as a PDF', async () => {
+    mockCompanyFindUnique.mockResolvedValue({ id: 'company-1', logoFileId: null, anmeCertificateFileId: null });
+    mockValidateUploadedFile.mockReturnValue({ valid: true, mimeType: 'pdf' });
+    mockSaveFile.mockResolvedValue({ storageKey: 'company/a.pdf' });
+    mockFileCreate.mockResolvedValue({ id: 'f1' });
+    const formData = buildFormData();
+    formData.set('anmeCertificate', new File([new TextEncoder().encode('%PDF-1.7')], 'attestation', { type: 'application/octet-stream' }));
+
+    await saveCompanyAction(undefined, formData);
+
+    expect(mockValidateUploadedFile).toHaveBeenCalledWith(expect.anything(), 'application/pdf', expect.any(Number));
+  });
+});

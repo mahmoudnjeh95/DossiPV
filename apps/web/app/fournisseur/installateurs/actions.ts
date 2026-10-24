@@ -27,10 +27,10 @@ export async function inviteInstallerAction(_prev: InviteState, formData: FormDa
 
   await sendEmail({
     to: invitation.email,
-    subject: `${supplierName} vous invite sur DossiPV`,
+    subject: `${supplierName} vous invite sur SolarixPro`,
     text:
       'Bonjour,\n\n' +
-      `${supplierName} vous invite à utiliser DossiPV : votre abonnement Standard est offert par ce fournisseur. ` +
+      `${supplierName} vous invite à utiliser SolarixPro : votre abonnement Standard est offert par ce fournisseur. ` +
       'En acceptant, vous ne pourrez utiliser que les panneaux et onduleurs référencés par ce fournisseur. ' +
       'Le lien est valable 7 jours.\n\n' +
       'Si vous ne connaissez pas ce fournisseur, ignorez cet email.',

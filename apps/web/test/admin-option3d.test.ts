@@ -165,7 +165,7 @@ describe('extendOption3dAction', () => {
     expect(data.option3dUntil.getTime()).toBeGreaterThanOrEqual(addMonths(before, 3).getTime());
     expect(data.periodEnd).toEqual(data.option3dUntil);
     expect(auditEntries()[0]![0]).toBe('subscription.option3d');
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('extends from the current end of the option while it still runs', async () => {

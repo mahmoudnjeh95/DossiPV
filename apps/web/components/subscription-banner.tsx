@@ -10,10 +10,21 @@ import { SPONSOR_LAPSED_MESSAGE, contactDossipv, trialDossiersLeft } from '../li
 export function SubscriptionBanner({
   subscription,
   trialUsed = 0,
+  awaitingEmailConfirmation = false,
 }: {
   subscription: SubscriptionSummary | null;
   trialUsed?: number;
+  /** A self sign-up that has not confirmed its email: the free trial starts at confirmation. */
+  awaitingEmailConfirmation?: boolean;
 }): React.JSX.Element | null {
+  if (!subscription && awaitingEmailConfirmation) {
+    return (
+      <div className="banner banner-warn" role="status">
+        Votre essai gratuit démarrera dès que votre adresse e-mail sera confirmée : ouvrez le lien reçu par email à l&apos;inscription
+        (pensez aux courriers indésirables).
+      </div>
+    );
+  }
   if (!subscription) {
     return (
       <div className="banner banner-danger" role="status">

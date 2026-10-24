@@ -10,6 +10,7 @@ import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
 import { readLoginEmail } from '../../../../../lib/account-form';
+import { withNotice } from '../../../../../lib/admin-notice';
 import { shouldUseSecureCookie } from '../../../../../lib/cookie-secure';
 
 /** `error` when the action was refused; `notice` for a result to show without leaving the page. */
@@ -54,7 +55,7 @@ export async function disableCompanyUserAction(
   await db.companyUser.update({ where: { id: userId }, data: { disabledAt: new Date() } });
   await db.session.deleteMany({ where: { companyUserId: userId } });
   await logAdminAction(admin.id, 'user.disable', companyId, { userId, email: user.email });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'userDisabled'));
 }
 
 export async function enableCompanyUserAction(
@@ -71,7 +72,7 @@ export async function enableCompanyUserAction(
     await db.companyUser.update({ where: { id: userId }, data: { disabledAt: null } });
     await logAdminAction(admin.id, 'user.enable', companyId, { userId, email: user.email });
   }
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'userEnabled'));
 }
 
 /** Changes the address the user signs in with. Its password and open sessions stay. */
@@ -104,7 +105,7 @@ export async function changeCompanyUserEmailAction(
 
   await db.companyUser.update({ where: { id: userId }, data: { email } });
   await logAdminAction(admin.id, 'user.changeEmail', companyId, { userId, from: user.email, to: email });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'emailChanged'));
 }
 
 /**
@@ -129,10 +130,10 @@ export async function sendCompanyUserResetLinkAction(
   const token = await createPasswordResetToken(user.id, ACCOUNT_SETUP_LIFETIME_MS);
   const result = await sendEmail({
     to: user.email,
-    subject: 'DossiPV : choisissez votre mot de passe',
+    subject: 'SolarixPro : choisissez votre mot de passe',
     text: [
       `Bonjour ${user.fullName},`,
-      `L'équipe DossiPV vous envoie un lien pour choisir le mot de passe de votre compte ${user.email}.`,
+      `L'équipe SolarixPro vous envoie un lien pour choisir le mot de passe de votre compte ${user.email}.`,
       "Ce lien est valable 7 jours et ne sert qu'une fois. Si vous n'attendiez pas ce message, ignorez-le : votre mot de passe actuel reste valable.",
     ].join('\n\n'),
     action: { label: 'Choisir mon mot de passe', url: appUrl(`/reinitialiser-mot-de-passe?token=${encodeURIComponent(token)}`) },

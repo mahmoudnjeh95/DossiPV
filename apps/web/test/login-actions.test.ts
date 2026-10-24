@@ -23,7 +23,7 @@ vi.mock('@dossipv/auth', async () => {
 });
 
 import { loginAction } from '../app/login/actions';
-import { InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
+import { EmailNotVerifiedError, InvalidCredentialsError, TooManyAttemptsError } from '@dossipv/auth';
 
 beforeEach(() => {
   mockSet.mockClear();
@@ -108,5 +108,18 @@ describe('loginAction', () => {
 
     expect(mockLogin).not.toHaveBeenCalled();
     expect(result).toEqual({ error: 'Email ou mot de passe incorrect.' });
+  });
+
+  it('offers to resend the confirmation email when the address is not confirmed', async () => {
+    mockLogin.mockRejectedValue(new EmailNotVerifiedError());
+    const formData = new FormData();
+    formData.set('email', ' Ali@Solaire.TN ');
+    formData.set('password', 'correct-password');
+
+    const result = await loginAction(undefined, formData);
+
+    expect(result).toMatchObject({ unverifiedEmail: 'ali@solaire.tn' });
+    expect(result?.error).toContain('Confirmez votre adresse email');
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });

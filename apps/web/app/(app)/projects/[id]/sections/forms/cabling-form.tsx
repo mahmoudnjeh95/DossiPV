@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { LibraryPrerequisite } from '../../../../../../components/library-prerequisite';
 import { saveCablingAction, type CablingPayload } from '../actions';
 import {
   INSTALL_METHOD_OPTIONS,
@@ -96,10 +97,12 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
 
   if (!hasDcCable || !hasAcCable) {
     return (
-      <div className="card">
-        <p role="alert">La bibliothèque doit contenir au moins un câble DC solaire et un câble AC pour renseigner le câblage.</p>
-        <Link href="/library">Voir la bibliothèque</Link>
-      </div>
+      <LibraryPrerequisite
+        missing={[
+          ...(!hasDcCable ? [{ label: 'câble DC solaire', type: 'CABLE' }] : []),
+          ...(!hasAcCable ? [{ label: 'câble AC', type: 'CABLE' }] : []),
+        ]}
+      />
     );
   }
 

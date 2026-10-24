@@ -156,7 +156,7 @@ export async function consumeInvitation(invitationId: string, supplierCompanyId:
   // it joins when its plan has ended. The admin can still link it by hand.
   const own = await db.subscription.findUnique({ where: { companyId: installerCompanyId }, include: { plan: { select: { isTrial: true } } } });
   if (own && own.status === 'ACTIVE' && own.periodEnd > new Date() && !own.plan.isTrial) {
-    throw new SponsorshipError('Vous avez déjà un abonnement en cours : rejoignez ce fournisseur à la fin de votre abonnement, ou contactez DossiPV.');
+    throw new SponsorshipError('Vous avez déjà un abonnement en cours : rejoignez ce fournisseur à la fin de votre abonnement, ou contactez SolarixPro.');
   }
   const claimed = await db.supplierInvitation.updateMany({
     where: { id: invitationId, acceptedAt: null, expiresAt: { gt: new Date() } },

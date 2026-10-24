@@ -211,9 +211,9 @@ describe('authorization of the payer', () => {
 });
 
 describe('admin posting', () => {
-  it('posts as DossiPV on any payment', async () => {
+  it('posts as SolarixPro on any payment', async () => {
     expect(await postAdminMessage('i1', 'Montant incorrect', NOW)).toEqual({ ok: true });
-    expect(m.mockMsgCreate).toHaveBeenCalledWith({ data: { intentId: 'i1', author: 'ADMIN', authorName: 'DossiPV', body: 'Montant incorrect', createdAt: NOW } });
+    expect(m.mockMsgCreate).toHaveBeenCalledWith({ data: { intentId: 'i1', author: 'ADMIN', authorName: 'SolarixPro', body: 'Montant incorrect', createdAt: NOW } });
   });
 
   it('answers not found for an unknown payment', async () => {
@@ -261,7 +261,7 @@ describe('read markers and unread counts', () => {
 
   it('lists messages oldest first with ISO dates', async () => {
     m.mockMsgFindMany.mockResolvedValue([
-      { id: 'b', author: 'ADMIN', authorName: 'DossiPV', body: 'deux', createdAt: new Date('2026-10-24T10:01:00Z') },
+      { id: 'b', author: 'ADMIN', authorName: 'SolarixPro', body: 'deux', createdAt: new Date('2026-10-24T10:01:00Z') },
       { id: 'a', author: 'COMPANY', authorName: 'Sami', body: 'un', createdAt: new Date('2026-10-24T10:00:00Z') },
     ]);
     const messages = await listMessages('i1');
@@ -289,12 +289,12 @@ describe('polling routes', () => {
   });
 
   it('the payer route returns JSON, uncached, and marks the admin messages read', async () => {
-    m.mockMsgFindMany.mockResolvedValue([{ id: 'a', author: 'ADMIN', authorName: 'DossiPV', body: 'salut', createdAt: new Date('2026-10-24T10:00:00Z') }]);
+    m.mockMsgFindMany.mockResolvedValue([{ id: 'a', author: 'ADMIN', authorName: 'SolarixPro', body: 'salut', createdAt: new Date('2026-10-24T10:00:00Z') }]);
     const response = await companyMessages(request, companyParams);
     expect(response.status).toBe(200);
     expect(response.headers.get('Cache-Control')).toBe('no-store');
     expect(await response.json()).toEqual({
-      messages: [{ id: 'a', author: 'ADMIN', authorName: 'DossiPV', body: 'salut', createdAt: '2026-10-24T10:00:00.000Z' }],
+      messages: [{ id: 'a', author: 'ADMIN', authorName: 'SolarixPro', body: 'salut', createdAt: '2026-10-24T10:00:00.000Z' }],
       open: true,
     });
     expect(m.mockMsgUpdateMany).toHaveBeenCalledWith({ where: { intentId: 'i1', author: 'ADMIN', readByCompanyAt: null }, data: { readByCompanyAt: expect.any(Date) } });

@@ -7,6 +7,8 @@ import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../../lib/account-form';
+import { parseFuturePeriodEnd } from '../../../../../lib/admin-period';
+import { withNotice } from '../../../../../lib/admin-notice';
 import { addMonths } from '../../../../../lib/subscription';
 import { extendOption3dUntil, periodExtensionData } from '../../../../../lib/subscription-extension';
 import { audienceMismatchError } from '../../../../../lib/plan-audience';
@@ -27,14 +29,14 @@ export async function suspendSubscriptionAction(companyId: string): Promise<void
   const admin = await requireAuthenticatedSuperAdmin();
   await db.subscription.update({ where: { companyId }, data: { status: 'SUSPENDED' } });
   await logAdminAction(admin.id, 'subscription.suspend', companyId);
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'subscriptionSuspended'));
 }
 
 export async function activateSubscriptionAction(companyId: string): Promise<void> {
   const admin = await requireAuthenticatedSuperAdmin();
   await db.subscription.update({ where: { companyId }, data: { status: 'ACTIVE' } });
   await logAdminAction(admin.id, 'subscription.activate', companyId);
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'subscriptionActivated'));
 }
 
 /**
@@ -53,13 +55,19 @@ export async function recordPaymentAction(
   const methodField = formData.get('method');
   const noteField = formData.get('note');
 
-  if (typeof amountField !== 'string' || typeof methodField !== 'string') {
-    return { error: 'Montant invalide.' };
+  if (typeof amountField !== 'string' || amountField.trim().length === 0) {
+    return { error: 'Montant (TND) : saisissez le montant payé.' };
+  }
+  if (typeof methodField !== 'string') {
+    return { error: 'Méthode : choisissez une méthode de paiement.' };
   }
 
   const amountTnd = Number(amountField);
-  if (!Number.isFinite(amountTnd) || amountTnd <= 0) {
-    return { error: 'Montant invalide.' };
+  if (!Number.isFinite(amountTnd)) {
+    return { error: 'Montant (TND) : nombre invalide.' };
+  }
+  if (amountTnd <= 0) {
+    return { error: 'Montant (TND) : le montant doit être supérieur à 0.' };
   }
 
   const reader = new FormReader(formData);
@@ -91,22 +99,26 @@ export async function recordPaymentAction(
     periodEnd: periodEnd?.toISOString() ?? null,
   });
 
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'paymentRecorded'));
 }
 
-export async function updatePeriodEndAction(companyId: string, formData: FormData): Promise<void> {
+/** Sets the end of the period to the date typed. A date in the past is refused: it would expire the subscription at once. */
+export async function updatePeriodEndAction(
+  companyId: string,
+  _prevState: InstallerActionState | undefined,
+  formData: FormData,
+): Promise<InstallerActionState | undefined> {
   const admin = await requireAuthenticatedSuperAdmin();
 
   const periodEndField = formData.get('periodEnd');
-
-  if (typeof periodEndField !== 'string') {
-    redirect(`/admin/installers/${companyId}`);
-    return;
+  const parsed = parseFuturePeriodEnd(typeof periodEndField === 'string' ? periodEndField : '', new Date());
+  if ('error' in parsed) {
+    return { error: parsed.error };
   }
 
-  await db.subscription.update({ where: { companyId }, data: { periodEnd: new Date(periodEndField) } });
-  await logAdminAction(admin.id, 'subscription.periodEnd', companyId, { periodEnd: periodEndField });
-  redirect(`/admin/installers/${companyId}`);
+  await db.subscription.update({ where: { companyId }, data: { periodEnd: parsed.date } });
+  await logAdminAction(admin.id, 'subscription.periodEnd', companyId, { periodEnd: String(periodEndField) });
+  redirect(withNotice(`/admin/installers/${companyId}`, 'periodEndUpdated'));
 }
 
 /**
@@ -126,10 +138,11 @@ export async function assignPlanAction(
   const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
   let periodEnd: Date | null = null;
   if (!subscription) {
-    const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
-    periodEnd = new Date(periodEndRaw);
-    if (periodEndRaw.length > 0 && Number.isNaN(periodEnd.getTime())) {
-      reader.errors.push('Fin de période : date invalide.');
+    const parsed = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    if ('error' in parsed) {
+      reader.errors.push(parsed.error);
+    } else {
+      periodEnd = parsed.date;
     }
   }
   if (reader.hasErrors) {
@@ -143,6 +156,10 @@ export async function assignPlanAction(
   // A company already on an archived plan keeps it; nobody else is moved onto one.
   if (plan.archivedAt && subscription?.planId !== planId) {
     return { error: "Ce plan est archivé : il n'est plus proposé." };
+  }
+  // The free trial is granted by the sign-up; by hand it is only kept, never chosen (it does not sell).
+  if (plan.isTrial && subscription?.planId !== planId) {
+    return { error: "L'essai gratuit est attribué à l'inscription : il ne se choisit pas à la main." };
   }
   // Suppliers only receive packs, installers only installer plans.
   const company = await db.company.findUnique({ where: { id: companyId }, select: { kind: true } });
@@ -161,11 +178,11 @@ export async function assignPlanAction(
   if (subscription && subscription.plan?.isTrial && !plan.isTrial) {
     // Trial to paid plan: the trial subscription is replaced by a fresh period (the trial's
     // dossiers no longer count) and the audit entry keeps the trial plan it came from.
-    const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
-    const newPeriodEnd = new Date(periodEndRaw);
-    if (periodEndRaw.length === 0 || Number.isNaN(newPeriodEnd.getTime())) {
-      return { error: "Fin de période : date valide requise pour passer de l'essai à un plan payant." };
+    const parsedEnd = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    if ('error' in parsedEnd) {
+      return { error: `${parsedEnd.error} (obligatoire pour passer de l'essai à un plan payant)` };
     }
+    const newPeriodEnd = parsedEnd.date;
     await db.subscription.update({
       where: { companyId },
       data: { planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: newPeriodEnd },
@@ -180,8 +197,15 @@ export async function assignPlanAction(
   } else if (subscription && leavesSponsor && subscription.status === 'SUSPENDED') {
     // The row only held the 3D option while the installer was sponsored (suspended, so it granted
     // nothing): it becomes the installer's own active plan, for the date given or one month.
-    const requested = new Date(typeof formData.get('periodEnd') === 'string' ? (formData.get('periodEnd') as string) : '');
-    const newPeriodEnd = Number.isNaN(requested.getTime()) ? addMonths(new Date(), 1) : requested;
+    const rawEnd = typeof formData.get('periodEnd') === 'string' ? (formData.get('periodEnd') as string) : '';
+    let newPeriodEnd = addMonths(new Date(), 1);
+    if (rawEnd.trim().length > 0) {
+      const requested = parseFuturePeriodEnd(rawEnd, new Date());
+      if ('error' in requested) {
+        return { error: requested.error };
+      }
+      newPeriodEnd = requested.date;
+    }
     await db.subscription.update({ where: { companyId }, data: { planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: newPeriodEnd } });
     await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name, periodEnd: newPeriodEnd.toISOString(), ...sponsorDetails });
   } else if (subscription) {
@@ -197,7 +221,7 @@ export async function assignPlanAction(
     await unlinkInstaller(companyId);
     await db.subscription.updateMany({ where: { companyId }, data: { option3dUntil: null } });
   }
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, subscription ? 'planChanged' : 'subscriptionCreated'));
 }
 
 /** Adds a login to the company. The super-admin gives the password to the person directly. */
@@ -225,7 +249,7 @@ export async function addCompanyUserAction(
     data: { companyId, email, fullName, role, passwordHash: await hashPassword(password) },
   });
   await logAdminAction(admin.id, 'user.create', companyId, { email, fullName, role });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'userAdded'));
 }
 
 /** Sets a new password for one of the company's users and ends every session it has open. */
@@ -252,7 +276,7 @@ export async function resetCompanyUserPasswordAction(
   await db.companyUser.update({ where: { id: userId }, data: { passwordHash: await hashPassword(password) } });
   await db.session.deleteMany({ where: { companyUserId: userId } });
   await logAdminAction(admin.id, 'user.resetPassword', companyId, { email: user.email });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'passwordReset'));
 }
 
 const OPTION_3D_MAX_MONTHS = 24;
@@ -300,7 +324,7 @@ export async function extendOption3dAction(
     return { error: error instanceof Error ? error.message : 'Impossible d’enregistrer l’option 3D.' };
   }
   await logAdminAction(admin.id, 'subscription.option3d', companyId, { months, option3dUntil: option3dUntil.toISOString() });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'option3dSaved'));
 }
 
 /** Ends the 3D option now. The (suspended) subscription row that may hold it is left in place. */
@@ -310,5 +334,5 @@ export async function clearOption3dAction(companyId: string): Promise<void> {
   if (result.count > 0) {
     await logAdminAction(admin.id, 'subscription.option3d', companyId, { option3dUntil: null });
   }
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'option3dCleared'));
 }

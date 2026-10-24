@@ -131,6 +131,13 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         <Link href="/projects">Projets</Link> › <Link href={`/projects/${project.id}`}>{fullName}</Link> › Récapitulatif
       </p>
       <h1>Récapitulatif avant génération — {fullName}</h1>
+      {!isDraft && generateReason === null && (
+        <p>
+          <a className="button" href="#generation">
+            Tout est prêt : aller à la génération du dossier final
+          </a>
+        </p>
+      )}
 
       {pending && (
         <div className="banner banner-danger" role="alert">
@@ -211,9 +218,15 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         <ul className="section-list piece-list">
           {pieces.map((piece) => (
             <li key={piece.key}>
-              <span className={`badge ${piece.done ? 'badge-ok' : 'badge-danger'}`}>{piece.done ? '✓' : 'manquant'}</span>
               <span className="grow">
+                {/* The mark sits right next to the label it speaks about, with the status spelled out. */}
+                <span className={`badge ${piece.done ? 'badge-ok' : 'badge-danger'}`} aria-hidden="true">
+                  {piece.done ? '✓' : '✗'}
+                </span>{' '}
                 {piece.label}
+                <span className={piece.done ? 'muted' : 'badge badge-danger'} style={{ marginLeft: 8 }}>
+                  {piece.done ? 'fourni' : 'manquant'}
+                </span>
                 {piece.detail && (
                   <>
                     <br />
@@ -237,8 +250,13 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         <Link href={`/projects/${project.id}`}>Voir le détail des contrôles</Link>
       </section>
 
-      <section className="card">
+      <section className="card" id="generation">
         <h2>Génération</h2>
+        {!isDraft && generateReason === null && (
+          <div className="banner banner-ok" role="status">
+            Tout est complet : vous pouvez générer le dossier final.
+          </div>
+        )}
         {quota && (
           <p className="muted">
             {hasPlace
@@ -253,7 +271,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
           projectId={project.id}
           disabled={generateReason !== null}
           reason={generateReason}
-          label={isDraft ? 'Générer un brouillon (pièces manquantes)' : 'Générer le dossier'}
+          label={isDraft ? 'Générer un brouillon (pièces manquantes)' : 'Générer le dossier final'}
         />
       </section>
     </main>

@@ -48,6 +48,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      SUPPORT_PHONE: ${SUPPORT_PHONE:-}
+      SUPPORT_WHATSAPP: ${SUPPORT_WHATSAPP:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
       # Satellite imagery of the dossier maps (worker) falls back to Esri when empty.
       MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}

@@ -11,6 +11,8 @@ const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // matches @dossipv/auth's SE
 
 export interface LoginActionState {
   error: string;
+  /** Set when the address is not confirmed yet: the form then offers to resend the confirmation email. */
+  unverifiedEmail?: string;
 }
 
 export async function loginAction(
@@ -40,10 +42,13 @@ export async function loginAction(
       return { error: 'Trop de tentatives échouées. Réessayez plus tard.' };
     }
     if (error instanceof EmailNotVerifiedError) {
-      return { error: "Confirmez votre adresse email : cliquez sur le lien reçu à l'inscription." };
+      return {
+        error: "Confirmez votre adresse email : cliquez sur le lien reçu à l'inscription. Il ne vous est pas parvenu ? Demandez un nouvel email ci-dessous.",
+        unverifiedEmail: emailField.trim().toLowerCase(),
+      };
     }
     if (error instanceof AccountDisabledError) {
-      return { error: 'Ce compte est désactivé. Contactez DossiPV pour le réactiver.' };
+      return { error: 'Ce compte est désactivé. Contactez SolarixPro pour le réactiver.' };
     }
     throw error;
   }

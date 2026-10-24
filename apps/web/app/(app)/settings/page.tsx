@@ -4,6 +4,8 @@ import { requireAuthenticatedCompanyUser } from '../layout';
 import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { summarizeSubscription, quotaJobs, quotaWindowStart, projectsCountedThisMonth } from '../../../lib/subscription';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE, TIER_LABELS } from '../../../lib/labels';
+import { isAwaitingEmailConfirmation } from '../../../lib/email-confirmation';
+import { FlashBanner } from '../../../components/flash-banner';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { CompanyForm } from './company-form';
 import { AcceptInvitationButton } from './pending-invitations';
@@ -40,6 +42,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         orderBy: { createdAt: 'desc' },
       });
   const subscription = summarizeSubscription(await loadEffectiveSubscription(user.companyId), now);
+  const awaitingEmail = subscription === null && (await isAwaitingEmailConfirmation(user.id));
   // Only the trial's banner shows a dossier count.
   const trialUsed = subscription?.isTrial
     ? projectsCountedThisMonth(await quotaJobs(user.companyId, subscription, now), now, quotaWindowStart(subscription, now)).size
@@ -47,10 +50,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <main>
-      <h1>Société</h1>
-      {saved && <div className="banner banner-ok">Informations enregistrées.</div>}
+      <h1>Paramètres</h1>
+      {saved && <FlashBanner param="saved">Informations enregistrées.</FlashBanner>}
       {company.anmeCertificateFileId === null && <div className="banner banner-danger">{ANME_AGREEMENT_REQUIRED_MESSAGE}</div>}
-      <SubscriptionBanner subscription={subscription} trialUsed={trialUsed} />
+      <SubscriptionBanner subscription={subscription} trialUsed={trialUsed} awaitingEmailConfirmation={awaitingEmail} />
 
       <section className="card">
         <h2>Abonnement</h2>
@@ -68,11 +71,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <dd>{user.email}</dd>
           </dl>
         ) : (
-          <p className="muted">Aucun abonnement.</p>
+          <p className="muted">
+            {awaitingEmail ? 'Votre essai gratuit démarrera dès que votre adresse e-mail sera confirmée.' : 'Aucun abonnement.'}
+          </p>
         )}
         <p className="hint">
           Renouvelez ou changez d&apos;offre depuis la page <Link href="/facturation">Abonnement et paiement</Link>. Le changement
-          d&apos;email ou de mot de passe se fait auprès de DossiPV.
+          d&apos;email ou de mot de passe se fait auprès de SolarixPro.
         </p>
         {company.payments.length > 0 && (
           <div className="table-wrap">
@@ -109,7 +114,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <ul>
               {pendingInvitations.map((invitation) => (
                 <li key={invitation.id}>
-                  {invitation.supplierCompany.name} vous invite à utiliser DossiPV.
+                  {invitation.supplierCompany.name} vous invite à utiliser SolarixPro.
                   <AcceptInvitationButton invitationId={invitation.id} />
                 </li>
               ))}

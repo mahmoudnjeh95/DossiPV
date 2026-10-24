@@ -72,13 +72,13 @@ export function buildReminderEmail({ kind, companyName, planName, periodEnd, now
   const endDate = formatFrenchDate(periodEnd);
   const contact = adminEmailAddress();
   const renew = contact
-    ? `Pour renouveler votre abonnement, contactez DossiPV à l'adresse ${contact}.`
-    : "Pour renouveler votre abonnement, contactez l'équipe DossiPV.";
-  const subscription = `Votre abonnement DossiPV (formule ${planName}) pour ${companyName}`;
+    ? `Pour renouveler votre abonnement, contactez SolarixPro à l'adresse ${contact}.`
+    : "Pour renouveler votre abonnement, contactez l'équipe SolarixPro.";
+  const subscription = `Votre abonnement SolarixPro (formule ${planName}) pour ${companyName}`;
 
   if (kind === 'EXPIRED') {
     return {
-      subject: 'Votre abonnement DossiPV a expiré',
+      subject: 'Votre abonnement SolarixPro a expiré',
       text: [
         'Bonjour,',
         `${subscription} a expiré le ${endDate}.`,
@@ -91,7 +91,7 @@ export function buildReminderEmail({ kind, companyName, planName, periodEnd, now
   const daysLeft = Math.ceil((periodEnd.getTime() - now.getTime()) / DAY_MS);
   const when = kind === 'EXPIRES_IN_1_DAY' ? 'dans moins de 24 heures' : `dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`;
   return {
-    subject: kind === 'EXPIRES_IN_1_DAY' ? `Dernier jour : votre abonnement DossiPV expire le ${endDate}` : `Votre abonnement DossiPV expire le ${endDate}`,
+    subject: kind === 'EXPIRES_IN_1_DAY' ? `Dernier jour : votre abonnement SolarixPro expire le ${endDate}` : `Votre abonnement SolarixPro expire le ${endDate}`,
     text: [
       'Bonjour,',
       `${subscription} expire le ${endDate}, ${when}.`,

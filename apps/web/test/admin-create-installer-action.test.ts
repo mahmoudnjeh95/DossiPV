@@ -103,7 +103,7 @@ describe('createInstallerAction', () => {
         details: { name: 'SolarPro Tunisie', ownerEmail: 'owner@solarpro.tn', planId: null, periodEnd: null },
       },
     });
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/company-new');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-new\?ok=/));
   });
 
   it('creates an active subscription when a plan is chosen', async () => {

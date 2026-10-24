@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Option } from '../lib/labels';
 
 /** A labelled `<select>` with an optional empty choice — shared by every section form. */
@@ -10,15 +11,18 @@ export function SelectField<T extends string | number>({
   required,
   hint,
   disabled,
+  emptyMessage,
 }: {
   name: string;
-  label: string;
+  label: ReactNode;
   options: Option<T>[];
   defaultValue?: T | null | undefined;
   allowEmpty?: boolean | undefined;
   required?: boolean | undefined;
-  hint?: string | undefined;
+  hint?: ReactNode;
   disabled?: boolean | undefined;
+  /** Shown instead of the hint when `options` is empty (e.g. a link to add equipment to the library). */
+  emptyMessage?: ReactNode;
 }): React.JSX.Element {
   return (
     <label>
@@ -31,7 +35,7 @@ export function SelectField<T extends string | number>({
           </option>
         ))}
       </select>
-      {hint && <span className="hint">{hint}</span>}
+      {options.length === 0 && emptyMessage ? <span className="hint" role="alert">{emptyMessage}</span> : hint && <span className="hint">{hint}</span>}
     </label>
   );
 }

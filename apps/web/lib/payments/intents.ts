@@ -18,11 +18,11 @@ export async function createIntent(
 ): Promise<{ intentId: string }> {
   const settings = await loadP2pSettings();
   if (!offeredProviders(settings).some((p) => p.id === input.provider)) {
-    throw new PaymentError('Ce moyen de paiement n’est pas disponible : choisissez-en un autre ou contactez DossiPV.');
+    throw new PaymentError('Ce moyen de paiement n’est pas disponible : choisissez-en un autre ou contactez SolarixPro.');
   }
   const open = await db.paymentIntent.count({ where: { companyId, status: 'PENDING' } });
   if (open >= MAX_OPEN_INTENTS) {
-    throw new PaymentError(`Vous avez déjà ${MAX_OPEN_INTENTS} paiements en cours : annulez-en un ou attendez la validation de DossiPV.`);
+    throw new PaymentError(`Vous avez déjà ${MAX_OPEN_INTENTS} paiements en cours : annulez-en un ou attendez la validation de SolarixPro.`);
   }
   const price = await priceCheckout(companyId, input);
   const intent = await db.paymentIntent.create({

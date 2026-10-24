@@ -62,7 +62,7 @@ async function sendWelcomeEmail(to: string): Promise<void> {
   const admin = adminEmailAddress();
   await sendEmail({
     to,
-    subject: 'Bienvenue sur DossiPV : votre essai gratuit est activé',
+    subject: 'Bienvenue sur SolarixPro : votre essai gratuit est activé',
     text:
       'Bonjour,\n\n' +
       `Votre adresse est confirmée. Votre essai gratuit vous donne ${TRIAL_DOSSIERS} dossiers pendant ${TRIAL_DAYS} jours.\n\n` +
@@ -82,7 +82,7 @@ async function sendAdminNotification(
   if (!admin) return;
   await sendEmail({
     to: admin,
-    subject: `Nouvelle inscription DossiPV : ${company?.name ?? email}`,
+    subject: `Nouvelle inscription SolarixPro : ${company?.name ?? email}`,
     text:
       'Une société vient de confirmer son inscription et de démarrer son essai gratuit.\n\n' +
       `Société : ${company?.name ?? '—'}\n` +

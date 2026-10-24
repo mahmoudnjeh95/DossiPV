@@ -105,7 +105,7 @@ describe('disableCompanyUserAction', () => {
     expect(m.mockCompanyUserUpdate).toHaveBeenCalledWith({ where: { id: 'user-2' }, data: { disabledAt: expect.any(Date) as unknown } });
     expect(m.mockSessionDeleteMany).toHaveBeenCalledWith({ where: { companyUserId: 'user-2' } });
     expect(auditEntries()).toEqual([['user.disable', 'company-1', { userId: 'user-2', email: 'membre@solar.tn' }]]);
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('disables an owner while another owner stays enabled', async () => {
@@ -149,7 +149,7 @@ describe('enableCompanyUserAction', () => {
 
     expect(m.mockCompanyUserUpdate).toHaveBeenCalledWith({ where: { id: 'user-2' }, data: { disabledAt: null } });
     expect(auditEntries()).toEqual([['user.enable', 'company-1', { userId: 'user-2', email: 'membre@solar.tn' }]]);
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('refuses a user unknown to this company', async () => {
@@ -172,7 +172,7 @@ describe('changeCompanyUserEmailAction', () => {
     expect(m.mockCompanyUserFindUnique).toHaveBeenCalledWith({ where: { email: 'salma@solar.tn' } });
     expect(m.mockCompanyUserUpdate).toHaveBeenCalledWith({ where: { id: 'user-2' }, data: { email: 'salma@solar.tn' } });
     expect(auditEntries()).toEqual([['user.changeEmail', 'company-1', { userId: 'user-2', from: 'membre@solar.tn', to: 'salma@solar.tn' }]]);
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/company-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-1\?ok=/));
   });
 
   it('refuses an email another account signs in with', async () => {

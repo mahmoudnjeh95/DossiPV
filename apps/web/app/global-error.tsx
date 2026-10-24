@@ -24,7 +24,7 @@ export default function GlobalError({
       <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', background: '#f4f7f9', color: '#0f172a' }}>
         <main style={{ maxWidth: 480, margin: '15vh auto', padding: '0 16px', textAlign: 'center' }}>
           <h1 style={{ fontSize: 22 }}>Une erreur inattendue est survenue</h1>
-          <p style={{ color: '#526174' }}>Réessayez dans un instant. Si le problème persiste, contactez le support DossiPV.</p>
+          <p style={{ color: '#526174' }}>Réessayez dans un instant. Si le problème persiste, contactez le support SolarixPro.</p>
           <button
             type="button"
             onClick={() => retry()}

@@ -13,7 +13,7 @@ export const CHAT_DAYS_AFTER_DECISION = 30;
 /** How many messages a conversation shows (the latest ones). */
 const LIST_ROWS = 200;
 /** The name the payer sees for the admin. */
-export const ADMIN_DISPLAY_NAME = 'DossiPV';
+export const ADMIN_DISPLAY_NAME = 'SolarixPro';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -149,8 +149,8 @@ async function notifyCompany(intent: { id: string; companyId: string; amountTnd:
     if (owners.length === 0) return;
     await sendEmail({
       to: owners.map((owner) => owner.email),
-      subject: 'DossiPV vous a écrit à propos de votre paiement',
-      text: `DossiPV a écrit un message sur votre paiement de ${money(Number(intent.amountTnd))}. Connectez-vous pour le lire et répondre.`,
+      subject: 'SolarixPro vous a écrit à propos de votre paiement',
+      text: `SolarixPro a écrit un message sur votre paiement de ${money(Number(intent.amountTnd))}. Connectez-vous pour le lire et répondre.`,
       action: { label: 'Lire le message', url: appUrl(`/paiement/${intent.id}`) },
     });
   } catch (error) {
@@ -187,7 +187,7 @@ export async function postCompanyMessage(
   return { ok: true };
 }
 
-/** A message from the admin, shown to the payer as "DossiPV". */
+/** A message from the admin, shown to the payer as "SolarixPro". */
 export async function postAdminMessage(intentId: string, rawBody: unknown, now: Date = new Date()): Promise<ChatResult> {
   const intent = await db.paymentIntent.findUnique({ where: { id: intentId }, select: { id: true, companyId: true, status: true, paidAt: true, amountTnd: true } });
   if (!intent) return NOT_FOUND;

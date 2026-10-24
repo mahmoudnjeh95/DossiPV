@@ -4,6 +4,7 @@ import { getOption3dPriceTnd } from '../../../../lib/platform-settings';
 import { loadP2pSettings } from '../../../../lib/payments/p2p';
 import { Option3dPriceForm } from './option3d-price-form';
 import { P2pForm } from './p2p-form';
+import { maskAccessToken } from '../../../../lib/admin-period';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 
 // Mirrors the model hardcoded in packages/document-text/src/generate-dossier-text.ts.
@@ -24,7 +25,7 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
         <tbody>
           <tr>
             <th>Source des tuiles</th>
-            <td>{ACTIVE_MAP_PROVIDER.tileUrlTemplate}</td>
+            <td>{maskAccessToken(ACTIVE_MAP_PROVIDER.tileUrlTemplate)}</td>
           </tr>
           <tr>
             <th>Zoom maximum</th>

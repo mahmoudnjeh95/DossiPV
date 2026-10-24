@@ -97,7 +97,7 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
               </>
             ) : (
               <p className="banner banner-warn" role="status">
-                Paiement indisponible : contactez DossiPV.
+                Paiement indisponible : contactez SolarixPro.
               </p>
             )}
           </section>
@@ -106,7 +106,7 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
             <h2>2. Déclarez votre paiement</h2>
             {intent.declaredAt && (
               <p className="banner banner-warn" role="status">
-                En attente de validation par DossiPV. Déclaré le {intent.declaredAt.toLocaleDateString('fr-FR')} (numéro ou référence : {intent.providerReference}).
+                En attente de validation par SolarixPro. Déclaré le {intent.declaredAt.toLocaleDateString('fr-FR')} (numéro ou référence : {intent.providerReference}).
                 Vous pouvez envoyer une nouvelle capture tant que le paiement n’est pas validé.
               </p>
             )}

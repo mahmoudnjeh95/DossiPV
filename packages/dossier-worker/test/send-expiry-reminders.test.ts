@@ -98,7 +98,7 @@ describe('buildReminderEmail', () => {
     const periodEnd = new Date('2026-10-30T10:00:00.000Z');
     const email = buildReminderEmail({ kind: 'EXPIRES_IN_7_DAYS', companyName: 'SolarPro', planName: 'Premium', periodEnd, now: NOW });
     expect(formatFrenchDate(periodEnd)).toBe('30/10/2026');
-    expect(email.subject).toBe('Votre abonnement DossiPV expire le 30/10/2026');
+    expect(email.subject).toBe('Votre abonnement SolarixPro expire le 30/10/2026');
     expect(email.text).toContain('formule Premium');
     expect(email.text).toContain('dans 7 jours');
     expect(email.text).toContain('consulter');
@@ -109,8 +109,8 @@ describe('buildReminderEmail', () => {
   it('falls back to a generic contact without ADMIN_EMAIL', () => {
     mocks.adminEmailAddress.mockReturnValue(null);
     const email = buildReminderEmail({ kind: 'EXPIRED', companyName: 'SolarPro', planName: 'Standard', periodEnd: inMs(-DAY_MS), now: NOW });
-    expect(email.subject).toBe('Votre abonnement DossiPV a expiré');
-    expect(email.text).toContain("contactez l'équipe DossiPV");
+    expect(email.subject).toBe('Votre abonnement SolarixPro a expiré');
+    expect(email.text).toContain("contactez l'équipe SolarixPro");
   });
 });
 
@@ -190,7 +190,7 @@ describe('sendExpiryReminders', () => {
     await sendExpiryReminders(NOW);
 
     expect((mocks.reminderCreate.mock.calls[0]?.[0] as { data: { kind: string } }).data.kind).toBe('EXPIRED');
-    expect((mocks.sendEmail.mock.calls[0]?.[0] as { subject: string }).subject).toBe('Votre abonnement DossiPV a expiré');
+    expect((mocks.sendEmail.mock.calls[0]?.[0] as { subject: string }).subject).toBe('Votre abonnement SolarixPro a expiré');
   });
 
   it('carries on with the other subscriptions when one reminder cannot be recorded', async () => {

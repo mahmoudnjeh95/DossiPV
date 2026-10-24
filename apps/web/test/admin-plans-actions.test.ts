@@ -80,7 +80,7 @@ describe('createPlanAction', () => {
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: { superAdminId: 'admin-1', action: 'plan.create', targetCompanyId: null, details: { planId: 'plan-1', ...plan } },
     });
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/plans');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/plans\?ok=/));
   });
 
   it('refuses a missing name, an unknown tier, a zero limit and a negative price, all at once', async () => {
@@ -228,7 +228,7 @@ describe('archivePlanAction / unarchivePlanAction', () => {
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: { superAdminId: 'admin-1', action: 'plan.archive', targetCompanyId: null, details: { planId: 'plan-1', name: 'Premium' } },
     });
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/plans');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/plans\?ok=/));
   });
 
   it('unarchives an archived plan and logs it', async () => {

@@ -19,8 +19,8 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
 
   return (
     <main className="login-page">
-      <section className="login-story" aria-label="DossiPV">
-        <Link href="/" aria-label="Retour à l’accueil DossiPV">
+      <section className="login-story" aria-label="SolarixPro">
+        <Link href="/" aria-label="Retour à l’accueil SolarixPro">
           <BrandMark inverse />
         </Link>
         <div className="login-story-content">
@@ -35,7 +35,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
 
       <section className="login-form-panel" aria-labelledby="reset-title">
         <div className="login-form-wrap">
-          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil DossiPV">
+          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil SolarixPro">
             <BrandMark compact />
           </Link>
           <p className="eyebrow login-eyebrow">NOUVEAU MOT DE PASSE</p>

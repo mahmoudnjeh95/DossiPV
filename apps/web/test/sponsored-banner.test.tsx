@@ -25,17 +25,17 @@ describe('subscription banner for sponsored installers', () => {
 
   it('offers Standard or Premium to a company with no subscription', () => {
     const html = renderToStaticMarkup(<SubscriptionBanner subscription={null} />);
-    expect(html).toContain('Aucun abonnement : contactez DossiPV');
+    expect(html).toContain('Aucun abonnement : contactez SolarixPro');
     expect(html).toContain('pour Standard ou Premium');
   });
 });
 
 describe('missing products of a sponsor', () => {
   it('names the missing kind', () => {
-    expect(sponsorMissingProductsMessage(['Onduleurs monophasés homologués STEG'])).toBe('Votre fournisseur n’a pas encore d’onduleur dans DossiPV.');
-    expect(sponsorMissingProductsMessage(['Modules photovoltaïques'])).toBe('Votre fournisseur n’a pas encore de panneau dans DossiPV.');
+    expect(sponsorMissingProductsMessage(['Onduleurs monophasés homologués STEG'])).toBe('Votre fournisseur n’a pas encore d’onduleur dans SolarixPro.');
+    expect(sponsorMissingProductsMessage(['Modules photovoltaïques'])).toBe('Votre fournisseur n’a pas encore de panneau dans SolarixPro.');
     expect(sponsorMissingProductsMessage(['Modules photovoltaïques', 'Onduleurs monophasés homologués STEG'])).toBe(
-      'Votre fournisseur n’a pas encore d’onduleur ni de panneau dans DossiPV.',
+      'Votre fournisseur n’a pas encore d’onduleur ni de panneau dans SolarixPro.',
     );
   });
 

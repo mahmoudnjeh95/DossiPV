@@ -9,11 +9,34 @@ import { ownEquipmentSlug } from './own-equipment-kinds';
 import { PriceForm } from './price-form';
 import { loadSponsor } from '../../../lib/sponsor-info';
 import { LOCKED_KINDS } from '../../../lib/sponsorship';
+import type { EquipmentKind } from '@dossipv/db';
+
+const SECTION_FILTERS: { kind: EquipmentKind; label: string }[] = [
+  { kind: 'PV_MODULE', label: 'Modules photovoltaïques' },
+  { kind: 'INVERTER', label: 'Onduleurs' },
+  { kind: 'SPD', label: 'Parafoudres' },
+  { kind: 'DC_SWITCH', label: 'Interrupteurs-sectionneurs DC' },
+  { kind: 'DC_FUSE', label: 'Fusibles DC' },
+  { kind: 'AC_BREAKER', label: 'Disjoncteurs AC' },
+  { kind: 'AC_ISOLATOR', label: 'Interrupteurs-sectionneurs AC' },
+  { kind: 'CABLE', label: 'Câbles' },
+  { kind: 'ACCESSORY', label: 'Accessoires' },
+];
 
 const isLocked = (kind: string): boolean => (LOCKED_KINDS as readonly string[]).includes(kind);
 
-type SearchParams = Promise<{ tab?: string; q?: string }>;
+type SearchParams = Promise<{ tab?: string; q?: string; type?: string; more?: string }>;
+
+/** Rows shown per section before « Afficher plus » (the shared catalogue lists hundreds of items). */
+const PAGE_SIZE = 25;
 type BulkKind = 'SPD' | 'DC_SWITCH' | 'DC_FUSE' | 'AC_BREAKER' | 'AC_ISOLATOR' | 'CABLE';
+
+function moreHref(q: string, type: EquipmentKind | null, more: number): string {
+  const query = new URLSearchParams({ tab: 'catalogue', more: String(more) });
+  if (q) query.set('q', q);
+  if (type) query.set('type', type);
+  return `/library?${query.toString()}`;
+}
 
 /**
  * The installer's own equipment library: each company picks, from the shared catalog, the
@@ -25,8 +48,10 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
   const params = await searchParams;
   const catalogue = params.tab === 'catalogue';
   const q = (params.q ?? '').slice(0, 100);
+  const typeFilter = catalogue ? (SECTION_FILTERS.find((f) => f.kind === params.type)?.kind ?? null) : null;
+  const shown = Math.min(Math.max(Number.parseInt(params.more ?? '', 10) || 1, 1), 40) * PAGE_SIZE;
   const [allSections, sponsor] = await Promise.all([
-    loadSections(user.companyId, catalogue ? 'catalogue' : 'library', catalogue ? q : ''),
+    loadSections(user.companyId, catalogue ? 'catalogue' : 'library', catalogue ? q : '', typeFilter),
     loadSponsor(user.companyId),
   ]);
   const sponsored = sponsor !== null;
@@ -51,7 +76,16 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
           <input type="hidden" name="tab" value="catalogue" />
           <label>
             Rechercher
-            <input type="search" name="q" defaultValue={q} placeholder="Marque, modèle, puissance (W ou kW)" />
+            <input type="search" name="q" defaultValue={q} placeholder="Marque, modèle, puissance (550 W, 5 kW), « onduleur », « parafoudre »…" />
+          </label>
+          <label>
+            Type
+            <select name="type" defaultValue={typeFilter ?? ''}>
+              <option value="">Tous les types</option>
+              {SECTION_FILTERS.filter((f) => !(sponsored && isLocked(f.kind))).map((f) => (
+                <option key={f.kind} value={f.kind}>{f.label}</option>
+              ))}
+            </select>
           </label>
           <button type="submit">Rechercher</button>
         </form>
@@ -80,7 +114,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
             {catalogue && s.bulk && s.rows.some((r) => !r.libraryItemId) && <AddAllButton kind={s.kind as BulkKind} />}
             <table>
               <tbody>
-                {s.rows.map((r) => (
+                {s.rows.slice(0, catalogue ? shown : undefined).map((r) => (
                   <tr key={r.itemId}>
                     <td>
                       {r.label} {r.own && <span className="badge">Mon matériel</span>}
@@ -111,6 +145,13 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                 ))}
               </tbody>
             </table>
+            {catalogue && s.rows.length > shown && (
+              <p>
+                <Link href={moreHref(q, typeFilter, shown / PAGE_SIZE + 1)}>
+                  Afficher plus ({s.rows.length - shown} autres {s.title.toLowerCase()})
+                </Link>
+              </p>
+            )}
           </section>
         ))}
 

@@ -269,7 +269,7 @@ describe('/invitation page', () => {
   it('offers sign-in and account creation to a visitor who is not signed in', async () => {
     m.mockGet.mockReturnValue(undefined);
     const html = await render(TOKEN);
-    expect(html).toContain('SolarPlus vous invite à utiliser DossiPV');
+    expect(html).toContain('SolarPlus vous invite à utiliser SolarixPro');
     expect(html).toContain('me connecter');
     expect(html).toContain('Créer mon compte');
     expect(html).toContain('value="new@installer.tn"');
@@ -278,7 +278,7 @@ describe('/invitation page', () => {
 
   it('shows the accept button to a signed-in installer', async () => {
     const html = await render(TOKEN);
-    expect(html).toContain('SolarPlus vous invite à utiliser DossiPV');
+    expect(html).toContain('SolarPlus vous invite à utiliser SolarixPro');
     expect(html).toContain('Accepter');
     expect(html).not.toContain('Créer mon compte');
   });

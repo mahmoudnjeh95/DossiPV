@@ -23,5 +23,5 @@ export function sponsorMissingProductsMessage(missingKinds: string[]): string | 
   const noInverter = missingKinds.some((kind) => kind.startsWith(INVERTER_LABEL_PREFIX));
   if (!noPanel && !noInverter) return null;
   const what = noPanel && noInverter ? 'd’onduleur ni de panneau' : noInverter ? 'd’onduleur' : 'de panneau';
-  return `Votre fournisseur n’a pas encore ${what} dans DossiPV.`;
+  return `Votre fournisseur n’a pas encore ${what} dans SolarixPro.`;
 }

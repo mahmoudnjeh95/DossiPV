@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   mockFileFindUnique: vi.fn(),
   mockGetFilePath: vi.fn(),
   mockCreateReadStream: vi.fn(),
+  mockStat: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({ cookies: mocks.mockCookies }));
@@ -27,10 +28,13 @@ vi.mock('@dossipv/db', async () => {
 vi.mock('@dossipv/file-storage', () => ({ getFilePath: mocks.mockGetFilePath }));
 vi.mock('fs', () => ({ createReadStream: mocks.mockCreateReadStream, default: { createReadStream: mocks.mockCreateReadStream } }));
 
+vi.mock('fs/promises', () => ({ stat: mocks.mockStat, default: { stat: mocks.mockStat } }));
+
 import { GET } from '../app/(app)/projects/[id]/jobs/[jobId]/files/[kind]/route';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.mockStat.mockResolvedValue({});
   mocks.mockGet.mockReturnValue({ value: 'valid-session-token' });
   mocks.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', email: 'a@b.com' });
 });
@@ -100,5 +104,19 @@ describe('GET /projects/[id]/jobs/[jobId]/files/[kind]', () => {
     const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'p1', jobId: 'j1', kind: 'pdf' }) });
 
     expect(response.status).toBe(404);
+  });
+
+  it('answers in French (not an empty 404) when the stored file is missing on disk', async () => {
+    mocks.mockProjectFindFirst.mockResolvedValue({ id: 'p1', client: null });
+    mocks.mockJobFindFirst.mockResolvedValue({ id: 'j1', projectId: 'p1', pdfFileId: 'file-1', docxFileId: null, annexesPdfFileId: null });
+    mocks.mockFileFindUnique.mockResolvedValue({ id: 'file-1', fileName: 'dossier.pdf', mimeType: 'pdf', storageKey: 'dossier/abc.pdf' });
+    mocks.mockGetFilePath.mockReturnValue('/fake/storage/dossier/abc.pdf');
+    mocks.mockStat.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+    const response = await GET(makeRequest(), { params: Promise.resolve({ id: 'p1', jobId: 'j1', kind: 'pdf' }) });
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).toContain('introuvable');
+    expect(mocks.mockCreateReadStream).not.toHaveBeenCalled();
   });
 });

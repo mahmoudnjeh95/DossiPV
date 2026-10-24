@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 import '../styles/palette.css';
 import '../styles/icons.css';
 import './globals.css';
+import '../styles/polish.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -12,8 +13,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata = {
   title: {
-    default: 'DossiPV | Dossiers photovoltaïques BT',
-    template: '%s | DossiPV',
+    default: 'SolarixPro | Dossiers photovoltaïques BT',
+    template: '%s | SolarixPro',
   },
   description: 'Préparez et structurez vos dossiers techniques photovoltaïques basse tension.',
 };
@@ -21,6 +22,7 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#0b1f4a',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }): React.JSX.Element {

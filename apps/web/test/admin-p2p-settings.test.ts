@@ -43,7 +43,7 @@ describe('updateP2pSettingsAction', () => {
     const result = await updateP2pSettingsAction(
       undefined,
       form({
-        p2pAccountHolder: 'DossiPV SARL',
+        p2pAccountHolder: 'SolarixPro SARL',
         p2pFlouciNumber: '+216 20 123 456',
         p2pIziNumber: '',
         p2pD17Number: '98765432',
@@ -53,7 +53,7 @@ describe('updateP2pSettingsAction', () => {
 
     expect(result).toEqual({ saved: true });
     const input = {
-      p2pAccountHolder: 'DossiPV SARL',
+      p2pAccountHolder: 'SolarixPro SARL',
       p2pFlouciNumber: '+216 20 123 456',
       p2pIziNumber: null,
       p2pD17Number: '98765432',
@@ -61,7 +61,7 @@ describe('updateP2pSettingsAction', () => {
     };
     expect(m.mockSettingsUpsert).toHaveBeenCalledWith({ where: { id: 'singleton' }, create: { id: 'singleton', ...input }, update: input });
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ action: 'settings.p2p', details: { accountHolder: 'DossiPV SARL', flouci: true, izi: false, d17: true } }) as unknown,
+      data: expect.objectContaining({ action: 'settings.p2p', details: { accountHolder: 'SolarixPro SARL', flouci: true, izi: false, d17: true } }) as unknown,
     });
   });
 

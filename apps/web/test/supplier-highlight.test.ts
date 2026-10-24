@@ -166,7 +166,7 @@ describe('unhighlightProductAction (admin)', () => {
     expect(m.db.supplierProduct.findFirst.mock.calls[0]![0].where).toEqual({ id: 'p1', supplierCompanyId: 'sup1', highlighted: true });
     expect(m.db.supplierProduct.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { highlighted: false } });
     expect(m.logAdminAction).toHaveBeenCalledWith('admin1', 'supplier.unhighlight', 'sup1', { productId: 'p1', product: 'Jinko T550' });
-    expect(m.redirect).toHaveBeenCalledWith('/admin/fournisseurs/sup1');
+    expect(m.redirect).toHaveBeenCalledWith('/admin/fournisseurs/sup1?ok=productUnhighlighted');
     expect(ADMIN_ACTION_LABELS['supplier.unhighlight']).toBeTruthy();
   });
 

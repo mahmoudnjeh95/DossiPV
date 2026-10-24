@@ -20,7 +20,7 @@ export function DeclareForm({ intentId }: { intentId: string }): React.JSX.Eleme
       <button type="submit" disabled={pending}>
         {pending ? 'Envoi…' : 'J’ai envoyé le paiement'}
       </button>
-      {state?.saved && <p role="status">Paiement déclaré : en attente de validation par DossiPV.</p>}
+      {state?.saved && <p role="status">Paiement déclaré : en attente de validation par SolarixPro.</p>}
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

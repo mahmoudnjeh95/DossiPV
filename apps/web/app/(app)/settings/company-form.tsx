@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useKeepFormValues } from '../../../lib/keep-form-values';
 import { saveCompanyAction, type SaveCompanyActionState } from './actions';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../lib/labels';
 
@@ -35,10 +35,11 @@ export interface CompanyFormValues {
 }
 
 export function CompanyForm({ company }: { company: CompanyFormValues }): React.JSX.Element {
-  const [state, formAction, pending] = useActionState<SaveCompanyActionState | undefined, FormData>(saveCompanyAction, undefined);
+  const { state, formAction, pending, formRef, errorRef } = useKeepFormValues<SaveCompanyActionState>(saveCompanyAction);
 
   return (
-    <form action={formAction} className="stack">
+    <form ref={formRef} action={formAction} className="stack">
+      {state?.error && <p ref={errorRef} role="alert">{state.error}</p>}
       <fieldset className="card">
         <legend>Identité</legend>
         <div className="form-grid">
@@ -184,7 +185,6 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
         </div>
       </fieldset>
 
-      {state?.error && <p role="alert">{state.error}</p>}
       <div className="actions">
         <button type="submit" disabled={pending}>
           {pending ? 'Enregistrement…' : 'Enregistrer'}

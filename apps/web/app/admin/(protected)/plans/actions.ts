@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
+import { withNotice } from '../../../../lib/admin-notice';
 import { logAdminAction } from '../../../../lib/admin-audit';
 
 export interface PlanActionState {
@@ -97,7 +98,7 @@ export async function createPlanAction(
 
   const created = await db.plan.create({ data: plan });
   await logAdminAction(admin.id, 'plan.create', null, { planId: created.id, ...plan });
-  redirect('/admin/plans');
+  redirect(withNotice('/admin/plans', 'planSaved'));
 }
 
 export async function updatePlanAction(
@@ -123,7 +124,7 @@ export async function updatePlanAction(
 
   await db.plan.update({ where: { id: planId }, data: plan });
   await logAdminAction(admin.id, 'plan.update', null, { planId, ...plan });
-  redirect('/admin/plans');
+  redirect(withNotice('/admin/plans', 'planSaved'));
 }
 
 /**
@@ -137,7 +138,7 @@ export async function archivePlanAction(planId: string): Promise<void> {
     await db.plan.update({ where: { id: planId }, data: { archivedAt: new Date() } });
     await logAdminAction(admin.id, 'plan.archive', null, { planId, name: plan.name });
   }
-  redirect('/admin/plans');
+  redirect(withNotice('/admin/plans', 'planArchived'));
 }
 
 export async function unarchivePlanAction(planId: string): Promise<void> {
@@ -152,5 +153,5 @@ export async function unarchivePlanAction(planId: string): Promise<void> {
     await db.plan.update({ where: { id: planId }, data: { archivedAt: null } });
     await logAdminAction(admin.id, 'plan.unarchive', null, { planId, name: plan.name });
   }
-  redirect('/admin/plans');
+  redirect(withNotice('/admin/plans', 'planUnarchived'));
 }

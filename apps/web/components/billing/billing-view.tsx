@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ContactDossipv } from '../support-contact';
 import { SubscriptionBanner } from '../subscription-banner';
 import type { BillingView } from '../../lib/payments/billing';
 import { INTENT_DISPLAY_LABELS, PAYMENT_METHOD_LABELS } from '../../lib/payments/p2p';
@@ -7,14 +8,23 @@ import { CheckoutOffer } from './checkout-offer';
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 
 /** The « Abonnement et paiement » page body, shared by the installer app and the supplier space. */
-export function BillingPageView({ billing, canPay }: { billing: BillingView; canPay: boolean }): React.JSX.Element {
+export function BillingPageView({
+  billing,
+  canPay,
+  awaitingEmailConfirmation = false,
+}: {
+  billing: BillingView;
+  canPay: boolean;
+  /** A self sign-up whose email is not confirmed yet: the free trial starts at confirmation. */
+  awaitingEmailConfirmation?: boolean;
+}): React.JSX.Element {
   const { subscription } = billing;
   const isSupplier = billing.kind === 'SUPPLIER';
 
   return (
     <main>
       <h1>Abonnement et paiement</h1>
-      <SubscriptionBanner subscription={subscription} />
+      <SubscriptionBanner subscription={subscription} awaitingEmailConfirmation={awaitingEmailConfirmation} />
 
       <section className="card">
         <h2>{isSupplier ? 'Votre pack' : 'Votre abonnement'}</h2>
@@ -34,22 +44,24 @@ export function BillingPageView({ billing, canPay }: { billing: BillingView; can
             )}
           </dl>
         ) : (
-          <p className="muted">Aucun abonnement.</p>
+          <p className="muted">
+            {awaitingEmailConfirmation ? 'Votre essai gratuit démarrera dès que votre adresse e-mail sera confirmée.' : 'Aucun abonnement.'}
+          </p>
         )}
       </section>
 
       <section>
         <h2>Payer par Flouci, izi ou D17</h2>
         <p className="hint">
-          Vous envoyez le montant depuis votre application au numéro de DossiPV, puis vous déclarez le paiement avec une capture d’écran.
-          DossiPV vérifie la capture et prolonge votre abonnement.
+          Vous envoyez le montant depuis votre application au numéro de SolarixPro, puis vous déclarez le paiement avec une capture d’écran.
+          SolarixPro vérifie la capture et prolonge votre abonnement.
         </p>
         {billing.providers.length === 0 ? (
           <div className="banner banner-warn" role="status">
-            Paiement indisponible : contactez DossiPV.
+            Paiement indisponible : <ContactDossipv />.
           </div>
         ) : billing.offers.length === 0 ? (
-          <p className="muted">Aucune offre pour votre compte : contactez DossiPV.</p>
+          <p className="muted">Aucune offre pour votre compte : <ContactDossipv />.</p>
         ) : (
           billing.offers.map((offer) => <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay} />)
         )}

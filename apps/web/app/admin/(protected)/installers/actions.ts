@@ -7,6 +7,8 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
 import { logAdminAction } from '../../../../lib/admin-audit';
 import { readLoginEmail, readNewPassword } from '../../../../lib/account-form';
+import { parseFuturePeriodEnd } from '../../../../lib/admin-period';
+import { withNotice } from '../../../../lib/admin-notice';
 import { audienceMismatchError } from '../../../../lib/plan-audience';
 
 export interface CreateInstallerActionState {
@@ -44,10 +46,11 @@ export async function createInstallerAction(
   const planId = reader.optionalText('planId', 'Plan', 100);
   let periodEnd: Date | null = null;
   if (planId !== null) {
-    const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
-    periodEnd = new Date(periodEndRaw);
-    if (periodEndRaw.length > 0 && Number.isNaN(periodEnd.getTime())) {
-      reader.errors.push('Fin de période : date invalide.');
+    const parsed = parseFuturePeriodEnd(String(formData.get('periodEnd') ?? ''), new Date());
+    if ('error' in parsed) {
+      reader.errors.push(`${parsed.error.replace(/\.$/, '')} (obligatoire quand un plan est choisi).`);
+    } else {
+      periodEnd = parsed.date;
     }
   }
   if (Number.isNaN(anmeValidFrom.getTime()) || Number.isNaN(anmeValidTo.getTime())) {
@@ -101,5 +104,5 @@ export async function createInstallerAction(
     planId,
     periodEnd: periodEnd?.toISOString() ?? null,
   });
-  redirect(`/admin/installers/${created.id}`);
+  redirect(withNotice(`/admin/installers/${created.id}`, 'installerCreated'));
 }

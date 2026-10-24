@@ -3,12 +3,27 @@
 import { useActionState } from 'react';
 import { resendVerificationAction } from './actions';
 
+/** Development only (the action sets it when SMTP is not configured and NODE_ENV is not production). */
+export function DevVerifyLink({ url }: { url: string | undefined }): React.JSX.Element | null {
+  if (!url) return null;
+  return (
+    <p className="login-field-hint" data-testid="dev-verify-link">
+      Mode développement (aucun SMTP configuré) : <a href={url}>ouvrir le lien de confirmation</a>.
+    </p>
+  );
+}
+
 /** "Renvoyer l'email de confirmation": the address is prefilled when we know it. */
 export function ResendVerificationForm({ defaultEmail = '' }: { defaultEmail?: string }): React.JSX.Element {
   const [state, formAction, pending] = useActionState(resendVerificationAction, undefined);
 
   if (state?.sent) {
-    return <p className="login-notice" role="status">{state.message}</p>;
+    return (
+      <>
+        <p className="login-notice" role="status">{state.message}</p>
+        <DevVerifyLink url={state.devVerifyUrl} />
+      </>
+    );
   }
   return (
     <form action={formAction} className="login-form">

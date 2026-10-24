@@ -4,6 +4,7 @@ import type { EmailMessage } from '@dossipv/email';
 const m = vi.hoisted(() => ({
   clientIp: '10.0.0.1',
   adminEmail: null as string | null,
+  emailConfigured: true,
   afterCallbacks: [] as Array<() => Promise<void>>,
   mockUserFindFirst: vi.fn(),
   mockCompanyFindMany: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('@dossipv/email', () => ({
   sendEmail: m.mockSendEmail,
   appUrl: (path: string): string => `https://dossipv.tn${path}`,
   adminEmailAddress: (): string | null => m.adminEmail,
+  isEmailConfigured: (): boolean => m.emailConfigured,
 }));
 
 import { resendVerificationAction, signUpAction } from '../app/inscription/actions';
@@ -54,6 +56,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.afterCallbacks.length = 0;
   m.adminEmail = null;
+  m.emailConfigured = true;
   // The limiters live in the module: each test starts from a fresh client address and mailbox.
   ipCounter += 1;
   emailCounter += 1;
@@ -98,6 +101,9 @@ describe('signUpAction validation', () => {
     [{ companyName: '' }, 'Raison sociale'],
     [{ contactName: '' }, 'Nom et prénom'],
     [{ phone: '' }, 'Téléphone'],
+    [{ phone: 'abc' }, 'numéro tunisien invalide'],
+    [{ phone: '1234567' }, 'numéro tunisien invalide'],
+    [{ phone: '+33 6 12 34 56 78' }, 'numéro tunisien invalide'],
     [{ email: 'pas-un-email' }, 'adresse invalide'],
     [{ governorate: 'Atlantide' }, 'Gouvernorat'],
     [{ governorate: '' }, 'Gouvernorat'],
@@ -288,5 +294,51 @@ describe('resendVerificationAction', () => {
     }
 
     expect(await resend('client9@solaire.tn')).toMatchObject({ sent: false, error: contains('Trop de demandes') });
+  });
+});
+
+describe('the confirmation link in development', () => {
+  it('is returned (and logged) only without SMTP and outside production', async () => {
+    m.emailConfigured = false;
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const result = await signUp();
+
+    expect(result).toMatchObject({ sent: true, devVerifyUrl: contains('/verifier-email?token=raw%2Btoken%2F%3D') });
+    expect(warn).toHaveBeenCalledWith(contains('[dev] confirmation link'));
+    // The email still goes out, with the very same link (one token only).
+    expect(m.mockCreateToken).toHaveBeenCalledTimes(1);
+    expect(m.mockSendEmail.mock.calls[0]?.[0].action?.url).toContain('raw%2Btoken');
+    warn.mockRestore();
+  });
+
+  it('is never returned when SMTP is configured', async () => {
+    const result = await signUp();
+
+    expect(result).not.toHaveProperty('devVerifyUrl');
+  });
+
+  it('is never returned in production, even without SMTP', async () => {
+    m.emailConfigured = false;
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const result = await signUp();
+    vi.unstubAllEnvs();
+
+    expect(JSON.stringify(result)).not.toContain('verifier-email');
+    expect(result).not.toHaveProperty('devVerifyUrl');
+  });
+
+  it('is returned by the resend action too, outside production without SMTP', async () => {
+    m.emailConfigured = false;
+    m.mockUserFindFirst.mockResolvedValue({ id: 'u1', email: 'ali@solaire.tn', fullName: 'Ali' });
+    const formData = new FormData();
+    formData.set('email', 'ali@solaire.tn');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const result = await resendVerificationAction(undefined, formData);
+    warn.mockRestore();
+
+    expect(result).toMatchObject({ sent: true, devVerifyUrl: contains('/verifier-email?token=') });
   });
 });

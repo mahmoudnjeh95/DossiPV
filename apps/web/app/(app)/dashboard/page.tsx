@@ -9,6 +9,7 @@ import {
 } from '../../../lib/subscription';
 import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
+import { isAwaitingEmailConfirmation } from '../../../lib/email-confirmation';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { StatsCard } from './stats-card';
 import { Dashboard, Projects, ChartBar, KwHours, Add } from '@dossipv/icons';
@@ -29,6 +30,7 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
     db.project.count({ where: { companyId: user.companyId } }),
   ]);
 
+  const awaitingEmail = subscription === null && (await isAwaitingEmailConfirmation(user.id));
   const used = projectsCountedThisMonth(jobsInWindow, now, quotaWindowStart(subscription, now)).size;
 
   return (
@@ -38,7 +40,7 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
         Bienvenue, {user.fullName}
       </h1>
 
-      <SubscriptionBanner subscription={subscription} trialUsed={used} />
+      <SubscriptionBanner subscription={subscription} trialUsed={used} awaitingEmailConfirmation={awaitingEmail} />
 
       <div className="card-grid" style={{ marginBottom: 16 }}>
         <StatsCard icon={Projects} label="Projets" value={projectCount} />

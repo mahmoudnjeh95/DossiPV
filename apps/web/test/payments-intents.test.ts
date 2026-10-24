@@ -43,7 +43,7 @@ async function png(width: number, height: number): Promise<Buffer> {
 beforeEach(() => {
   vi.clearAllMocks();
   m.mockRequireUser.mockResolvedValue(owner);
-  m.mockSettingsFindUnique.mockResolvedValue({ p2pFlouciNumber: '+216 20 123 456', p2pIziNumber: null, p2pD17Number: '98 765 432', p2pAccountHolder: 'DossiPV' });
+  m.mockSettingsFindUnique.mockResolvedValue({ p2pFlouciNumber: '+216 20 123 456', p2pIziNumber: null, p2pD17Number: '98 765 432', p2pAccountHolder: 'SolarixPro' });
   m.mockCompanyFindUnique.mockResolvedValue({ kind: 'INSTALLER', sponsorCompanyId: null, subscription: { planId: 'plan-std' } });
   m.mockPlanFindUnique.mockResolvedValue(plan);
   m.mockIntentCount.mockResolvedValue(0);

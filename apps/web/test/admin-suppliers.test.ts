@@ -133,7 +133,7 @@ describe('createSupplierAction', () => {
     expect(auditEntries()).toEqual([
       ['supplier.create', 'supplier-new', { name: 'Solaire Distribution', ownerEmail: 'sami@solaire-distribution.tn', planId: null, periodEnd: null }],
     ]);
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/fournisseurs/supplier-new');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/fournisseurs\/supplier-new\?ok=/));
   });
 
   it('draws a different placeholder ANME code each time', async () => {
@@ -188,7 +188,7 @@ describe('linkInstallerAction / unlinkInstallerAction', () => {
 
     expect(m.mockLinkInstaller).toHaveBeenCalledWith('installer-1', 'supplier-1');
     expect(auditEntries()).toEqual([['supplier.linkInstaller', 'supplier-1', { installerId: 'installer-1', installerName: 'Solar Co' }]]);
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/fournisseurs/supplier-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/fournisseurs\/supplier-1\?ok=/));
   });
 
   it('shows the sponsorship refusal (pack full) and logs nothing', async () => {
@@ -230,7 +230,7 @@ describe('linkInstallerAction / unlinkInstallerAction', () => {
 
     expect(m.mockUnlinkInstaller).not.toHaveBeenCalled();
     expect(m.mockAuditCreate).not.toHaveBeenCalled();
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/fournisseurs/supplier-1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/fournisseurs\/supplier-1\?ok=/));
   });
 });
 
@@ -238,7 +238,7 @@ describe('lists and dashboard', () => {
   it('lists only INSTALLER companies on the installer page', async () => {
     m.mockCompanyFindMany.mockResolvedValue([]);
 
-    await InstallerListPage();
+    await InstallerListPage({ searchParams: Promise.resolve({}) });
 
     expect((m.mockCompanyFindMany.mock.calls[0]?.[0] as { where: unknown }).where).toEqual({ kind: 'INSTALLER' });
   });
@@ -246,9 +246,19 @@ describe('lists and dashboard', () => {
   it('lists only SUPPLIER companies on the suppliers page', async () => {
     m.mockCompanyFindMany.mockResolvedValue([]);
 
-    await SupplierListPage();
+    await SupplierListPage({ searchParams: Promise.resolve({}) });
 
     expect((m.mockCompanyFindMany.mock.calls[0]?.[0] as { where: unknown }).where).toEqual({ kind: 'SUPPLIER' });
+  });
+
+  it('filters the lists on the search query (name, email, phone, contact)', async () => {
+    m.mockCompanyFindMany.mockResolvedValue([]);
+
+    await SupplierListPage({ searchParams: Promise.resolve({ q: ' sol ' }) });
+
+    const where = (m.mockCompanyFindMany.mock.calls[0]?.[0] as { where: { kind: string; OR: unknown[] } }).where;
+    expect(where.kind).toBe('SUPPLIER');
+    expect(where.OR).toHaveLength(4);
   });
 
   it('counts installers apart from suppliers and sponsored installers on the dashboard', async () => {

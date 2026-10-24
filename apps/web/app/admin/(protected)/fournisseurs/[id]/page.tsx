@@ -4,10 +4,12 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS } from '../../../../../lib/labels';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
+import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/p2p';
+import { displayedSubscriptionStatus } from '../../../../../lib/admin-period';
 import { supplierSeats } from '../../../../../lib/sponsorship';
-import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction } from '../../installers/[id]/actions';
+import { suspendSubscriptionAction, activateSubscriptionAction } from '../../installers/[id]/actions';
 import { RecordPaymentForm } from '../../installers/[id]/record-payment-form';
-import { AddUserForm, AssignPlanForm, ResetPasswordForm } from '../../installers/[id]/account-forms';
+import { AddUserForm, AssignPlanForm, PeriodEndForm, ResetPasswordForm } from '../../installers/[id]/account-forms';
 import { ChangeEmailForm, UserActionButton } from '../../installers/[id]/user-forms';
 import { packLabel } from '../pack-label';
 import { unlinkInstallerAction, unhighlightProductAction } from './actions';
@@ -50,12 +52,17 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
 
   const boundSuspend = suspendSubscriptionAction.bind(null, company.id);
   const boundActivate = activateSubscriptionAction.bind(null, company.id);
-  const boundUpdatePeriodEnd = updatePeriodEndAction.bind(null, company.id);
   // Archived packs are no longer offered, except the one the supplier is already on.
   const currentPlanId = company.subscription?.planId ?? null;
   const packOptions = packs
     .filter((pack) => pack.archivedAt === null || pack.id === currentPlanId)
     .map((pack) => ({ id: pack.id, label: packLabel(pack) }));
+  const statusLabel = company.subscription
+    ? (() => {
+        const status = displayedSubscriptionStatus(company.subscription.status, company.subscription.periodEnd, new Date());
+        return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
+      })()
+    : '';
   const enabledOwnerCount = company.users.filter((user) => user.role === 'OWNER' && user.disabledAt === null).length;
 
   return (
@@ -73,7 +80,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
         {company.subscription ? (
           <>
             <p>Pack : {company.subscription.plan.name}</p>
-            <p>Statut : {SUBSCRIPTION_STATUS_LABELS[company.subscription.status] ?? company.subscription.status}</p>
+            <p>Statut : {statusLabel}</p>
             <p>Fin de période : {company.subscription.periodEnd.toLocaleDateString('fr-FR')}</p>
             <p>
               Mise en avant : {company.subscription.plan.includesHighlight ? 'incluse' : 'non incluse'} · Quota :{' '}
@@ -89,13 +96,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 <button type="submit">Activer l&apos;abonnement</button>
               </form>
             )}
-            <form action={boundUpdatePeriodEnd}>
-              <label>
-                Nouvelle fin de période
-                <input type="date" name="periodEnd" required />
-              </label>
-              <button type="submit">Mettre à jour</button>
-            </form>
+            <PeriodEndForm companyId={company.id} />
           </>
         ) : (
           <p>Aucun pack</p>
@@ -126,7 +127,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
               <tr key={payment.id}>
                 <td>{payment.createdAt.toLocaleDateString('fr-FR')}</td>
                 <td>{payment.amountTnd.toString()} TND</td>
-                <td>{payment.method}</td>
+                <td>{PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}</td>
                 <td>{payment.note ?? '—'}</td>
               </tr>
             ))}

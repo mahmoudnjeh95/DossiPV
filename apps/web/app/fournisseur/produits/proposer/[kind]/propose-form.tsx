@@ -11,18 +11,28 @@ export function ProposeForm({ kind, children }: { kind: string; children: ReactN
     <form action={formAction} className="stack">
       <section className="card">
         <h2>Caractéristiques</h2>
-        <p className="hint">Reprenez les valeurs de la fiche technique du fabricant.</p>
+        <p className="hint">
+          Reprenez les valeurs de la fiche technique du fabricant, dans l’unité indiquée entre parenthèses (utilisez le point pour les
+          décimales, ex. 41.8). Les exemples grisés ne sont là que pour illustrer le format. Les champs marqués « optionnel » peuvent rester
+          vides.
+        </p>
+        <p className="hint">
+          {kind === 'PV_MODULE'
+            ? 'Les valeurs électriques (Pmax, Vmp, Imp, Voc, Isc) sont celles des conditions STC, en première page de la fiche. Les coefficients de température se lisent dans le tableau « caractéristiques thermiques » et sont souvent négatifs (ex. -0.275 %/°C pour Voc).'
+            : 'Les tensions et courants DC se lisent dans la partie « Entrée (DC) » de la fiche, les valeurs AC dans la partie « Sortie (AC) ». Les puissances sont en W (et VA pour la puissance apparente), pas en kW : 5 kW = 5000 W.'}
+        </p>
         <div className="form-grid">{children}</div>
       </section>
       <section className="card">
         <h2>Fiche technique</h2>
+        <p className="hint">Les deux éléments ci-dessous sont obligatoires : le fichier PDF de la fiche <strong>et</strong> son lien sur le site du fabricant.</p>
         <div className="form-grid">
           <label>
-            Fiche technique (PDF)
+            Fiche technique : fichier PDF (obligatoire)
             <input type="file" name="datasheet" accept="application/pdf" required />
           </label>
           <label>
-            Lien de la fiche sur le site du fabricant
+            Fiche technique : lien sur le site du fabricant (obligatoire)
             <input type="url" name="datasheetSourceUrl" placeholder="https://" maxLength={500} required />
           </label>
         </div>

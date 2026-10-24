@@ -49,9 +49,9 @@ function smtpTransport(): Transporter {
   return transporter;
 }
 
-/** The address the platform writes from, e.g. `DossiPV <noreply@dossipv.tn>`. */
+/** The address the platform writes from, e.g. `SolarixPro <noreply@dossipv.tn>`. */
 export function senderAddress(): string {
-  return process.env.SMTP_FROM ?? 'DossiPV <noreply@dossipv.tn>';
+  return process.env.SMTP_FROM ?? 'SolarixPro <noreply@dossipv.tn>';
 }
 
 /** Where alerts and sign-up notifications go (the super admin's mailbox); null when unset. */
@@ -81,7 +81,7 @@ export function emailHtml(message: Pick<EmailMessage, 'text' | 'action'>): strin
     '<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1a1a1a;max-width:560px">' +
     paragraphs +
     button +
-    '<p style="margin:24px 0 0;font-size:12px;color:#888">DossiPV — dossiers techniques photovoltaïques STEG</p></div>'
+    '<p style="margin:24px 0 0;font-size:12px;color:#888">SolarixPro — dossiers techniques photovoltaïques STEG</p></div>'
   );
 }
 

@@ -11,8 +11,8 @@ export default function ForgotPasswordPage(): React.JSX.Element {
 
   return (
     <main className="login-page">
-      <section className="login-story" aria-label="DossiPV">
-        <Link href="/" aria-label="Retour à l’accueil DossiPV">
+      <section className="login-story" aria-label="SolarixPro">
+        <Link href="/" aria-label="Retour à l’accueil SolarixPro">
           <BrandMark inverse />
         </Link>
         <div className="login-story-content">
@@ -22,12 +22,12 @@ export default function ForgotPasswordPage(): React.JSX.Element {
           <div className="login-story-rule" />
           <span className="login-story-caption">Dossiers photovoltaïques basse tension</span>
         </div>
-        <span className="login-story-foot">DOSSI PV <i /> ESPACE SÉCURISÉ</span>
+        <span className="login-story-foot">SOLARIXPRO <i /> ESPACE SÉCURISÉ</span>
       </section>
 
       <section className="login-form-panel" aria-labelledby="forgot-title">
         <div className="login-form-wrap">
-          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil DossiPV">
+          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil SolarixPro">
             <BrandMark compact />
           </Link>
           <p className="eyebrow login-eyebrow">MOT DE PASSE OUBLIÉ</p>

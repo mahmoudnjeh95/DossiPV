@@ -3,6 +3,7 @@ import type { EquipmentKind } from '@dossipv/db';
 import { provenanceScope } from '../../../lib/project-access';
 import { acBreakerRating } from '../../../lib/labels';
 import { highlightedFirst, type HighlightedProducts } from '../../../lib/highlight';
+import { foldText, parseLibraryQuery } from '../../../lib/library-search';
 
 export interface LibraryRow {
   itemId: string;
@@ -30,23 +31,33 @@ const join = (parts: (string | null)[]): string => parts.filter(Boolean).join(' 
 
 const order = [{ brand: 'asc' as const }, { model: 'asc' as const }];
 
-/** A number in the search box matches module Pmax / inverter Pac, in W (and in kW for inverters). */
-function searchWhere(q: string, numeric: 'pmaxW' | 'pacW' | null): Record<string, unknown> {
-  if (!q) {
-    return {};
-  }
-  const or: Record<string, unknown>[] = [
-    { brand: { contains: q, mode: 'insensitive' } },
-    { model: { contains: q, mode: 'insensitive' } },
-  ];
-  const num = Number(q.replace(',', '.'));
-  if (numeric && Number.isFinite(num) && num > 0) {
-    or.push({ [numeric]: num });
-    if (numeric === 'pacW') {
-      or.push({ pacW: num * 1000 });
+/**
+ * The search box: free text matches brand or model (typed as is or without accents), a number
+ * matches module Pmax / inverter Pac in W, and a power with a unit ("5 kW", "550 W") is exact.
+ */
+export function searchWhere(q: string, numeric: 'pmaxW' | 'pacW' | null): Record<string, unknown> {
+  const parsed = parseLibraryQuery(q);
+  const text = q.trim();
+  const and: Record<string, unknown>[] = [];
+  if (parsed.text) {
+    const variants = new Set([parsed.text, ...(foldText(text) === text.toLowerCase() ? [] : [text.toLowerCase()])]);
+    const or: Record<string, unknown>[] = [...variants].flatMap((variant) => [
+      { brand: { contains: variant, mode: 'insensitive' } },
+      { model: { contains: variant, mode: 'insensitive' } },
+    ]);
+    // A bare number also matches a power: module Pmax, inverter Pac in W or in kW.
+    const num = Number(parsed.text.replace(',', '.'));
+    if (numeric && Number.isFinite(num) && num > 0) {
+      or.push({ [numeric]: num });
+      if (numeric === 'pacW') or.push({ pacW: num * 1000 });
     }
+    and.push({ OR: or });
   }
-  return { OR: or };
+  if (parsed.watts !== null) {
+    // « 550 W » or « 5 kW »: an exact power; a type without a power (cables…) matches nothing.
+    and.push(numeric ? { [numeric]: parsed.watts } : { id: { in: [] } });
+  }
+  return and.length === 0 ? {} : and.length === 1 ? (and[0] as Record<string, unknown>) : { AND: and };
 }
 
 interface Owned {
@@ -89,11 +100,16 @@ export function withHighlights(sections: LibrarySection[], highlighted: Highligh
  * Loads every equipment section. Mode 'library' lists only what the company selected;
  * 'catalogue' lists everything it may choose (published shared items plus its private ones).
  */
-export async function loadSections(companyId: string, mode: 'library' | 'catalogue', q: string): Promise<LibrarySection[]> {
+export async function loadSections(companyId: string, mode: 'library' | 'catalogue', q: string, kindFilter: EquipmentKind | null = null): Promise<LibrarySection[]> {
+  const wantedKinds = parseLibraryQuery(q).kinds;
   const base: Record<string, unknown> =
     mode === 'library'
       ? { libraryItems: { some: { companyId } } }
       : { AND: [{ OR: [{ ownerCompanyId: null, catalogStatus: 'PUBLISHED' }, { ownerCompanyId: companyId }] }, provenanceScope(companyId)] };
+  // A type word in the search (« onduleur ») or the type filter keeps only those sections: the others are not even queried.
+  const wants = (kind: EquipmentKind): boolean =>
+    (kindFilter === null || kindFilter === kind) && (wantedKinds.length === 0 || wantedKinds.includes(kind));
+  const find = <T,>(kind: EquipmentKind, load: () => Promise<T[]>): Promise<T[]> => (wants(kind) ? load() : Promise.resolve([]));
   const query = (numeric: 'pmaxW' | 'pacW' | null = null): { where: never; orderBy: typeof order } => {
     const search = searchWhere(q.trim(), numeric);
     return { where: (Object.keys(search).length > 0 ? { AND: [base, search] } : base) as never, orderBy: order };
@@ -101,15 +117,15 @@ export async function loadSections(companyId: string, mode: 'library' | 'catalog
   const include = { libraryItems: { where: { companyId }, select: { id: true, purchasePriceTnd: true } } };
 
   const [modules, inverters, spds, dcSwitches, dcFuses, acBreakers, acIsolators, cables, accessories] = await Promise.all([
-    db.pvModule.findMany({ ...query('pmaxW'), include }),
-    db.inverter.findMany({ ...query('pacW'), include }),
-    db.spd.findMany({ ...query(), include }),
-    db.dcSwitch.findMany({ ...query(), include }),
-    db.dcFuse.findMany({ ...query(), include }),
-    db.acBreaker.findMany({ ...query(), include }),
-    db.acIsolator.findMany({ ...query(), include }),
-    db.cable.findMany({ ...query(), include: { ...include, sections: true } }),
-    db.accessory.findMany({ ...query(), include }),
+    find('PV_MODULE', () => db.pvModule.findMany({ ...query('pmaxW'), include })),
+    find('INVERTER', () => db.inverter.findMany({ ...query('pacW'), include })),
+    find('SPD', () => db.spd.findMany({ ...query(), include })),
+    find('DC_SWITCH', () => db.dcSwitch.findMany({ ...query(), include })),
+    find('DC_FUSE', () => db.dcFuse.findMany({ ...query(), include })),
+    find('AC_BREAKER', () => db.acBreaker.findMany({ ...query(), include })),
+    find('AC_ISOLATOR', () => db.acIsolator.findMany({ ...query(), include })),
+    find('CABLE', () => db.cable.findMany({ ...query(), include: { ...include, sections: true } })),
+    find('ACCESSORY', () => db.accessory.findMany({ ...query(), include })),
   ]);
 
   return [

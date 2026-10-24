@@ -3,16 +3,17 @@ import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS, TIER_LABELS } from '../../../../../lib/labels';
-import { suspendSubscriptionAction, activateSubscriptionAction, updatePeriodEndAction, clearOption3dAction } from './actions';
+import { suspendSubscriptionAction, activateSubscriptionAction, clearOption3dAction } from './actions';
 import { Option3dForm } from './option3d-form';
 import { getOption3dPriceTnd } from '../../../../../lib/platform-settings';
 import { RecordPaymentForm } from './record-payment-form';
-import { AddUserForm, AssignPlanForm, ResetPasswordForm } from './account-forms';
+import { AddUserForm, AssignPlanForm, PeriodEndForm, ResetPasswordForm } from './account-forms';
 import { ChangeEmailForm, UserActionButton } from './user-forms';
 import { markSignupUncontactedAction } from '../../inscriptions/actions';
 import { MarkContactedForm } from '../../inscriptions/signup-forms';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
 import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/p2p';
+import { displayedSubscriptionStatus } from '../../../../../lib/admin-period';
 
 const AUDIT_LOG_ROWS = 30;
 
@@ -51,15 +52,21 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
 
   const boundSuspend = suspendSubscriptionAction.bind(null, company.id);
   const boundActivate = activateSubscriptionAction.bind(null, company.id);
-  const boundUpdatePeriodEnd = updatePeriodEndAction.bind(null, company.id);
   // Archived plans are no longer offered, except the one the company is already on.
   const currentPlanId = company.subscription?.planId ?? null;
   const planOptions = plans
-    .filter((plan) => plan.archivedAt === null || plan.id === currentPlanId)
+    // Archived plans stay out, and so do trial plans (granted at sign-up): both only when already held.
+    .filter((plan) => (plan.archivedAt === null && !plan.isTrial) || plan.id === currentPlanId)
     .map((plan) => ({
       id: plan.id,
       label: `${plan.name} — ${TIER_LABELS[plan.tier] ?? plan.tier}, ${plan.monthlyDossierLimit} dossiers / mois, ${Number(plan.priceTnd).toFixed(3)} TND${plan.isTrial ? ' (essai)' : ''}${plan.archivedAt ? ' (archivé)' : ''}`,
     }));
+  const statusLabel = company.subscription
+    ? (() => {
+        const status = displayedSubscriptionStatus(company.subscription.status, company.subscription.periodEnd, new Date());
+        return SUBSCRIPTION_STATUS_LABELS[status] ?? status;
+      })()
+    : '';
   const enabledOwnerCount = company.users.filter((user) => user.role === 'OWNER' && user.disabledAt === null).length;
 
   return (
@@ -111,7 +118,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         {company.subscription ? (
           <>
             <p>Plan : {company.subscription.plan.name}</p>
-            <p>Statut : {SUBSCRIPTION_STATUS_LABELS[company.subscription.status] ?? company.subscription.status}</p>
+            <p>Statut : {statusLabel}</p>
             <p>Fin de période : {company.subscription.periodEnd.toLocaleDateString('fr-FR')}</p>
             {company.subscription.status !== 'SUSPENDED' && (
               <form action={boundSuspend}>
@@ -123,13 +130,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
                 <button type="submit">Activer l&apos;abonnement</button>
               </form>
             )}
-            <form action={boundUpdatePeriodEnd}>
-              <label>
-                Nouvelle fin de période
-                <input type="date" name="periodEnd" required />
-              </label>
-              <button type="submit">Mettre à jour</button>
-            </form>
+            <PeriodEndForm companyId={company.id} />
           </>
         ) : (
           <p>Aucun abonnement</p>
@@ -188,7 +189,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
               <tr key={payment.id}>
                 <td>{payment.createdAt.toLocaleDateString('fr-FR')}</td>
                 <td>{payment.amountTnd.toString()} TND</td>
-                <td>{payment.method}</td>
+                <td>{PAYMENT_METHOD_LABELS[payment.method] ?? payment.method}</td>
                 <td>{payment.note ?? '—'}</td>
               </tr>
             ))}

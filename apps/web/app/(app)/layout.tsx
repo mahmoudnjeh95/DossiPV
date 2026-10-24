@@ -18,14 +18,14 @@ export async function requireAuthenticatedCompanyUser(): Promise<AuthenticatedCo
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!token) {
-    redirect('/login');
+    redirect('/login?connexion=requise');
     return undefined as never;
   }
 
   const user = await validateSession(token);
 
   if (!user) {
-    redirect('/login');
+    redirect('/login?connexion=requise');
     return undefined as never;
   }
 

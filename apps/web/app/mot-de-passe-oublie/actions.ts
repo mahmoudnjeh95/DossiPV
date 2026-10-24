@@ -57,10 +57,10 @@ export async function requestPasswordResetAction(
       const token = await createPasswordResetToken(id);
       await sendEmail({
         to,
-        subject: 'Réinitialisation de votre mot de passe DossiPV',
+        subject: 'Réinitialisation de votre mot de passe SolarixPro',
         text:
           'Bonjour,\n\n' +
-          'Vous avez demandé à changer le mot de passe de votre compte DossiPV. ' +
+          'Vous avez demandé à changer le mot de passe de votre compte SolarixPro. ' +
           'Le lien ci-dessous est valable 1 heure et ne peut servir qu’une fois.\n\n' +
           'Si vous n’êtes pas à l’origine de cette demande, ignorez cet email : votre mot de passe reste inchangé.',
         action: {

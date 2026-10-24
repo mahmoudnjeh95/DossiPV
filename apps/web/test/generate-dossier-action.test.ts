@@ -176,7 +176,7 @@ describe('generateDossierAction', () => {
 
       const result = await generateDossierAction('project-1', undefined);
 
-      expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez DossiPV/);
+      expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez SolarixPro/);
       expect(mocks.jobFindMany.mock.calls[0]?.[0]).toMatchObject({
         where: { project: { companyId: 'company-1' }, startedAt: { gte: periodStart } },
       });
@@ -213,7 +213,7 @@ describe('generateDossierAction', () => {
 
       const result = await generateDossierAction('project-1', undefined);
 
-      expect(result?.error).toMatch(/^Essai gratuit expiré : contactez DossiPV/);
+      expect(result?.error).toMatch(/^Essai gratuit expiré : contactez SolarixPro/);
       expect(mocks.jobCreate).not.toHaveBeenCalled();
     });
   });

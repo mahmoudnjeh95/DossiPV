@@ -13,13 +13,13 @@ describe('sendEmail', () => {
     const transport = nodemailer.createTransport({ jsonTransport: true });
     const sendMail = vi.spyOn(transport, 'sendMail');
     setEmailTransportForTests(transport);
-    vi.stubEnv('SMTP_FROM', 'DossiPV <noreply@example.tn>');
+    vi.stubEnv('SMTP_FROM', 'SolarixPro <noreply@example.tn>');
 
     const result = await sendEmail({ to: 'a@b.tn', subject: 'Réinitialisation', text: 'Bonjour,\n\nVoici le lien.', action: { label: 'Choisir un mot de passe', url: 'https://x.tn/r?t=1&u=2' } });
 
     expect(result).toEqual({ sent: true });
     const mail = sendMail.mock.calls[0]![0] as { from: string; to: string[]; text: string; html: string };
-    expect(mail.from).toBe('DossiPV <noreply@example.tn>');
+    expect(mail.from).toBe('SolarixPro <noreply@example.tn>');
     expect(mail.to).toEqual(['a@b.tn']);
     expect(mail.text).toContain('Choisir un mot de passe : https://x.tn/r?t=1&u=2');
     expect(mail.html).toContain('href="https://x.tn/r?t=1&amp;u=2"');

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  friendlyWarning,
   derivePipelineSteps,
   jobProgressPercent,
   jobWarnings,
@@ -180,12 +181,30 @@ describe('toJobProgressView', () => {
 });
 
 describe('jobWarnings', () => {
-  it('reads the worker warnings and drops anything that is not a string', () => {
+  it('reads the worker warnings, worded for the installer, and drops anything that is not a string', () => {
     expect(jobWarnings(['Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.', 3, null, ''])).toEqual([
-      'Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.',
+      'Annexe N°14 — Fiche technique X : le document est illisible et n’est pas joint au dossier. Remplacez-le par un PDF ou une image valide puis régénérez le dossier.',
     ]);
     expect(jobWarnings(null)).toEqual([]);
     expect(jobWarnings({ a: 1 })).toEqual([]);
+  });
+
+  it('keeps a warning it does not know as it is', () => {
+    expect(jobWarnings(['Autre message.'])).toEqual(['Autre message.']);
+  });
+
+  it('says what to do, or that nothing is needed, for the list page and highlight warnings', () => {
+    expect(friendlyWarning('Page de la liste STEG introuvable pour SUN-5K-G04.')).toContain('Aucune action n’est obligatoire');
+    expect(friendlyWarning('Page de la liste STEG introuvable pour SUN-5K-G04.')).toContain('SUN-5K-G04');
+    expect(friendlyWarning('Surlignage impossible dans Annexe N°11 — Fiche technique LONGi X (document scanné ou modèle introuvable).')).toContain(
+      'aucune action n’est nécessaire',
+    );
+  });
+
+  it('does not reword the draft-missing pieces of a snapshot', () => {
+    expect(snapshotDraftMissing({ draftMissing: ['Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.'] })).toEqual([
+      'Annexe N°14 — Fiche technique X : document illisible, non joint au dossier.',
+    ]);
   });
 });
 

@@ -1,7 +1,11 @@
 'use client';
 
 import { useActionState } from 'react';
-import { addCompanyUserAction, assignPlanAction, resetCompanyUserPasswordAction, type InstallerActionState } from './actions';
+import { addCompanyUserAction, assignPlanAction, resetCompanyUserPasswordAction, updatePeriodEndAction, type InstallerActionState } from './actions';
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export interface PlanOption {
   id: string;
@@ -42,7 +46,7 @@ export function AssignPlanForm({
       {(currentPlanId === null || onTrial) && (
         <label>
           Fin de période
-          <input type="date" name="periodEnd" required />
+          <input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
         </label>
       )}
       <button type="submit" disabled={pending}>
@@ -55,6 +59,29 @@ export function AssignPlanForm({
         </p>
       )}
       {currentPlanId !== null && !onTrial && <p className="hint">La fin de période et les dossiers déjà générés ce mois-ci sont conservés.</p>}
+      <p className="hint">Les plans d&apos;essai gratuit ne se choisissent pas ici : ils sont attribués à l&apos;inscription.</p>
+      {state?.error && <p role="alert">{state.error}</p>}
+    </form>
+  );
+}
+
+/** Sets the end of the period directly. Refuses a date in the past, with the reason shown under the form. */
+export function PeriodEndForm({ companyId }: { companyId: string }): React.JSX.Element {
+  const [state, formAction, pending] = useActionState<InstallerActionState | undefined, FormData>(
+    updatePeriodEndAction.bind(null, companyId),
+    undefined,
+  );
+
+  return (
+    <form action={formAction}>
+      <label>
+        Nouvelle fin de période
+        <input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
+      </label>
+      <button type="submit" disabled={pending}>
+        Mettre à jour
+      </button>
+      <p className="hint">Fixe la date exacte de fin et remplace la date actuelle, y compris celle calculée par un paiement avec prolongation : le dernier réglage enregistré l&apos;emporte. Une date passée est refusée.</p>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

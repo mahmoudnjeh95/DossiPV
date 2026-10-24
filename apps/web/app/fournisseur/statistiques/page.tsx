@@ -55,8 +55,10 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
             <thead>
               <tr>
                 <th>Produit</th>
-                <th>Proposé (sponsorisé)</th>
-                <th>Appliqué</th>
+                <th title="Nombre de fois où ce produit sponsorisé a été proposé à un installateur direct dans une proposition de matériel.">
+                  Proposé (sponsorisé)
+                </th>
+                <th title="Nombre de fois où un installateur direct a choisi ce produit proposé et l’a appliqué à son projet.">Appliqué</th>
                 <th>Dossiers générés</th>
                 <th>kWc installés</th>
               </tr>
@@ -77,7 +79,8 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
           </table>
         )}
         <p className="hint">
-          « Proposé » et « Appliqué » comptent les propositions sponsorisées faites aux installateurs directs, sans savoir lesquels. Les dossiers et
+          « Proposé » : le produit sponsorisé a été suggéré à un installateur direct dans une proposition de matériel. « Appliqué » : cet installateur l’a appliqué à son
+          projet. Ces deux chiffres comptent les propositions sponsorisées faites aux installateurs directs, sans savoir lesquels. Les dossiers et
           les kWc ne concernent que vos installateurs parrainés.
         </p>
       </section>

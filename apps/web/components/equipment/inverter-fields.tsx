@@ -5,10 +5,10 @@ export function InverterFields({ item }: { item?: Inverter | undefined }): React
   return (
     <>
       <label>
-        Marque <input name="brand" defaultValue={item?.brand} required />
+        Marque <input name="brand" placeholder="ex. Huawei" defaultValue={item?.brand} required />
       </label>
       <label>
-        Modèle <input name="model" defaultValue={item?.model} required />
+        Modèle <input name="model" placeholder="ex. SUN2000-5KTL-L1" defaultValue={item?.model} required />
       </label>
       <label>
         Phases
@@ -18,45 +18,45 @@ export function InverterFields({ item }: { item?: Inverter | undefined }): React
         </select>
       </label>
       <label>
-        Puissance AC nominale (W) <input type="number" name="pacW" step="0.01" defaultValue={item?.pacW} required />
+        Puissance AC nominale (W) <input type="number" name="pacW" placeholder="ex. 5000" step="0.01" defaultValue={item?.pacW} required />
       </label>
       <label>
-        Puissance apparente max (VA) <input type="number" name="sacVA" step="0.01" defaultValue={item?.sacVA} required />
+        Puissance apparente max (VA) <input type="number" name="sacVA" placeholder="ex. 5000" step="0.01" defaultValue={item?.sacVA} required />
       </label>
       <label>
-        Tension DC max (V) <input type="number" name="vdcMaxV" step="0.01" defaultValue={item?.vdcMaxV} required />
+        Tension DC max (V) <input type="number" name="vdcMaxV" placeholder="ex. 600" step="0.01" defaultValue={item?.vdcMaxV} required />
       </label>
       <label>
-        Tension MPPT min (V) <input type="number" name="mpptMinV" step="0.01" defaultValue={item?.mpptMinV} required />
+        Tension MPPT min (V) <input type="number" name="mpptMinV" placeholder="ex. 90" step="0.01" defaultValue={item?.mpptMinV} required />
       </label>
       <label>
-        Tension MPPT max (V) <input type="number" name="mpptMaxV" step="0.01" defaultValue={item?.mpptMaxV} required />
+        Tension MPPT max (V) <input type="number" name="mpptMaxV" placeholder="ex. 560" step="0.01" defaultValue={item?.mpptMaxV} required />
       </label>
       <label>
-        Tension de démarrage (V) <input type="number" name="startUpV" step="0.01" defaultValue={item?.startUpV} required />
+        Tension de démarrage (V) <input type="number" name="startUpV" placeholder="ex. 100" step="0.01" defaultValue={item?.startUpV} required />
       </label>
       <label>
-        Nombre de MPPT <input type="number" name="mpptCount" defaultValue={item?.mpptCount} required />
+        Nombre de MPPT <input type="number" name="mpptCount" placeholder="ex. 2" defaultValue={item?.mpptCount} required />
       </label>
       <label>
-        Entrées par MPPT <input type="number" name="inputsPerMppt" defaultValue={item?.inputsPerMppt} required />
+        Entrées par MPPT <input type="number" name="inputsPerMppt" placeholder="ex. 1" defaultValue={item?.inputsPerMppt} required />
       </label>
       <label>
         Courant DC max par MPPT (A){' '}
-        <input type="number" name="idcMaxPerMpptA" step="0.01" defaultValue={item?.idcMaxPerMpptA} required />
+        <input type="number" name="idcMaxPerMpptA" placeholder="ex. 12.5" step="0.01" defaultValue={item?.idcMaxPerMpptA} required />
       </label>
       <label>
         Courant de court-circuit max par MPPT (A){' '}
-        <input type="number" name="iscMaxPerMpptA" step="0.01" defaultValue={item?.iscMaxPerMpptA} required />
+        <input type="number" name="iscMaxPerMpptA" placeholder="ex. 18" step="0.01" defaultValue={item?.iscMaxPerMpptA} required />
       </label>
       <label>
-        Tension AC nominale (V) <input type="number" name="vacNomV" step="0.01" defaultValue={item?.vacNomV} required />
+        Tension AC nominale (V) <input type="number" name="vacNomV" placeholder="ex. 230" step="0.01" defaultValue={item?.vacNomV} required />
       </label>
       <label>
-        Plage de tension AC (optionnel) <input name="vacRangeV" defaultValue={item?.vacRangeV ?? undefined} />
+        Plage de tension AC (optionnel) <input name="vacRangeV" placeholder="ex. 180-270" defaultValue={item?.vacRangeV ?? undefined} />
       </label>
       <label>
-        Courant AC max (A) <input type="number" name="iacMaxA" step="0.01" defaultValue={item?.iacMaxA} required />
+        Courant AC max (A) <input type="number" name="iacMaxA" placeholder="ex. 21.7" step="0.01" defaultValue={item?.iacMaxA} required />
       </label>
       <label className="inline">
         Sectionneur DC intégré <input type="checkbox" name="integratedDcSwitch" defaultChecked={item?.integratedDcSwitch} />

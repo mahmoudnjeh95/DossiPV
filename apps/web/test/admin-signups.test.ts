@@ -119,7 +119,7 @@ describe('markSignupContactedAction', () => {
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: { superAdminId: 'admin-1', action: 'signup.contacted', targetCompanyId: 'c1', details: { note: 'Appelé, rappeler lundi' } },
     });
-    expect(m.mockRedirect).toHaveBeenCalledWith('/admin/installers/c1');
+    expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/c1\?ok=/));
   });
 
   it('refuses a company that is not a self sign-up', async () => {

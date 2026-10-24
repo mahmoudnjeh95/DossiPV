@@ -11,7 +11,7 @@ export function RecordPaymentForm({ companyId }: { companyId: string }): React.J
     <form action={formAction}>
       <label>
         Montant (TND)
-        <input type="number" name="amountTnd" step="0.01" required />
+        <input type="number" name="amountTnd" step="0.01" min="0.01" required />
       </label>
       <label>
         Méthode
@@ -27,7 +27,7 @@ export function RecordPaymentForm({ companyId }: { companyId: string }): React.J
       <label>
         Prolonger l&apos;abonnement de (mois)
         <input type="number" name="extendMonths" defaultValue={1} min={0} max={24} step={1} />
-        <span className="hint">Compté depuis la fin actuelle, ou depuis aujourd&apos;hui si l&apos;abonnement est terminé. 0 : ne pas prolonger.</span>
+        <span className="hint">Compté depuis la fin actuelle, ou depuis aujourd&apos;hui si l&apos;abonnement est terminé. 0 : ne pas prolonger. Pour fixer une date précise, utilisez plutôt « Nouvelle fin de période » ci-dessus : ce champ n&apos;est qu&apos;un nombre de mois ajoutés à ce paiement.</span>
       </label>
       <p className="hint">Une facture sera émise. Le montant saisi est le total TTC payé (droit de timbre compris).</p>
       <button type="submit">Enregistrer</button>

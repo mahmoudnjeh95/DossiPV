@@ -9,6 +9,8 @@ import { loadEffectiveSubscription } from '../../../../lib/sponsorship';
 import { summarizeSubscription, checkQuota, quotaJobs, quotaWindowStart } from '../../../../lib/subscription';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../../lib/labels';
 import { SubscriptionBanner } from '../../../../components/subscription-banner';
+import { FlashBanner } from '../../../../components/flash-banner';
+import { Jargon } from '../../../../components/jargon';
 import { ChecksPanel } from '../../../../components/checks-panel';
 import { locationsPending } from '../../../../lib/steg-completeness';
 import { Projects } from '@dossipv/icons';
@@ -128,7 +130,7 @@ export default async function ProjectOverviewPage({
           </Link>
         </div>
       )}
-      {saved && <div className="banner banner-ok">Section enregistrée.</div>}
+      {saved && <FlashBanner param="saved">Section enregistrée.</FlashBanner>}
       <SubscriptionBanner subscription={subscription} trialUsed={quota?.used ?? 0} />
 
       <div className="card-grid" style={{ alignItems: 'start' }}>
@@ -167,7 +169,7 @@ export default async function ProjectOverviewPage({
           ) : engineError ? (
             <div className="banner banner-danger">{engineError}</div>
           ) : engineResult ? (
-            <ChecksPanel checks={engineResult.checks} />
+            <ChecksPanel checks={engineResult.checks} projectId={project.id} derived={engineResult.derived} />
           ) : null}
         </section>
       </div>
@@ -183,7 +185,7 @@ export default async function ProjectOverviewPage({
               }
               return (
                 <div key={item.key} style={{ display: 'contents' }}>
-                  <dt>{item.label}</dt>
+                  <dt><Jargon text={item.label} /></dt>
                   <dd>
                     {formatNumber(value, item.decimals)}
                     {item.unit ? ` ${item.unit}` : ''}

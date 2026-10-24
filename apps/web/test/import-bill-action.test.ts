@@ -356,7 +356,7 @@ describe('importStegBillAction — free trial', () => {
 
     const result = await importStegBillAction(undefined, billForm());
 
-    expect(result?.error).toMatch(/^Limite de 10 factures importées pendant l'essai atteinte : contactez DossiPV/);
+    expect(result?.error).toMatch(/^Limite de 10 factures importées pendant l'essai atteinte : contactez SolarixPro/);
     expect(m.tx.billImportAttempt.count).toHaveBeenCalledWith({ where: { companyId: 'company-1', createdAt: { gte: periodStart } } });
     expect(m.tx.billImportAttempt.create).not.toHaveBeenCalled();
     expect(m.mockReadStegBill).not.toHaveBeenCalled();
@@ -381,7 +381,7 @@ describe('importStegBillAction — free trial', () => {
 
     const result = await importStegBillAction(undefined, billForm());
 
-    expect(result?.error).toMatch(/^Essai gratuit expiré : contactez DossiPV/);
+    expect(result?.error).toMatch(/^Essai gratuit expiré : contactez SolarixPro/);
     expect(m.mockReadStegBill).not.toHaveBeenCalled();
     expect(m.mockTransaction).not.toHaveBeenCalled();
   });
@@ -393,7 +393,7 @@ describe('importStegBillAction — free trial', () => {
 
     const result = await importStegBillAction(undefined, billForm());
 
-    expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez DossiPV/);
+    expect(result?.error).toMatch(/^Essai gratuit terminé \(3 dossiers utilisés\) : contactez SolarixPro/);
     expect(m.mockJobFindMany.mock.calls[0]?.[0]).toMatchObject({ where: { startedAt: { gte: periodStart } } });
     expect(m.mockReadStegBill).not.toHaveBeenCalled();
   });

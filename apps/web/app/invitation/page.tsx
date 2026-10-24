@@ -20,8 +20,8 @@ export default async function InvitationPage({ searchParams }: InvitationPagePro
 
   return (
     <main className="login-page">
-      <section className="login-story" aria-label="DossiPV">
-        <Link href="/" aria-label="Retour à l’accueil DossiPV">
+      <section className="login-story" aria-label="SolarixPro">
+        <Link href="/" aria-label="Retour à l’accueil SolarixPro">
           <BrandMark inverse />
         </Link>
         <div className="login-story-content">
@@ -31,20 +31,26 @@ export default async function InvitationPage({ searchParams }: InvitationPagePro
           <div className="login-story-rule" />
           <span className="login-story-caption">Dossiers photovoltaïques basse tension</span>
         </div>
-        <span className="login-story-foot">DOSSI PV <i /> ESPACE SÉCURISÉ</span>
+        <span className="login-story-foot">SOLARIXPRO <i /> ESPACE SÉCURISÉ</span>
       </section>
 
       <section className="login-form-panel" aria-labelledby="invitation-title">
         <div className="login-form-wrap">
-          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil DossiPV">
+          <Link href="/" className="login-mobile-brand" aria-label="Retour à l’accueil SolarixPro">
             <BrandMark compact />
           </Link>
           <p className="eyebrow login-eyebrow">INVITATION</p>
           {!invitation ? (
-            <h2 id="invitation-title">Cette invitation n’est plus valide.</h2>
+            <>
+              <h2 id="invitation-title">Cette invitation n’est plus valide.</h2>
+              <p className="login-intro">
+                Le lien a expiré (il est valable 7 jours), a déjà été utilisé ou a été annulé. Demandez à votre fournisseur de vous envoyer un
+                nouveau lien d’invitation.
+              </p>
+            </>
           ) : (
             <>
-              <h2 id="invitation-title">{invitation.supplierName} vous invite à utiliser DossiPV.</h2>
+              <h2 id="invitation-title">{invitation.supplierName} vous invite à utiliser SolarixPro.</h2>
               <p className="login-intro">
                 Vous préparez vos dossiers avec les panneaux et onduleurs de {invitation.supplierName}, sous son abonnement.
               </p>

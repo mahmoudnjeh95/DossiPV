@@ -5,6 +5,7 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { FormReader } from '../../../../../lib/form-reader';
 import { logAdminAction } from '../../../../../lib/admin-audit';
+import { withNotice } from '../../../../../lib/admin-notice';
 import { linkInstaller, unlinkInstaller, SponsorshipError } from '../../../../../lib/sponsorship';
 
 export interface SponsorshipActionState {
@@ -35,7 +36,7 @@ export async function linkInstallerAction(
   }
   const installer = await db.company.findUnique({ where: { id: installerId }, select: { name: true } });
   await logAdminAction(admin.id, 'supplier.linkInstaller', supplierId, { installerId, installerName: installer?.name ?? '' });
-  redirect(`/admin/fournisseurs/${supplierId}`);
+  redirect(withNotice(`/admin/fournisseurs/${supplierId}`, 'installerLinked'));
 }
 
 /** Moderation: switches off the highlighting of one of this supplier's products (the supplier can switch it on again). */
@@ -52,7 +53,7 @@ export async function unhighlightProductAction(supplierId: string, productId: st
     const item = product.pvModule ?? product.inverter;
     await logAdminAction(admin.id, 'supplier.unhighlight', supplierId, { productId, product: item ? `${item.brand} ${item.model}` : '' });
   }
-  redirect(`/admin/fournisseurs/${supplierId}`);
+  redirect(withNotice(`/admin/fournisseurs/${supplierId}`, 'productUnhighlighted'));
 }
 
 /** Ends an installer's sponsoring: it becomes a direct installer and the seat is freed. */
@@ -65,5 +66,5 @@ export async function unlinkInstallerAction(supplierId: string, installerId: str
     await unlinkInstaller(installerId);
     await logAdminAction(admin.id, 'supplier.unlinkInstaller', supplierId, { installerId, installerName: installer.name });
   }
-  redirect(`/admin/fournisseurs/${supplierId}`);
+  redirect(withNotice(`/admin/fournisseurs/${supplierId}`, 'installerUnlinked'));
 }

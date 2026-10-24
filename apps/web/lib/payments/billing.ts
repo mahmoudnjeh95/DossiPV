@@ -39,7 +39,7 @@ export interface BillingIntent {
   status: IntentDisplayStatus;
   failureReason: string | null;
   hasProof: boolean;
-  /** Messages from DossiPV the payer has not read yet. */
+  /** Messages from SolarixPro the payer has not read yet. */
   unreadMessages: number;
 }
 

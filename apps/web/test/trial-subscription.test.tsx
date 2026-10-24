@@ -67,17 +67,17 @@ describe('trial quota window', () => {
 });
 
 describe('trial messages', () => {
-  it('names the limit and tells to contact DossiPV', () => {
+  it('names the limit and tells to contact SolarixPro', () => {
     vi.stubEnv('ADMIN_EMAIL', '');
-    expect(trialQuotaMessage(3)).toBe('Essai gratuit terminé (3 dossiers utilisés) : contactez DossiPV pour passer à un abonnement.');
+    expect(trialQuotaMessage(3)).toBe('Essai gratuit terminé (3 dossiers utilisés) : contactez SolarixPro pour passer à un abonnement.');
     expect(trialBillImportLimitMessage()).toBe(
-      "Limite de 10 factures importées pendant l'essai atteinte : contactez DossiPV pour passer à un abonnement.",
+      "Limite de 10 factures importées pendant l'essai atteinte : contactez SolarixPro pour passer à un abonnement.",
     );
   });
 
   it('adds the admin address when configured', () => {
     vi.stubEnv('ADMIN_EMAIL', 'contact@dossipv.tn');
-    expect(trialQuotaMessage(3)).toContain('contactez DossiPV (contact@dossipv.tn)');
+    expect(trialQuotaMessage(3)).toContain('contactez SolarixPro (contact@dossipv.tn)');
   });
 
   it('keeps the usual wording for a non-trial inactive subscription', () => {

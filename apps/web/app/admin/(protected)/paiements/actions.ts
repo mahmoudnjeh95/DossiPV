@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { postAdminMessage } from '../../../../lib/payments/chat';
+import { withNotice } from '../../../../lib/admin-notice';
 import { approveIntent, rejectIntent } from '../../../../lib/payments/approve';
 
 export interface PaymentDecisionState {
@@ -15,10 +16,10 @@ export async function approvePaymentAction(intentId: string): Promise<void> {
   const admin = await requireAuthenticatedSuperAdmin();
   const result = await approveIntent(intentId, admin.id);
   revalidatePath('/admin/paiements');
-  redirect(result.ok ? '/admin/paiements' : `/admin/paiements/${intentId}`);
+  redirect(result.ok ? withNotice('/admin/paiements', 'paymentApproved') : `/admin/paiements/${intentId}`);
 }
 
-/** The admin writes in the chat of a payment; the payer sees it as "DossiPV". Nothing sensitive to audit. */
+/** The admin writes in the chat of a payment; the payer sees it as "SolarixPro". Nothing sensitive to audit. */
 export async function sendAdminPaymentMessageAction(intentId: string, formData: FormData): Promise<PaymentDecisionState | undefined> {
   await requireAuthenticatedSuperAdmin();
   const result = await postAdminMessage(intentId, formData.get('body'));
@@ -36,5 +37,5 @@ export async function rejectPaymentAction(
   const result = await rejectIntent(intentId, admin.id, typeof reason === 'string' ? reason : '');
   if (!result.ok) return { error: result.error };
   revalidatePath('/admin/paiements');
-  redirect('/admin/paiements');
+  redirect(withNotice('/admin/paiements', 'paymentRejected'));
 }

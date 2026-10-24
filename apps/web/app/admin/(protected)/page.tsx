@@ -3,6 +3,8 @@ import { requireAuthenticatedSuperAdmin } from './layout';
 import { AdminStatsCard } from './components/admin-stats-card';
 import Link from 'next/link';
 import { countSignupsToContact } from '../../../lib/admin-signups';
+import { countPaymentsNeedingAttention } from '../../../lib/payments/admin';
+import { expiringSubscriptionWhere } from '../../../lib/admin-search';
 import { Users, ChartBar, Revenue, Payment } from '@dossipv/icons';
 
 export function getMonthStart(now: Date): Date {
@@ -16,18 +18,24 @@ export interface DashboardStats {
   totalRevenueTnd: number;
   suppliers: number;
   sponsoredInstallers: number;
+  /** Active installer subscriptions ending within 30 days. */
+  expiringInstallers: number;
+  /** Active supplier packs ending within 30 days. */
+  expiringSuppliers: number;
 }
 
 export async function computeDashboardStats(now: Date): Promise<DashboardStats> {
   const monthStart = getMonthStart(now);
 
-  const [activeInstallers, dossiersThisMonth, claudeCostAgg, revenueAgg, suppliers, sponsoredInstallers] = await Promise.all([
+  const [activeInstallers, dossiersThisMonth, claudeCostAgg, revenueAgg, suppliers, sponsoredInstallers, expiringInstallers, expiringSuppliers] = await Promise.all([
     db.company.count({ where: { kind: 'INSTALLER' } }),
     db.dossierJob.count({ where: { startedAt: { gte: monthStart } } }),
     db.claudeUsageLog.aggregate({ _sum: { costUsd: true }, where: { createdAt: { gte: monthStart } } }),
     db.payment.aggregate({ _sum: { amountTnd: true } }),
     db.company.count({ where: { kind: 'SUPPLIER' } }),
     db.company.count({ where: { kind: 'INSTALLER', sponsorCompanyId: { not: null } } }),
+    db.company.count({ where: { kind: 'INSTALLER', ...expiringSubscriptionWhere(now) } }),
+    db.company.count({ where: { kind: 'SUPPLIER', ...expiringSubscriptionWhere(now) } }),
   ]);
 
   return {
@@ -37,6 +45,8 @@ export async function computeDashboardStats(now: Date): Promise<DashboardStats> 
     totalRevenueTnd: Number(revenueAgg._sum.amountTnd ?? 0),
     suppliers,
     sponsoredInstallers,
+    expiringInstallers,
+    expiringSuppliers,
   };
 }
 
@@ -45,7 +55,11 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
   // is here even though the (protected) layout already guards this route.
   await requireAuthenticatedSuperAdmin();
 
-  const [stats, signupsToContact] = await Promise.all([computeDashboardStats(new Date()), countSignupsToContact()]);
+  const [stats, signupsToContact, paymentsToVerify] = await Promise.all([
+    computeDashboardStats(new Date()),
+    countSignupsToContact(),
+    countPaymentsNeedingAttention(),
+  ]);
 
   return (
     <main>
@@ -70,6 +84,15 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
         <AdminStatsCard icon={Users} label="Installateurs parrainés" value={stats.sponsoredInstallers} />
         <Link href="/admin/inscriptions" style={{ textDecoration: 'none', color: 'inherit' }}>
           <AdminStatsCard icon={Users} label="Inscriptions à contacter" value={signupsToContact} />
+        </Link>
+        <Link href="/admin/paiements" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard icon={Payment} label="Paiements P2P à vérifier" value={paymentsToVerify} />
+        </Link>
+        <Link href="/admin/installers?expiring=1" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard icon={Users} label="Installateurs : abonnement expirant (30 j)" value={stats.expiringInstallers} />
+        </Link>
+        <Link href="/admin/fournisseurs?expiring=1" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard icon={Users} label="Fournisseurs : pack expirant (30 j)" value={stats.expiringSuppliers} />
         </Link>
       </div>
     </main>

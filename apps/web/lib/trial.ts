@@ -6,10 +6,10 @@ export const TRIAL_BILL_IMPORT_LIMIT = 10;
 
 export const SPONSOR_LAPSED_MESSAGE = 'L’abonnement de votre fournisseur a expiré : payez Standard ou Premium vous-même';
 
-/** « contactez DossiPV », with the admin address when one is configured. */
+/** « contactez SolarixPro », with the admin address when one is configured. */
 export function contactDossipv(): string {
   const email = adminEmailAddress();
-  return email ? `contactez DossiPV (${email})` : 'contactez DossiPV';
+  return email ? `contactez SolarixPro (${email})` : 'contactez SolarixPro';
 }
 
 export function trialQuotaMessage(limit: number): string {

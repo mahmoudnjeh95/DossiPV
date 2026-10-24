@@ -4,7 +4,7 @@ import { ChatPanel } from '../components/payments/chat-panel';
 import type { ChatSnapshot } from '../lib/payments/chat';
 
 const mine = { id: 'm1', author: 'COMPANY', authorName: 'Sami', body: 'Bonjour', createdAt: '2026-10-24T10:00:00.000Z' } as const;
-const theirs = { id: 'm2', author: 'ADMIN', authorName: 'DossiPV', body: 'Quel montant ?', createdAt: '2026-10-24T10:01:00.000Z' } as const;
+const theirs = { id: 'm2', author: 'ADMIN', authorName: 'SolarixPro', body: 'Quel montant ?', createdAt: '2026-10-24T10:01:00.000Z' } as const;
 
 function setVisibility(state: 'visible' | 'hidden'): void {
   Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
@@ -31,7 +31,7 @@ describe('ChatPanel', () => {
     const body = screen.getByText(/<b>x<\/b>/);
     expect(body.style.whiteSpace).toBe('pre-wrap');
     expect(screen.getByText('Vous', { exact: false })).toBeTruthy();
-    expect(screen.getByText('DossiPV', { exact: false })).toBeTruthy();
+    expect(screen.getByText('SolarixPro', { exact: false })).toBeTruthy();
   });
 
   it('sends the typed text, empties the box and refreshes', async () => {

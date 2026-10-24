@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { SolarixProLogo, Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
+import { Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
+import { BrandMark } from './brand-mark';
 import { logoutAdminAction } from '../app/admin/(protected)/actions';
 import { countSignupsToContact } from '../lib/admin-signups';
 import { countPaymentsNeedingAttention } from '../lib/payments/admin';
@@ -35,9 +36,9 @@ export async function AdminShell({ children }: AdminShellProps): Promise<React.J
     <>
       <header className="app-header">
         <div className="app-header-inner">
-          <Link href="/admin" className="app-brand" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SolarixProLogo size="sm" />
-            SOLARIX PRO Admin
+          <Link href="/admin" className="app-brand" aria-label="SolarixPro, administration">
+            <BrandMark compact />
+            <span className="badge badge-ok app-brand-tag">Admin</span>
           </Link>
           <nav className="app-nav" aria-label="Navigation admin">
             {ADMIN_NAV_LINKS.map((link) => {

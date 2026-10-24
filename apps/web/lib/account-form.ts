@@ -30,3 +30,19 @@ export function readNewPassword(reader: FormReader, formData: FormData, name: st
   }
   return value;
 }
+
+/** A Tunisian phone number: 8 digits, with an optional +216 / 00216 prefix; spaces, dots and dashes are allowed. */
+export function isTunisianPhone(value: string): boolean {
+  if (!/^[+\d\s.-]+$/.test(value)) return false;
+  const digits = value.replace(/[\s.-]/g, '').replace(/^(\+216|00216)/, '');
+  return /^\d{8}$/.test(digits);
+}
+
+/** A required phone number, checked to be Tunisian (8 digits, optional +216); kept as typed. */
+export function readTunisianPhone(reader: FormReader, name: string, label: string): string {
+  const phone = reader.text(name, label, 30);
+  if (phone.length > 0 && !isTunisianPhone(phone)) {
+    reader.errors.push(`${label} : numéro tunisien invalide (8 chiffres, avec ou sans +216, ex. 98 123 456).`);
+  }
+  return phone;
+}

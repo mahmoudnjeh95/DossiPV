@@ -2,6 +2,8 @@ import { db } from '@dossipv/db';
 import { requireSupplier, dossiersThisMonth } from '../../../lib/supplier-access';
 import { supplierSeats } from '../../../lib/sponsorship';
 import { ActionButton } from '../action-button';
+import { ContactDossipv } from '../../../components/support-contact';
+import { ContactDossipv } from '../../../components/support-contact';
 import { InviteForm } from './invite-form';
 import { cancelInvitationAction, removeSponsoredInstallerAction } from './actions';
 
@@ -30,7 +32,7 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
       <h1>Installateurs</h1>
       <p>
         <strong>{seats.max === null ? `${seats.used} installateurs` : `${seats.used} / ${seats.max} installateurs`}</strong>
-        {!seats.hasPack && <span className="muted"> — aucun pack actif : contactez DossiPV.</span>}
+        {!seats.hasPack && <span className="muted"> — aucun pack actif : <ContactDossipv />.</span>}
       </p>
 
       <section className="card">
@@ -39,7 +41,21 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
           Il reçoit un lien valable 7 jours. Une fois l’invitation acceptée, son abonnement Standard est offert par vous et sa bibliothèque
           se limite à vos panneaux et onduleurs.
         </p>
-        <InviteForm disabled={full} />
+        <InviteForm
+          disabled={full}
+          disabledReason={
+            !seats.hasPack ? (
+              <>
+                Vous n’avez aucun pack actif, donc aucune place d’invitation : <ContactDossipv /> pour en activer un.
+              </>
+            ) : full ? (
+              <>
+                Toutes les places de votre pack sont utilisées ({seats.used} / {seats.max}). Retirez un installateur parrainé ci-dessous pour
+                libérer une place, ou <ContactDossipv /> pour un pack plus grand.
+              </>
+            ) : null
+          }
+        />
       </section>
 
       <section className="card table-wrap">

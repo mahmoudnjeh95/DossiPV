@@ -1,21 +1,27 @@
 :root {
-  --color-bg: #f4f7f9;
+  --color-bg: #f4f6fb;
   --color-surface: #ffffff;
-  --color-text: #0f172a;
-  --color-muted: #526174;
-  --color-border: #d8e0e8;
-  --color-primary: #0f172a;
+  --color-text: #0e1b3d;
+  --color-muted: #55627d;
+  --color-border: #dbe2ee;
+  --color-primary: #0b1f4a;
   --color-primary-contrast: #ffffff;
-  --color-accent: #0369a1;
-  --color-accent-soft: #e7f2f8;
+  --color-accent: #1d4b97;
+  --color-accent-soft: #e8eefa;
+  --color-gold: #e8a317;
+  --color-gold-soft: #fff4d6;
+  --color-navy: #0b1f4a;
   --color-danger: #b42318;
   --color-danger-bg: #fdecea;
   --color-warn: #8a5a00;
   --color-warn-bg: #fff4d6;
   --color-ok: #17694a;
   --color-ok-bg: #e3f5ec;
-  --radius: 6px;
+  --radius: 10px;
   --gutter: 24px;
+  --shadow-card: 0 1px 2px rgba(11, 31, 74, 0.04), 0 8px 24px -12px rgba(11, 31, 74, 0.12);
+  --shadow-lift: 0 2px 4px rgba(11, 31, 74, 0.05), 0 18px 36px -14px rgba(11, 31, 74, 0.22);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -97,7 +103,7 @@ h2 {
 
 .app-nav a:hover {
   color: var(--color-text);
-  background: #f1f5f8;
+  background: #eef2fa;
 }
 
 .app-nav a[aria-current='page'] {
@@ -188,7 +194,7 @@ h2 {
   position: relative;
   height: 10px;
   border-radius: 999px;
-  background: rgba(3, 105, 161, 0.14);
+  background: rgba(29, 75, 151, 0.14);
   overflow: hidden;
 }
 
@@ -319,8 +325,8 @@ button,
 
 button:hover:not(:disabled),
 .button:hover:not([aria-disabled='true']) {
-  background: #26364a;
-  border-color: #26364a;
+  background: #17358a;
+  border-color: #17358a;
   transform: translateY(-1px);
 }
 
@@ -340,7 +346,7 @@ button.secondary,
 button.secondary:hover:not(:disabled),
 .button.secondary:hover:not([aria-disabled='true']) {
   color: var(--color-text);
-  background: #f1f5f8;
+  background: #eef2fa;
   border-color: #bdc9d5;
 }
 
@@ -400,7 +406,7 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 3px solid rgba(3, 105, 161, 0.22);
+  outline: 3px solid rgba(29, 75, 151, 0.22);
   outline-offset: 1px;
   border-color: var(--color-accent);
 }
@@ -587,72 +593,56 @@ th {
 }
 
 *:focus-visible {
-  outline: 3px solid rgba(3, 105, 161, 0.7);
+  outline: 3px solid rgba(29, 75, 151, 0.7);
   outline-offset: 3px;
 }
 
 .brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 11px;
-  color: var(--color-text);
+  gap: 10px;
+  color: var(--color-navy);
   text-align: left;
   text-decoration: none;
 }
 
 .brand-symbol {
   display: block;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
-  fill: none;
-  stroke: var(--color-accent);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.2;
-}
-
-.brand-symbol-accent {
-  stroke: #d97706;
-  stroke-width: 3.5;
+  filter: drop-shadow(0 4px 8px rgba(11, 31, 74, 0.25));
 }
 
 .brand-wordmark {
   display: grid;
-  gap: 1px;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .brand-wordmark strong {
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-.brand-wordmark small {
-  color: var(--color-muted);
-  font-size: 0.67rem;
-  font-weight: 550;
+.brand-wordmark em {
+  color: var(--color-gold);
+  font-style: normal;
 }
 
-.brand-lockup-compact {
-  gap: 8px;
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-.brand-lockup-compact .brand-symbol {
-  width: 34px;
-  height: 34px;
-}
-
-.brand-lockup-compact .brand-wordmark strong {
-  font-size: 1rem;
+.brand-lockup-full {
+  display: block;
+  width: clamp(150px, 22vw, 230px);
 }
 
 .brand-lockup-inverse {
   color: #fff;
-}
-
-.brand-lockup-inverse .brand-wordmark small {
-  color: #b6c6d4;
 }
 
 .welcome-page {
@@ -695,8 +685,8 @@ th {
 
 .welcome-login-link:hover:not([aria-disabled='true']),
 .welcome-primary-cta:hover:not([aria-disabled='true']) {
-  background: #075985;
-  border-color: #075985;
+  background: #0b1f4a;
+  border-color: #0b1f4a;
 }
 
 .welcome-hero {
@@ -727,7 +717,7 @@ th {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
-  background: #d97706;
+  background: #e8a317;
   border-radius: 2px;
 }
 
@@ -802,7 +792,7 @@ th {
 .welcome-visual::before {
   position: absolute;
   inset: 24px;
-  border: 1px solid rgba(3, 105, 161, 0.18);
+  border: 1px solid rgba(29, 75, 151, 0.18);
   content: '';
   pointer-events: none;
 }
@@ -1067,7 +1057,7 @@ th {
   overflow: hidden;
   padding: 34px clamp(32px, 6vw, 84px);
   color: #fff;
-  background-color: #0f172a;
+  background-color: #0b1f4a;
   background-image: linear-gradient(rgba(221, 235, 244, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(221, 235, 244, 0.035) 1px, transparent 1px);
   background-size: 36px 36px;
 }
@@ -1119,7 +1109,7 @@ th {
   width: 54px;
   height: 3px;
   margin-top: 38px;
-  background: #d97706;
+  background: #e8a317;
 }
 
 .login-story-caption,
@@ -1142,7 +1132,7 @@ th {
 .login-story-foot i {
   width: 4px;
   height: 4px;
-  background: #d97706;
+  background: #e8a317;
   border-radius: 50%;
 }
 
@@ -1211,8 +1201,8 @@ th {
 }
 
 .login-submit:hover:not(:disabled) {
-  background: #075985;
-  border-color: #075985;
+  background: #0b1f4a;
+  border-color: #0b1f4a;
 }
 
 .login-help {
@@ -1673,7 +1663,7 @@ main.locations-main {
 }
 
 .locations-workspace .map-tool:hover:not(:disabled) {
-  background: #f1f5f8;
+  background: #eef2fa;
   border-color: #bdc9d5;
 }
 
@@ -1808,7 +1798,7 @@ main.locations-main {
 }
 
 .locations-workspace .map-check:hover:not(:disabled) {
-  background: #f1f5f8;
+  background: #eef2fa;
   transform: none;
 }
 
@@ -1973,4 +1963,22 @@ main.locations-main {
   min-height: 50px;
   padding: 12px 14px;
   background: #fbfcfd;
+}
+
+/* Admin: success banner after an action (?ok=…) and the error message of a refused form. */
+.admin-notice {
+  margin: 0 0 16px;
+  padding: 11px 13px;
+  color: var(--color-ok);
+  background: var(--color-ok-bg);
+  border-left: 3px solid var(--color-ok);
+  font-size: 0.9rem;
+}
+
+form [role='alert'] {
+  margin-top: 8px;
+  padding: 9px 12px;
+  background: var(--color-danger-bg, #ffe5e5);
+  border-left: 3px solid var(--color-danger);
+  font-size: 0.9rem;
 }

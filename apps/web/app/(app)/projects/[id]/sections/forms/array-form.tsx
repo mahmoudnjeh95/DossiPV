@@ -16,6 +16,8 @@ import {
   type PvModuleInput,
   type InverterInput,
 } from '@dossipv/engine';
+import { Jargon } from '../../../../../../components/jargon';
+import { LibraryPrerequisite } from '../../../../../../components/library-prerequisite';
 import { saveArrayAction, type ArrayPayload } from '../actions';
 import { PHASE_CONNECTION_OPTIONS } from '../../../../../../lib/labels';
 
@@ -119,10 +121,12 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
 
   if (modules.length === 0 || inverters.length === 0) {
     return (
-      <div className="card">
-        <p role="alert">La bibliothèque ne contient encore aucun module ou onduleur : impossible de configurer le champ PV.</p>
-        <Link href="/library">Voir la bibliothèque</Link>
-      </div>
+      <LibraryPrerequisite
+        missing={[
+          ...(modules.length === 0 ? [{ label: 'module photovoltaïque', type: 'PV_MODULE' }] : []),
+          ...(inverters.length === 0 ? [{ label: 'onduleur', type: 'INVERTER' }] : []),
+        ]}
+      />
     );
   }
 
@@ -156,8 +160,8 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
         </div>
         {module && (
           <p className="hint">
-            {fmt(module.spec.pmaxW)} Wc · Voc {fmt(module.spec.vocV, 1)} V · Isc {fmt(module.spec.iscA, 2)} A · Nc max sans fusible :{' '}
-            {ncMaxNoFuse(module.spec)} chaîne(s) en parallèle.
+            {fmt(module.spec.pmaxW)} Wc · <Jargon text="Voc" /> {fmt(module.spec.vocV, 1)} V · <Jargon text="Isc" /> {fmt(module.spec.iscA, 2)} A ·{' '}
+            <Jargon text="Nc" /> max sans fusible : {ncMaxNoFuse(module.spec)} chaîne(s) en parallèle.
           </p>
         )}
       </fieldset>
@@ -203,9 +207,9 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
             </div>
             {inverter && bounds && (
               <p className="hint">
-                Plage MPPT {fmt(inverter.spec.mpptMinV)}–{fmt(inverter.spec.mpptMaxV)} V · Vdc max {fmt(inverter.spec.vdcMaxV)} V ·{' '}
-                {inverter.spec.mpptCount} MPPT · Ns admissible {bounds.nsMin}–{bounds.nsMax} (optimal ≤ {bounds.nsOptMax}) · Np max {bounds.npMax}{' '}
-                (optimal {bounds.npOpt}).{!inverter.spec.stegApproved && ' Onduleur absent de la liste STEG (C21).'}
+                <Jargon
+                  text={`Plage MPPT ${fmt(inverter.spec.mpptMinV)}–${fmt(inverter.spec.mpptMaxV)} V · Vdc max ${fmt(inverter.spec.vdcMaxV)} V · ${inverter.spec.mpptCount} MPPT · Ns admissible ${bounds.nsMin}–${bounds.nsMax} (optimal ≤ ${bounds.nsOptMax}) · Np max ${bounds.npMax} (optimal ${bounds.npOpt}).${inverter.spec.stegApproved ? '' : ' Onduleur absent de la liste STEG (C21).'}`}
+                />
               </p>
             )}
             {phaseMismatch && <p className="live-hint bad">Le site est {sitePhases === 3 ? 'triphasé' : 'monophasé'} mais cet onduleur ne l&apos;est pas (C19).</p>}
@@ -219,22 +223,22 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
                 return (
                   <div key={mpptIndex} className="form-grid" style={{ alignItems: 'end' }}>
                     <label>
-                      MPPT {mpptIndex + 1} — modules par chaîne (Ns)
+                      <Jargon text={`MPPT ${mpptIndex + 1} — modules par chaîne (Ns)`} />
                       <input type="number" min={1} max={100} step={1} value={mppt.modulesPerString} onChange={(e) => updateMppt(rowIndex, mpptIndex, { modulesPerString: Number(e.target.value) })} required />
                     </label>
                     <label>
-                      Chaînes en parallèle (Np)
+                      <Jargon text="Chaînes en parallèle (Np)" />
                       <input type="number" min={1} max={50} step={1} value={mppt.stringsInParallel} onChange={(e) => updateMppt(rowIndex, mpptIndex, { stringsInParallel: Number(e.target.value) })} required />
                     </label>
                     <div className="stack" style={{ gap: 4 }}>
                       {bounds && (
                         <span className={`live-hint ${nsBad ? 'bad' : nsWarn ? '' : 'good'}`}>
-                          {nsBad ? `Ns doit être entre ${bounds.nsMin} et ${bounds.nsMax} pour cet onduleur.` : nsWarn ? `Ns au-dessus de l'optimal (${bounds.nsOptMax}) : écrêtage possible (C03).` : `Ns dans la plage ${bounds.nsMin}–${bounds.nsMax}.`}
+                          <Jargon text={nsBad ? `Ns doit être entre ${bounds.nsMin} et ${bounds.nsMax} pour cet onduleur.` : nsWarn ? `Ns au-dessus de l'optimal (${bounds.nsOptMax}) : écrêtage possible (C03).` : `Ns dans la plage ${bounds.nsMin}–${bounds.nsMax}.`} />
                         </span>
                       )}
                       {bounds && (
                         <span className={`live-hint ${npBad ? 'bad' : 'good'}`}>
-                          {npBad ? `Np dépasse le maximum ${bounds.npMax} (C04).` : `Np ≤ ${bounds.npMax}.`}
+                          <Jargon text={npBad ? `Np dépasse le maximum ${bounds.npMax} (C04).` : `Np ≤ ${bounds.npMax}.`} />
                           {fuse ? ' Fusibles DC requis.' : ''}
                         </span>
                       )}

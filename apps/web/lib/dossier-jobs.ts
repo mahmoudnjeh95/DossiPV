@@ -151,9 +151,37 @@ export function jobProgressPercent(job: { status: JobStatusValue; progressStep: 
   return Math.min(99, Math.max(1, ((done + share * current) / total) * 100));
 }
 
-/** `DossierJob.warnings` (a JSON string[] the worker writes) as strings; anything else is dropped. */
-export function jobWarnings(value: unknown): string[] {
+/** The worker's warnings as strings; anything else is dropped (raw, as stored). */
+function rawWarnings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((warning): warning is string => typeof warning === 'string' && warning !== '') : [];
+}
+
+/**
+ * A worker warning in words an installer can act on (or told that nothing is needed). The worker
+ * keeps writing its terse text; only the shown text changes, and an unknown warning is kept as is.
+ */
+export function friendlyWarning(warning: string): string {
+  const list = /^Page de la liste (STEG|ANME) introuvable pour (.+)\.$/.exec(warning);
+  if (list) {
+    const [, name, model] = list;
+    return `Le modèle ${model} n’a pas été trouvé dans la liste ${name} officielle : sa page n’est pas jointe au dossier. Aucune action n’est obligatoire ; si vous la souhaitez, ajoutez cette page vous-même dans les annexes.`;
+  }
+  const highlight = /^Surlignage impossible dans (.+) \(document scanné ou modèle introuvable\)\.$/.exec(warning);
+  if (highlight) {
+    return `${highlight[1]} : le modèle n’a pas pu être surligné dans la fiche technique (document scanné ou texte illisible). La fiche est bien jointe au dossier : aucune action n’est nécessaire, ou surlignez-la à la main avant de l’envoyer.`;
+  }
+  const missingFile = /^(.+) : fichier introuvable, non joint au dossier\.$/.exec(warning);
+  if (missingFile) return `${missingFile[1]} : le fichier est introuvable et n’est pas joint au dossier. Rajoutez-le dans les annexes du projet puis régénérez le dossier.`;
+  const unreadable = /^(.+) : document illisible, non joint au dossier\.$/.exec(warning);
+  if (unreadable) return `${unreadable[1]} : le document est illisible et n’est pas joint au dossier. Remplacez-le par un PDF ou une image valide puis régénérez le dossier.`;
+  const summary = /^Sommaire : titre « (.+) » introuvable\.$/.exec(warning);
+  if (summary) return `Sommaire : la section « ${summary[1]} » n’a pas pu être repérée dans le PDF, son numéro de page manque. Aucune action n’est nécessaire.`;
+  return warning;
+}
+
+/** `DossierJob.warnings` (a JSON string[] the worker writes), worded for the installer; anything else is dropped. */
+export function jobWarnings(value: unknown): string[] {
+  return rawWarnings(value).map(friendlyWarning);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -162,7 +190,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** The STEG pieces a job's snapshot recorded as missing (its dossier is then a draft); [] for older snapshots. */
 export function snapshotDraftMissing(value: unknown): string[] {
-  return isRecord(value) ? jobWarnings(value['draftMissing']) : [];
+  return isRecord(value) ? rawWarnings(value['draftMissing']) : [];
 }
 
 /**

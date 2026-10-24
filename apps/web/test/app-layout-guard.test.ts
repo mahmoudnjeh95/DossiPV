@@ -31,7 +31,7 @@ describe('requireAuthenticatedCompanyUser', () => {
 
     await requireAuthenticatedCompanyUser();
 
-    expect(mockRedirect).toHaveBeenCalledWith('/login');
+    expect(mockRedirect).toHaveBeenCalledWith('/login?connexion=requise');
     expect(mockValidateSession).not.toHaveBeenCalled();
   });
 
@@ -42,7 +42,7 @@ describe('requireAuthenticatedCompanyUser', () => {
     await requireAuthenticatedCompanyUser();
 
     expect(mockValidateSession).toHaveBeenCalledWith('some-expired-or-unknown-token');
-    expect(mockRedirect).toHaveBeenCalledWith('/login');
+    expect(mockRedirect).toHaveBeenCalledWith('/login?connexion=requise');
   });
 
   it('returns the authenticated user and does not redirect when the session is valid', async () => {

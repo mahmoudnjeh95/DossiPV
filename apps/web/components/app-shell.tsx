@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { logoutAction } from '../app/(app)/actions';
-import { Dashboard, Projects, Library, Settings, Logout } from '@dossipv/icons';
+import { Dashboard, Projects, Library, Settings, Subscription, Logout } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
 import { JobWatcherProvider } from './job-watcher';
 
@@ -20,7 +20,8 @@ const NAV_LINKS: NavLink[] = [
   { href: '/dashboard', label: 'Tableau de bord', icon: Dashboard },
   { href: '/projects', label: 'Projets', icon: Projects },
   { href: '/library', label: 'Bibliothèque', icon: Library },
-  { href: '/settings', label: 'Société', icon: Settings },
+  { href: '/facturation', label: 'Abonnement et paiement', icon: Subscription },
+  { href: '/settings', label: 'Paramètres', icon: Settings },
 ];
 
 /**
@@ -33,7 +34,7 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
     <>
       <header className="app-header">
         <div className="app-header-inner">
-          <Link href="/dashboard" className="app-brand" aria-label="DossiPV, tableau de bord">
+          <Link href="/dashboard" className="app-brand" aria-label="SolarixPro, tableau de bord">
             <BrandMark compact />
 
           </Link>

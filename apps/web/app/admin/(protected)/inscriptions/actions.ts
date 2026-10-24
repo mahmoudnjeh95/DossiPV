@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
+import { withNotice } from '../../../../lib/admin-notice';
 import { logAdminAction } from '../../../../lib/admin-audit';
 
 export interface SignupActionState {
@@ -31,7 +32,7 @@ export async function markSignupContactedAction(
 
   await db.company.update({ where: { id: companyId }, data: { signupContactedAt: new Date(), signupNote: note } });
   await logAdminAction(admin.id, 'signup.contacted', companyId, { note });
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'signupContacted'));
 }
 
 /** Puts a self sign-up back in the "À contacter" list and clears its note. */
@@ -43,5 +44,5 @@ export async function markSignupUncontactedAction(companyId: string): Promise<vo
     await db.company.update({ where: { id: companyId }, data: { signupContactedAt: null, signupNote: null } });
     await logAdminAction(admin.id, 'signup.uncontacted', companyId);
   }
-  redirect(`/admin/installers/${companyId}`);
+  redirect(withNotice(`/admin/installers/${companyId}`, 'signupUncontacted'));
 }
