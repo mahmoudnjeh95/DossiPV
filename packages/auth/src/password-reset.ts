@@ -6,7 +6,7 @@ import { generateToken, hashToken } from './tokens';
 export const PASSWORD_RESET_LIFETIME_MS = 60 * 60 * 1000;
 /** A link the admin sends to a new account's user stays valid a week, time to read the email. */
 export const ACCOUNT_SETUP_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
-export const MIN_PASSWORD_LENGTH = 8;
+export const MIN_PASSWORD_LENGTH = 10;
 
 /** The link is unknown, used already, expired, or its account was disabled. */
 export class InvalidResetTokenError extends Error {

@@ -47,6 +47,8 @@ RUN npm run --workspace=@dossipv/db generate
 # NEXT_PUBLIC_* values are inlined into the browser bundle at build time, so they must be build
 # args (the deploy workflow passes them); empty leaves browser error monitoring off.
 ARG NEXT_PUBLIC_SENTRY_DSN=""
+# Public Mapbox token (pk.…) for satellite imagery in the map editor; empty falls back to Esri.
+ARG NEXT_PUBLIC_MAPBOX_TOKEN=""
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace=@dossipv/web
 

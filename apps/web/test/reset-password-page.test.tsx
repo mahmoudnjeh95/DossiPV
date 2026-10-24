@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 const m = vi.hoisted(() => ({ mockFindValid: vi.fn() }));
 
-vi.mock('@dossipv/auth', () => ({ findValidPasswordResetToken: m.mockFindValid, MIN_PASSWORD_LENGTH: 8 }));
+vi.mock('@dossipv/auth', () => ({ findValidPasswordResetToken: m.mockFindValid, MIN_PASSWORD_LENGTH: 10 }));
 // The form's server action is not exercised here (see password-reset-actions.test.ts).
 vi.mock('../app/reinitialiser-mot-de-passe/actions', () => ({ resetPasswordAction: vi.fn() }));
 

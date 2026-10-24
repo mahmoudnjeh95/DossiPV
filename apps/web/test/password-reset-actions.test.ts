@@ -170,10 +170,10 @@ describe('resetPasswordAction', () => {
     expect(m.mockResetPassword).not.toHaveBeenCalled();
   });
 
-  it('refuses a password shorter than 8 characters', async () => {
+  it('refuses a password shorter than 10 characters', async () => {
     const result = await resetPasswordAction(undefined, resetForm({ token: 'tok', password: 'court', confirmation: 'court' }));
 
-    expect(result).toEqual({ error: 'Le mot de passe doit comporter au moins 8 caractères.' });
+    expect(result).toEqual({ error: 'Le mot de passe doit comporter au moins 10 caractères.' });
     expect(m.mockResetPassword).not.toHaveBeenCalled();
   });
 
@@ -182,7 +182,7 @@ describe('resetPasswordAction', () => {
 
     const result = await resetPasswordAction(undefined, resetForm({ token: 'tok', password: 'nouveau-mdp', confirmation: 'nouveau-mdp' }));
 
-    expect(result).toEqual({ error: 'Le mot de passe doit comporter au moins 8 caractères.' });
+    expect(result).toEqual({ error: 'Le mot de passe doit comporter au moins 10 caractères.' });
   });
 
   it('explains that a used, expired or unknown link is no longer valid', async () => {

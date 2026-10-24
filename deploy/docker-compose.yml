@@ -49,6 +49,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      # Satellite imagery of the dossier maps (worker) falls back to Esri when empty.
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
     ports:
       - '127.0.0.1:3100:3000'
     volumes:
@@ -94,6 +96,8 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
+      # Satellite imagery of the dossier maps (worker) falls back to Esri when empty.
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
     volumes:
       - dossipv_files:/app/apps/web/.file-storage
     depends_on:

@@ -80,6 +80,7 @@ jobs:
           ADMIN_EMAIL: ${{ secrets.DEPLOY_ADMIN_EMAIL }}
           SENTRY_DSN: ${{ secrets.DEPLOY_SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.DEPLOY_NEXT_PUBLIC_SENTRY_DSN }}
+          NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.DEPLOY_NEXT_PUBLIC_MAPBOX_TOKEN }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -103,7 +104,7 @@ jobs:
           # Build the image on the server, tagged with the commit SHA. The browser DSN is a build
           # arg because Next inlines NEXT_PUBLIC_* at build time (it is public by design: it ships
           # in the JS bundle).
-          $SSH "cd /home/debian/dossipv-release && docker build --build-arg NEXT_PUBLIC_SENTRY_DSN='$NEXT_PUBLIC_SENTRY_DSN' -t dossipv-web:${{ github.sha }} -t dossipv-web:latest ."
+          $SSH "cd /home/debian/dossipv-release && docker build --build-arg NEXT_PUBLIC_SENTRY_DSN='$NEXT_PUBLIC_SENTRY_DSN' --build-arg NEXT_PUBLIC_MAPBOX_TOKEN='$NEXT_PUBLIC_MAPBOX_TOKEN' -t dossipv-web:${{ github.sha }} -t dossipv-web:latest ."
 
           # Write the runtime .env for compose (never echoed/logged; heredoc
           # stays inside the remote shell).
@@ -118,6 +119,7 @@ jobs:
           SMTP_FROM=$SMTP_FROM
           ADMIN_EMAIL=$ADMIN_EMAIL
           SENTRY_DSN=$SENTRY_DSN
+          MAPBOX_ACCESS_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
           IMAGE_TAG=${{ github.sha }}
           EOF
 

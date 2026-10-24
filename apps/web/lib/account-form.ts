@@ -1,6 +1,8 @@
 import type { FormReader } from './form-reader';
 
-export const MIN_PASSWORD_LENGTH = 10;
+// One rule for every password form, from the auth package.
+export { MIN_PASSWORD_LENGTH } from '@dossipv/auth';
+import { MIN_PASSWORD_LENGTH } from '@dossipv/auth';
 /** bcrypt ignores everything past 72 bytes, so a longer password would not be what it seems. */
 const MAX_PASSWORD_LENGTH = 72;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
