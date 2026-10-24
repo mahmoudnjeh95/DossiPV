@@ -1,6 +1,7 @@
 import { pathToFileURL } from 'url';
 import { db } from '@dossipv/db';
 import { processJob } from './process-job';
+import { sendExpiryReminders } from './send-expiry-reminders';
 
 const POLL_INTERVAL_MS = Number(process.env.DOSSIER_WORKER_POLL_INTERVAL_MS ?? 5000);
 const STALE_RUNNING_MS = Number(process.env.DOSSIER_WORKER_STALE_RUNNING_MS ?? 600_000);
@@ -31,6 +32,35 @@ export async function resetStaleRunningJobs(staleThresholdMs: number): Promise<n
   return result.count;
 }
 
+const EXPIRY_REMINDER_INTERVAL_MS = 60 * 60 * 1000;
+let lastExpiryReminderRunAt: number | null = null;
+
+/** Tests start each case from a worker that has not run the expiry check yet. */
+export function resetExpiryReminderScheduleForTests(): void {
+  lastExpiryReminderRunAt = null;
+}
+
+/**
+ * The subscription expiry emails, checked at most once an hour from the poll loop (each email is
+ * sent once anyway; the hourly pace only bounds the DB queries). The run time is recorded before
+ * the check, so a failing check is retried an hour later, not on every poll. Never throws: an
+ * email problem must not stop dossier generation.
+ */
+export async function runExpiryRemindersIfDue(now: Date = new Date()): Promise<void> {
+  if (lastExpiryReminderRunAt !== null && now.getTime() - lastExpiryReminderRunAt < EXPIRY_REMINDER_INTERVAL_MS) {
+    return;
+  }
+  lastExpiryReminderRunAt = now.getTime();
+  try {
+    const summary = await sendExpiryReminders(now);
+    if (summary.sent > 0) {
+      console.warn(`Expiry reminders: ${summary.sent} sent (${summary.checked} subscriptions in the reminder window).`);
+    }
+  } catch (error) {
+    console.error('Expiry reminders check failed:', error);
+  }
+}
+
 let shuttingDown = false;
 
 async function pollOnce(): Promise<void> {
@@ -57,7 +87,11 @@ export async function main(): Promise<void> {
     shuttingDown = true;
   });
 
+  // Once at startup, then at most hourly from the loop.
+  await runExpiryRemindersIfDue();
+
   while (!shuttingDown) {
+    await runExpiryRemindersIfDue();
     await pollOnce();
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   updateMany: vi.fn(),
+  sendExpiryReminders: vi.fn(),
 }));
 
 vi.mock('@dossipv/db', async () => {
@@ -10,7 +11,9 @@ vi.mock('@dossipv/db', async () => {
   return { ...actual, db: { ...actual.db, dossierJob: { findFirst: mocks.findFirst, updateMany: mocks.updateMany } } };
 });
 
-import { claimNextJob, resetStaleRunningJobs } from '../src/run-worker';
+vi.mock('../src/send-expiry-reminders', () => ({ sendExpiryReminders: mocks.sendExpiryReminders }));
+
+import { claimNextJob, resetExpiryReminderScheduleForTests, resetStaleRunningJobs, runExpiryRemindersIfDue } from '../src/run-worker';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -60,5 +63,38 @@ describe('resetStaleRunningJobs', () => {
     expect(callArg.where.status).toBe('RUNNING');
     expect(callArg.data.status).toBe('PENDING');
     expect(callArg.where.startedAt.lt.getTime()).toBeLessThan(Date.now());
+  });
+});
+
+describe('runExpiryRemindersIfDue', () => {
+  const START = new Date('2026-10-24T08:00:00.000Z');
+  const minutesLater = (minutes: number): Date => new Date(START.getTime() + minutes * 60_000);
+
+  beforeEach(() => {
+    resetExpiryReminderScheduleForTests();
+    mocks.sendExpiryReminders.mockResolvedValue({ checked: 0, sent: 0 });
+  });
+
+  it('runs on the first call (startup), then at most once an hour', async () => {
+    await runExpiryRemindersIfDue(START);
+    await runExpiryRemindersIfDue(minutesLater(1));
+    await runExpiryRemindersIfDue(minutesLater(59));
+    expect(mocks.sendExpiryReminders).toHaveBeenCalledTimes(1);
+
+    await runExpiryRemindersIfDue(minutesLater(60));
+    expect(mocks.sendExpiryReminders).toHaveBeenCalledTimes(2);
+    expect(mocks.sendExpiryReminders).toHaveBeenLastCalledWith(minutesLater(60));
+  });
+
+  it('never throws when the check fails, and waits an hour before trying again', async () => {
+    mocks.sendExpiryReminders.mockRejectedValue(new Error('database unreachable'));
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(runExpiryRemindersIfDue(START)).resolves.toBeUndefined();
+    await runExpiryRemindersIfDue(minutesLater(5));
+
+    expect(mocks.sendExpiryReminders).toHaveBeenCalledTimes(1);
+    expect(error).toHaveBeenCalledWith('Expiry reminders check failed:', expect.any(Error));
+    error.mockRestore();
   });
 });
