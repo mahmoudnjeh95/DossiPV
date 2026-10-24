@@ -36,8 +36,9 @@ describe('trial quota window', () => {
     expect(quotaWindowStart(trial(), now)).toEqual(periodStart);
     const normal = summarizeSubscription({ status: 'ACTIVE', periodStart, periodEnd: new Date('2026-12-01'), plan: normalPlan }, now);
     expect(normal?.isTrial).toBe(false);
-    expect(quotaWindowStart(normal, now)).toEqual(new Date(now.getFullYear(), now.getMonth(), 1));
-    expect(quotaWindowStart(null, now)).toEqual(new Date(now.getFullYear(), now.getMonth(), 1));
+    // The month starts at midnight in Tunis (UTC+1): 30 September 23:00 UTC for October.
+    expect(quotaWindowStart(normal, now)).toEqual(new Date('2026-09-30T23:00:00.000Z'));
+    expect(quotaWindowStart(null, now)).toEqual(new Date('2026-09-30T23:00:00.000Z'));
   });
 
   const jobs = [job('a', '2026-09-25T00:00:00Z'), job('b', '2026-10-02T00:00:00Z'), job('c', '2026-10-05T00:00:00Z')];

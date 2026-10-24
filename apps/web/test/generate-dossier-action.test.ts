@@ -50,6 +50,7 @@ vi.mock('../lib/dossier-number', async () => {
 
 import { generateDossierAction } from '../app/(app)/projects/[id]/actions';
 import { buildFullProject } from './fixtures/full-project';
+import { monthStart } from '../lib/subscription';
 
 const user = {
   id: 'user-1',
@@ -204,8 +205,7 @@ describe('generateDossierAction', () => {
       await generateDossierAction('project-1', undefined).catch(() => undefined);
 
       const where = (mocks.jobFindMany.mock.calls[0]?.[0] as { where: { startedAt: { gte: Date } } }).where;
-      const first = new Date();
-      expect(where.startedAt.gte).toEqual(new Date(first.getFullYear(), first.getMonth(), 1));
+      expect(where.startedAt.gte).toEqual(monthStart(new Date()));
     });
 
     it('refuses once the trial period is over, with the trial wording', async () => {

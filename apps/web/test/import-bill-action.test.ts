@@ -71,6 +71,7 @@ vi.mock('sharp', () => ({ default: m.mockSharp }));
 import { BillReadingError } from '@dossipv/bill-reader';
 import { Prisma } from '@dossipv/db';
 import { importStegBillAction } from '../app/(app)/projects/import-bill-actions';
+import { dayStart } from '../lib/subscription';
 
 const user = { id: 'user-1', companyId: 'company-1', email: 'a@b.com', fullName: 'A', role: 'OWNER' as const };
 
@@ -435,7 +436,7 @@ describe('importStegBillAction — subscription and daily limit (before the paid
     expect(m.tx.billImportAttempt.create).not.toHaveBeenCalled();
     const now = new Date();
     expect(m.tx.billImportAttempt.count).toHaveBeenCalledWith({
-      where: { companyId: 'company-1', createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) } },
+      where: { companyId: 'company-1', createdAt: { gte: dayStart(now) } },
     });
     expect(m.mockTransaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: 'Serializable' });
   });
