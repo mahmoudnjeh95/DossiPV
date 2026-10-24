@@ -1,0 +1,14 @@
+# Install: see docs/runbooks/backup-and-restore.md. Started by dossipv-backup.timer.
+[Unit]
+Description=DossiPV nightly backup (database + files)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/dossipv/backup/backup.sh
+# Low priority: the dump and the tar must not slow the app down for users still online.
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

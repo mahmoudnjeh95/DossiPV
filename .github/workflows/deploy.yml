@@ -70,6 +70,16 @@ jobs:
           SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           POSTGRES_PASSWORD: ${{ secrets.DEPLOY_POSTGRES_PASSWORD }}
           ANTHROPIC_API_KEY: ${{ secrets.DEPLOY_ANTHROPIC_API_KEY }}
+          # Optional: an unset secret is an empty value, which leaves that feature off.
+          APP_URL: ${{ secrets.DEPLOY_APP_URL }}
+          SMTP_HOST: ${{ secrets.DEPLOY_SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.DEPLOY_SMTP_PORT }}
+          SMTP_USER: ${{ secrets.DEPLOY_SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.DEPLOY_SMTP_PASSWORD }}
+          SMTP_FROM: ${{ secrets.DEPLOY_SMTP_FROM }}
+          ADMIN_EMAIL: ${{ secrets.DEPLOY_ADMIN_EMAIL }}
+          SENTRY_DSN: ${{ secrets.DEPLOY_SENTRY_DSN }}
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.DEPLOY_NEXT_PUBLIC_SENTRY_DSN }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -90,14 +100,24 @@ jobs:
           # stream over SSH, extract).
           git archive --format=tar HEAD | $SSH "mkdir -p /home/debian/dossipv-release && tar -xf - -C /home/debian/dossipv-release"
 
-          # Build the image on the server, tagged with the commit SHA.
-          $SSH "cd /home/debian/dossipv-release && docker build -t dossipv-web:${{ github.sha }} -t dossipv-web:latest ."
+          # Build the image on the server, tagged with the commit SHA. The browser DSN is a build
+          # arg because Next inlines NEXT_PUBLIC_* at build time (it is public by design: it ships
+          # in the JS bundle).
+          $SSH "cd /home/debian/dossipv-release && docker build --build-arg NEXT_PUBLIC_SENTRY_DSN='$NEXT_PUBLIC_SENTRY_DSN' -t dossipv-web:${{ github.sha }} -t dossipv-web:latest ."
 
           # Write the runtime .env for compose (never echoed/logged; heredoc
           # stays inside the remote shell).
           $SSH "umask 077 && cat > /home/debian/dossipv/.env" <<EOF
           POSTGRES_PASSWORD=$POSTGRES_PASSWORD
           ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
+          APP_URL=$APP_URL
+          SMTP_HOST=$SMTP_HOST
+          SMTP_PORT=${SMTP_PORT:-587}
+          SMTP_USER=$SMTP_USER
+          SMTP_PASSWORD=$SMTP_PASSWORD
+          SMTP_FROM=$SMTP_FROM
+          ADMIN_EMAIL=$ADMIN_EMAIL
+          SENTRY_DSN=$SENTRY_DSN
           IMAGE_TAG=${{ github.sha }}
           EOF
 
