@@ -1237,6 +1237,36 @@ th {
   color: var(--color-accent);
 }
 
+/* Forgotten password: the link under the login form, the success notices (link sent, password
+   changed), the field hint and the "request a new link" button of /reinitialiser-mot-de-passe. */
+.login-forgot-link {
+  display: inline-block;
+  margin-top: 14px;
+  color: var(--color-accent);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.login-notice {
+  margin: 0 0 19px;
+  padding: 11px 13px;
+  color: var(--color-ok);
+  background: var(--color-ok-bg);
+  border-left: 3px solid var(--color-ok);
+  font-size: 0.85rem;
+}
+
+.login-field-hint {
+  margin: -10px 0 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.login-link-button {
+  display: flex;
+  text-decoration: none;
+}
+
 .app-user span {
   max-width: 180px;
   overflow: hidden;
