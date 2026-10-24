@@ -1967,3 +1967,10 @@ main.locations-main {
     width: 100%;
   }
 }
+
+/* Sign-up (/inscription): the governorate select looks like the other login-form inputs. */
+.login-form select {
+  min-height: 50px;
+  padding: 12px 14px;
+  background: #fbfcfd;
+}

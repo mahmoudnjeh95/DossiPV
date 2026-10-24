@@ -57,6 +57,7 @@ export default function LoginPage({ searchParams }: LoginPageProps): React.JSX.E
             </button>
           </form>
           <Link href="/mot-de-passe-oublie" className="login-forgot-link">Mot de passe oublié ?</Link>
+          <p className="login-help">Pas encore de compte ? <Link href="/inscription" className="login-forgot-link">Créer un compte</Link></p>
           <p className="login-help">Un problème d’accès ? Contactez le responsable de votre compte.</p>
           <Link href="/" className="login-back-link"><span aria-hidden="true">←</span> Retour à l’accueil</Link>
         </div>
