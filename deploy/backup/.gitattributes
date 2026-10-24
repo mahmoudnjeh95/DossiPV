@@ -1,0 +1,2 @@
+# Run on the Linux server: keep LF endings even when checked out on Windows (CRLF breaks bash).
+* text eol=lf

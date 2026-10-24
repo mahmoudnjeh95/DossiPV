@@ -38,10 +38,34 @@ services:
       DATABASE_URL: postgresql://dossipv:${POSTGRES_PASSWORD}@postgres:5432/dossipv
       FILE_STORAGE_ROOT: /app/apps/web/.file-storage
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Public base URL used in e-mail links. SMTP_* / ADMIN_EMAIL: transactional e-mail and the
+      # admin alerts (failed jobs). SENTRY_DSN: error monitoring, off when empty. All come from the
+      # .env the deploy workflow writes; see docs/runbooks/monitoring.md.
+      APP_URL: ${APP_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - '127.0.0.1:3100:3000'
     volumes:
       - dossipv_files:/app/apps/web/.file-storage
+    # Same check as the external uptime monitor (GET /api/health also queries the database). The
+    # image has no curl, hence Node's fetch. Docker only marks the container unhealthy (visible in
+    # `docker ps`); `restart: unless-stopped` still covers crashes.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,6 +83,17 @@ services:
       DATABASE_URL: postgresql://dossipv:${POSTGRES_PASSWORD}@postgres:5432/dossipv
       FILE_STORAGE_ROOT: /app/apps/web/.file-storage
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # Public base URL used in e-mail links. SMTP_* / ADMIN_EMAIL: transactional e-mail and the
+      # admin alerts (failed jobs). SENTRY_DSN: error monitoring, off when empty. All come from the
+      # .env the deploy workflow writes; see docs/runbooks/monitoring.md.
+      APP_URL: ${APP_URL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
     volumes:
       - dossipv_files:/app/apps/web/.file-storage
     depends_on:

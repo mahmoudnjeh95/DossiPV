@@ -44,6 +44,9 @@ COPY . .
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 RUN npm run --workspace=@dossipv/db generate
 
+# NEXT_PUBLIC_* values are inlined into the browser bundle at build time, so they must be build
+# args (the deploy workflow passes them); empty leaves browser error monitoring off.
+ARG NEXT_PUBLIC_SENTRY_DSN=""
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build --workspace=@dossipv/web
 
