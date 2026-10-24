@@ -122,7 +122,7 @@ export async function assignPlanAction(
 
   const reader = new FormReader(formData);
   const planId = reader.text('planId', 'Plan', 100);
-  const subscription = await db.subscription.findUnique({ where: { companyId } });
+  const subscription = await db.subscription.findUnique({ where: { companyId }, include: { plan: true } });
   let periodEnd: Date | null = null;
   if (!subscription) {
     const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
@@ -144,7 +144,25 @@ export async function assignPlanAction(
     return { error: "Ce plan est archivé : il n'est plus proposé." };
   }
 
-  if (subscription) {
+  if (subscription && subscription.plan?.isTrial && !plan.isTrial) {
+    // Trial to paid plan: the trial subscription is replaced by a fresh period (the trial's
+    // dossiers no longer count) and the audit entry keeps the trial plan it came from.
+    const periodEndRaw = reader.text('periodEnd', 'Fin de période', 10);
+    const newPeriodEnd = new Date(periodEndRaw);
+    if (periodEndRaw.length === 0 || Number.isNaN(newPeriodEnd.getTime())) {
+      return { error: "Fin de période : date valide requise pour passer de l'essai à un plan payant." };
+    }
+    await db.subscription.update({
+      where: { companyId },
+      data: { planId, status: 'ACTIVE', periodStart: new Date(), periodEnd: newPeriodEnd },
+    });
+    await logAdminAction(admin.id, 'subscription.changePlan', companyId, {
+      planId,
+      planName: plan.name,
+      from: subscription.plan.name,
+      periodEnd: newPeriodEnd.toISOString(),
+    });
+  } else if (subscription) {
     await db.subscription.update({ where: { companyId }, data: { planId } });
     await logAdminAction(admin.id, 'subscription.changePlan', companyId, { planId, planName: plan.name });
   } else {

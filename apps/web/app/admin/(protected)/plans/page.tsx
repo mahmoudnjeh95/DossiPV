@@ -25,7 +25,8 @@ function PlanTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
         {plans.map((plan) => (
           <tr key={plan.id} className={archived ? 'muted' : undefined}>
             <td>
-              {plan.name} {archived && <span className="badge">archivé</span>}
+              {plan.name} {plan.isTrial && <span className="badge badge-ok">essai</span>}{' '}
+              {archived && <span className="badge">archivé</span>}
             </td>
             <td>{TIER_LABELS[plan.tier] ?? plan.tier}</td>
             <td>{plan.monthlyDossierLimit}</td>
@@ -59,6 +60,11 @@ export default async function AdminPlansPage(): Promise<React.JSX.Element> {
     <main>
       <h1>Plans</h1>
       <p className="hint">Un changement de limite ou de prix s&apos;applique tout de suite aux sociétés abonnées à ce plan.</p>
+      {!activePlans.some((plan) => plan.isTrial) && (
+        <p className="hint" role="status">
+          Aucun plan d&apos;essai actif : les nouvelles inscriptions n&apos;auront pas d&apos;essai gratuit tant qu&apos;un plan « Essai gratuit » n&apos;est pas proposé.
+        </p>
+      )}
       {activePlans.length === 0 ? <p>Aucun plan proposé.</p> : <PlanTable plans={activePlans} archived={false} />}
 
       {archivedPlans.length > 0 && (

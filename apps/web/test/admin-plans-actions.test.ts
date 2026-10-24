@@ -10,6 +10,7 @@ const m = vi.hoisted(() => {
     mockPlanCreate: vi.fn(),
     mockPlanUpdate: vi.fn(),
     mockPlanFindUnique: vi.fn(),
+    mockPlanFindFirst: vi.fn(),
     mockAuditCreate: vi.fn(),
   };
 });
@@ -26,7 +27,7 @@ vi.mock('@dossipv/db', async () => {
     ...actual,
     db: {
       ...actual.db,
-      plan: { create: m.mockPlanCreate, update: m.mockPlanUpdate, findUnique: m.mockPlanFindUnique },
+      plan: { create: m.mockPlanCreate, update: m.mockPlanUpdate, findUnique: m.mockPlanFindUnique, findFirst: m.mockPlanFindFirst },
       adminAuditLog: { create: m.mockAuditCreate },
     },
   };
@@ -51,6 +52,8 @@ beforeEach(() => {
   m.mockPlanCreate.mockReset();
   m.mockPlanUpdate.mockReset();
   m.mockPlanFindUnique.mockReset();
+  m.mockPlanFindFirst.mockReset();
+  m.mockPlanFindFirst.mockResolvedValue(null);
   m.mockAuditCreate.mockReset();
 });
 
@@ -60,7 +63,7 @@ describe('createPlanAction', () => {
 
     await createPlanAction(undefined, form(premium));
 
-    const plan = { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 20, priceTnd: 349.5 };
+    const plan = { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 20, priceTnd: 349.5, isTrial: false };
     expect(m.mockPlanCreate).toHaveBeenCalledWith({ data: plan });
     expect(m.mockAuditCreate).toHaveBeenCalledWith({
       data: { superAdminId: 'admin-1', action: 'plan.create', targetCompanyId: null, details: { planId: 'plan-1', ...plan } },
@@ -86,13 +89,59 @@ describe('createPlanAction', () => {
   });
 });
 
+describe('free trial plan', () => {
+  const trial = { name: 'Essai gratuit', tier: 'STANDARD', monthlyDossierLimit: '3', priceTnd: '0', isTrial: 'on' };
+
+  it('creates a trial plan when no other one is offered', async () => {
+    m.mockPlanCreate.mockResolvedValue({ id: 'plan-trial' });
+
+    await createPlanAction(undefined, form(trial));
+
+    expect(m.mockPlanFindFirst).toHaveBeenCalledWith({ where: { isTrial: true, archivedAt: null }, select: { id: true } });
+    expect(m.mockPlanCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ isTrial: true }) as unknown });
+  });
+
+  it('refuses a second non-archived trial plan, on create and on update', async () => {
+    m.mockPlanFindFirst.mockResolvedValue({ id: 'plan-trial' });
+
+    const created = await createPlanAction(undefined, form(trial));
+    const updated = await updatePlanAction('plan-2', undefined, form(trial));
+
+    expect(created?.error).toContain("plan d'essai gratuit existe déjà");
+    expect(updated?.error).toContain("plan d'essai gratuit existe déjà");
+    expect(m.mockPlanFindFirst).toHaveBeenLastCalledWith({
+      where: { isTrial: true, archivedAt: null, id: { not: 'plan-2' } },
+      select: { id: true },
+    });
+    expect(m.mockPlanCreate).not.toHaveBeenCalled();
+    expect(m.mockPlanUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not look for another trial when the plan is not one', async () => {
+    m.mockPlanCreate.mockResolvedValue({ id: 'plan-1' });
+
+    await createPlanAction(undefined, form(premium));
+
+    expect(m.mockPlanFindFirst).not.toHaveBeenCalled();
+  });
+
+  it('keeps an archived second trial plan archived', async () => {
+    m.mockPlanFindUnique.mockResolvedValue({ id: 'plan-old', name: 'Essai', isTrial: true, archivedAt: new Date('2026-09-01') });
+    m.mockPlanFindFirst.mockResolvedValue({ id: 'plan-trial' });
+
+    await unarchivePlanAction('plan-old');
+
+    expect(m.mockPlanUpdate).not.toHaveBeenCalled();
+  });
+});
+
 describe('updatePlanAction', () => {
   it('updates the plan in place and logs the new values', async () => {
     await updatePlanAction('plan-1', undefined, form({ ...premium, monthlyDossierLimit: '25' }));
 
     expect(m.mockPlanUpdate).toHaveBeenCalledWith({
       where: { id: 'plan-1' },
-      data: { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 25, priceTnd: 349.5 },
+      data: { name: 'Premium', tier: 'PREMIUM', monthlyDossierLimit: 25, priceTnd: 349.5, isTrial: false },
     });
     expect((m.mockAuditCreate.mock.calls[0]?.[0] as { data: object }).data).toMatchObject({ action: 'plan.update', details: { planId: 'plan-1', monthlyDossierLimit: 25 } });
   });

@@ -149,6 +149,8 @@ export const ADMIN_ACTION_LABELS: Record<string, string> = {
   'plan.update': 'Plan modifié',
   'plan.archive': 'Plan archivé',
   'plan.unarchive': 'Plan désarchivé',
+  'signup.contacted': 'Inscription marquée comme contactée',
+  'signup.uncontacted': 'Inscription remise à contacter',
 };
 
 export function labelFor(options: Option<string | number>[], value: string | number | null | undefined): string {
