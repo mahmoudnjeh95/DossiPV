@@ -28,7 +28,7 @@ export default async function LocationsPage({ params }: { params: Promise<{ id: 
           <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> › Emplacements
         </p>
         <h1>Emplacements — {fullName}</h1>
-        <p className="muted">Étape 1 sur 2 : placez les points et le toit sur la carte (les longueurs de câbles sont mesurées ici). Tout se déplace en le faisant glisser.</p>
+        <p className="text-app-muted">Étape 1 sur 2 : placez les points et le toit sur la carte (les longueurs de câbles sont mesurées ici). Tout se déplace en le faisant glisser.</p>
       </div>
       <LocationsMap
         projectId={id}

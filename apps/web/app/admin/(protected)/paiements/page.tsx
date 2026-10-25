@@ -3,6 +3,8 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { unreadForAdmin } from '../../../../lib/payments/chat';
 import { PAYMENT_METHOD_LABELS, paymentReference } from '../../../../lib/payments/p2p';
+import { Badge } from '@/components/ui/badge';
+import { Table } from '@/components/ui/table';
 
 const ROWS = 200;
 
@@ -34,12 +36,12 @@ export default async function AdminPaymentsPage(): Promise<React.JSX.Element> {
   return (
     <main>
       <h1>Paiements</h1>
-      <p className="hint">Paiements P2P déclarés par les clients, à vérifier avec la capture d&apos;écran puis à confirmer ou refuser.</p>
+      <p className="text-[0.8rem] font-normal text-app-muted">Paiements P2P déclarés par les clients, à vérifier avec la capture d&apos;écran puis à confirmer ou refuser.</p>
       {intents.length === 0 ? (
-        <p className="muted">Aucun paiement à vérifier.</p>
+        <p className="text-app-muted">Aucun paiement à vérifier.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="overflow-x-auto">
+          <Table>
             <thead>
               <tr>
                 <th>Déclaré le</th>
@@ -67,15 +69,15 @@ export default async function AdminPaymentsPage(): Promise<React.JSX.Element> {
                   <td>
                     <Link href={`/admin/paiements/${intent.id}`}>Examiner</Link>
                     {(unread.get(intent.id) ?? 0) > 0 && (
-                      <span className="badge badge-warn" style={{ marginLeft: 8 }}>
+                      <Badge variant="warn" style={{ marginLeft: 8 }}>
                         {unread.get(intent.id)} message{unread.get(intent.id) === 1 ? '' : 's'} non lu{unread.get(intent.id) === 1 ? '' : 's'}
-                      </span>
+                      </Badge>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
     </main>

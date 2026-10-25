@@ -3,6 +3,8 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteAcBreakerButton } from './delete-button';
 import { AcBreaker, Add } from '@dossipv/icons';
+import { buttonVariants } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 
 export default async function AcBreakerListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -15,11 +17,11 @@ export default async function AcBreakerListPage(): Promise<React.JSX.Element> {
         <AcBreaker size="lg" color="gold" />
         Disjoncteurs AC
       </h1>
-      <Link href="/admin/equipment/ac-breakers/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+      <Link href="/admin/equipment/ac-breakers/new" className={buttonVariants()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
         <Add size="sm" color="inherit" />
         Ajouter un disjoncteur AC
       </Link>
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>Marque</th>
@@ -43,7 +45,7 @@ export default async function AcBreakerListPage(): Promise<React.JSX.Element> {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </main>
   );
 }

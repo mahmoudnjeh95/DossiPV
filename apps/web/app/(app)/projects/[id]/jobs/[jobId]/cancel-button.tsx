@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { cancelJobAction, type CancelJobActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function CancelJobButton({
   projectId,
@@ -17,10 +18,10 @@ export function CancelJobButton({
   );
 
   return (
-    <form action={formAction} className="stack">
-      <button type="submit" className="secondary" disabled={pending}>
+    <form action={formAction} className="flex flex-col gap-3">
+      <Button variant="secondary" type="submit"  disabled={pending}>
         {pending ? 'Annulation…' : 'Annuler cette génération'}
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

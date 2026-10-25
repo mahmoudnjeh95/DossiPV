@@ -1,3 +1,4 @@
+import { badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
@@ -14,6 +15,11 @@ import { Jargon } from '../../../../components/jargon';
 import { ChecksPanel } from '../../../../components/checks-panel';
 import { locationsPending } from '../../../../lib/steg-completeness';
 import { Projects } from '@dossipv/icons';
+import { Badge } from '@/components/ui/badge';
+import { Alert } from '@/components/ui/alert';
+import { buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Table } from '@/components/ui/table';
 
 const DERIVED_LABELS: { key: string; label: string; unit: string; decimals: number }[] = [
   { key: 'P_DC_W', label: 'Puissance DC', unit: 'W', decimals: 0 },
@@ -112,50 +118,50 @@ export default async function ProjectOverviewPage({
       <p className="breadcrumb">
         <Link href="/projects">Projets</Link> › {clientName}
       </p>
-      <div className="actions" style={{ marginBottom: 12 }}>
+      <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 12 }}>
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Projects size="md" color="gold" />
           {clientName}
         </h1>
-        <span className="badge">{PROJECT_STATUS_LABELS[project.status] ?? project.status}</span>
-        <span className="badge">{TIER_LABELS[project.tier] ?? project.tier}</span>
-        {project.dossierNumber && <span className="badge">Dossier n° {project.dossierNumber}</span>}
-        <span className="muted">Révision {project.revision}</span>
+        <Badge>{PROJECT_STATUS_LABELS[project.status] ?? project.status}</Badge>
+        <Badge>{TIER_LABELS[project.tier] ?? project.tier}</Badge>
+        {project.dossierNumber && <Badge>Dossier n° {project.dossierNumber}</Badge>}
+        <span className="text-app-muted">Révision {project.revision}</span>
       </div>
 
       {(project.flowStep === 'PROPOSALS' || project.flowStep === 'LOCATIONS') && (
-        <div className="banner banner-ok">
-          <Link className="button" href={`/projects/${project.id}/${project.flowStep === 'PROPOSALS' ? 'proposals' : 'locations'}`}>
+        <Alert variant="ok">
+          <Link className={buttonVariants()} href={`/projects/${project.id}/${project.flowStep === 'PROPOSALS' ? 'proposals' : 'locations'}`}>
             {project.flowStep === 'PROPOSALS' ? "Continuer : choisir l'installation" : 'Continuer : placer les points'}
           </Link>
-        </div>
+        </Alert>
       )}
       {saved && <FlashBanner param="saved">Section enregistrée.</FlashBanner>}
       <SubscriptionBanner subscription={subscription} trialUsed={quota?.used ?? 0} />
 
       <div className="card-grid" style={{ alignItems: 'start' }}>
-        <section className="card">
+        <Card as="section">
           <h2>Sections du dossier</h2>
           <ul className="section-list">
             {sections.map((section) => (
               <li key={section.key}>
-                <span className={`badge ${section.complete ? 'badge-ok' : ''}`}>
+                <span className={badgeVariants({ variant: section.complete ? 'ok' : 'default' })}>
                   {section.complete ? 'OK' : 'À faire'}
                 </span>
                 <span className="grow">
                   <Link href={section.href}>{section.label}</Link>
-                  {section.summary && <span className="muted"> · {section.summary}</span>}
+                  {section.summary && <span className="text-app-muted"> · {section.summary}</span>}
                 </span>
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
 
-        <section className="card">
+        <Card as="section">
           <h2>Validation</h2>
           {!engineInput.ok ? (
             <>
-              <p className="muted">
+              <p className="text-app-muted">
                 Les contrôles s&apos;exécuteront dès que les sections suivantes seront complètes :
               </p>
               <ul className="check-list">
@@ -167,15 +173,15 @@ export default async function ProjectOverviewPage({
               </ul>
             </>
           ) : engineError ? (
-            <div className="banner banner-danger">{engineError}</div>
+            <Alert variant="danger">{engineError}</Alert>
           ) : engineResult ? (
             <ChecksPanel checks={engineResult.checks} projectId={project.id} derived={engineResult.derived} />
           ) : null}
-        </section>
+        </Card>
       </div>
 
       {engineResult && (
-        <section className="card">
+        <Card as="section">
           <h2>Valeurs calculées</h2>
           <dl className="dl">
             {DERIVED_LABELS.map((item) => {
@@ -194,13 +200,13 @@ export default async function ProjectOverviewPage({
               );
             })}
           </dl>
-        </section>
+        </Card>
       )}
 
-      <section className="card">
+      <Card as="section">
         <h2>Génération</h2>
         {quota && (
-          <p className="muted">
+          <p className="text-app-muted">
             Dossiers utilisés ce mois : {quota.used} / {quota.limit}
             {quota.blocked
               ? ''
@@ -209,16 +215,16 @@ export default async function ProjectOverviewPage({
                 : ''}
           </p>
         )}
-        <div className="actions">
-          <Link className="button" href={`/projects/${project.id}/summary`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link className={buttonVariants()} href={`/projects/${project.id}/summary`}>
             Récapitulatif et génération
           </Link>
-          {generateReason && <span className="muted">{generateReason}</span>}
+          {generateReason && <span className="text-app-muted">{generateReason}</span>}
         </div>
 
         {project.jobs.length > 0 && (
-          <div className="table-wrap" style={{ marginTop: 12 }}>
-            <table>
+          <div className="overflow-x-auto" style={{ marginTop: 12 }}>
+            <Table>
               <thead>
                 <tr>
                   <th>Lancée le</th>
@@ -236,7 +242,7 @@ export default async function ProjectOverviewPage({
                     </td>
                     <td>
                       <span
-                        className={`badge ${job.status === 'SUCCEEDED' ? 'badge-ok' : job.status === 'FAILED' ? 'badge-danger' : ''}`}
+                        className={badgeVariants({ variant: job.status === 'SUCCEEDED' ? 'ok' : job.status === 'FAILED' ? 'danger' : 'default' })}
                       >
                         {JOB_STATUS_LABELS[job.status] ?? job.status}
                       </span>
@@ -252,10 +258,10 @@ export default async function ProjectOverviewPage({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
-      </section>
+      </Card>
     </main>
   );
 }

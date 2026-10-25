@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
+import { Alert } from '@/components/ui/alert';
 
 /**
  * A success banner shown after a redirect carrying `?param=…`. It removes that query parameter
@@ -18,8 +19,8 @@ export function FlashBanner({ param, children }: { param: string; children: Reac
     }
   }, [param]);
   return (
-    <div className="banner banner-ok" role="status">
+    <Alert variant="ok" role="status">
       {children}
-    </div>
+    </Alert>
   );
 }

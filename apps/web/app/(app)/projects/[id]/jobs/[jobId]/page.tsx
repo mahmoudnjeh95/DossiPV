@@ -1,3 +1,4 @@
+import { badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
@@ -18,6 +19,9 @@ import { JOB_STATUS_LABELS } from '../../../../../../lib/labels';
 import { GenerateButton } from '../../generate-button';
 import { CancelJobButton } from './cancel-button';
 import { JobProgressBanner, JobStepList } from './job-progress';
+import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
 
 function formatDuration(start: Date, end: Date | null): string | null {
   if (!end) {
@@ -87,10 +91,10 @@ export default async function DossierJobPage({
 
   const statusClass =
     job.status === 'SUCCEEDED'
-      ? 'badge badge-ok'
+      ? badgeVariants({ variant: 'ok' })
       : job.status === 'FAILED'
-        ? 'badge badge-danger'
-        : 'badge badge-warn';
+        ? badgeVariants({ variant: 'danger' })
+        : badgeVariants({ variant: 'warn' });
   const duration = formatDuration(job.startedAt, job.completedAt);
   const warnings = jobWarnings(job.warnings);
   const isCancelled = job.failureReason === CANCELLED_BY_INSTALLER_REASON;
@@ -102,39 +106,39 @@ export default async function DossierJobPage({
         <Link href="/projects">Projets</Link> ›{' '}
         <Link href={`/projects/${projectId}`}>{clientName}</Link> › Dossier
       </p>
-      <div className="actions" style={{ marginBottom: 12 }}>
+      <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 12 }}>
         <h1 style={{ margin: 0 }}>Dossier — {clientName}</h1>
         <span className={statusClass}>
           {isCancelled ? 'Annulée' : (JOB_STATUS_LABELS[job.status] ?? job.status)}
         </span>
-        {revisionLabel && <span className="muted">{revisionLabel}</span>}
+        {revisionLabel && <span className="text-app-muted">{revisionLabel}</span>}
       </div>
 
       {isJobActive(job.status) && <JobProgressBanner initial={progressView} />}
       {job.status === 'FAILED' && !isCancelled && (
-        <div className="banner banner-danger">
+        <Alert variant="danger">
           La génération a échoué{job.failedStep ? ` à l'étape « ${job.failedStep} »` : ''}
           {job.failureReason ? ` : ${job.failureReason}` : '.'} Ce dossier n&apos;a pas été décompté
           de votre quota.
-        </div>
+        </Alert>
       )}
       {job.status === 'FAILED' && isCancelled && (
-        <div className="banner">Génération annulée avant traitement. Aucun dossier décompté.</div>
+        <Alert>Génération annulée avant traitement. Aucun dossier décompté.</Alert>
       )}
       {job.status === 'SUCCEEDED' && (
-        <div className="banner banner-ok">Dossier généré{duration ? ` en ${duration}` : ''}.</div>
+        <Alert variant="ok">Dossier généré{duration ? ` en ${duration}` : ''}.</Alert>
       )}
       {draftMissing.length > 0 && !isCancelled && (
-        <div className="banner banner-warn">
+        <Alert variant="warn">
           Brouillon : le PDF {job.status === 'SUCCEEDED' ? 'porte' : 'portera'} la mention « BROUILLON – NON RECEVABLE ».
           Pièces manquantes :{' '}
           {draftMissing.join(' ; ')}.{' '}
           <Link href={`/projects/${projectId}/summary`}>Compléter les pièces</Link>
-        </div>
+        </Alert>
       )}
 
       <div className="card-grid" style={{ alignItems: 'start' }}>
-        <section className="card">
+        <Card as="section">
           <h2>Déroulement</h2>
           <dl className="dl" style={{ marginBottom: 12 }}>
             <dt>Lancée le</dt>
@@ -149,7 +153,7 @@ export default async function DossierJobPage({
             )}
           </dl>
           <JobStepList initial={progressView} />
-          <div className="actions" style={{ marginTop: 12 }}>
+          <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 12 }}>
             {job.status === 'PENDING' && <CancelJobButton projectId={projectId} jobId={job.id} />}
             {job.status === 'FAILED' && (
               <GenerateButton
@@ -159,51 +163,51 @@ export default async function DossierJobPage({
               />
             )}
           </div>
-        </section>
+        </Card>
 
-        <section className="card">
+        <Card as="section">
           <h2>Fichiers du dossier</h2>
           {files.length > 0 ? (
             <ul className="section-list">
               {files.map((file) => (
                 <li key={file.kind}>
                   <span className="grow">{file.label}</span>
-                  <a href={file.href} className="button small">
+                  <a href={file.href} className={buttonVariants({ size: 'sm' })}>
                     Télécharger
                   </a>
                 </li>
               ))}
             </ul>
           ) : job.status === 'SUCCEEDED' ? (
-            <p className="muted">
+            <p className="text-app-muted">
               Les fichiers Word et PDF de ce dossier seront téléchargeables ici dès
               l&apos;activation du stockage des documents générés.
             </p>
           ) : (
-            <p className="muted">Les fichiers apparaîtront ici une fois la génération terminée.</p>
+            <p className="text-app-muted">Les fichiers apparaîtront ici une fois la génération terminée.</p>
           )}
-        </section>
+        </Card>
       </div>
 
       {warnings.length > 0 && (
-        <section className="card">
+        <Card as="section">
           <h2>Avertissements</h2>
           <ul>
             {warnings.map((warning) => (
               <li key={warning}>{warning}</li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
 
-      <section className="card">
+      <Card as="section">
         <h2>Contrôles</h2>
         {checks.length === 0 ? (
-          <p className="muted">Aucun résultat de contrôle enregistré pour cette génération.</p>
+          <p className="text-app-muted">Aucun résultat de contrôle enregistré pour cette génération.</p>
         ) : (
           <>
             {checksSource === 'snapshot' && (
-              <p className="hint">
+              <p className="text-[0.8rem] font-normal text-app-muted">
                 Contrôles recalculés à partir des données figées au lancement ; le résultat
                 définitif sera enregistré par la génération.
               </p>
@@ -211,18 +215,18 @@ export default async function DossierJobPage({
             <ChecksPanel checks={checks} />
           </>
         )}
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card as="section">
         <h2>Données figées au lancement</h2>
         {!summary ? (
-          <p className="muted">
+          <p className="text-app-muted">
             Le format des données figées de cette génération n&apos;est pas reconnu par cette
             version de l&apos;application.
           </p>
         ) : (
           <>
-            <p className="hint">
+            <p className="text-[0.8rem] font-normal text-app-muted">
               Ces valeurs sont celles utilisées pour ce dossier. Une modification ultérieure du
               projet ou du catalogue ne les change pas ; relancez une génération pour produire une
               nouvelle révision.
@@ -278,7 +282,7 @@ export default async function DossierJobPage({
             </dl>
           </>
         )}
-      </section>
+      </Card>
     </main>
   );
 }

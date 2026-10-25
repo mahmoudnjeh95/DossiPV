@@ -11,6 +11,11 @@ import { CorrectionsForm } from './corrections-form';
 import { IdentityForm } from './identity-form';
 import { clientIdentityNeeds } from '../../../../../lib/client-identity';
 import { isSponsorLockedLabel, loadSponsor, sponsorMissingProductsMessage } from '../../../../../lib/sponsor-info';
+import { Card } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 const fr = (value: number, decimals = 0): string =>
   new Intl.NumberFormat('fr-FR', { maximumFractionDigits: decimals }).format(value);
@@ -68,13 +73,13 @@ export default async function ProposalsPage({
       <h1>Propositions pour {client?.fullName ?? 'ce client'}</h1>
 
       {identityNeeds && identityNeeds.name && (
-        <section className="card">
+        <Card as="section">
           <h2>Identité du titulaire</h2>
           <IdentityForm projectId={id} needs={identityNeeds} />
-        </section>
+        </Card>
       )}
 
-      <section className="card">
+      <Card as="section">
         <h2>Lu sur la facture</h2>
         <dl className="dl">
           <dt>Référence STEG</dt>
@@ -97,19 +102,19 @@ export default async function ProposalsPage({
           )}
         </dl>
         {warnings.length > 0 && (
-          <div className="banner banner-warn">
+          <Alert variant="warn">
             <ul>
               {warnings.map((warning) => (
                 <li key={warning}>{warning}</li>
               ))}
             </ul>
-          </div>
+          </Alert>
         )}
         {client && (
           <details open={missing.length > 0}>
             <summary>Corriger les données lues</summary>
             {missing.length > 0 && (
-              <p className="muted">À renseigner pour obtenir des propositions : {missing.join(', ')}.</p>
+              <p className="text-app-muted">À renseigner pour obtenir des propositions : {missing.join(', ')}.</p>
             )}
             <CorrectionsForm
               projectId={id}
@@ -122,71 +127,71 @@ export default async function ProposalsPage({
             />
           </details>
         )}
-      </section>
+      </Card>
 
       {blockedReasons.length > 0 && (
-        <div className="banner banner-warn">
+        <Alert variant="warn">
           <ul>
             {blockedReasons.map((reason) => (
               <li key={reason}>{reason}</li>
             ))}
           </ul>
-          <Link className="button" href={`/projects/${id}/sections/site`}>
+          <Link className={buttonVariants()} href={`/projects/${id}/sections/site`}>
             Modifier le site
           </Link>
-        </div>
+        </Alert>
       )}
 
       {sponsorMessage && (
-        <div className="banner banner-warn" role="status">
+        <Alert variant="warn" role="status">
           {sponsorMessage}
-        </div>
+        </Alert>
       )}
 
       {missingLibraryKinds.length > 0 && (
-        <section className="card">
+        <Card as="section">
           <p>Votre bibliothèque ne contient pas encore :</p>
           <ul>
             {missingLibraryKinds.map((kind) => (
               <li key={kind}>{kind}</li>
             ))}
           </ul>
-          <Link className="button" href="/library?tab=catalogue">
+          <Link className={buttonVariants()} href="/library?tab=catalogue">
             Compléter ma bibliothèque
           </Link>
-        </section>
+        </Card>
       )}
 
       {computed.ok && (
-        <section className="card">
+        <Card as="section">
           <h2>Matériel</h2>
-          <p className="muted">Choisissez la marque des panneaux ou de l'onduleur : les propositions sont recalculées avec ce matériel.</p>
-          <form method="get" className="actions" style={{ alignItems: 'end' }}>
-            <label>
+          <p className="text-app-muted">Choisissez la marque des panneaux ou de l'onduleur : les propositions sont recalculées avec ce matériel.</p>
+          <form method="get" className="flex flex-wrap items-center gap-2" style={{ alignItems: 'end' }}>
+            <Label>
               Panneaux
-              <select name="module" defaultValue={selection.moduleId ?? ''}>
+              <Select name="module" defaultValue={selection.moduleId ?? ''}>
                 <option value="">Automatique</option>
                 {computed.choices.modules.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label>
+              </Select>
+            </Label>
+            <Label>
               Onduleur
-              <select name="inverter" defaultValue={selection.inverterId ?? ''}>
+              <Select name="inverter" defaultValue={selection.inverterId ?? ''}>
                 <option value="">Automatique</option>
                 {computed.choices.inverters.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                   </option>
                 ))}
-              </select>
-            </label>
-            <button type="submit">Recalculer</button>
+              </Select>
+            </Label>
+            <Button type="submit">Recalculer</Button>
           </form>
-        </section>
+        </Card>
       )}
 
       {computed.ok && (proposals.length > 0 || sponsored) && (
@@ -207,23 +212,23 @@ export default async function ProposalsPage({
       )}
 
       {computed.ok && proposals.length > 0 && (
-        <p className="muted">
+        <p className="text-app-muted">
           Production estimée à partir de la position approximative ; le dossier utilisera la simulation PVGIS au point exact du champ PV.
         </p>
       )}
 
       {computed.ok && proposals.length === 0 && (
-        <section className="card">
+        <Card as="section">
           <h2>Aucune installation possible</h2>
           <ul>
             {computed.result.noSolutionReasons.map((reason) => (
               <li key={reason}>{reason}</li>
             ))}
           </ul>
-          <Link className="button" href={`/projects/${id}`}>
+          <Link className={buttonVariants()} href={`/projects/${id}`}>
             Ouvrir le projet
           </Link>
-        </section>
+        </Card>
       )}
     </main>
   );

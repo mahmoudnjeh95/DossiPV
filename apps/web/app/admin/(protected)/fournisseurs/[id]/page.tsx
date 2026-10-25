@@ -14,6 +14,9 @@ import { ChangeEmailForm, UserActionButton } from '../../installers/[id]/user-fo
 import { packLabel } from '../pack-label';
 import { unlinkInstallerAction, unhighlightProductAction } from './actions';
 import { LinkInstallerForm } from './link-installer-form';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table } from '@/components/ui/table';
 
 const AUDIT_LOG_ROWS = 30;
 
@@ -88,12 +91,12 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
             </p>
             {company.subscription.status !== 'SUSPENDED' && (
               <form action={boundSuspend}>
-                <button type="submit">Suspendre l&apos;abonnement</button>
+                <Button type="submit">Suspendre l&apos;abonnement</Button>
               </form>
             )}
             {company.subscription.status !== 'ACTIVE' && (
               <form action={boundActivate}>
-                <button type="submit">Activer l&apos;abonnement</button>
+                <Button type="submit">Activer l&apos;abonnement</Button>
               </form>
             )}
             <PeriodEndForm companyId={company.id} />
@@ -113,7 +116,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
 
       <section>
         <h2>Historique des paiements</h2>
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Date</th>
@@ -132,7 +135,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </section>
 
       <section>
@@ -144,7 +147,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
         {company.sponsoredInstallers.length === 0 ? (
           <p>Aucun installateur parrainé.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Nom</th>
@@ -161,23 +164,23 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                   <td>{installer.email}</td>
                   <td>
                     <form action={unlinkInstallerAction.bind(null, company.id, installer.id)}>
-                      <button type="submit" className="secondary small">
+                      <Button variant="secondary" size="sm" type="submit">
                         Retirer
-                      </button>
+                      </Button>
                     </form>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
         <h3>Parrainer un installateur existant</h3>
         {unsponsored.length === 0 ? (
-          <p className="hint">Aucun installateur sans parrain.</p>
+          <p className="text-[0.8rem] font-normal text-app-muted">Aucun installateur sans parrain.</p>
         ) : (
           <LinkInstallerForm supplierId={company.id} installers={unsponsored} />
         )}
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Retirer un installateur en fait un installateur direct sans plan actif : il garde sa bibliothèque et ses projets, et son compte est libéré.
         </p>
       </section>
@@ -191,7 +194,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
         {company.supplierProducts.length === 0 ? (
           <p>Le fournisseur n&apos;a pas encore choisi de produits.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Type</th>
@@ -213,9 +216,9 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                     <td>
                       {product.highlighted && (
                         <form action={unhighlightProductAction.bind(null, company.id, product.id)}>
-                          <button type="submit" className="secondary small">
+                          <Button variant="secondary" size="sm" type="submit">
                             Retirer la mise en avant
-                          </button>
+                          </Button>
                         </form>
                       )}
                     </td>
@@ -223,13 +226,13 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
 
       <section>
         <h2>Utilisateurs</h2>
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Nom</th>
@@ -245,9 +248,9 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
               const disabled = user.disabledAt !== null;
               const lastOwner = !disabled && user.role === 'OWNER' && enabledOwnerCount <= 1;
               return (
-                <tr key={user.id} className={disabled ? 'muted' : undefined}>
+                <tr key={user.id} className={disabled ? 'text-app-muted' : undefined}>
                   <td>
-                    {user.fullName} {disabled && <span className="badge">désactivé</span>}
+                    {user.fullName} {disabled && <Badge>désactivé</Badge>}
                   </td>
                   <td>
                     <ChangeEmailForm companyId={company.id} userId={user.id} email={user.email} />
@@ -269,8 +272,8 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
               );
             })}
           </tbody>
-        </table>
-        <p className="hint">
+        </Table>
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Réinitialiser un mot de passe ou désactiver un utilisateur le déconnecte de tous ses appareils. Le dernier responsable actif ne peut pas
           être désactivé.
         </p>
@@ -286,7 +289,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
         {company.adminAuditLogs.length === 0 ? (
           <p>Aucune action enregistrée.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Date</th>
@@ -305,7 +308,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
     </main>

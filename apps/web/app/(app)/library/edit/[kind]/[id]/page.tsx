@@ -26,7 +26,7 @@ export default async function EditOwnEquipmentPage({
         <Link href="/library">← Ma bibliothèque</Link>
       </p>
       <h1>Modifier : {item.name}</h1>
-      <p className="muted">
+      <p className="text-app-muted">
         {entry.label} — les dossiers déjà générés ne changent pas, les prochains utiliseront ces valeurs.
       </p>
       <OwnEquipmentForm action={updateOwnEquipmentAction.bind(null, entry.kind, id)} attached={item.attached}>

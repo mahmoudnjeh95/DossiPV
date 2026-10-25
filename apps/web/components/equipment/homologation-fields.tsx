@@ -1,4 +1,6 @@
-interface Homologated {
+
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';interface Homologated {
   homologationReference: string | null;
   homologationValidTo: Date | null;
 }
@@ -11,14 +13,14 @@ export function toDateInputValue(date: Date | null | undefined): string | undefi
 export function HomologationFields({ item }: { item?: Homologated | undefined }): React.JSX.Element {
   return (
     <>
-      <label>
+      <Label>
         Référence d&apos;homologation (optionnel){' '}
-        <input name="homologationReference" defaultValue={item?.homologationReference ?? undefined} />
-      </label>
-      <label>
+        <Input name="homologationReference" defaultValue={item?.homologationReference ?? undefined} />
+      </Label>
+      <Label>
         Homologation valide jusqu&apos;au (optionnel){' '}
-        <input type="date" name="homologationValidTo" defaultValue={toDateInputValue(item?.homologationValidTo)} />
-      </label>
+        <Input type="date" name="homologationValidTo" defaultValue={toDateInputValue(item?.homologationValidTo)} />
+      </Label>
     </>
   );
 }

@@ -3,6 +3,7 @@ import { db, type Prisma } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { ADMIN_ACTION_LABELS } from '../../../../lib/labels';
 import { describeAuditDetails } from '../../../../lib/admin-audit';
+import { Table } from '@/components/ui/table';
 
 const AUDIT_PAGE_SIZE = 100;
 const AUDIT_ENTRY_INCLUDE = { superAdmin: { select: { email: true } }, targetCompany: { select: { id: true, name: true } } } as const;
@@ -67,7 +68,7 @@ export default async function AdminAuditPage({
       {entries.length === 0 ? (
         <p>Aucune action enregistrée.</p>
       ) : (
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Date</th>
@@ -90,7 +91,7 @@ export default async function AdminAuditPage({
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
       {nextBefore && (
         <p>

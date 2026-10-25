@@ -2,6 +2,10 @@
 
 import { useActionState } from 'react';
 import { saveBillCorrectionsAction } from './actions';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface CorrectionsFormProps {
   projectId: string;
@@ -19,24 +23,24 @@ export function CorrectionsForm({ projectId, defaults }: CorrectionsFormProps): 
   const [state, formAction, pending] = useActionState(bound, undefined);
   return (
     <form action={formAction}>
-      <label>
+      <Label>
         Nom du client
-        <input type="text" name="fullName" maxLength={200} defaultValue={defaults.fullName} required />
-      </label>
-      <label>
+        <Input type="text" name="fullName" maxLength={200} defaultValue={defaults.fullName} required />
+      </Label>
+      <Label>
         Référence STEG
-        <input type="text" name="stegReference" maxLength={100} defaultValue={defaults.stegReference ?? ''} />
-      </label>
-      <label>
+        <Input type="text" name="stegReference" maxLength={100} defaultValue={defaults.stegReference ?? ''} />
+      </Label>
+      <Label>
         Puissance souscrite (kVA)
-        <input type="number" name="subscribedPowerKVA" min={1} max={100} step="any" defaultValue={defaults.subscribedPowerKVA ?? ''} required />
-      </label>
-      <label>
+        <Input type="number" name="subscribedPowerKVA" min={1} max={100} step="any" defaultValue={defaults.subscribedPowerKVA ?? ''} required />
+      </Label>
+      <Label>
         Consommation annuelle (kWh/an)
-        <input type="number" name="annualConsumptionKWh" min={1} max={1000000} step="any" defaultValue={defaults.annualConsumptionKWh ?? ''} required />
-      </label>
-      <button type="submit" disabled={pending}>Enregistrer et recalculer</button>
-      {state?.error && <div className="banner banner-danger" role="alert" style={{ marginTop: 12 }}>{state.error}</div>}
+        <Input type="number" name="annualConsumptionKWh" min={1} max={1000000} step="any" defaultValue={defaults.annualConsumptionKWh ?? ''} required />
+      </Label>
+      <Button type="submit" disabled={pending}>Enregistrer et recalculer</Button>
+      {state?.error && <Alert variant="danger" role="alert" style={{ marginTop: 12 }}>{state.error}</Alert>}
     </form>
   );
 }

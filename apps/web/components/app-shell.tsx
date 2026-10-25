@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { logoutAction } from '../app/(app)/actions';
 import { Dashboard, Projects, Library, Settings, Subscription, Logout } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
+import { AppHeader } from './app-header';
+import { Button } from '@/components/ui/button';
 import { JobWatcherProvider } from './job-watcher';
 
 export interface AppShellProps {
@@ -32,34 +33,21 @@ const NAV_LINKS: NavLink[] = [
 export function AppShell({ userFullName, children }: AppShellProps): React.JSX.Element {
   return (
     <>
-      <header className="app-header">
-        <div className="app-header-inner">
-          <Link href="/dashboard" className="app-brand" aria-label="SolarixPro, tableau de bord">
-            <BrandMark compact />
-
-          </Link>
-          <nav className="app-nav" aria-label="Navigation principale">
-            {NAV_LINKS.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link key={link.href} href={link.href} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon size="sm" color="inherit" />
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="app-user">
-            <span>{userFullName}</span>
-            <form action={logoutAction}>
-              <button type="submit" className="secondary small app-logout">
-                <Logout size="xs" color="inherit" />
-                Se déconnecter
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        brandHref="/dashboard"
+        brandLabel="SolarixPro, tableau de bord"
+        brand={<BrandMark compact />}
+        navLabel="Navigation principale"
+        items={NAV_LINKS.map((link) => ({ href: link.href, label: link.label, icon: <link.icon size="sm" color="inherit" /> }))}
+      >
+        <span className="hidden max-w-[180px] truncate 2xl:inline" title={userFullName}>{userFullName}</span>
+        <form action={logoutAction}>
+          <Button type="submit" variant="secondary" size="sm" className="gap-1.5 text-[0.82rem] max-sm:px-2.5 max-sm:text-[0.76rem]">
+            <Logout size="xs" color="inherit" />
+            Se déconnecter
+          </Button>
+        </form>
+      </AppHeader>
       <JobWatcherProvider>{children}</JobWatcherProvider>
     </>
   );

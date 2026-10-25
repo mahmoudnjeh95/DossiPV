@@ -2,6 +2,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Last-resort boundary for errors in the root layout. It replaces the whole document (no global
@@ -25,13 +26,13 @@ export default function GlobalError({
         <main style={{ maxWidth: 480, margin: '15vh auto', padding: '0 16px', textAlign: 'center' }}>
           <h1 style={{ fontSize: 22 }}>Une erreur inattendue est survenue</h1>
           <p style={{ color: '#526174' }}>Réessayez dans un instant. Si le problème persiste, contactez le support SolarixPro.</p>
-          <button
+          <Button
             type="button"
             onClick={() => retry()}
             style={{ padding: '10px 18px', border: 0, borderRadius: 8, background: '#0f172a', color: '#fff', cursor: 'pointer' }}
           >
             Réessayer
-          </button>
+          </Button>
         </main>
       </body>
     </html>

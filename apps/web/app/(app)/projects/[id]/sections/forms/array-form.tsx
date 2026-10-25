@@ -20,6 +20,10 @@ import { Jargon } from '../../../../../../components/jargon';
 import { LibraryPrerequisite } from '../../../../../../components/library-prerequisite';
 import { saveArrayAction, type ArrayPayload } from '../actions';
 import { PHASE_CONNECTION_OPTIONS } from '../../../../../../lib/labels';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface ModuleChoice {
   id: string;
@@ -131,35 +135,35 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="card stack">
+    <Card as="form" onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
       <fieldset>
         <legend>Module et températures</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Module photovoltaïque
-            <select value={moduleId} onChange={(e) => setModuleId(e.target.value)} required>
+            <Select value={moduleId} onChange={(e) => setModuleId(e.target.value)} required>
               {modules.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.isPrivate ? `${m.label} (privé)` : m.label}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Tmin (°C)
-            <input type="number" step="any" value={tMinC} onChange={(e) => setTMinC(Number(e.target.value))} required />
-          </label>
-          <label>
+            <Input type="number" step="any" value={tMinC} onChange={(e) => setTMinC(Number(e.target.value))} required />
+          </Label>
+          <Label>
             Tmax cellule (°C)
-            <input type="number" step="any" value={tMaxC} onChange={(e) => setTMaxC(Number(e.target.value))} required />
-          </label>
-          <label>
+            <Input type="number" step="any" value={tMaxC} onChange={(e) => setTMaxC(Number(e.target.value))} required />
+          </Label>
+          <Label>
             Description des rangées
-            <input type="text" value={rowsDescription} onChange={(e) => setRowsDescription(e.target.value)} maxLength={500} />
-          </label>
+            <Input type="text" value={rowsDescription} onChange={(e) => setRowsDescription(e.target.value)} maxLength={500} />
+          </Label>
         </div>
         {module && (
-          <p className="hint">
+          <p className="text-[0.8rem] font-normal text-app-muted">
             {fmt(module.spec.pmaxW)} Wc · <Jargon text="Voc" /> {fmt(module.spec.vocV, 1)} V · <Jargon text="Isc" /> {fmt(module.spec.iscA, 2)} A ·{' '}
             <Jargon text="Nc" /> max sans fusible : {ncMaxNoFuse(module.spec)} chaîne(s) en parallèle.
           </p>
@@ -182,31 +186,31 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
         return (
           <fieldset key={rowIndex}>
             <legend>Onduleur {rowIndex + 1}</legend>
-            <div className="form-grid">
-              <label>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+              <Label>
                 Modèle
-                <select value={row.inverterId} onChange={(e) => updateRow(rowIndex, { inverterId: e.target.value, mppts: row.mppts.slice(0, inverters.find((i) => i.id === e.target.value)?.spec.mpptCount ?? 1) })} required>
+                <Select value={row.inverterId} onChange={(e) => updateRow(rowIndex, { inverterId: e.target.value, mppts: row.mppts.slice(0, inverters.find((i) => i.id === e.target.value)?.spec.mpptCount ?? 1) })} required>
                   {inverters.map((i) => (
                     <option key={i.id} value={i.id}>
                       {i.isPrivate ? `${i.label} (privé)` : i.label}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Raccordement de phase
-                <select value={row.phaseConnection ?? ''} onChange={(e) => updateRow(rowIndex, { phaseConnection: e.target.value === '' ? null : e.target.value })}>
+                <Select value={row.phaseConnection ?? ''} onChange={(e) => updateRow(rowIndex, { phaseConnection: e.target.value === '' ? null : e.target.value })}>
                   <option value="">—</option>
                   {PHASE_CONNECTION_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
-              </label>
+                </Select>
+              </Label>
             </div>
             {inverter && bounds && (
-              <p className="hint">
+              <p className="text-[0.8rem] font-normal text-app-muted">
                 <Jargon
                   text={`Plage MPPT ${fmt(inverter.spec.mpptMinV)}–${fmt(inverter.spec.mpptMaxV)} V · Vdc max ${fmt(inverter.spec.vdcMaxV)} V · ${inverter.spec.mpptCount} MPPT · Ns admissible ${bounds.nsMin}–${bounds.nsMax} (optimal ≤ ${bounds.nsOptMax}) · Np max ${bounds.npMax} (optimal ${bounds.npOpt}).${inverter.spec.stegApproved ? '' : ' Onduleur absent de la liste STEG (C21).'}`}
                 />
@@ -214,23 +218,23 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
             )}
             {phaseMismatch && <p className="live-hint bad">Le site est {sitePhases === 3 ? 'triphasé' : 'monophasé'} mais cet onduleur ne l&apos;est pas (C19).</p>}
 
-            <div className="stack" style={{ marginTop: 8 }}>
+            <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
               {row.mppts.map((mppt, mpptIndex) => {
                 const nsBad = bounds !== null && (mppt.modulesPerString < bounds.nsMin || mppt.modulesPerString > bounds.nsMax);
                 const nsWarn = bounds !== null && !nsBad && mppt.modulesPerString > bounds.nsOptMax;
                 const npBad = bounds !== null && mppt.stringsInParallel > bounds.npMax;
                 const fuse = module ? dcFuseRequired(module.spec, mppt.stringsInParallel) : false;
                 return (
-                  <div key={mpptIndex} className="form-grid" style={{ alignItems: 'end' }}>
-                    <label>
+                  <div key={mpptIndex} className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1" style={{ alignItems: 'end' }}>
+                    <Label>
                       <Jargon text={`MPPT ${mpptIndex + 1} — modules par chaîne (Ns)`} />
-                      <input type="number" min={1} max={100} step={1} value={mppt.modulesPerString} onChange={(e) => updateMppt(rowIndex, mpptIndex, { modulesPerString: Number(e.target.value) })} required />
-                    </label>
-                    <label>
+                      <Input type="number" min={1} max={100} step={1} value={mppt.modulesPerString} onChange={(e) => updateMppt(rowIndex, mpptIndex, { modulesPerString: Number(e.target.value) })} required />
+                    </Label>
+                    <Label>
                       <Jargon text="Chaînes en parallèle (Np)" />
-                      <input type="number" min={1} max={50} step={1} value={mppt.stringsInParallel} onChange={(e) => updateMppt(rowIndex, mpptIndex, { stringsInParallel: Number(e.target.value) })} required />
-                    </label>
-                    <div className="stack" style={{ gap: 4 }}>
+                      <Input type="number" min={1} max={50} step={1} value={mppt.stringsInParallel} onChange={(e) => updateMppt(rowIndex, mpptIndex, { stringsInParallel: Number(e.target.value) })} required />
+                    </Label>
+                    <div className="flex flex-col gap-3" style={{ gap: 4 }}>
                       {bounds && (
                         <span className={`live-hint ${nsBad ? 'bad' : nsWarn ? '' : 'good'}`}>
                           <Jargon text={nsBad ? `Ns doit être entre ${bounds.nsMin} et ${bounds.nsMax} pour cet onduleur.` : nsWarn ? `Ns au-dessus de l'optimal (${bounds.nsOptMax}) : écrêtage possible (C03).` : `Ns dans la plage ${bounds.nsMin}–${bounds.nsMax}.`} />
@@ -243,42 +247,42 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
                         </span>
                       )}
                       {row.mppts.length > 1 && (
-                        <button type="button" className="secondary small" onClick={() => updateRow(rowIndex, { mppts: row.mppts.filter((_, j) => j !== mpptIndex) })}>
+                        <Button variant="secondary" size="sm" type="button"  onClick={() => updateRow(rowIndex, { mppts: row.mppts.filter((_, j) => j !== mpptIndex) })}>
                           Retirer ce MPPT
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button
+            <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 8 }}>
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="secondary small"
+                
                 disabled={inverter !== null && row.mppts.length >= inverter.spec.mpptCount}
                 onClick={() => updateRow(rowIndex, { mppts: [...row.mppts, { stringsInParallel: 1, modulesPerString: row.mppts[0]?.modulesPerString ?? 1 }] })}
               >
                 Ajouter un MPPT
-              </button>
+              </Button>
               {rows.length > 1 && (
-                <button type="button" className="secondary small" onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIndex))}>
+                <Button variant="secondary" size="sm" type="button"  onClick={() => setRows((prev) => prev.filter((_, i) => i !== rowIndex))}>
                   Retirer cet onduleur
-                </button>
+                </Button>
               )}
             </div>
           </fieldset>
         );
       })}
 
-      <div className="actions">
-        <button
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary"
           type="button"
-          className="secondary"
+          
           onClick={() => setRows((prev) => [...prev, { inverterId: prev[0]?.inverterId ?? inverters[0]!.id, phaseConnection: null, mppts: [{ stringsInParallel: 1, modulesPerString: 1 }] }])}
         >
           Ajouter un onduleur
-        </button>
+        </Button>
       </div>
 
       {totals && (
@@ -289,14 +293,14 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
       )}
 
       {error && <p role="alert">{error}</p>}
-      <div className="actions">
-        <button type="submit" disabled={saving}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={saving}>
           {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-        <Link href={`/projects/${projectId}`} className="button secondary">
+        </Button>
+        <Link href={`/projects/${projectId}`} className={buttonVariants({ variant: 'secondary' })}>
           Retour au projet
         </Link>
       </div>
-    </form>
+    </Card>
   );
 }

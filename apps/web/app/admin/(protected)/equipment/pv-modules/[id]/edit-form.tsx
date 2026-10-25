@@ -4,6 +4,9 @@ import { useActionState } from 'react';
 import type { PvModule } from '@dossipv/db';
 import { PvModuleFields } from '../../../../../../components/equipment/pv-module-fields';
 import { updatePvModuleAction } from '../actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function EditPvModuleForm({ pvModule }: { pvModule: PvModule }): React.JSX.Element {
   const boundAction = updatePvModuleAction.bind(null, pvModule.id);
@@ -16,12 +19,12 @@ export function EditPvModuleForm({ pvModule }: { pvModule: PvModule }): React.JS
       </h1>
       <form action={formAction}>
         <PvModuleFields item={pvModule} />
-        <label>
-          Remplacer la fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
-        </label>
-        <button type="submit" disabled={pending}>
+        <Label>
+          Remplacer la fiche technique (PDF) <Input type="file" name="datasheet" accept="application/pdf" />
+        </Label>
+        <Button type="submit" disabled={pending}>
           Enregistrer
-        </button>
+        </Button>
         {state?.error && <p role="alert">{state.error}</p>}
       </form>
     </main>

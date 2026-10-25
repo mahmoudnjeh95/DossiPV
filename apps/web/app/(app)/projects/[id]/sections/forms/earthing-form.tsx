@@ -2,6 +2,8 @@ import type { ProjectEarthing } from '@dossipv/db';
 import { SectionForm } from '../../../../../../components/section-form';
 import { SelectField, equipmentOptions, type EquipmentOption } from '../../../../../../components/select-field';
 import { saveEarthingAction } from '../actions';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function EarthingForm({
   projectId,
@@ -17,23 +19,23 @@ export function EarthingForm({
   const targetResistance = earthing?.targetResistanceOhm ?? defaults.targetResistanceOhm;
   return (
     <SectionForm action={saveEarthingAction.bind(null, projectId)} cancelHref={`/projects/${projectId}`}>
-      <div className="form-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
         <SelectField name="earthCableId" label="Câble de terre" options={equipmentOptions(earthCables)} defaultValue={earthing?.earthCableId} allowEmpty required />
         {earthing?.useBuildingEarth ? (
-          <p className="muted">Mise à la terre : terre existante du bâtiment (aucun piquet dédié). Modifiez ce choix à l'étape Emplacements.</p>
+          <p className="text-app-muted">Mise à la terre : terre existante du bâtiment (aucun piquet dédié). Modifiez ce choix à l'étape Emplacements.</p>
         ) : (
-          <label>
+          <Label>
             Nombre de piquets
-            <input type="number" name="rodCount" step={1} min={1} defaultValue={earthing?.rodCount ?? 1} required />
-          </label>
+            <Input type="number" name="rodCount" step={1} min={1} defaultValue={earthing?.rodCount ?? 1} required />
+          </Label>
         )}
         {targetResistance === null || targetResistance === undefined ? (
-          <label>
+          <Label>
             Résistance cible (Ω)
-            <input type="number" name="targetResistanceOhm" step="any" min={0} required />
-          </label>
+            <Input type="number" name="targetResistanceOhm" step="any" min={0} required />
+          </Label>
         ) : (
-          <input type="hidden" name="targetResistanceOhm" value={targetResistance} />
+          <Input type="hidden" name="targetResistanceOhm" value={targetResistance} />
         )}
       </div>
     </SectionForm>

@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react';
 import { linkInstallerAction, type SponsorshipActionState } from './actions';
+import { Button } from '@/components/ui/button';
+import { Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function LinkInstallerForm({
   supplierId,
@@ -17,9 +20,9 @@ export function LinkInstallerForm({
 
   return (
     <form action={formAction}>
-      <label>
+      <Label>
         Installateur
-        <select name="installerId" defaultValue="" required>
+        <Select name="installerId" defaultValue="" required>
           <option value="" disabled>
             Choisir un installateur
           </option>
@@ -28,11 +31,11 @@ export function LinkInstallerForm({
               {installer.name}
             </option>
           ))}
-        </select>
-      </label>
-      <button type="submit" disabled={pending}>
+        </Select>
+      </Label>
+      <Button type="submit" disabled={pending}>
         Parrainer
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

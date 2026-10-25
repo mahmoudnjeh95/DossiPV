@@ -3,6 +3,9 @@
 import { useActionState } from 'react';
 import { AccessoryFields } from '../../../../../../components/equipment/accessory-fields';
 import { createAccessoryAction } from '../actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function NewAccessoryPage(): React.JSX.Element {
   const [state, formAction, pending] = useActionState(createAccessoryAction, undefined);
@@ -12,15 +15,15 @@ export default function NewAccessoryPage(): React.JSX.Element {
       <h1>Ajouter un accessoire</h1>
       <form action={formAction}>
         <AccessoryFields />
-        <label>
-          Fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
-        </label>
-        <label>
-          Attestation d&apos;homologation (PDF) <input type="file" name="homologationDocument" accept="application/pdf" />
-        </label>
-        <button type="submit" disabled={pending}>
+        <Label>
+          Fiche technique (PDF) <Input type="file" name="datasheet" accept="application/pdf" />
+        </Label>
+        <Label>
+          Attestation d&apos;homologation (PDF) <Input type="file" name="homologationDocument" accept="application/pdf" />
+        </Label>
+        <Button type="submit" disabled={pending}>
           Enregistrer
-        </button>
+        </Button>
         {state?.error && <p role="alert">{state.error}</p>}
       </form>
     </main>

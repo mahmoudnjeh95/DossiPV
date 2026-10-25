@@ -3,6 +3,11 @@
 import { useKeepFormValues } from '../../../lib/keep-form-values';
 import { saveCompanyAction, type SaveCompanyActionState } from './actions';
 import { ANME_AGREEMENT_REQUIRED_MESSAGE } from '../../../lib/labels';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface CompanyFormValues {
   name: string;
@@ -38,157 +43,157 @@ export function CompanyForm({ company }: { company: CompanyFormValues }): React.
   const { state, formAction, pending, formRef, errorRef } = useKeepFormValues<SaveCompanyActionState>(saveCompanyAction);
 
   return (
-    <form ref={formRef} action={formAction} className="stack">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-3">
       {state?.error && <p ref={errorRef} role="alert">{state.error}</p>}
-      <fieldset className="card">
+      <Card as="fieldset">
         <legend>Identité</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Raison sociale
-            <input type="text" name="name" defaultValue={company.name} required maxLength={200} />
-          </label>
-          <label>
+            <Input type="text" name="name" defaultValue={company.name} required maxLength={200} />
+          </Label>
+          <Label>
             Nom court
-            <input type="text" name="shortName" defaultValue={company.shortName ?? ''} maxLength={50} />
-          </label>
-          <label>
+            <Input type="text" name="shortName" defaultValue={company.shortName ?? ''} maxLength={50} />
+          </Label>
+          <Label>
             Slogan
-            <input type="text" name="slogan" defaultValue={company.slogan ?? ''} maxLength={200} />
-          </label>
-          <label>
+            <Input type="text" name="slogan" defaultValue={company.slogan ?? ''} maxLength={200} />
+          </Label>
+          <Label>
             Adresse
-            <input type="text" name="address" defaultValue={company.address} required maxLength={300} />
-          </label>
-          <label>
+            <Input type="text" name="address" defaultValue={company.address} required maxLength={300} />
+          </Label>
+          <Label>
             Téléphone
-            <input type="tel" name="phone" defaultValue={company.phone} required maxLength={30} />
-          </label>
-          <label>
+            <Input type="tel" name="phone" defaultValue={company.phone} required maxLength={30} />
+          </Label>
+          <Label>
             Email de contact
-            <input type="email" name="email" defaultValue={company.email} required maxLength={200} />
-          </label>
-          <label>
+            <Input type="email" name="email" defaultValue={company.email} required maxLength={200} />
+          </Label>
+          <Label>
             Matricule fiscal
-            <input type="text" name="taxId" defaultValue={company.taxId ?? ''} maxLength={50} />
-          </label>
-          <label>
+            <Input type="text" name="taxId" defaultValue={company.taxId ?? ''} maxLength={50} />
+          </Label>
+          <Label>
             Registre de commerce
-            <input type="text" name="commercialRegister" defaultValue={company.commercialRegister ?? ''} maxLength={50} />
-          </label>
-          <label>
+            <Input type="text" name="commercialRegister" defaultValue={company.commercialRegister ?? ''} maxLength={50} />
+          </Label>
+          <Label>
             Représentant légal
-            <input type="text" name="legalRepFullName" defaultValue={company.legalRepFullName} required maxLength={200} />
-          </label>
-          <label>
+            <Input type="text" name="legalRepFullName" defaultValue={company.legalRepFullName} required maxLength={200} />
+          </Label>
+          <Label>
             Fonction
-            <input type="text" name="legalRepRole" defaultValue={company.legalRepRole} required maxLength={100} />
-          </label>
-          <label>
+            <Input type="text" name="legalRepRole" defaultValue={company.legalRepRole} required maxLength={100} />
+          </Label>
+          <Label>
             Logo (PNG ou JPEG)
-            <input type="file" name="logo" accept="image/png,image/jpeg" />
-            <span className="hint">
+            <Input type="file" name="logo" accept="image/png,image/jpeg" />
+            <span className="text-[0.8rem] font-normal text-app-muted">
               {company.hasLogo ? 'Un logo est déjà enregistré ; choisir un fichier le remplace.' : 'Imprimé sur chaque page du dossier généré.'}
             </span>
-          </label>
+          </Label>
         </div>
-      </fieldset>
+      </Card>
 
-      <fieldset className="card">
+      <Card as="fieldset">
         <legend>Accréditation ANME</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Code ANME
-            <input type="text" name="anmeCode" defaultValue={company.anmeCode} required maxLength={50} />
-          </label>
-          <label>
+            <Input type="text" name="anmeCode" defaultValue={company.anmeCode} required maxLength={50} />
+          </Label>
+          <Label>
             Référence
-            <input type="text" name="anmeReference" defaultValue={company.anmeReference ?? ''} maxLength={100} />
-          </label>
-          <label>
+            <Input type="text" name="anmeReference" defaultValue={company.anmeReference ?? ''} maxLength={100} />
+          </Label>
+          <Label>
             Catégorie
-            <select name="anmeCategory" defaultValue={company.anmeCategory}>
+            <Select name="anmeCategory" defaultValue={company.anmeCategory}>
               <option value="BT">BT</option>
               <option value="MT">MT</option>
               <option value="BT_MT">BT + MT</option>
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Valide du
-            <input type="date" name="anmeValidFrom" defaultValue={company.anmeValidFrom} required />
-          </label>
-          <label>
+            <Input type="date" name="anmeValidFrom" defaultValue={company.anmeValidFrom} required />
+          </Label>
+          <Label>
             Valide jusqu&apos;au
-            <input type="date" name="anmeValidTo" defaultValue={company.anmeValidTo} required />
-            <span className="hint">Une accréditation expirée bloque la génération (contrôle C22).</span>
-          </label>
-          <label>
-            Attestation d&apos;agrément ANME (PDF ou image) <span className="badge badge-danger">obligatoire</span>
-            <input type="file" name="anmeCertificate" accept="application/pdf,image/png,image/jpeg" />
+            <Input type="date" name="anmeValidTo" defaultValue={company.anmeValidTo} required />
+            <span className="text-[0.8rem] font-normal text-app-muted">Une accréditation expirée bloque la génération (contrôle C22).</span>
+          </Label>
+          <Label>
+            Attestation d&apos;agrément ANME (PDF ou image) <Badge variant="danger">obligatoire</Badge>
+            <Input type="file" name="anmeCertificate" accept="application/pdf,image/png,image/jpeg" />
             {company.hasAnmeCertificate ? (
-              <span className="hint">Une attestation est déjà enregistrée ; choisir un fichier la remplace. Elle ouvre l&apos;annexe N°1 du dossier.</span>
+              <span className="text-[0.8rem] font-normal text-app-muted">Une attestation est déjà enregistrée ; choisir un fichier la remplace. Elle ouvre l&apos;annexe N°1 du dossier.</span>
             ) : (
-              <span className="hint" role="alert">
+              <span className="text-[0.8rem] font-normal text-app-muted" role="alert">
                 {ANME_AGREEMENT_REQUIRED_MESSAGE}
               </span>
             )}
-          </label>
+          </Label>
         </div>
-      </fieldset>
+      </Card>
 
-      <fieldset className="card">
+      <Card as="fieldset">
         <legend>Numérotation des dossiers</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Préfixe de numérotation des dossiers
-            <input type="text" name="dossierPrefix" defaultValue={company.dossierPrefix ?? ''} maxLength={20} />
-          </label>
-          <label>
+            <Input type="text" name="dossierPrefix" defaultValue={company.dossierPrefix ?? ''} maxLength={20} />
+          </Label>
+          <Label>
             Prochain numéro de dossier
-            <input type="number" name="dossierNextNumber" min={1} step={1} defaultValue={company.dossierNextNumber} required />
-            <input type="hidden" name="dossierNextNumberShown" value={company.dossierNextNumber} />
-          </label>
+            <Input type="number" name="dossierNextNumber" min={1} step={1} defaultValue={company.dossierNextNumber} required />
+            <Input type="hidden" name="dossierNextNumberShown" value={company.dossierNextNumber} />
+          </Label>
         </div>
-        <p className="hint">Exemple : préfixe 434 et prochain numéro 303 donnent « 434 - 303 ».</p>
-      </fieldset>
+        <p className="text-[0.8rem] font-normal text-app-muted">Exemple : préfixe 434 et prochain numéro 303 donnent « 434 - 303 ».</p>
+      </Card>
 
-      <fieldset className="card">
+      <Card as="fieldset">
         <legend>Valeurs par défaut des nouveaux projets</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Tmin (°C)
-            <input type="number" step="any" name="defaultTMinC" defaultValue={company.defaultTMinC} required />
-          </label>
-          <label>
+            <Input type="number" step="any" name="defaultTMinC" defaultValue={company.defaultTMinC} required />
+          </Label>
+          <Label>
             Tmax cellule (°C)
-            <input type="number" step="any" name="defaultTMaxC" defaultValue={company.defaultTMaxC} required />
-          </label>
-          <label>
+            <Input type="number" step="any" name="defaultTMaxC" defaultValue={company.defaultTMaxC} required />
+          </Label>
+          <Label>
             Chute de tension maximale DC (%)
-            <input type="number" step="any" min={0} max={10} name="defaultMaxVoltageDropPct" defaultValue={company.defaultMaxVoltageDropPct} required />
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} max={10} name="defaultMaxVoltageDropPct" defaultValue={company.defaultMaxVoltageDropPct} required />
+          </Label>
+          <Label>
             Chute de tension maximale AC (%)
-            <input type="number" step="any" min={0} max={10} name="defaultMaxAcVoltageDropPct" defaultValue={company.defaultMaxAcVoltageDropPct} required />
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} max={10} name="defaultMaxAcVoltageDropPct" defaultValue={company.defaultMaxAcVoltageDropPct} required />
+          </Label>
+          <Label>
             Résistance de terre cible (Ω)
-            <input type="number" step="any" name="defaultEarthResistanceTargetOhm" defaultValue={company.defaultEarthResistanceTargetOhm ?? ''} />
-          </label>
-          <label>
+            <Input type="number" step="any" name="defaultEarthResistanceTargetOhm" defaultValue={company.defaultEarthResistanceTargetOhm ?? ''} />
+          </Label>
+          <Label>
             Vitesse de vent de calcul (km/h)
-            <input type="number" step="any" name="defaultDesignWindSpeedKmh" defaultValue={company.defaultDesignWindSpeedKmh} required />
-          </label>
-          <label>
+            <Input type="number" step="any" name="defaultDesignWindSpeedKmh" defaultValue={company.defaultDesignWindSpeedKmh} required />
+          </Label>
+          <Label>
             cos φ
-            <input type="number" step="any" name="defaultCosPhi" defaultValue={company.defaultCosPhi} required />
-          </label>
+            <Input type="number" step="any" name="defaultCosPhi" defaultValue={company.defaultCosPhi} required />
+          </Label>
         </div>
-      </fieldset>
+      </Card>
 
-      <div className="actions">
-        <button type="submit" disabled={pending}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={pending}>
           {pending ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
+        </Button>
       </div>
     </form>
   );

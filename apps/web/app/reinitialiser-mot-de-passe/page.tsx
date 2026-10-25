@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { findValidPasswordResetToken, MIN_PASSWORD_LENGTH } from '@dossipv/auth';
 import { BrandMark } from '../../components/brand-mark';
 import { ResetPasswordForm } from './reset-password-form';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // Public page (outside the (app) layout), reached from a reset email: the installer's own
 // "mot de passe oublié" link (1 hour) or a link sent by the admin, which may be a 7-day
@@ -49,7 +51,7 @@ export default async function ResetPasswordPage({ searchParams }: ResetPasswordP
             <>
               <h2 id="reset-title">Ce lien n’est plus valide.</h2>
               <p className="login-intro">Il a déjà servi, a expiré ou a été remplacé par un lien plus récent.</p>
-              <Link href="/mot-de-passe-oublie" className="button login-submit login-link-button">
+              <Link href="/mot-de-passe-oublie" className={cn(buttonVariants(), 'login-submit login-link-button')}>
                 Demander un nouveau lien <span aria-hidden="true">→</span>
               </Link>
             </>

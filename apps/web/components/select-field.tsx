@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Option } from '../lib/labels';
+import { Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 /** A labelled `<select>` with an optional empty choice — shared by every section form. */
 export function SelectField<T extends string | number>({
@@ -25,18 +27,18 @@ export function SelectField<T extends string | number>({
   emptyMessage?: ReactNode;
 }): React.JSX.Element {
   return (
-    <label>
+    <Label>
       {label}
-      <select name={name} defaultValue={defaultValue === null || defaultValue === undefined ? '' : String(defaultValue)} required={required} disabled={disabled}>
+      <Select name={name} defaultValue={defaultValue === null || defaultValue === undefined ? '' : String(defaultValue)} required={required} disabled={disabled}>
         {allowEmpty && <option value="">—</option>}
         {options.map((option) => (
           <option key={String(option.value)} value={String(option.value)}>
             {option.label}
           </option>
         ))}
-      </select>
-      {options.length === 0 && emptyMessage ? <span className="hint" role="alert">{emptyMessage}</span> : hint && <span className="hint">{hint}</span>}
-    </label>
+      </Select>
+      {options.length === 0 && emptyMessage ? <span className="text-[0.8rem] font-normal text-app-muted" role="alert">{emptyMessage}</span> : hint && <span className="text-[0.8rem] font-normal text-app-muted">{hint}</span>}
+    </Label>
   );
 }
 

@@ -1,3 +1,4 @@
+import { badgeVariants } from '@/components/ui/badge';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
@@ -20,6 +21,9 @@ import {
 } from '../../../../../lib/steg-completeness';
 import { GenerateButton } from '../generate-button';
 import { PieceUploadForm } from './piece-upload-form';
+import { buttonVariants } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
 
 const kwpFormat = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const integerFormat = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });
@@ -133,22 +137,22 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
       <h1>Récapitulatif avant génération — {fullName}</h1>
       {!isDraft && generateReason === null && (
         <p>
-          <a className="button" href="#generation">
+          <a className={buttonVariants()} href="#generation">
             Tout est prêt : aller à la génération du dossier final
           </a>
         </p>
       )}
 
       {pending && (
-        <div className="banner banner-danger" role="alert">
+        <Alert variant="danger" role="alert">
           <p style={{ margin: '0 0 8px' }}>{LOCATIONS_PENDING_MESSAGE}</p>
-          <Link className="button" href={locationsHref}>
+          <Link className={buttonVariants()} href={locationsHref}>
             {project.flowStep === 'PROPOSALS' ? "Choisir l'installation" : 'Placer les points'}
           </Link>
-        </div>
+        </Alert>
       )}
 
-      <section className="card">
+      <Card as="section">
         <h2>L&apos;installation</h2>
         {!engineInput.ok ? (
           <ul className="check-list">
@@ -184,12 +188,12 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
             </dd>
           </dl>
         )}
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card as="section">
         <h2>Câbles</h2>
         {project.cableRuns.length === 0 ? (
-          <p className="muted">Aucune liaison définie.</p>
+          <p className="text-app-muted">Aucune liaison définie.</p>
         ) : (
           <dl className="dl">
             {cableLines(project).map((line) => (
@@ -209,9 +213,9 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
             </Link>
           </p>
         )}
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card as="section">
         <h2>
           Pièces STEG — {donePieces}/{pieces.length}
         </h2>
@@ -220,17 +224,17 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
             <li key={piece.key}>
               <span className="grow">
                 {/* The mark sits right next to the label it speaks about, with the status spelled out. */}
-                <span className={`badge ${piece.done ? 'badge-ok' : 'badge-danger'}`} aria-hidden="true">
+                <span className={badgeVariants({ variant: piece.done ? 'ok' : 'danger' })} aria-hidden="true">
                   {piece.done ? '✓' : '✗'}
                 </span>{' '}
                 {piece.label}
-                <span className={piece.done ? 'muted' : 'badge badge-danger'} style={{ marginLeft: 8 }}>
+                <span className={piece.done ? 'text-app-muted' : badgeVariants({ variant: 'danger' })} style={{ marginLeft: 8 }}>
                   {piece.done ? 'fourni' : 'manquant'}
                 </span>
                 {piece.detail && (
                   <>
                     <br />
-                    <span className="hint">{piece.detail}</span>
+                    <span className="text-[0.8rem] font-normal text-app-muted">{piece.detail}</span>
                   </>
                 )}
                 {isUploadableStegPiece(piece.key) && (
@@ -240,25 +244,25 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
             </li>
           ))}
         </ul>
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card as="section">
         <h2>
           Contrôles électriques : {passedChecks}/{checks.length} OK
         </h2>
-        {engineError && <div className="banner banner-danger">{engineError}</div>}
+        {engineError && <Alert variant="danger">{engineError}</Alert>}
         <Link href={`/projects/${project.id}`}>Voir le détail des contrôles</Link>
-      </section>
+      </Card>
 
-      <section className="card" id="generation">
+      <Card as="section" id="generation">
         <h2>Génération</h2>
         {!isDraft && generateReason === null && (
-          <div className="banner banner-ok" role="status">
+          <Alert variant="ok" role="status">
             Tout est complet : vous pouvez générer le dossier final.
-          </div>
+          </Alert>
         )}
         {quota && (
-          <p className="muted">
+          <p className="text-app-muted">
             {hasPlace
               ? subscription?.isTrial
                 ? 'Ce projet a déjà sa place dans votre essai.'
@@ -273,7 +277,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
           reason={generateReason}
           label={isDraft ? 'Générer un brouillon (pièces manquantes)' : 'Générer le dossier final'}
         />
-      </section>
+      </Card>
     </main>
   );
 }

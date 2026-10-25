@@ -4,6 +4,9 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { SUBSCRIPTION_STATUS_LABELS } from '../../../../lib/labels';
 import { displayedSubscriptionStatus } from '../../../../lib/admin-period';
 import { companySearchWhere, expiringSubscriptionWhere, readSearchQuery } from '../../../../lib/admin-search';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table } from '@/components/ui/table';
 
 export interface SupplierForList {
   id: string;
@@ -58,22 +61,22 @@ export default async function SupplierListPage({
   return (
     <main>
       <h1>Fournisseurs</h1>
-      {expiring && <p className="hint">Packs actifs qui se terminent dans les 30 prochains jours.</p>}
+      {expiring && <p className="text-[0.8rem] font-normal text-app-muted">Packs actifs qui se terminent dans les 30 prochains jours.</p>}
       <p>
         <Link href="/admin/fournisseurs/new">Nouveau fournisseur</Link>
       </p>
-      <form method="get" role="search" className="actions">
-        <input type="search" name="q" defaultValue={query ?? ''} placeholder="Rechercher (nom, email, téléphone)" aria-label="Rechercher" maxLength={100} />
-        <button type="submit" className="secondary small">
+      <form method="get" role="search" className="flex flex-wrap items-center gap-2">
+        <Input type="search" name="q" defaultValue={query ?? ''} placeholder="Rechercher (nom, email, téléphone)" aria-label="Rechercher" maxLength={100} />
+        <Button variant="secondary" size="sm" type="submit">
           Rechercher
-        </button>
-        {expiring && <input type="hidden" name="expiring" value="1" />}
+        </Button>
+        {expiring && <Input type="hidden" name="expiring" value="1" />}
         {(query || expiring) && <Link href="/admin/fournisseurs">Effacer</Link>}
       </form>
       {rows.length === 0 ? (
         <p>{query ? 'Aucun fournisseur ne correspond.' : 'Aucun fournisseur.'}</p>
       ) : (
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Nom</th>
@@ -105,7 +108,7 @@ export default async function SupplierListPage({
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
     </main>
   );

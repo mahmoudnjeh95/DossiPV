@@ -1,6 +1,10 @@
+import { buttonVariants } from '@/components/ui/button';
 import { requireSupplier } from '../../../lib/supplier-access';
 import Link from 'next/link';
 import { loadProductMonthStats, loadSupplierStats, lastMonths } from '../../../lib/supplier-stats';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table } from '@/components/ui/table';
 
 export default async function SupplierStatsPage({ searchParams }: { searchParams: Promise<{ mois?: string }> }): Promise<React.JSX.Element> {
   const { mois } = await searchParams;
@@ -13,14 +17,14 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
   return (
     <main>
       <h1>Statistiques</h1>
-      <p className="hint">Chiffres agrégés uniquement : aucune donnée sur les clients de vos installateurs n’est affichée.</p>
+      <p className="text-[0.8rem] font-normal text-app-muted">Chiffres agrégés uniquement : aucune donnée sur les clients de vos installateurs n’est affichée.</p>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Dossiers ce mois-ci : {stats.totalDossiersThisMonth}</h2>
         {stats.installers.length === 0 ? (
-          <p className="muted">Aucun installateur parrainé pour le moment.</p>
+          <p className="text-app-muted">Aucun installateur parrainé pour le moment.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Installateur</th>
@@ -35,23 +39,23 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Produits par mois : {monthLabel(month.start)}</h2>
-        <nav className="actions" aria-label="Mois">
+        <nav className="flex flex-wrap items-center gap-2" aria-label="Mois">
           {months.map((m) => (
-            <Link key={m.key} href={`/fournisseur/statistiques?mois=${m.key}`} className={m.key === month.key ? 'button small' : 'button secondary small'}>
+            <Link key={m.key} href={`/fournisseur/statistiques?mois=${m.key}`} className={buttonVariants({ size: 'sm', variant: m.key === month.key ? 'default' : 'secondary' })}>
               {monthLabel(m.start)}
             </Link>
           ))}
         </nav>
         {monthStats.length === 0 ? (
-          <p className="muted">Vous ne référencez encore aucun produit.</p>
+          <p className="text-app-muted">Vous ne référencez encore aucun produit.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Produit</th>
@@ -67,7 +71,7 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
               {monthStats.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    {p.label} {p.highlighted && <span className="badge badge-ok">Sponsorisé</span>}
+                    {p.label} {p.highlighted && <Badge variant="ok">Sponsorisé</Badge>}
                   </td>
                   <td>{p.shown}</td>
                   <td>{p.applied}</td>
@@ -76,21 +80,21 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           « Proposé » : le produit sponsorisé a été suggéré à un installateur direct dans une proposition de matériel. « Appliqué » : cet installateur l’a appliqué à son
           projet. Ces deux chiffres comptent les propositions sponsorisées faites aux installateurs directs, sans savoir lesquels. Les dossiers et
           les kWc ne concernent que vos installateurs parrainés.
         </p>
-      </section>
+      </Card>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Projets par produit</h2>
         {stats.products.length === 0 ? (
-          <p className="muted">Vous ne référencez encore aucun produit.</p>
+          <p className="text-app-muted">Vous ne référencez encore aucun produit.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Produit</th>
@@ -107,9 +111,9 @@ export default async function SupplierStatsPage({ searchParams }: { searchParams
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }

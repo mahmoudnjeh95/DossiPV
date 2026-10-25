@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteCableAction, type CableActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteCableButton({ cableId }: { cableId: string }): React.JSX.Element {
   const boundAction = deleteCableAction.bind(null, cableId);
@@ -9,7 +10,7 @@ export function DeleteCableButton({ cableId }: { cableId: string }): React.JSX.E
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

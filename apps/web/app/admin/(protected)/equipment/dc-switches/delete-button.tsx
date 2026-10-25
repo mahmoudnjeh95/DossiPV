@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteDcSwitchAction, type DcSwitchActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteDcSwitchButton({ dcSwitchId }: { dcSwitchId: string }): React.JSX.Element {
   const boundAction = deleteDcSwitchAction.bind(null, dcSwitchId);
@@ -9,7 +10,7 @@ export function DeleteDcSwitchButton({ dcSwitchId }: { dcSwitchId: string }): Re
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

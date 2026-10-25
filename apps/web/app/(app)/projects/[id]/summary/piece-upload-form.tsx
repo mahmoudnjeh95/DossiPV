@@ -3,6 +3,9 @@
 import { useActionState } from 'react';
 import { uploadStegPieceAction } from './actions';
 import type { UploadableStegPiece } from '../../../../../lib/steg-completeness';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 
 interface PieceUploadFormProps {
   projectId: string;
@@ -17,18 +20,18 @@ export function PieceUploadForm({ projectId, piece, label }: PieceUploadFormProp
   const [state, formAction, pending] = useActionState(bound, undefined);
   return (
     <form action={formAction} className="piece-upload">
-      <input type="hidden" name="piece" value={piece} />
-      <input
+      <Input type="hidden" name="piece" value={piece} />
+      <Input
         type="file"
         name="file"
         accept="image/jpeg,image/png,image/webp,application/pdf"
         required
         aria-label={`${label} : photo ou PDF`}
       />
-      <button type="submit" className="small secondary" disabled={pending}>
+      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
         {pending ? 'Envoi…' : 'Ajouter la photo'}
-      </button>
-      {state?.error && <p role="alert" className="banner banner-danger">{state.error}</p>}
+      </Button>
+      {state?.error && <Alert variant="danger" role="alert">{state.error}</Alert>}
       {state?.saved && <p role="status">Fichier enregistré ✓</p>}
     </form>
   );

@@ -88,7 +88,7 @@ describe('trial messages', () => {
 describe('SubscriptionBanner — trial', () => {
   it('shows the dossiers left and the end date while the trial runs', () => {
     const html = renderToStaticMarkup(<SubscriptionBanner subscription={trial()} trialUsed={1} />);
-    expect(html).toContain('banner-ok');
+    expect(html).toContain('bg-app-ok-bg');
     expect(html).toContain('Essai gratuit : 2 dossiers restants, jusqu&#x27;au 01/12/2026');
   });
 
@@ -96,7 +96,7 @@ describe('SubscriptionBanner — trial', () => {
     const html = renderToStaticMarkup(
       <SubscriptionBanner subscription={trial({ periodEnd: new Date('2026-10-20T00:00:00Z') })} trialUsed={2} />,
     );
-    expect(html).toContain('banner-warn');
+    expect(html).toContain('bg-app-warn-bg');
     expect(html).toContain('1 dossier restant,');
     expect(html).toContain('5 jours');
   });
@@ -104,7 +104,7 @@ describe('SubscriptionBanner — trial', () => {
   it('says the trial is over, with the contact details, when the quota is used', () => {
     vi.stubEnv('ADMIN_EMAIL', 'contact@dossipv.tn');
     const html = renderToStaticMarkup(<SubscriptionBanner subscription={trial()} trialUsed={3} />);
-    expect(html).toContain('banner-danger');
+    expect(html).toContain('bg-app-danger-bg');
     expect(html).toContain('Essai gratuit terminé (3 dossiers utilisés)');
     expect(html).toContain('plus importer de facture');
     expect(html).toContain('contact@dossipv.tn');
@@ -114,7 +114,7 @@ describe('SubscriptionBanner — trial', () => {
     const html = renderToStaticMarkup(
       <SubscriptionBanner subscription={trial({ periodEnd: new Date('2026-10-01T00:00:00Z') })} trialUsed={1} />,
     );
-    expect(html).toContain('banner-danger');
+    expect(html).toContain('bg-app-danger-bg');
     expect(html).toContain('Votre essai gratuit');
     expect(html).toContain('plus');
   });

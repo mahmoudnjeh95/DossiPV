@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { db, type Prisma } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
+import { Table } from '@/components/ui/table';
 
 const SIGNUP_ROWS = 200;
 const SIGNUP_INCLUDE = {
@@ -97,8 +98,8 @@ export default async function AdminSignupsPage({
       {rows.length === 0 ? (
         <p>Aucune inscription.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
+        <div className="overflow-x-auto">
+          <Table>
             <thead>
               <tr>
                 <th>Date</th>
@@ -140,7 +141,7 @@ export default async function AdminSignupsPage({
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         </div>
       )}
     </main>

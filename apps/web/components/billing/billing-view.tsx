@@ -4,6 +4,10 @@ import { SubscriptionBanner } from '../subscription-banner';
 import type { BillingView } from '../../lib/payments/billing';
 import { INTENT_DISPLAY_LABELS, PAYMENT_METHOD_LABELS } from '../../lib/payments/p2p';
 import { CheckoutOffer } from './checkout-offer';
+import { Card } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Table } from '@/components/ui/table';
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 
@@ -26,7 +30,7 @@ export function BillingPageView({
       <h1>Abonnement et paiement</h1>
       <SubscriptionBanner subscription={subscription} awaitingEmailConfirmation={awaitingEmailConfirmation} />
 
-      <section className="card">
+      <Card as="section">
         <h2>{isSupplier ? 'Votre pack' : 'Votre abonnement'}</h2>
         {subscription ? (
           <dl className="dl">
@@ -44,35 +48,43 @@ export function BillingPageView({
             )}
           </dl>
         ) : (
-          <p className="muted">
+          <p className="text-app-muted">
             {awaitingEmailConfirmation ? 'Votre essai gratuit démarrera dès que votre adresse e-mail sera confirmée.' : 'Aucun abonnement.'}
           </p>
         )}
-      </section>
+      </Card>
 
-      <section>
+      <section id="offres" className="mb-6">
         <h2>Payer par Flouci, izi ou D17</h2>
-        <p className="hint">
-          Vous envoyez le montant depuis votre application au numéro de SolarixPro, puis vous déclarez le paiement avec une capture d’écran.
-          SolarixPro vérifie la capture et prolonge votre abonnement.
-        </p>
+        <ol className="m-0 mb-4 grid list-none gap-2 p-0 text-[0.9rem] sm:grid-cols-3">
+          {['Choisissez l’offre et la durée', 'Envoyez le montant depuis votre application', 'Déclarez-le avec une capture : SolarixPro valide'].map((text, index) => (
+            <li key={text} className="flex items-center gap-2.5 rounded-ui border border-app-border bg-app-surface px-3 py-2.5">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-app-primary text-[0.8rem] font-bold text-white">{index + 1}</span>
+              {text}
+            </li>
+          ))}
+        </ol>
         {billing.providers.length === 0 ? (
-          <div className="banner banner-warn" role="status">
+          <Alert variant="warn" role="status">
             Paiement indisponible : <ContactDossipv />.
-          </div>
+          </Alert>
         ) : billing.offers.length === 0 ? (
-          <p className="muted">Aucune offre pour votre compte : <ContactDossipv />.</p>
+          <p className="text-app-muted">Aucune offre pour votre compte : <ContactDossipv />.</p>
         ) : (
-          billing.offers.map((offer) => <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay} />)
+          <div className="grid gap-4 md:grid-cols-2">
+            {billing.offers.map((offer) => (
+              <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay} />
+            ))}
+          </div>
         )}
-        {!canPay && billing.providers.length > 0 && <p className="hint">Seul le responsable du compte peut payer.</p>}
+        {!canPay && billing.providers.length > 0 && <p className="text-[0.8rem] font-normal text-app-muted">Seul le responsable du compte peut payer.</p>}
       </section>
 
       {billing.intents.length > 0 && (
         <section>
           <h2>Vos paiements déclarés</h2>
-          <div className="table-wrap">
-            <table>
+          <div className="overflow-x-auto">
+            <Table>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -97,15 +109,15 @@ export function BillingPageView({
                     <td>
                       <Link href={`/paiement/${intent.id}`}>{intent.status === 'TO_DECLARE' ? 'Déclarer' : 'Voir'}</Link>
                       {intent.unreadMessages > 0 && (
-                        <span className="badge badge-warn" style={{ marginLeft: 8 }}>
+                        <Badge variant="warn" style={{ marginLeft: 8 }}>
                           {intent.unreadMessages} message{intent.unreadMessages === 1 ? '' : 's'} non lu{intent.unreadMessages === 1 ? '' : 's'}
-                        </span>
+                        </Badge>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         </section>
       )}
@@ -113,10 +125,10 @@ export function BillingPageView({
       <section>
         <h2>Historique des paiements</h2>
         {billing.payments.length === 0 ? (
-          <p className="muted">Aucun paiement.</p>
+          <p className="text-app-muted">Aucun paiement.</p>
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="overflow-x-auto">
+            <Table>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -133,7 +145,7 @@ export function BillingPageView({
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
       </section>

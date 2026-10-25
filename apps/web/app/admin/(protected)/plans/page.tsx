@@ -4,6 +4,9 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { TIER_LABELS } from '../../../../lib/labels';
 import { archivePlanAction, createPlanAction, unarchivePlanAction } from './actions';
 import { PlanForm } from './plan-form';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table } from '@/components/ui/table';
 
 const PLAN_INCLUDE = { _count: { select: { subscriptions: true } } } as const;
 type PlanRow = Prisma.PlanGetPayload<{ include: typeof PLAN_INCLUDE }>;
@@ -13,9 +16,9 @@ function PlanActions({ plan, archived }: { plan: PlanRow; archived: boolean }): 
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
       <Link href={`/admin/plans/${plan.id}`}>Modifier</Link>
       <form action={(archived ? unarchivePlanAction : archivePlanAction).bind(null, plan.id)}>
-        <button type="submit" className="secondary small">
+        <Button variant="secondary" size="sm" type="submit">
           {archived ? 'Désarchiver' : 'Archiver'}
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -23,7 +26,7 @@ function PlanActions({ plan, archived }: { plan: PlanRow; archived: boolean }): 
 
 function PlanTable({ plans, archived }: { plans: PlanRow[]; archived: boolean }): React.JSX.Element {
   return (
-    <table>
+    <Table>
       <thead>
         <tr>
           <th>Nom</th>
@@ -36,10 +39,10 @@ function PlanTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
       </thead>
       <tbody>
         {plans.map((plan) => (
-          <tr key={plan.id} className={archived ? 'muted' : undefined}>
+          <tr key={plan.id} className={archived ? 'text-app-muted' : undefined}>
             <td>
-              {plan.name} {plan.isTrial && <span className="badge badge-ok">essai</span>}{' '}
-              {archived && <span className="badge">archivé</span>}
+              {plan.name} {plan.isTrial && <Badge variant="ok">essai</Badge>}{' '}
+              {archived && <Badge>archivé</Badge>}
             </td>
             <td>{TIER_LABELS[plan.tier] ?? plan.tier}</td>
             <td>{plan.monthlyDossierLimit}</td>
@@ -51,13 +54,13 @@ function PlanTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
 function PackTable({ plans, archived }: { plans: PlanRow[]; archived: boolean }): React.JSX.Element {
   return (
-    <table>
+    <Table>
       <thead>
         <tr>
           <th>Nom</th>
@@ -71,9 +74,9 @@ function PackTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
       </thead>
       <tbody>
         {plans.map((plan) => (
-          <tr key={plan.id} className={archived ? 'muted' : undefined}>
+          <tr key={plan.id} className={archived ? 'text-app-muted' : undefined}>
             <td>
-              {plan.name} {archived && <span className="badge">archivé</span>}
+              {plan.name} {archived && <Badge>archivé</Badge>}
             </td>
             <td>{plan.maxSponsoredInstallers ?? 'Illimité'}</td>
             <td>{plan.dossiersPerInstallerPerMonth}</td>
@@ -86,7 +89,7 @@ function PackTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
           </tr>
         ))}
       </tbody>
-    </table>
+    </Table>
   );
 }
 
@@ -104,18 +107,18 @@ export default async function AdminPlansPage(): Promise<React.JSX.Element> {
   return (
     <main>
       <h1>Plans</h1>
-      <p className="hint">Un changement de limite ou de prix s&apos;applique tout de suite aux sociétés abonnées à ce plan.</p>
+      <p className="text-[0.8rem] font-normal text-app-muted">Un changement de limite ou de prix s&apos;applique tout de suite aux sociétés abonnées à ce plan.</p>
 
       <h2>Plans installateurs</h2>
       {!activePlans.some((plan) => plan.isTrial) && (
-        <p className="hint" role="status">
+        <p className="text-[0.8rem] font-normal text-app-muted" role="status">
           Aucun plan d&apos;essai actif : les nouvelles inscriptions n&apos;auront pas d&apos;essai gratuit tant qu&apos;un plan « Essai gratuit » n&apos;est pas proposé.
         </p>
       )}
       {activePlans.length === 0 ? <p>Aucun plan proposé.</p> : <PlanTable plans={activePlans} archived={false} />}
 
       <h2>Packs fournisseurs</h2>
-      <p className="hint">
+      <p className="text-[0.8rem] font-normal text-app-muted">
         Un pack donne à un fournisseur un nombre de comptes installateurs, chacun avec son quota de dossiers par mois. Seuls les fournisseurs
         reçoivent un pack, seuls les installateurs reçoivent un plan installateur.
       </p>
@@ -124,7 +127,7 @@ export default async function AdminPlansPage(): Promise<React.JSX.Element> {
       {(archivedPlans.length > 0 || archivedPacks.length > 0) && (
         <>
           <h2>Plans archivés</h2>
-          <p className="hint">
+          <p className="text-[0.8rem] font-normal text-app-muted">
             Un plan archivé n&apos;est plus proposé aux nouveaux abonnements ni aux changements de plan ; les sociétés qui l&apos;ont le
             gardent. Un plan n&apos;est jamais supprimé.
           </p>

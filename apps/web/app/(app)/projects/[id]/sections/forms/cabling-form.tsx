@@ -11,6 +11,10 @@ import {
   AMBIENT_CONTEXT_OPTIONS,
   AMBIENT_TEMP_BY_CONTEXT,
 } from '../../../../../../lib/labels';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface CableChoice {
   id: string;
@@ -107,50 +111,50 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="card stack">
+    <Card as="form" onSubmit={(event) => void handleSubmit(event)} className="flex flex-col gap-3">
       <fieldset>
         <legend>Paramètres généraux</legend>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             cos φ
-            <input type="number" step="any" min={0} max={1} value={cosPhi} onChange={(e) => setCosPhi(Number(e.target.value))} required />
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} max={1} value={cosPhi} onChange={(e) => setCosPhi(Number(e.target.value))} required />
+          </Label>
+          <Label>
             Réactance linéique λ (Ω/m)
-            <input type="number" step="any" min={0} value={lambdaOhmPerM} onChange={(e) => setLambda(Number(e.target.value))} required />
-            <span className="hint">0,00008 Ω/m est la valeur usuelle pour les câbles BT.</span>
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} value={lambdaOhmPerM} onChange={(e) => setLambda(Number(e.target.value))} required />
+            <span className="text-[0.8rem] font-normal text-app-muted">0,00008 Ω/m est la valeur usuelle pour les câbles BT.</span>
+          </Label>
+          <Label>
             Chute de tension maximale DC (%)
-            <input type="number" step="any" min={0} max={10} value={maxVoltageDropPct} onChange={(e) => setMaxDrop(Number(e.target.value))} required />
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} max={10} value={maxVoltageDropPct} onChange={(e) => setMaxDrop(Number(e.target.value))} required />
+          </Label>
+          <Label>
             Chute de tension maximale AC (%)
-            <input type="number" step="any" min={0} max={10} value={maxAcVoltageDropPct} onChange={(e) => setMaxAcDrop(Number(e.target.value))} required />
-            <span className="hint">1 % selon la norme UTE C15-712-1.</span>
-          </label>
-          <label>
+            <Input type="number" step="any" min={0} max={10} value={maxAcVoltageDropPct} onChange={(e) => setMaxAcDrop(Number(e.target.value))} required />
+            <span className="text-[0.8rem] font-normal text-app-muted">1 % selon la norme UTE C15-712-1.</span>
+          </Label>
+          <Label>
             Connecteurs
-            <select value={connectorId ?? ''} onChange={(e) => setConnectorId(e.target.value === '' ? null : e.target.value)}>
+            <Select value={connectorId ?? ''} onChange={(e) => setConnectorId(e.target.value === '' ? null : e.target.value)}>
               <option value="">—</option>
               {connectors.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.isPrivate ? `${c.label} (privé)` : c.label}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Chemin de câbles
-            <select value={cableTrayId ?? ''} onChange={(e) => setCableTrayId(e.target.value === '' ? null : e.target.value)}>
+            <Select value={cableTrayId ?? ''} onChange={(e) => setCableTrayId(e.target.value === '' ? null : e.target.value)}>
               <option value="">—</option>
               {cableTrays.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.isPrivate ? `${c.label} (privé)` : c.label}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </Label>
         </div>
       </fieldset>
 
@@ -166,10 +170,10 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
               Liaison {index + 1} — {run.circuitType}
               {isSizingRun ? ' (dimensionnante)' : ''}
             </legend>
-            <div className="form-grid">
-              <label>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+              <Label>
                 Type de circuit
-                <select
+                <Select
                   value={run.circuitType}
                   onChange={(e) => {
                     const circuitType = e.target.value === 'AC' ? 'AC' : 'DC';
@@ -179,66 +183,66 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
                 >
                   <option value="DC">DC</option>
                   <option value="AC">AC</option>
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Libellé
-                <input type="text" value={run.label} onChange={(e) => updateRun(index, { label: e.target.value })} maxLength={100} required />
-              </label>
-              <label>
+                <Input type="text" value={run.label} onChange={(e) => updateRun(index, { label: e.target.value })} maxLength={100} required />
+              </Label>
+              <Label>
                 Câble
-                <select value={run.cableId} onChange={(e) => changeCable(index, e.target.value)} required>
+                <Select value={run.cableId} onChange={(e) => changeCable(index, e.target.value)} required>
                   {usableCables.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.isPrivate ? `${c.label} (privé)` : c.label}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Section (mm²)
-                <select value={run.sectionMm2} onChange={(e) => updateRun(index, { sectionMm2: Number(e.target.value) })} required>
+                <Select value={run.sectionMm2} onChange={(e) => updateRun(index, { sectionMm2: Number(e.target.value) })} required>
                   {(cable?.sections ?? []).map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Longueur (m)
-                <input type="number" step="any" min={0.1} value={run.lengthM} onChange={(e) => updateRun(index, { lengthM: Number(e.target.value) })} required />
-              </label>
-              <label>
+                <Input type="number" step="any" min={0.1} value={run.lengthM} onChange={(e) => updateRun(index, { lengthM: Number(e.target.value) })} required />
+              </Label>
+              <Label>
                 Mode de pose (NF C 15-100 tab. 52C)
-                <select value={run.installMethod} onChange={(e) => updateRun(index, { installMethod: e.target.value })}>
+                <Select value={run.installMethod} onChange={(e) => updateRun(index, { installMethod: e.target.value })}>
                   {INSTALL_METHOD_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Contexte ambiant
-                <select value={run.ambientContext} onChange={(e) => updateRun(index, { ambientContext: e.target.value })}>
+                <Select value={run.ambientContext} onChange={(e) => updateRun(index, { ambientContext: e.target.value })}>
                   {AMBIENT_CONTEXT_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
                     </option>
                   ))}
-                </select>
-              </label>
-              <label>
+                </Select>
+              </Label>
+              <Label>
                 Circuits groupés
-                <input type="number" step={1} min={1} value={run.groupedCircuits} onChange={(e) => updateRun(index, { groupedCircuits: Number(e.target.value) })} required />
-              </label>
-              <label>
+                <Input type="number" step={1} min={1} value={run.groupedCircuits} onChange={(e) => updateRun(index, { groupedCircuits: Number(e.target.value) })} required />
+              </Label>
+              <Label>
                 Couches
-                <input type="number" step={1} min={1} value={run.layers} onChange={(e) => updateRun(index, { layers: Number(e.target.value) })} required />
-              </label>
+                <Input type="number" step={1} min={1} value={run.layers} onChange={(e) => updateRun(index, { layers: Number(e.target.value) })} required />
+              </Label>
             </div>
-            <div className="stack" style={{ gap: 4, marginTop: 8 }}>
+            <div className="flex flex-col gap-3" style={{ gap: 4, marginTop: 8 }}>
               {ambientTemp !== undefined && <span className="live-hint">Température ambiante retenue : {ambientTemp} °C.</span>}
               {k1Missing && (
                 <span className="live-hint bad">
@@ -248,34 +252,34 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
               )}
             </div>
             {runs.length > 1 && (
-              <div className="actions" style={{ marginTop: 8 }}>
-                <button type="button" className="secondary small" onClick={() => setRuns((prev) => prev.filter((_, i) => i !== index))}>
+              <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 8 }}>
+                <Button variant="secondary" size="sm" type="button"  onClick={() => setRuns((prev) => prev.filter((_, i) => i !== index))}>
                   Retirer cette liaison
-                </button>
+                </Button>
               </div>
             )}
           </fieldset>
         );
       })}
 
-      <div className="actions">
-        <button type="button" className="secondary" onClick={() => setRuns((prev) => [...prev, defaultRun('DC', cables)])}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" type="button"  onClick={() => setRuns((prev) => [...prev, defaultRun('DC', cables)])}>
           Ajouter une liaison DC
-        </button>
-        <button type="button" className="secondary" onClick={() => setRuns((prev) => [...prev, defaultRun('AC', cables)])}>
+        </Button>
+        <Button variant="secondary" type="button"  onClick={() => setRuns((prev) => [...prev, defaultRun('AC', cables)])}>
           Ajouter une liaison AC
-        </button>
+        </Button>
       </div>
 
       {error && <p role="alert">{error}</p>}
-      <div className="actions">
-        <button type="submit" disabled={saving}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={saving}>
           {saving ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-        <Link href={`/projects/${projectId}`} className="button secondary">
+        </Button>
+        <Link href={`/projects/${projectId}`} className={buttonVariants({ variant: 'secondary' })}>
           Retour au projet
         </Link>
       </div>
-    </form>
+    </Card>
   );
 }

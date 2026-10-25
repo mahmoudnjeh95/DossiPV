@@ -7,7 +7,12 @@ import { chatSnapshot, markReadByCompany } from '../../../lib/payments/chat';
 import { cancelIntentAction } from '../actions';
 import { PayerChat } from './payer-chat';
 import { DeclareForm } from './declare-form';
-import { CopyButton } from '../../../components/copy-button';
+import { CopyRow } from './copy-row';
+import { Stepper } from './stepper';
+import { Card } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 
@@ -36,38 +41,94 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
   const canPay = payerRefusal(user) === null;
   const open = intent.status === 'PENDING';
   const label = intent.purpose === 'OPTION_3D' ? 'Option 3D' : `Abonnement ${plan?.name ?? ''}`.trim();
+  const amount = Number(intent.amountTnd);
+  const step = status === 'CONFIRMED' ? 4 : status === 'WAITING' ? 3 : status === 'TO_DECLARE' ? 1 : null;
+  const badge = status === 'CONFIRMED' ? 'ok' : status === 'REJECTED' ? 'danger' : status === 'CANCELLED' ? 'default' : 'warn';
 
   return (
-    <main>
+    <main className="mx-auto max-w-[760px]">
       <p>
         <Link href={backHref}>← Abonnement et paiement</Link>
       </p>
       <h1>Paiement {PAYMENT_METHOD_LABELS[intent.provider]}</h1>
 
-      <section className="card">
-        <dl className="dl">
-          <dt>Achat</dt>
-          <dd>
-            {label}, {intent.months} mois
-          </dd>
-          <dt>Montant</dt>
-          <dd>
-            <strong>{money(Number(intent.amountTnd))}</strong>
-          </dd>
-          <dt>Statut</dt>
-          <dd>{INTENT_DISPLAY_LABELS[status]}</dd>
-        </dl>
+      <Card as="section" className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="text-[0.9rem] text-app-muted">
+              {label}, {intent.months} mois
+            </div>
+            <div className="text-[2rem] leading-tight font-bold tabular-nums">{money(amount)}</div>
+          </div>
+          <Badge variant={badge}>{INTENT_DISPLAY_LABELS[status]}</Badge>
+        </div>
+        {step && <Stepper current={step} />}
         {intent.status === 'FAILED' && intent.failureReason && (
-          <p className="banner banner-danger" role="alert">
+          <Alert variant="danger" role="alert">
             Paiement refusé : {intent.failureReason}. Vous pouvez faire un nouveau paiement depuis la page <Link href={backHref}>Abonnement et paiement</Link>.
-          </p>
+          </Alert>
         )}
         {intent.status === 'PAID' && (
-          <p className="banner banner-ok" role="status">
+          <Alert variant="ok" role="status">
             Paiement confirmé : votre abonnement est à jour.
-          </p>
+          </Alert>
         )}
-      </section>
+        {open && intent.declaredAt && (
+          <Alert variant="warn" role="status">
+            Capture reçue le {intent.declaredAt.toLocaleDateString('fr-FR')} (numéro ou référence : {intent.providerReference}). SolarixPro la vérifie, puis prolonge votre abonnement.
+            Vous pouvez envoyer une nouvelle capture tant que le paiement n’est pas validé.
+          </Alert>
+        )}
+      </Card>
+
+      {open && (
+        <>
+          <Card as="section" className="flex flex-col gap-3">
+            <h2 className="m-0">1. Envoyez le montant</h2>
+            {provider ? (
+              <>
+                <p className="m-0 text-[0.9rem] text-app-muted">Ouvrez votre application {provider.label} et faites un transfert d’argent avec ces informations.</p>
+                <CopyRow
+                  title={`Numéro ${provider.label} de SolarixPro`}
+                  shown={provider.number}
+                  value={provider.number.replace(/\s+/g, '')}
+                  copyLabel={`le numéro ${provider.label}`}
+                  hint={settings.accountHolder ? `Au nom de ${settings.accountHolder}` : undefined}
+                />
+                <CopyRow title="Montant exact" shown={money(amount)} value={amount.toFixed(2)} copyLabel="le montant" />
+                <CopyRow title="Référence à écrire dans le commentaire" shown={reference} value={reference} copyLabel="la référence" hint="Elle permet à SolarixPro de retrouver votre paiement." />
+                {settings.instructions && (
+                  <p className="m-0 text-[0.8rem] font-normal text-app-muted" style={{ whiteSpace: 'pre-line' }}>
+                    {settings.instructions}
+                  </p>
+                )}
+              </>
+            ) : (
+              <Alert variant="warn" role="status">
+                Paiement indisponible : contactez SolarixPro.
+              </Alert>
+            )}
+          </Card>
+
+          <Card as="section" className="flex flex-col gap-3">
+            <h2 className="m-0">2. Déclarez votre paiement</h2>
+            <p className="m-0 text-[0.9rem] text-app-muted">Une fois le transfert fait, envoyez la capture d’écran de la confirmation de votre application.</p>
+            {canPay ? (
+              <DeclareForm intentId={intent.id} reference={reference} />
+            ) : (
+              <p className="m-0 text-[0.8rem] font-normal text-app-muted">Seul le responsable du compte peut déclarer le paiement.</p>
+            )}
+            <p className="m-0 text-[0.8rem] font-normal text-app-muted">La capture est conservée {PROOF_RETENTION_DAYS} jours puis supprimée automatiquement.</p>
+            {intent.proofMime && (
+              <p className="m-0">
+                <a href={`/paiement/${intent.id}/capture`} target="_blank" rel="noreferrer">
+                  Voir ma capture
+                </a>
+              </p>
+            )}
+          </Card>
+        </>
+      )}
 
       <PayerChat
         intentId={intent.id}
@@ -76,63 +137,12 @@ export default async function PaymentPage({ params }: { params: Promise<{ intent
         readOnlyHint={user.impersonatedBySuperAdminId ? 'Mode support : lecture seule.' : 'Seul le responsable du compte peut écrire.'}
       />
 
-      {open && (
-        <>
-          <section className="card">
-            <h2>1. Envoyez le montant</h2>
-            {provider ? (
-              <>
-                <p>
-                  Depuis votre application {provider.label}, envoyez <strong>{money(Number(intent.amountTnd))}</strong>
-                  <CopyButton value={Number(intent.amountTnd).toFixed(2)} label="le montant" /> au numéro{' '}
-                  <strong>{provider.number}</strong>
-                  <CopyButton value={provider.number.replace(/s+/g, '')} label={`le numéro ${provider.label}`} />
-                  {settings.accountHolder ? ` (${settings.accountHolder})` : ''}.
-                </p>
-                <p>
-                  Écrivez cette référence dans le commentaire du transfert : <strong>{reference}</strong>
-                  <CopyButton value={reference} label="la référence" />
-                </p>
-                {settings.instructions && <p className="hint" style={{ whiteSpace: 'pre-line' }}>{settings.instructions}</p>}
-              </>
-            ) : (
-              <p className="banner banner-warn" role="status">
-                Paiement indisponible : contactez SolarixPro.
-              </p>
-            )}
-          </section>
-
-          <section className="card">
-            <h2>2. Déclarez votre paiement</h2>
-            {intent.declaredAt && (
-              <p className="banner banner-warn" role="status">
-                En attente de validation par SolarixPro. Déclaré le {intent.declaredAt.toLocaleDateString('fr-FR')} (numéro ou référence : {intent.providerReference}).
-                Vous pouvez envoyer une nouvelle capture tant que le paiement n’est pas validé.
-              </p>
-            )}
-            {canPay ? (
-              <DeclareForm intentId={intent.id} />
-            ) : (
-              <p className="hint">Seul le responsable du compte peut déclarer le paiement.</p>
-            )}
-            <p className="hint">La capture est conservée {PROOF_RETENTION_DAYS} jours puis supprimée automatiquement.</p>
-            {intent.proofMime && (
-              <p>
-                <a href={`/paiement/${intent.id}/capture`} target="_blank" rel="noreferrer">
-                  Voir ma capture
-                </a>
-              </p>
-            )}
-          </section>
-
-          {canPay && (
-            <form action={cancelIntentAction.bind(null, intent.id)}>
-              <button type="submit" className="secondary">
-                Annuler ce paiement
-              </button>
-            </form>
-          )}
-        </>
+      {open && canPay && (
+        <form action={cancelIntentAction.bind(null, intent.id)}>
+          <Button variant="secondary" type="submit">
+            Annuler ce paiement
+          </Button>
+        </form>
       )}
       {!open && intent.proofMime && (
         <p>

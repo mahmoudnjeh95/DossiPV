@@ -5,6 +5,8 @@ import { parseRoofOutline, parseSiteImagePoints } from '@dossipv/engine';
 import { siteImageUrl } from '../../../../../../lib/site-image';
 import { requireAuthenticatedCompanyUser } from '../../../../layout';
 import { SitePhotoEditorClientOnly as SitePhotoEditor } from './site-photo-editor-loader';
+import { Card } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
 
 function point(lat: number | null, lon: number | null): { lat: number; lon: number } | null {
   return lat !== null && lon !== null ? { lat, lon } : null;
@@ -36,7 +38,7 @@ export default async function SitePhotoPage({ params }: { params: Promise<{ id: 
           <Link href={`/projects/${id}/locations`}>Emplacements</Link> › Photo pour l&apos;annexe 3D
         </p>
         <h1>Photo pour l&apos;annexe 3D — {fullName}</h1>
-        <p className="muted">
+        <p className="text-app-muted">
           Étape 2 sur 2, facultative : une capture Google Maps où vous placez de nouveau les points et le toit. Elle sert aux dessins ; les longueurs
           restent celles mesurées sur la carte.
         </p>
@@ -50,12 +52,12 @@ export default async function SitePhotoPage({ params }: { params: Promise<{ id: 
           initialPoints={parseSiteImagePoints(site.siteImagePoints)}
         />
       ) : (
-        <section className="card">
+        <Card as="section">
           <p>Placez d&apos;abord les points sur la carte : la photo se met à l&apos;échelle grâce à eux.</p>
-          <Link className="button" href={`/projects/${id}/locations`}>
+          <Link className={buttonVariants()} href={`/projects/${id}/locations`}>
             Revenir à la carte
           </Link>
-        </section>
+        </Card>
       )}
     </main>
   );

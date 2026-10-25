@@ -4,6 +4,10 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { SUBSCRIPTION_STATUS_LABELS } from '../../../../lib/labels';
 import { displayedSubscriptionStatus } from '../../../../lib/admin-period';
 import { companySearchWhere, expiringSubscriptionWhere, readSearchQuery } from '../../../../lib/admin-search';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Table } from '@/components/ui/table';
 
 export interface CompanyWithRelationsForList {
   id: string;
@@ -84,20 +88,20 @@ export default async function InstallerListPage({
   return (
     <main>
       <h1>Installateurs</h1>
-      {expiring && <p className="hint">Abonnements actifs qui se terminent dans les 30 prochains jours.</p>}
+      {expiring && <p className="text-[0.8rem] font-normal text-app-muted">Abonnements actifs qui se terminent dans les 30 prochains jours.</p>}
       <p>
         <Link href="/admin/installers/new">Nouvel installateur</Link>
       </p>
-      <form method="get" role="search" className="actions">
-        <input type="search" name="q" defaultValue={query ?? ''} placeholder="Rechercher (nom, email, téléphone)" aria-label="Rechercher" maxLength={100} />
-        <button type="submit" className="secondary small">
+      <form method="get" role="search" className="flex flex-wrap items-center gap-2">
+        <Input type="search" name="q" defaultValue={query ?? ''} placeholder="Rechercher (nom, email, téléphone)" aria-label="Rechercher" maxLength={100} />
+        <Button variant="secondary" size="sm" type="submit">
           Rechercher
-        </button>
-        {expiring && <input type="hidden" name="expiring" value="1" />}
+        </Button>
+        {expiring && <Input type="hidden" name="expiring" value="1" />}
         {(query || expiring) && <Link href="/admin/installers">Effacer</Link>}
       </form>
       {rows.length === 0 && <p>Aucun installateur ne correspond.</p>}
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>Nom</th>
@@ -116,7 +120,7 @@ export default async function InstallerListPage({
                 {row.sponsorName && (
                   <>
                     {' '}
-                    <span className="badge">Parrainé par {row.sponsorName}</span>
+                    <Badge>Parrainé par {row.sponsorName}</Badge>
                   </>
                 )}
               </td>
@@ -135,7 +139,7 @@ export default async function InstallerListPage({
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </main>
   );
 }

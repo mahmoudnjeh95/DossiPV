@@ -3,6 +3,9 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../layout';
 import { PROJECT_STATUS_LABELS, TIER_LABELS, JOB_STATUS_LABELS } from '../../../lib/labels';
 import { Projects, Add } from '@dossipv/icons';
+import { buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Table } from '@/components/ui/table';
 
 export default async function ProjectListPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
@@ -15,25 +18,25 @@ export default async function ProjectListPage(): Promise<React.JSX.Element> {
 
   return (
     <main>
-      <div className="actions" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="flex flex-wrap items-center gap-2" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Projects size="lg" color="gold" />
           Projets
         </h1>
-        <Link href="/projects/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <Link href="/projects/new" className={buttonVariants()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <Add size="sm" color="inherit" />
           Nouveau projet
         </Link>
       </div>
       {projects.length === 0 ? (
-        <section className="card">
-          <p className="muted">
+        <Card as="section">
+          <p className="text-app-muted">
             Aucun projet. Créez votre premier projet pour commencer un dossier.
           </p>
-        </section>
+        </Card>
       ) : (
-        <section className="card table-wrap">
-          <table>
+        <Card as="section" className="overflow-x-auto">
+          <Table>
             <thead>
               <tr>
                 <th>Client</th>
@@ -67,8 +70,8 @@ export default async function ProjectListPage(): Promise<React.JSX.Element> {
                 );
               })}
             </tbody>
-          </table>
-        </section>
+          </Table>
+        </Card>
       )}
     </main>
   );

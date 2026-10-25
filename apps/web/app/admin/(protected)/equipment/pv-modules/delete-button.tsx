@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deletePvModuleAction, type PvModuleActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeletePvModuleButton({ moduleId }: { moduleId: string }): React.JSX.Element {
   const boundAction = deletePvModuleAction.bind(null, moduleId);
@@ -9,9 +10,9 @@ export function DeletePvModuleButton({ moduleId }: { moduleId: string }): React.
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending}>
         Supprimer
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

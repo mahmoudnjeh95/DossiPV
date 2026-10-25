@@ -1,9 +1,15 @@
 'use client';
 
+import { badgeVariants } from '@/components/ui/badge';
 import { useState, useTransition } from 'react';
 import type { Proposal, ProposalKind } from '@dossipv/engine';
 import type { EquipmentChoice, EquipmentSelection } from '../../../../../lib/project-proposals';
 import { applyProposalAction } from './actions';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Select } from '@/components/ui/input';
 
 const KIND_LABELS: Record<ProposalKind, string> = {
   RECOMMENDED: 'Recommandée',
@@ -53,23 +59,23 @@ export function ProposalCard({
   }
 
   return (
-    <section className="card">
+    <Card as="section">
       {sponsoredBy && (
         <>
           <h2>Proposition sponsorisée</h2>
-          <p className="muted">
+          <p className="text-app-muted">
             Mis en avant par {sponsoredBy.join(', ')} ; les vérifications techniques sont identiques.
           </p>
         </>
       )}
-      <div className="actions" style={{ marginBottom: 8 }}>
+      <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 8 }}>
         {sponsoredBy && (
-          <span className="badge badge-warn" title={`Mis en avant par ${sponsoredBy.join(', ')}`}>
+          <Badge variant="warn" title={`Mis en avant par ${sponsoredBy.join(', ')}`}>
             Sponsorisé
-          </span>
+          </Badge>
         )}
         {proposal.kinds.map((kind) => (
-          <span key={kind} className={kind === 'RECOMMENDED' ? 'badge badge-ok' : 'badge'}>
+          <span key={kind} className={badgeVariants({ variant: kind === 'RECOMMENDED' ? 'ok' : 'default' })}>
             {KIND_LABELS[kind]}
           </span>
         ))}
@@ -78,13 +84,13 @@ export function ProposalCard({
       <p>
         {proposal.moduleCount} panneaux{' '}
         {choices ? (
-          <select aria-label="Changer les panneaux" value={module.id} onChange={(event) => swap('module', event.target.value)}>
+          <Select aria-label="Changer les panneaux" value={module.id} onChange={(event) => swap('module', event.target.value)}>
             {choices.modules.map((choice) => (
               <option key={choice.id} value={choice.id}>
                 {choice.label}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           `${module.brand} ${module.model} (${fr(module.pmaxW)} W)`
         )}
@@ -92,13 +98,13 @@ export function ProposalCard({
       <p>
         Onduleur{' '}
         {choices ? (
-          <select aria-label="Changer l'onduleur" value={inverter.id} onChange={(event) => swap('inverter', event.target.value)}>
+          <Select aria-label="Changer l'onduleur" value={inverter.id} onChange={(event) => swap('inverter', event.target.value)}>
             {choices.inverters.map((choice) => (
               <option key={choice.id} value={choice.id}>
                 {choice.label}
               </option>
             ))}
-          </select>
+          </Select>
         ) : (
           `${inverter.brand} ${inverter.model} (${fr(inverter.pacW / 1000, 1, 0)} kW)`
         )}
@@ -107,11 +113,11 @@ export function ProposalCard({
       <p>Couverture de la consommation : {fr(proposal.coveragePct)} %</p>
       <p>Surface de toiture : environ {fr(proposal.roofAreaM2)} m²</p>
       {proposal.yearlySavingTND !== null && <p>Économie estimée : environ {fr(proposal.yearlySavingTND)} DT/an</p>}
-      <p className="muted">{proposal.explanation}</p>
-      <button type="button" onClick={choose} disabled={pending}>
+      <p className="text-app-muted">{proposal.explanation}</p>
+      <Button type="button" onClick={choose} disabled={pending}>
         Choisir cette installation
-      </button>
-      {error && <div className="banner banner-danger" role="alert" style={{ marginTop: 12 }}>{error}</div>}
-    </section>
+      </Button>
+      {error && <Alert variant="danger" role="alert" style={{ marginTop: 12 }}>{error}</Alert>}
+    </Card>
   );
 }
