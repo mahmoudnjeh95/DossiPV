@@ -6,6 +6,7 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
 import { logAdminAction } from '../../../../lib/admin-audit';
 import { PLATFORM_SETTINGS_ID } from '../../../../lib/platform-settings';
+import { isClaudeModelId } from '@dossipv/dossier-worker';
 import { readP2pSettings } from './p2p-validation';
 
 export interface SettingsActionState {
@@ -32,6 +33,28 @@ export async function updateOption3dPriceAction(
     update: { option3dPriceTnd },
   });
   await logAdminAction(admin.id, 'settings.option3dPrice', null, { priceTnd: option3dPriceTnd });
+  revalidatePath('/admin/settings');
+  return { saved: true };
+}
+
+/** Sets the Claude model the dossier text is generated with. */
+export async function updateClaudeModelAction(
+  _prevState: SettingsActionState | undefined,
+  formData: FormData,
+): Promise<SettingsActionState | undefined> {
+  const admin = await requireAuthenticatedSuperAdmin();
+
+  const claudeModel = formData.get('claudeModel');
+  if (!isClaudeModelId(claudeModel)) {
+    return { error: 'Modèle inconnu.' };
+  }
+
+  await db.platformSettings.upsert({
+    where: { id: PLATFORM_SETTINGS_ID },
+    create: { id: PLATFORM_SETTINGS_ID, claudeModel },
+    update: { claudeModel },
+  });
+  await logAdminAction(admin.id, 'settings.claudeModel', null, { claudeModel });
   revalidatePath('/admin/settings');
   return { saved: true };
 }

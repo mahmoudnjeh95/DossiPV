@@ -63,9 +63,10 @@ export async function generateDossierText(
   input: DossierTextInput,
   client: Anthropic,
   allowedPlaceholderNames: string[],
+  model = 'claude-sonnet-5-5',
 ): Promise<DossierTextSections> {
   const response = await client.messages.parse({
-    model: 'claude-sonnet-5-5',
+    model,
     max_tokens: 4096,
     system: DOSSIER_TEXT_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: buildDossierTextUserPrompt(input, allowedPlaceholderNames) }],

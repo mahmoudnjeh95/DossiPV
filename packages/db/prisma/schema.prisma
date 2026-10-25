@@ -323,6 +323,8 @@ model PlatformSettings {
   p2pD17Number       String?
   /// Free text shown under the numbers (e.g. "Mettez la référence ci-dessous en commentaire").
   p2pInstructions    String?
+  /// Claude model used for the dossier text (one of CLAUDE_MODEL_OPTIONS); null = default.
+  claudeModel        String?
   updatedAt          DateTime @updatedAt
 
   @@map("platform_settings")

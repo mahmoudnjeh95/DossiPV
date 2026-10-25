@@ -19,6 +19,7 @@ import {
 import { getFilePath, saveFile } from '@dossipv/file-storage';
 import { fillDossierTemplate } from '@dossipv/docx-template';
 import { generateDossierDocument } from './generate-dossier-document';
+import { resolveClaudeModel } from './claude-models';
 import { buildTemplateData, computeSectionNumbers, type EarthingRow } from './build-template-data';
 import { convertDocxToPdf } from './convert-to-pdf';
 import { annexPageCount, mergeDocumentFragments, type AnnexFile } from './merge-annexes';
@@ -519,8 +520,10 @@ export async function processJob(jobId: string): Promise<void> {
   let workerResult;
   await reportProgress(jobId, 'text');
   try {
+    const platformSettings = await db.platformSettings.findUnique({ where: { id: 'singleton' } });
+    const claudeModel = resolveClaudeModel(platformSettings?.claudeModel);
     workerResult = await withRetry(() =>
-      generateDossierDocument({ engineInput: snapshot.engineInput, projectMeta: snapshot.projectMeta }, anthropicClient),
+      generateDossierDocument({ engineInput: snapshot.engineInput, projectMeta: snapshot.projectMeta }, anthropicClient, claudeModel),
     );
   } catch (error) {
     return fail(jobId, 'text', error);

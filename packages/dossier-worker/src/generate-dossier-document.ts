@@ -59,6 +59,7 @@ export class DossierGenerationBlockedError extends Error {
 export async function generateDossierDocument(
   input: DossierWorkerInput,
   client: Anthropic,
+  model?: string,
 ): Promise<DossierWorkerResult> {
   const engineResult = runEngine(input.engineInput);
 
@@ -93,7 +94,7 @@ export async function generateDossierDocument(
   };
 
   const allowedPlaceholderNames = Object.keys(PLACEHOLDER_DEFINITIONS);
-  const sections = await generateDossierText(textInput, client, allowedPlaceholderNames);
+  const sections = await generateDossierText(textInput, client, allowedPlaceholderNames, model);
 
   const values = buildPlaceholderValues({
     derived: engineResult.derived,
