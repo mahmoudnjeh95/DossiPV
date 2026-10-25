@@ -6,7 +6,7 @@ import { requireAuthenticatedSuperAdmin } from '../layout';
 import { FormReader } from '../../../../lib/form-reader';
 import { logAdminAction } from '../../../../lib/admin-audit';
 import { PLATFORM_SETTINGS_ID } from '../../../../lib/platform-settings';
-import { isClaudeModelId } from '@dossipv/dossier-worker';
+import { isClaudeModelId } from '@dossipv/dossier-worker/claude-models';
 import { readP2pSettings } from './p2p-validation';
 
 export interface SettingsActionState {

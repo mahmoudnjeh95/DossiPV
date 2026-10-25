@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { CLAUDE_MODEL_OPTIONS, resolveClaudeModel } from '@dossipv/dossier-worker';
+import { CLAUDE_MODEL_OPTIONS, resolveClaudeModel } from '@dossipv/dossier-worker/claude-models';
 import { getClaudeModel, getOption3dPriceTnd } from '../../../../lib/platform-settings';
 import { loadP2pSettings } from '../../../../lib/payments/p2p';
 import { Option3dPriceForm } from './option3d-price-form';
