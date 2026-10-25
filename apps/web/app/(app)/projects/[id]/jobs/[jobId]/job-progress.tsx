@@ -1,14 +1,17 @@
 'use client';
 
+import { badgeVariants } from '@/components/ui/badge';
 import { useEffect, useState } from 'react';
 import { requestNotificationPermission, useJobProgress, useNow, type LiveJobView } from '../../../../../../components/job-watcher';
 import { derivePipelineSteps, isJobActive, jobProgressPercent, type JobProgressView } from '../../../../../../lib/dossier-jobs';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const STEP_BADGE: Record<string, { className: string; text: string }> = {
-  done: { className: 'badge badge-ok', text: 'OK' },
-  running: { className: 'badge badge-warn', text: 'En cours' },
-  failed: { className: 'badge badge-danger', text: 'Échec' },
-  pending: { className: 'badge', text: 'À venir' },
+  done: { className: badgeVariants({ variant: 'ok' }), text: 'OK' },
+  running: { className: badgeVariants({ variant: 'warn' }), text: 'En cours' },
+  failed: { className: badgeVariants({ variant: 'danger' }), text: 'Échec' },
+  pending: { className: badgeVariants(), text: 'À venir' },
 };
 
 function formatElapsed(ms: number): string {
@@ -66,10 +69,10 @@ export function JobProgressBanner({ initial }: { initial: JobProgressView }): Re
   }
 
   return (
-    <div className="banner banner-info job-progress">
+    <Alert variant="info" className="job-progress">
       <div className="job-progress-head">
         <strong>{title}</strong>
-        <span className="muted">{detail}</span>
+        <span className="text-app-muted">{detail}</span>
       </div>
       <div
         className="progress-track"
@@ -87,18 +90,18 @@ export function JobProgressBanner({ initial }: { initial: JobProgressView }): Re
       </div>
       {isJobActive(view.status) && (
         <div className="job-progress-foot">
-          <span className="muted">
+          <span className="text-app-muted">
             Vous pouvez quitter cette page et continuer à travailler : vous serez prévenu à la fin.
             {permission === 'granted' && " Une notification du navigateur s'affichera aussi si l'onglet est en arrière-plan."}
           </span>
           {permission === 'default' && (
-            <button type="button" className="secondary small" onClick={askPermission}>
+            <Button variant="secondary" size="sm" type="button"  onClick={askPermission}>
               Activer les notifications du navigateur
-            </button>
+            </Button>
           )}
         </div>
       )}
-    </div>
+    </Alert>
   );
 }
 

@@ -7,6 +7,7 @@ import { chatSnapshot, markReadByAdmin } from '../../../../../lib/payments/chat'
 import { approvePaymentAction } from '../actions';
 import { AdminChat } from './admin-chat';
 import { RejectForm } from '../reject-form';
+import { Button } from '@/components/ui/button';
 
 /** One declared payment: its screenshot and the two decisions. */
 export default async function AdminPaymentDetailPage({ params }: { params: Promise<{ id: string }> }): Promise<React.JSX.Element> {
@@ -77,17 +78,17 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
         {intent.proofMime ? (
           <img src={`/admin/paiements/${intent.id}/capture`} alt="Capture d’écran du transfert" style={{ maxWidth: '100%', maxHeight: 700 }} />
         ) : (
-          <p className="muted">Aucune capture : supprimée après 30 jours, ou pas encore envoyée.</p>
+          <p className="text-app-muted">Aucune capture : supprimée après 30 jours, ou pas encore envoyée.</p>
         )}
-        <p className="hint">Capture supprimée après 30 jours.</p>
+        <p className="text-[0.8rem] font-normal text-app-muted">Capture supprimée après 30 jours.</p>
       </section>
 
       {decidable && (
         <section>
           <h2>Décision</h2>
-          <p className="hint">Vérifiez sur la capture le montant, le numéro de destination et la référence {paymentReference(intent.id)}.</p>
+          <p className="text-[0.8rem] font-normal text-app-muted">Vérifiez sur la capture le montant, le numéro de destination et la référence {paymentReference(intent.id)}.</p>
           <form action={approvePaymentAction.bind(null, intent.id)}>
-            <button type="submit">Confirmer le paiement</button>
+            <Button type="submit">Confirmer le paiement</Button>
           </form>
           <RejectForm intentId={intent.id} />
         </section>

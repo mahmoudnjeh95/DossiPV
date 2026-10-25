@@ -12,6 +12,9 @@ import { AcceptInvitationButton } from './pending-invitations';
 import { loadSponsor } from '../../../lib/sponsor-info';
 import { PAYMENT_METHOD_LABELS } from '../../../lib/payments/p2p';
 import Link from 'next/link';
+import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { Table } from '@/components/ui/table';
 
 function toDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -52,10 +55,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     <main>
       <h1>Paramètres</h1>
       {saved && <FlashBanner param="saved">Informations enregistrées.</FlashBanner>}
-      {company.anmeCertificateFileId === null && <div className="banner banner-danger">{ANME_AGREEMENT_REQUIRED_MESSAGE}</div>}
+      {company.anmeCertificateFileId === null && <Alert variant="danger">{ANME_AGREEMENT_REQUIRED_MESSAGE}</Alert>}
       <SubscriptionBanner subscription={subscription} trialUsed={trialUsed} awaitingEmailConfirmation={awaitingEmail} />
 
-      <section className="card">
+      <Card as="section">
         <h2>Abonnement</h2>
         {subscription ? (
           <dl className="dl">
@@ -71,17 +74,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <dd>{user.email}</dd>
           </dl>
         ) : (
-          <p className="muted">
+          <p className="text-app-muted">
             {awaitingEmail ? 'Votre essai gratuit démarrera dès que votre adresse e-mail sera confirmée.' : 'Aucun abonnement.'}
           </p>
         )}
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Renouvelez ou changez d&apos;offre depuis la page <Link href="/facturation">Abonnement et paiement</Link>. Le changement
           d&apos;email ou de mot de passe se fait auprès de SolarixPro.
         </p>
         {company.payments.length > 0 && (
-          <div className="table-wrap">
-            <table>
+          <div className="overflow-x-auto">
+            <Table>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -100,13 +103,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
-      </section>
+      </Card>
 
       {(sponsor || pendingInvitations.length > 0) && (
-        <section className="card">
+        <Card as="section">
           <h2>Parrainage</h2>
           {sponsor ? (
             <p>Vous êtes parrainé par {sponsor.name} : vos panneaux et onduleurs sont ceux de ce fournisseur.</p>
@@ -120,7 +123,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               ))}
             </ul>
           )}
-        </section>
+        </Card>
       )}
 
       <CompanyForm

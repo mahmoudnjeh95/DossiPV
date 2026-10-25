@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { Card } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
 
 export interface MissingEquipment {
   /** Singular, as in « un module photovoltaïque ». */
@@ -14,21 +16,21 @@ export interface MissingEquipment {
  */
 export function LibraryPrerequisite({ missing }: { missing: MissingEquipment[] }): React.JSX.Element {
   return (
-    <div className="card stack" role="alert">
+    <Card className="flex flex-col gap-3" role="alert">
       <p>
         <strong>Il manque du matériel dans votre bibliothèque.</strong> Cette section se remplit en choisissant du matériel de votre
         bibliothèque : ajoutez d’abord, depuis le catalogue partagé (ou en saisissant votre propre matériel), {missing.map((m) => `un ${m.label}`).join(' et ')}.
       </p>
-      <div className="actions">
+      <div className="flex flex-wrap items-center gap-2">
         {missing.map((m) => (
-          <Link key={m.label} href={`/library?tab=catalogue&type=${m.type}`} className="button">
+          <Link key={m.label} href={`/library?tab=catalogue&type=${m.type}`} className={buttonVariants()}>
             Ajouter un {m.label} depuis le catalogue
           </Link>
         ))}
-        <Link href="/library/new" className="button secondary">
+        <Link href="/library/new" className={buttonVariants({ variant: 'secondary' })}>
           Saisir mon propre matériel
         </Link>
       </div>
-    </div>
+    </Card>
   );
 }

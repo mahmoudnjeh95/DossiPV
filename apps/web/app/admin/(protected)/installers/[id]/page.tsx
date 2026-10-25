@@ -14,6 +14,9 @@ import { MarkContactedForm } from '../../inscriptions/signup-forms';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
 import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/p2p';
 import { displayedSubscriptionStatus } from '../../../../../lib/admin-period';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 
 const AUDIT_LOG_ROWS = 30;
 
@@ -74,9 +77,9 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
       <h1>
         {company.name}{' '}
         {sponsor && (
-          <span className="badge">
+          <Badge>
             Parrainé par <Link href={`/admin/fournisseurs/${sponsor.id}`}>{sponsor.name}</Link>
-          </span>
+          </Badge>
         )}
       </h1>
       <section>
@@ -105,9 +108,9 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
           <MarkContactedForm companyId={company.id} note={company.signupNote} />
           {company.signupContactedAt && (
             <form action={markSignupUncontactedAction.bind(null, company.id)}>
-              <button type="submit" className="secondary small">
+              <Button variant="secondary" size="sm" type="submit">
                 Remettre à contacter
-              </button>
+              </Button>
             </form>
           )}
         </section>
@@ -122,12 +125,12 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
             <p>Fin de période : {company.subscription.periodEnd.toLocaleDateString('fr-FR')}</p>
             {company.subscription.status !== 'SUSPENDED' && (
               <form action={boundSuspend}>
-                <button type="submit">Suspendre l&apos;abonnement</button>
+                <Button type="submit">Suspendre l&apos;abonnement</Button>
               </form>
             )}
             {company.subscription.status !== 'ACTIVE' && (
               <form action={boundActivate}>
-                <button type="submit">Activer l&apos;abonnement</button>
+                <Button type="submit">Activer l&apos;abonnement</Button>
               </form>
             )}
             <PeriodEndForm companyId={company.id} />
@@ -153,16 +156,16 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
           <Option3dForm companyId={company.id} />
           {company.subscription?.option3dUntil && (
             <form action={clearOption3dAction.bind(null, company.id)}>
-              <button type="submit" className="secondary small">
+              <Button variant="secondary" size="sm" type="submit">
                 Supprimer l&apos;option 3D
-              </button>
+              </Button>
             </form>
           )}
         </section>
       ) : (
         <section>
           <h2>Option 3D</h2>
-          <p className="hint">L&apos;option 3D est réservée aux installateurs parrainés. Un installateur direct passe au plan Premium, qui inclut la 3D.</p>
+          <p className="text-[0.8rem] font-normal text-app-muted">L&apos;option 3D est réservée aux installateurs parrainés. Un installateur direct passe au plan Premium, qui inclut la 3D.</p>
         </section>
       )}
 
@@ -175,7 +178,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
 
       <section>
         <h2>Historique des paiements</h2>
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Date</th>
@@ -194,15 +197,15 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </section>
 
       <section>
         <h2>Dernières déclarations de paiement P2P</h2>
         {company.paymentIntents.length === 0 ? (
-          <p className="muted">Aucune déclaration.</p>
+          <p className="text-app-muted">Aucune déclaration.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Date</th>
@@ -223,13 +226,13 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
 
       <section>
         <h2>Utilisateurs</h2>
-        <table>
+        <Table>
           <thead>
             <tr>
               <th>Nom</th>
@@ -245,9 +248,9 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
               const disabled = user.disabledAt !== null;
               const lastOwner = !disabled && user.role === 'OWNER' && enabledOwnerCount <= 1;
               return (
-                <tr key={user.id} className={disabled ? 'muted' : undefined}>
+                <tr key={user.id} className={disabled ? 'text-app-muted' : undefined}>
                   <td>
-                    {user.fullName} {disabled && <span className="badge">désactivé</span>}
+                    {user.fullName} {disabled && <Badge>désactivé</Badge>}
                   </td>
                   <td>
                     <ChangeEmailForm companyId={company.id} userId={user.id} email={user.email} />
@@ -272,8 +275,8 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
               );
             })}
           </tbody>
-        </table>
-        <p className="hint">
+        </Table>
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Réinitialiser un mot de passe ou désactiver un utilisateur le déconnecte de tous ses appareils. Le lien de réinitialisation est
           valable 7 jours. « Se connecter en tant que » ouvre l&apos;application installateur dans ce navigateur pendant 1 heure au plus.
           Le dernier responsable actif ne peut pas être désactivé.
@@ -290,7 +293,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
         {company.adminAuditLogs.length === 0 ? (
           <p>Aucune action enregistrée.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Date</th>
@@ -309,7 +312,7 @@ export default async function InstallerDetailPage({ params }: { params: Promise<
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
       </section>
     </main>

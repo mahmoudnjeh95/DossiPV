@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 /** Copies text to the clipboard where the browser allows it, with the old selection trick as a fallback (plain http, old phones). */
 async function copyText(text: string): Promise<boolean> {
@@ -50,14 +51,14 @@ export function CopyButton({ value, label }: { value: string; label: string }): 
   }
 
   return (
-    <button
+    <Button variant="secondary" size="sm"
       type="button"
-      className="small secondary"
+      
       onClick={() => void copy()}
       aria-label={`Copier ${label}`}
       style={{ marginLeft: 8, minHeight: 28, padding: '2px 10px' }}
     >
       {state === 'copied' ? 'Copié ✓' : state === 'failed' ? 'Copie impossible' : 'Copier'}
-    </button>
+    </Button>
   );
 }

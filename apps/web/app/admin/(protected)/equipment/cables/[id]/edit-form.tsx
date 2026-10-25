@@ -4,6 +4,9 @@ import { useActionState } from 'react';
 import type { Cable, CableSection } from '@dossipv/db';
 import { CableFields } from '../../../../../../components/equipment/cable-fields';
 import { updateCableAction } from '../actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function EditCableForm({ cable }: { cable: Cable & { sections: CableSection[] } }): React.JSX.Element {
   const boundAction = updateCableAction.bind(null, cable.id);
@@ -16,12 +19,12 @@ export function EditCableForm({ cable }: { cable: Cable & { sections: CableSecti
       </h1>
       <form action={formAction}>
         <CableFields item={cable} />
-        <label>
-          Remplacer la fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
-        </label>
-        <button type="submit" disabled={pending}>
+        <Label>
+          Remplacer la fiche technique (PDF) <Input type="file" name="datasheet" accept="application/pdf" />
+        </Label>
+        <Button type="submit" disabled={pending}>
           Enregistrer
-        </button>
+        </Button>
         {state?.error && <p role="alert">{state.error}</p>}
       </form>
     </main>

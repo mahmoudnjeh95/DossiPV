@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteInverterAction, type InverterActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteInverterButton({ inverterId }: { inverterId: string }): React.JSX.Element {
   const boundAction = deleteInverterAction.bind(null, inverterId);
@@ -9,7 +10,7 @@ export function DeleteInverterButton({ inverterId }: { inverterId: string }): Re
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

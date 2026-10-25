@@ -18,6 +18,12 @@ export interface BillingOffer {
   title: string;
   buttonLabel: string;
   note: string | null;
+  /** What the plan includes, one short line each. */
+  highlights: string[];
+  /** The plan the company holds now (the offer is a renewal). */
+  isCurrent: boolean;
+  /** Plan tier, null for the 3D option. */
+  tier: 'STANDARD' | 'PREMIUM' | null;
   monthlyTnd: number;
   options: OfferOption[];
 }
@@ -54,6 +60,12 @@ export interface BillingView {
   intents: BillingIntent[];
 }
 
+/** The lines under a plan's price: its dossier quota and what Premium adds. */
+export function planHighlights(tier: 'STANDARD' | 'PREMIUM', monthlyDossierLimit: number): string[] {
+  const quota = `${monthlyDossierLimit} dossier${monthlyDossierLimit > 1 ? 's' : ''} par mois`;
+  return tier === 'PREMIUM' ? [quota, 'Vue 3D du champ sur le toit', 'Contour du toit et remplissage automatique des panneaux'] : [quota];
+}
+
 const PAYMENT_ROWS = 20;
 const INTENT_ROWS = 10;
 
@@ -87,7 +99,10 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       planId: plan.id,
       title: plan.name,
       buttonLabel: isCurrent ? 'Renouveler' : plan.tier === 'PREMIUM' ? 'Passer à Premium' : 'Passer à Standard',
-      note: buyer.sponsored ? 'Vous quittez le parrainage de votre fournisseur : vos panneaux et onduleurs ne sont plus limités.' : null,
+      highlights: planHighlights(plan.tier, plan.monthlyDossierLimit),
+      isCurrent,
+      tier: plan.tier,
+      note: buyer.sponsored && plan.tier === 'PREMIUM' ? 'Vous quittez le parrainage de votre fournisseur : vos panneaux et onduleurs ne sont plus limités.' : null,
       monthlyTnd: unit,
       options: optionsFor(unit),
     });
@@ -102,6 +117,9 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       title: 'Option 3D',
       buttonLabel: 'Acheter l’option 3D',
       note: 'La vue 3D du champ sur le toit dans vos dossiers, en plus du Standard offert par votre fournisseur.',
+      highlights: [],
+      isCurrent: false,
+      tier: null,
       monthlyTnd: option3dPrice,
       options: optionsFor(option3dPrice),
     });

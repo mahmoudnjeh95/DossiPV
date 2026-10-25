@@ -5,6 +5,10 @@ import { useFormStatus } from 'react-dom';
 import { useKeepFormValues } from '../../../../../lib/keep-form-values';
 import { createProjectAction, type CreateProjectActionState } from '../../actions';
 import { CIVILITY_OPTIONS, CLIENT_KIND_OPTIONS } from '../../../../../lib/labels';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function NewProjectPage(): React.JSX.Element {
   const { state, formAction, formRef, errorRef } = useKeepFormValues<CreateProjectActionState>(createProjectAction);
@@ -15,50 +19,50 @@ export default function NewProjectPage(): React.JSX.Element {
         <Link href="/projects">Projets</Link> › Nouveau projet
       </p>
       <h1>Nouveau projet</h1>
-      <form ref={formRef} action={formAction} className="card stack">
+      <Card as="form" ref={formRef} action={formAction} className="flex flex-col gap-3">
         {state?.error && <p ref={errorRef} role="alert">{state.error}</p>}
-        <p className="muted">
+        <p className="text-app-muted">
           Seul le nom du client est nécessaire pour commencer ; le reste du dossier se complète section par section.
         </p>
-        <div className="form-grid">
-          <label>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
+          <Label>
             Civilité
-            <select name="civility" defaultValue="">
+            <Select name="civility" defaultValue="">
               <option value="">—</option>
               {CIVILITY_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Nom complet du client
-            <input type="text" name="fullName" required maxLength={200} />
-          </label>
-          <label>
+            <Input type="text" name="fullName" required maxLength={200} />
+          </Label>
+          <Label>
             Type de client
-            <select name="clientKind" defaultValue="residential">
+            <Select name="clientKind" defaultValue="residential">
               {CLIENT_KIND_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
-            </select>
-          </label>
-          <label>
+            </Select>
+          </Label>
+          <Label>
             Référence STEG
-            <input type="text" name="stegReference" maxLength={100} />
-            <span className="hint">Peut être renseignée plus tard ; verrouillée après la première génération.</span>
-          </label>
+            <Input type="text" name="stegReference" maxLength={100} />
+            <span className="text-[0.8rem] font-normal text-app-muted">Peut être renseignée plus tard ; verrouillée après la première génération.</span>
+          </Label>
         </div>
-        <div className="actions">
+        <div className="flex flex-wrap items-center gap-2">
           <CreateButton />
-          <Link href="/projects" className="button secondary">
+          <Link href="/projects" className={buttonVariants({ variant: 'secondary' })}>
             Annuler
           </Link>
         </div>
-      </form>
+      </Card>
     </main>
   );
 }
@@ -67,8 +71,8 @@ export default function NewProjectPage(): React.JSX.Element {
 function CreateButton(): React.JSX.Element {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} aria-busy={pending}>
+    <Button type="submit" disabled={pending} aria-busy={pending}>
       {pending ? 'Création du projet…' : 'Créer le projet'}
-    </button>
+    </Button>
   );
 }

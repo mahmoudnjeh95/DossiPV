@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { rejectCatalogItemAction, type ReviewKind } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function RejectButton({ kind, id }: { kind: ReviewKind; id: string }): React.JSX.Element {
   const boundAction = rejectCatalogItemAction.bind(null, kind, id);
@@ -9,9 +10,9 @@ export function RejectButton({ kind, id }: { kind: ReviewKind; id: string }): Re
 
   return (
     <form action={formAction}>
-      <button type="submit" className="danger" disabled={pending}>
+      <Button variant="danger" type="submit"  disabled={pending}>
         Rejeter
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

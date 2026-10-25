@@ -2,6 +2,10 @@
 
 import { useActionState } from 'react';
 import { saveClientIdentityAction } from './actions';
+import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface IdentityFormProps {
   projectId: string;
@@ -16,15 +20,15 @@ export function IdentityForm({ projectId, needs }: IdentityFormProps): React.JSX
     <form action={formAction}>
       {needs.name && (
         <>
-          <p className="muted">La facture ne porte pas le nom du titulaire.</p>
-          <label>
+          <p className="text-app-muted">La facture ne porte pas le nom du titulaire.</p>
+          <Label>
             Nom du titulaire (comme sur le contrat STEG)
-            <input type="text" name="fullName" minLength={2} maxLength={200} required />
-          </label>
+            <Input type="text" name="fullName" minLength={2} maxLength={200} required />
+          </Label>
         </>
       )}
-      <button type="submit" disabled={pending}>Enregistrer</button>
-      {state?.error && <div className="banner banner-danger" role="alert" style={{ marginTop: 12 }}>{state.error}</div>}
+      <Button type="submit" disabled={pending}>Enregistrer</Button>
+      {state?.error && <Alert variant="danger" role="alert" style={{ marginTop: 12 }}>{state.error}</Alert>}
     </form>
   );
 }

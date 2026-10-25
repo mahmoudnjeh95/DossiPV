@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 import { requestNotificationPermission } from '../../../../components/job-watcher';
 import { generateDossierAction, type GenerateDossierActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function GenerateButton({
   projectId,
@@ -23,12 +24,12 @@ export function GenerateButton({
 
   return (
     // The click is the moment a browser lets the page ask to notify the end of the generation.
-    <form action={formAction} onSubmit={() => void requestNotificationPermission()} className="stack">
-      <div className="actions">
-        <button type="submit" disabled={disabled || pending}>
+    <form action={formAction} onSubmit={() => void requestNotificationPermission()} className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={disabled || pending}>
           {pending ? 'Envoi…' : label}
-        </button>
-        {reason && <span className="muted">{reason}</span>}
+        </Button>
+        {reason && <span className="text-app-muted">{reason}</span>}
       </div>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>

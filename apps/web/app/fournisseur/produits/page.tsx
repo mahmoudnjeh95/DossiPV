@@ -4,6 +4,12 @@ import { requireSupplier } from '../../../lib/supplier-access';
 import { ActionButton } from '../action-button';
 import { highlightEligibility, MAX_HIGHLIGHTED_PRODUCTS } from '../../../lib/supplier-highlight';
 import { addSupplierProductAction, removeSupplierProductAction, setProductHighlightedAction } from './actions';
+import { Card } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Table } from '@/components/ui/table';
 
 const CATALOG_LIMIT = 50;
 
@@ -69,17 +75,17 @@ export default async function SupplierProductsPage({
   return (
     <main>
       <h1>Produits</h1>
-      <p className="hint">
+      <p className="text-[0.8rem] font-normal text-app-muted">
         Les installateurs que vous parrainez ne peuvent utiliser que ces panneaux et onduleurs. Seuls les produits publiés dans le
         catalogue SolarixPro, avec leur fiche technique sourcée, leur sont ouverts : un produit proposé reste en attente jusqu’à sa
         validation. Pensez à l’homologation ANME des produits que vous référencez.
       </p>
-      <p className="hint">
+      <p className="text-[0.8rem] font-normal text-app-muted">
         La mise en avant (réservée aux packs qui l’incluent) place vos produits publiés en tête des catalogues et des propositions des
         installateurs directs, avec la mention « Sponsorisé » ({MAX_HIGHLIGHTED_PRODUCTS} produits au maximum). Elle ne change rien à la
         bibliothèque de vos installateurs parrainés.
       </p>
-      <details className="hint">
+      <details className="text-[0.8rem] font-normal text-app-muted">
         <summary>Que signifient « Sponsorisé » et « Mettre en avant » ?</summary>
         <p>
           <strong>Mettre en avant</strong> : vous demandez que l’un de vos produits publiés soit suggéré en priorité aux installateurs directs
@@ -89,7 +95,7 @@ export default async function SupplierProductsPage({
         </p>
       </details>
       {carried.length === 0 && (
-        <section className="card" aria-label="Bienvenue">
+        <Card as="section" aria-label="Bienvenue">
           <h2>Bienvenue dans votre espace fournisseur</h2>
           <p>Pour démarrer, suivez ces 4 étapes :</p>
           <ol>
@@ -108,16 +114,16 @@ export default async function SupplierProductsPage({
               <strong>Statistiques</strong> : suivez l’activité de vos installateurs dans <Link href="/fournisseur/statistiques">Statistiques</Link>.
             </li>
           </ol>
-        </section>
+        </Card>
       )}
-      {proposed && <div className="banner banner-ok">Produit proposé : il sera disponible pour vos installateurs dès sa validation par SolarixPro.</div>}
+      {proposed && <Alert variant="ok">Produit proposé : il sera disponible pour vos installateurs dès sa validation par SolarixPro.</Alert>}
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Mes produits ({carried.length})</h2>
         {carried.length === 0 ? (
-          <p className="muted">Vous ne référencez encore aucun produit.</p>
+          <p className="text-app-muted">Vous ne référencez encore aucun produit.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Type</th>
@@ -141,12 +147,12 @@ export default async function SupplierProductsPage({
                     </td>
                     <td>{power}</td>
                     <td>
-                      {item.catalogStatus === 'PUBLISHED' ? <span className="badge badge-ok">Publié</span> : <span className="badge">En attente de validation</span>}
+                      {item.catalogStatus === 'PUBLISHED' ? <Badge variant="ok">Publié</Badge> : <Badge>En attente de validation</Badge>}
                     </td>
                     <td>
-                      {p.highlighted && <span className="badge badge-ok" title="Ce produit est mis en avant : il est suggéré en priorité aux installateurs directs.">Sponsorisé</span>}
+                      {p.highlighted && <Badge variant="ok" title="Ce produit est mis en avant : il est suggéré en priorité aux installateurs directs.">Sponsorisé</Badge>}
                       {item.catalogStatus !== 'PUBLISHED' ? (
-                        <span className="muted">en attente de validation</span>
+                        <span className="text-app-muted">en attente de validation</span>
                       ) : (
                         <>
                           <ActionButton
@@ -155,7 +161,7 @@ export default async function SupplierProductsPage({
                             secondary={p.highlighted}
                             disabled={!p.highlighted && !eligibility.ok}
                           />
-                          {!p.highlighted && !eligibility.ok && <span className="muted">{eligibility.reason}</span>}
+                          {!p.highlighted && !eligibility.ok && <span className="text-app-muted">{eligibility.reason}</span>}
                         </>
                       )}
                     </td>
@@ -166,28 +172,28 @@ export default async function SupplierProductsPage({
                 );
               })}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Ajouter depuis le catalogue</h2>
-        <nav className="actions" aria-label="Type de produit">
+        <nav className="flex flex-wrap items-center gap-2" aria-label="Type de produit">
           {TYPE_FILTERS.map((t) => (
-            <Link key={t.key} href={catalogHref(t.key, search, CATALOG_LIMIT)} className={t.key === type ? 'button small' : 'button secondary small'} aria-current={t.key === type ? 'true' : undefined}>
+            <Link key={t.key} href={catalogHref(t.key, search, CATALOG_LIMIT)} className={buttonVariants({ size: 'sm', variant: t.key === type ? 'default' : 'secondary' })} aria-current={t.key === type ? 'true' : undefined}>
               {t.label}
             </Link>
           ))}
         </nav>
-        <form method="get" className="actions">
-          {type !== 'tous' && <input type="hidden" name="type" value={type} />}
-          <input type="search" name="q" defaultValue={search} placeholder="Marque ou modèle" aria-label="Marque ou modèle" />
-          <button type="submit">Rechercher</button>
+        <form method="get" className="flex flex-wrap items-center gap-2">
+          {type !== 'tous' && <Input type="hidden" name="type" value={type} />}
+          <Input type="search" name="q" defaultValue={search} placeholder="Marque ou modèle" aria-label="Marque ou modèle" />
+          <Button type="submit">Rechercher</Button>
         </form>
         {modules.length + inverters.length === 0 ? (
-          <p className="muted">Aucun produit du catalogue ne correspond.</p>
+          <p className="text-app-muted">Aucun produit du catalogue ne correspond.</p>
         ) : (
-          <table>
+          <Table>
             <tbody>
               {modules.map((m) => (
                 <tr key={`m-${m.id}`}>
@@ -214,32 +220,32 @@ export default async function SupplierProductsPage({
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
         {hasMore ? (
           <p>
-            <Link href={catalogHref(type, search, limit + CATALOG_LIMIT)} className="button secondary">
+            <Link href={catalogHref(type, search, limit + CATALOG_LIMIT)} className={buttonVariants({ variant: 'secondary' })}>
               Afficher plus
             </Link>
           </p>
         ) : null}
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           {modules.length + inverters.length} produit(s) affiché(s){hasMore ? ' : affichez-en plus ou affinez la recherche.' : '.'}
         </p>
-      </section>
+      </Card>
 
-      <section className="card">
+      <Card as="section">
         <h2>Proposer un nouveau produit</h2>
-        <p className="hint">Il n’est pas dans le catalogue ? Saisissez sa fiche technique : SolarixPro la vérifie avant de la publier.</p>
-        <div className="actions">
-          <Link href="/fournisseur/produits/proposer/PV_MODULE" className="button secondary">
+        <p className="text-[0.8rem] font-normal text-app-muted">Il n’est pas dans le catalogue ? Saisissez sa fiche technique : SolarixPro la vérifie avant de la publier.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/fournisseur/produits/proposer/PV_MODULE" className={buttonVariants({ variant: 'secondary' })}>
             Proposer un panneau
           </Link>
-          <Link href="/fournisseur/produits/proposer/INVERTER" className="button secondary">
+          <Link href="/fournisseur/produits/proposer/INVERTER" className={buttonVariants({ variant: 'secondary' })}>
             Proposer un onduleur
           </Link>
         </div>
-      </section>
+      </Card>
     </main>
   );
 }

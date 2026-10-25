@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage, ChatSide, ChatSnapshot } from '../../lib/payments/chat';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface ChatPanelProps {
   /** The conversation as the server rendered it. */
@@ -90,7 +94,7 @@ export function ChatPanel({ initial, mine, send, fetchSnapshot, readOnlyHint, po
   }
 
   return (
-    <section className="card" aria-label="Messages">
+    <Card as="section" aria-label="Messages">
       <h2>
         Messages
         {fresh && (
@@ -100,7 +104,7 @@ export function ChatPanel({ initial, mine, send, fetchSnapshot, readOnlyHint, po
         )}
       </h2>
       {snapshot.messages.length === 0 ? (
-        <p className="muted">Aucun message. Écrivez ici pour toute question sur ce paiement.</p>
+        <p className="text-app-muted">Aucun message. Écrivez ici pour toute question sur ce paiement.</p>
       ) : (
         <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {snapshot.messages.map((message) => (
@@ -109,22 +113,22 @@ export function ChatPanel({ initial, mine, send, fetchSnapshot, readOnlyHint, po
         </ul>
       )}
       {!snapshot.open ? (
-        <p className="hint">Conversation terminée.</p>
+        <p className="text-[0.8rem] font-normal text-app-muted">Conversation terminée.</p>
       ) : send ? (
         <form onSubmit={(event) => void submit(event)}>
-          <label>
+          <Label>
             Votre message
-            <textarea name="body" rows={3} maxLength={1000} value={draft} onChange={(event) => setDraft(event.target.value)} onFocus={() => setFresh(false)} />
-          </label>
-          <button type="submit" disabled={sending || draft.trim().length === 0}>
+            <Textarea name="body" rows={3} maxLength={1000} value={draft} onChange={(event) => setDraft(event.target.value)} onFocus={() => setFresh(false)} />
+          </Label>
+          <Button type="submit" disabled={sending || draft.trim().length === 0}>
             {sending ? 'Envoi…' : 'Envoyer'}
-          </button>
+          </Button>
           {error && <p role="alert">{error}</p>}
         </form>
       ) : (
-        <p className="hint">{readOnlyHint ?? 'Lecture seule.'}</p>
+        <p className="text-[0.8rem] font-normal text-app-muted">{readOnlyHint ?? 'Lecture seule.'}</p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -139,7 +143,7 @@ function Bubble({ message, own }: { message: ChatMessage; own: boolean }): React
         background: own ? 'var(--color-primary-soft, #dbe8fb)' : 'var(--color-surface-alt, #f1f1f1)',
       }}
     >
-      <div className="hint" style={{ margin: 0 }}>
+      <div className="text-[0.8rem] font-normal text-app-muted" style={{ margin: 0 }}>
         {own ? 'Vous' : message.authorName} ·{' '}
         <time dateTime={message.createdAt} suppressHydrationWarning>
           {new Date(message.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}

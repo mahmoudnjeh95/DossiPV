@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import { Button } from '@/components/ui/button';
 
 /** A one-click server action (add, remove, cancel…) with an optional confirmation and its error. */
 export function ActionButton({
@@ -24,9 +25,9 @@ export function ActionButton({
         if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
       }}
     >
-      <button type="submit" className={secondary ? 'secondary small' : 'small'} disabled={pending || disabled}>
+      <Button type="submit" size="sm" variant={secondary ? 'secondary' : 'default'} disabled={pending || disabled}>
         {label}
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

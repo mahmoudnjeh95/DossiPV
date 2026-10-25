@@ -11,8 +11,13 @@ import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
 import { isAwaitingEmailConfirmation } from '../../../lib/email-confirmation';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
+import { PremiumUpsell } from '../../../components/premium-upsell';
+import { loadPremiumUpgrade } from '../../../lib/payments/upgrade';
 import { StatsCard } from './stats-card';
 import { Dashboard, Projects, ChartBar, KwHours, Add } from '@dossipv/icons';
+import { Card } from '@/components/ui/card';
+import { buttonVariants } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 
 export default async function DashboardPage(): Promise<React.JSX.Element> {
   const user = await requireAuthenticatedCompanyUser();
@@ -32,6 +37,7 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
 
   const awaitingEmail = subscription === null && (await isAwaitingEmailConfirmation(user.id));
   const used = projectsCountedThisMonth(jobsInWindow, now, quotaWindowStart(subscription, now)).size;
+  const premiumUpgrade = await loadPremiumUpgrade(subscription);
 
   return (
     <main>
@@ -41,6 +47,8 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
       </h1>
 
       <SubscriptionBanner subscription={subscription} trialUsed={used} awaitingEmailConfirmation={awaitingEmail} />
+
+      {premiumUpgrade && <PremiumUpsell upgrade={premiumUpgrade} />}
 
       <div className="card-grid" style={{ marginBottom: 16 }}>
         <StatsCard icon={Projects} label="Projets" value={projectCount} />
@@ -54,22 +62,22 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
         )}
       </div>
 
-      <section className="card">
+      <Card as="section">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <h2 style={{ margin: 0 }}>Derniers projets</h2>
-          <Link href="/projects/new" className="button" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Link href="/projects/new" className={buttonVariants()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Add size="sm" color="inherit" />
             Nouveau projet
           </Link>
         </div>
 
         {recentProjects.length === 0 ? (
-          <p className="muted">
+          <p className="text-app-muted">
             Aucun projet pour l&apos;instant. Créez votre premier projet pour commencer un dossier.
           </p>
         ) : (
-          <div className="table-wrap">
-            <table>
+          <div className="overflow-x-auto">
+            <Table>
               <thead>
                 <tr>
                   <th>Client</th>
@@ -92,16 +100,16 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
 
-        <div className="actions" style={{ marginTop: 12 }}>
-          <Link href="/projects" className="button secondary">
+        <div className="flex flex-wrap items-center gap-2" style={{ marginTop: 12 }}>
+          <Link href="/projects" className={buttonVariants({ variant: 'secondary' })}>
             Tous les projets
           </Link>
         </div>
-      </section>
+      </Card>
     </main>
   );
 }

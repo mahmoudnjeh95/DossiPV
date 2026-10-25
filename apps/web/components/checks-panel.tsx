@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { CHECK_HELP, checkFixHref } from '../lib/check-help';
 import { Jargon } from './jargon';
+import { Alert } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 export interface CheckLike {
   id: string;
@@ -31,7 +33,7 @@ export function ChecksPanel({
     const facts = derived ? help.facts(derived) : [];
     return (
       <span className="check-help" style={{ display: 'block', marginTop: 4 }}>
-        <span className="muted" style={{ display: 'block' }}>
+        <span className="text-app-muted" style={{ display: 'block' }}>
           <Jargon text={help.explain} />
         </span>
         {facts.length > 0 && (
@@ -55,12 +57,12 @@ export function ChecksPanel({
   return (
     <>
       {blocking.length === 0 && warnings.length === 0 && (
-        <div className="banner banner-ok">Les {checks.length} contrôles sont satisfaits.</div>
+        <Alert variant="ok">Les {checks.length} contrôles sont satisfaits.</Alert>
       )}
       {blocking.length > 0 && (
         <>
           <h3 style={{ margin: '8px 0' }}>
-            <span className="badge badge-danger">Bloquant</span> {blocking.length} contrôle(s) à
+            <Badge variant="danger">Bloquant</Badge> {blocking.length} contrôle(s) à
             corriger
           </h3>
           <ul className="check-list">
@@ -79,7 +81,7 @@ export function ChecksPanel({
       {warnings.length > 0 && (
         <>
           <h3 style={{ margin: '8px 0' }}>
-            <span className="badge badge-warn">Avertissement</span> {warnings.length} point(s) à
+            <Badge variant="warn">Avertissement</Badge> {warnings.length} point(s) à
             vérifier
           </h3>
           <ul className="check-list">
@@ -96,12 +98,12 @@ export function ChecksPanel({
         </>
       )}
       <details style={{ marginTop: 8 }}>
-        <summary className="muted">{passing.length} contrôle(s) satisfait(s)</summary>
+        <summary className="text-app-muted">{passing.length} contrôle(s) satisfait(s)</summary>
         <ul className="check-list" style={{ marginTop: 6 }}>
           {passing.map((c, index) => (
             <li key={`${c.id}-${index}`}>
               <span className="check-id">{c.id}</span>
-              <span className="muted">{c.message}</span>
+              <span className="text-app-muted">{c.message}</span>
             </li>
           ))}
         </ul>

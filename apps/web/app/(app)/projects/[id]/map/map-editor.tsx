@@ -9,6 +9,7 @@ import { saveMapDataAction } from './actions';
 import { SiteTileLayer } from './site-tile-layer';
 import { pointIcon } from '../../../../../components/map/point-markers';
 import { Map as MapIcon, Polygon as PolygonIcon, MarkerTech, MarkerMeter, MarkerEarth, Check } from '@dossipv/icons';
+import { Button } from '@/components/ui/button';
 
 // Leaflet's default marker icon paths are relative to its own CSS file and don't survive
 // Next.js's bundler — without this, markers render with no icon image and two 404s.
@@ -159,30 +160,30 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         Carte du site
       </h1>
       {tier === 'PREMIUM' && (
-        <div className="actions" style={{ marginBottom: 12 }}>
-          <button type="button" onClick={() => setDrawMode('polygon')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 12 }}>
+          <Button type="button" onClick={() => setDrawMode('polygon')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <PolygonIcon size="sm" color="inherit" />
             Dessiner le contour
-          </button>
-          <button type="button" onClick={handleFinishPolygon} disabled={outline.length < 3} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          </Button>
+          <Button type="button" onClick={handleFinishPolygon} disabled={outline.length < 3} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Check size="sm" color="inherit" />
             Terminer le contour
-          </button>
-          <button type="button" onClick={() => setDrawMode('technicalRoom')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          </Button>
+          <Button type="button" onClick={() => setDrawMode('technicalRoom')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <MarkerTech size="sm" color="inherit" />
             Placer : Local technique
-          </button>
-          <button type="button" onClick={() => setDrawMode('meter')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          </Button>
+          <Button type="button" onClick={() => setDrawMode('meter')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <MarkerMeter size="sm" color="inherit" />
             Placer : Compteur STEG
-          </button>
-          <button type="button" onClick={() => setDrawMode('earthPit')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          </Button>
+          <Button type="button" onClick={() => setDrawMode('earthPit')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <MarkerEarth size="sm" color="inherit" />
             Placer : Piquet de terre
-          </button>
-          <button type="button" onClick={handleAutoFill} disabled={outline.length < 3 || !moduleInfo} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          </Button>
+          <Button type="button" onClick={handleAutoFill} disabled={outline.length < 3 || !moduleInfo} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             Remplissage automatique
-          </button>
+          </Button>
         </div>
       )}
       <MapContainer center={[gps.lat, gps.lon]} zoom={18} style={{ height: '500px', width: '100%' }}>
@@ -224,14 +225,14 @@ export function MapEditor({ projectId, tier, site, moduleInfo }: MapEditorProps)
         ))}
       </MapContainer>
       {fitWarning && <p role="alert">{fitWarning}</p>}
-      <button
+      <Button
         type="button"
         onClick={() => {
           void handleSave();
         }}
       >
         Enregistrer
-      </button>
+      </Button>
       {saveError && <p role="alert">{saveError}</p>}
     </main>
   );

@@ -3,6 +3,8 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteSpdButton } from './delete-button';
 import { Spd, Add } from '@dossipv/icons';
+import { buttonVariants } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 
 export default async function SpdListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -15,11 +17,11 @@ export default async function SpdListPage(): Promise<React.JSX.Element> {
         <Spd size="lg" color="gold" />
         Parafoudres (SPD)
       </h1>
-      <Link href="/admin/equipment/spds/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+      <Link href="/admin/equipment/spds/new" className={buttonVariants()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
         <Add size="sm" color="inherit" />
         Ajouter un parafoudre
       </Link>
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>Marque</th>
@@ -41,7 +43,7 @@ export default async function SpdListPage(): Promise<React.JSX.Element> {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </main>
   );
 }

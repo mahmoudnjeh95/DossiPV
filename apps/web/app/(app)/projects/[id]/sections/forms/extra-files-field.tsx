@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 /**
  * Renders N independent `<input type="file" name="extraFiles">` elements. File inputs are
@@ -16,14 +19,14 @@ export function ExtraFilesField(): React.JSX.Element {
     <fieldset>
       <legend>Autres pièces jointes</legend>
       {Array.from({ length: slotCount }, (_, index) => (
-        <label key={index}>
+        <Label key={index}>
           Fichier {index + 1}
-          <input type="file" name="extraFiles" accept="application/pdf,image/png,image/jpeg" />
-        </label>
+          <Input type="file" name="extraFiles" accept="application/pdf,image/png,image/jpeg" />
+        </Label>
       ))}
-      <button type="button" onClick={() => setSlotCount((n) => n + 1)}>
+      <Button type="button" onClick={() => setSlotCount((n) => n + 1)}>
         Ajouter un fichier
-      </button>
+      </Button>
     </fieldset>
   );
 }

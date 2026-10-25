@@ -4,6 +4,9 @@ import { useActionState } from 'react';
 import type { AcBreaker } from '@dossipv/db';
 import { AcBreakerFields } from '../../../../../../components/equipment/ac-breaker-fields';
 import { updateAcBreakerAction } from '../actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function EditAcBreakerForm({ acBreaker }: { acBreaker: AcBreaker }): React.JSX.Element {
   const boundAction = updateAcBreakerAction.bind(null, acBreaker.id);
@@ -16,12 +19,12 @@ export function EditAcBreakerForm({ acBreaker }: { acBreaker: AcBreaker }): Reac
       </h1>
       <form action={formAction}>
         <AcBreakerFields item={acBreaker} />
-        <label>
-          Remplacer la fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
-        </label>
-        <button type="submit" disabled={pending}>
+        <Label>
+          Remplacer la fiche technique (PDF) <Input type="file" name="datasheet" accept="application/pdf" />
+        </Label>
+        <Button type="submit" disabled={pending}>
           Enregistrer
-        </button>
+        </Button>
         {state?.error && <p role="alert">{state.error}</p>}
       </form>
     </main>

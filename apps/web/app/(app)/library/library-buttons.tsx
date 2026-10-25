@@ -9,6 +9,7 @@ import {
   type LibraryActionState,
 } from './actions';
 import { deleteOwnEquipmentAction } from './own-equipment-actions';
+import { Button } from '@/components/ui/button';
 
 function ActionButton({
   action,
@@ -27,7 +28,7 @@ function ActionButton({
         if (confirmMessage && !window.confirm(confirmMessage)) event.preventDefault();
       }}
     >
-      <button type="submit" disabled={pending}>{label}</button>
+      <Button type="submit" disabled={pending}>{label}</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

@@ -5,6 +5,8 @@ import { ActionButton } from '../action-button';
 import { ContactDossipv } from '../../../components/support-contact';
 import { InviteForm } from './invite-form';
 import { cancelInvitationAction, removeSponsoredInstallerAction } from './actions';
+import { Card } from '@/components/ui/card';
+import { Table } from '@/components/ui/table';
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeZone: 'UTC' });
 
@@ -31,12 +33,12 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
       <h1>Installateurs</h1>
       <p>
         <strong>{seats.max === null ? `${seats.used} installateurs` : `${seats.used} / ${seats.max} installateurs`}</strong>
-        {!seats.hasPack && <span className="muted"> — aucun pack actif : <ContactDossipv />.</span>}
+        {!seats.hasPack && <span className="text-app-muted"> — aucun pack actif : <ContactDossipv />.</span>}
       </p>
 
-      <section className="card">
+      <Card as="section">
         <h2>Inviter un installateur</h2>
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Il reçoit un lien valable 7 jours. Une fois l’invitation acceptée, son abonnement Standard est offert par vous et sa bibliothèque
           se limite à vos panneaux et onduleurs.
         </p>
@@ -55,14 +57,14 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
             ) : null
           }
         />
-      </section>
+      </Card>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Installateurs parrainés ({installers.length})</h2>
         {installers.length === 0 ? (
-          <p className="muted">Aucun installateur parrainé pour le moment.</p>
+          <p className="text-app-muted">Aucun installateur parrainé pour le moment.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Société</th>
@@ -78,7 +80,7 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
                   <td>
                     {i.legalRepFullName}
                     <br />
-                    <span className="muted">
+                    <span className="text-app-muted">
                       {i.email} · {i.phone}
                     </span>
                   </td>
@@ -94,16 +96,16 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
 
-      <section className="card table-wrap">
+      <Card as="section" className="overflow-x-auto">
         <h2>Invitations en attente ({invitations.length})</h2>
         {invitations.length === 0 ? (
-          <p className="muted">Aucune invitation en attente.</p>
+          <p className="text-app-muted">Aucune invitation en attente.</p>
         ) : (
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Adresse e-mail</th>
@@ -122,9 +124,9 @@ export default async function SupplierInstallersPage(): Promise<React.JSX.Elemen
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         )}
-      </section>
+      </Card>
     </main>
   );
 }

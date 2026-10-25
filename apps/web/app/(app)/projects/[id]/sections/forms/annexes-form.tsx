@@ -1,6 +1,8 @@
 import { SectionForm } from '../../../../../../components/section-form';
 import { saveAnnexesAction } from '../actions';
 import { ExtraFilesField } from './extra-files-field';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export interface AnnexesFormValues {
   hasCin: boolean;
@@ -13,18 +15,18 @@ export interface AnnexesFormValues {
 
 function FileField({ name, label, hasExisting }: { name: string; label: string; hasExisting: boolean }): React.JSX.Element {
   return (
-    <label>
+    <Label>
       {label}
-      <input type="file" name={name} accept="application/pdf,image/png,image/jpeg" />
-      <span className="hint">{hasExisting ? 'Un fichier est déjà enregistré ; en choisir un le remplace.' : 'Aucun fichier déposé.'}</span>
-    </label>
+      <Input type="file" name={name} accept="application/pdf,image/png,image/jpeg" />
+      <span className="text-[0.8rem] font-normal text-app-muted">{hasExisting ? 'Un fichier est déjà enregistré ; en choisir un le remplace.' : 'Aucun fichier déposé.'}</span>
+    </Label>
   );
 }
 
 export function AnnexesForm({ projectId, annexes }: { projectId: string; annexes: AnnexesFormValues }): React.JSX.Element {
   return (
     <SectionForm action={saveAnnexesAction.bind(null, projectId)} cancelHref={`/projects/${projectId}`}>
-      <div className="form-grid">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
         <FileField name="cin" label="Carte d'identité nationale (CIN)" hasExisting={annexes.hasCin} />
         <FileField name="commercialRegister" label="Registre de commerce" hasExisting={annexes.hasCommercialRegister} />
         <FileField name="stegContract" label="Contrat STEG" hasExisting={annexes.hasStegContract} />
@@ -37,7 +39,7 @@ export function AnnexesForm({ projectId, annexes }: { projectId: string; annexes
       </div>
       <ExtraFilesField />
       {annexes.extraFileCount > 0 && (
-        <p className="hint">{annexes.extraFileCount} fichier(s) supplémentaire(s) déjà enregistré(s) ; tout nouvel ajout remplace l&apos;ensemble.</p>
+        <p className="text-[0.8rem] font-normal text-app-muted">{annexes.extraFileCount} fichier(s) supplémentaire(s) déjà enregistré(s) ; tout nouvel ajout remplace l&apos;ensemble.</p>
       )}
     </SectionForm>
   );

@@ -10,6 +10,13 @@ import { PriceForm } from './price-form';
 import { loadSponsor } from '../../../lib/sponsor-info';
 import { LOCKED_KINDS } from '../../../lib/sponsorship';
 import type { EquipmentKind } from '@dossipv/db';
+import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table } from '@/components/ui/table';
 
 const SECTION_FILTERS: { kind: EquipmentKind; label: string }[] = [
   { kind: 'PV_MODULE', label: 'Modules photovoltaïques' },
@@ -66,65 +73,65 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
       <h1>Ma bibliothèque</h1>
       <LibraryTabs active={catalogue ? 'catalogue' : 'mine'} sponsored={sponsored} />
       {sponsor && (
-        <p className="banner banner-ok" role="status">
+        <Alert variant="ok" role="status">
           Panneaux et onduleurs fournis par {sponsor.name}
-        </p>
+        </Alert>
       )}
 
       {catalogue && (
-        <form method="get" className="card">
-          <input type="hidden" name="tab" value="catalogue" />
-          <label>
+        <Card as="form" method="get">
+          <Input type="hidden" name="tab" value="catalogue" />
+          <Label>
             Rechercher
-            <input type="search" name="q" defaultValue={q} placeholder="Marque, modèle, puissance (550 W, 5 kW), « onduleur », « parafoudre »…" />
-          </label>
-          <label>
+            <Input type="search" name="q" defaultValue={q} placeholder="Marque, modèle, puissance (550 W, 5 kW), « onduleur », « parafoudre »…" />
+          </Label>
+          <Label>
             Type
-            <select name="type" defaultValue={typeFilter ?? ''}>
+            <Select name="type" defaultValue={typeFilter ?? ''}>
               <option value="">Tous les types</option>
               {SECTION_FILTERS.filter((f) => !(sponsored && isLocked(f.kind))).map((f) => (
                 <option key={f.kind} value={f.kind}>{f.label}</option>
               ))}
-            </select>
-          </label>
-          <button type="submit">Rechercher</button>
-        </form>
+            </Select>
+          </Label>
+          <Button type="submit">Rechercher</Button>
+        </Card>
       )}
 
       {!catalogue && total === 0 && (
-        <section className="card">
+        <Card as="section">
           <p>
             Votre bibliothèque est vide : ajoutez les équipements que vous installez depuis le catalogue partagé
             {sponsored ? '.' : ', ou saisissez votre propre matériel.'}
           </p>
-          <div className="actions">
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/library?tab=catalogue">Ouvrir le catalogue partagé</Link>
             {!sponsored && <Link href="/library/new">Ajouter mon matériel</Link>}
           </div>
-        </section>
+        </Card>
       )}
 
       {sections
         .filter((s) => s.rows.length > 0)
         .map((s) => (
-          <section key={s.kind} className="card table-wrap">
+          <Card as="section" key={s.kind} className="overflow-x-auto">
             <h2>
               {s.title} ({s.rows.length})
             </h2>
             {catalogue && s.bulk && s.rows.some((r) => !r.libraryItemId) && <AddAllButton kind={s.kind as BulkKind} />}
-            <table>
+            <Table>
               <tbody>
                 {s.rows.slice(0, catalogue ? shown : undefined).map((r) => (
                   <tr key={r.itemId}>
                     <td>
-                      {r.label} {r.own && <span className="badge">Mon matériel</span>}
+                      {r.label} {r.own && <Badge>Mon matériel</Badge>}
                       {r.sponsoredBy && <SponsoredBadge suppliers={r.sponsoredBy} />}
                     </td>
                     <td>{r.figures}</td>
                     {catalogue ? (
                       <td>
                         {r.libraryItemId ? (
-                          <span className="badge badge-ok">Déjà ajouté</span>
+                          <Badge variant="ok">Déjà ajouté</Badge>
                         ) : (
                           <AddButton kind={s.kind} itemId={r.itemId} />
                         )}
@@ -133,7 +140,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                       <>
                         <td>{r.libraryItemId && <PriceForm libraryItemId={r.libraryItemId} priceTnd={r.priceTnd} />}</td>
                         <td>
-                          <div className="actions">
+                          <div className="flex flex-wrap items-center gap-2">
                             {r.own && <Link href={`/library/edit/${ownEquipmentSlug(s.kind)}/${r.itemId}`}>Modifier</Link>}
                             {r.libraryItemId && !(sponsored && isLocked(s.kind)) && <RemoveButton libraryItemId={r.libraryItemId} />}
                             {r.own && <DeleteOwnButton kind={s.kind} itemId={r.itemId} />}
@@ -144,7 +151,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
             {catalogue && s.rows.length > shown && (
               <p>
                 <Link href={moreHref(q, typeFilter, shown / PAGE_SIZE + 1)}>
@@ -152,10 +159,10 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
                 </Link>
               </p>
             )}
-          </section>
+          </Card>
         ))}
 
-      {catalogue && total === 0 && <p className="muted">Aucun équipement ne correspond à votre recherche.</p>}
+      {catalogue && total === 0 && <p className="text-app-muted">Aucun équipement ne correspond à votre recherche.</p>}
     </main>
   );
 }

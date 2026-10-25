@@ -6,6 +6,8 @@ import { db } from '@dossipv/db';
 import { validateSession, type AuthenticatedCompanyUser } from '@dossipv/auth';
 import { AppShell } from '../../components/app-shell';
 import { endImpersonationAction } from './actions';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 const SESSION_COOKIE_NAME = 'dossipv_session';
 
@@ -72,18 +74,18 @@ export default async function AppLayout({
 /** Above every page until a self sign-up company has filled its profile: generation is refused meanwhile. */
 function ProfileIncompleteBanner(): React.JSX.Element {
   return (
-    <div className="banner banner-warn" role="status" style={{ margin: 0, borderRadius: 0, textAlign: 'center' }}>
+    <Alert variant="warn" role="status" style={{ margin: 0, borderRadius: 0, textAlign: 'center' }}>
       Complétez le profil de votre société (adresse, représentant légal, agrément ANME) pour pouvoir générer des
       dossiers : <Link href="/settings">ouvrir les Paramètres</Link>.
-    </div>
+    </Alert>
   );
 }
 
 /** Above every page of a support session a super admin opened as this user (spec §4). */
 function ImpersonationBanner({ fullName, email }: { fullName: string; email: string }): React.JSX.Element {
   return (
-    <div
-      className="banner banner-warn"
+    <Alert variant="warn"
+      
       role="status"
       style={{ margin: 0, borderRadius: 0, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 }}
     >
@@ -91,10 +93,10 @@ function ImpersonationBanner({ fullName, email }: { fullName: string; email: str
         Mode support : vous êtes connecté en tant que {fullName} ({email})
       </span>
       <form action={endImpersonationAction}>
-        <button type="submit" className="secondary small">
+        <Button variant="secondary" size="sm" type="submit">
           Terminer
-        </button>
+        </Button>
       </form>
-    </div>
+    </Alert>
   );
 }

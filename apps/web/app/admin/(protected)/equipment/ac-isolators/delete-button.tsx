@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteAcIsolatorAction, type AcIsolatorActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteAcIsolatorButton({ acIsolatorId }: { acIsolatorId: string }): React.JSX.Element {
   const boundAction = deleteAcIsolatorAction.bind(null, acIsolatorId);
@@ -9,7 +10,7 @@ export function DeleteAcIsolatorButton({ acIsolatorId }: { acIsolatorId: string 
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

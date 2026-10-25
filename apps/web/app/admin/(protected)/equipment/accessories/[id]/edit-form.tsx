@@ -4,6 +4,9 @@ import { useActionState } from 'react';
 import type { Accessory } from '@dossipv/db';
 import { AccessoryFields } from '../../../../../../components/equipment/accessory-fields';
 import { updateAccessoryAction } from '../actions';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function EditAccessoryForm({ accessory }: { accessory: Accessory }): React.JSX.Element {
   const boundAction = updateAccessoryAction.bind(null, accessory.id);
@@ -16,12 +19,12 @@ export function EditAccessoryForm({ accessory }: { accessory: Accessory }): Reac
       </h1>
       <form action={formAction}>
         <AccessoryFields item={accessory} />
-        <label>
-          Remplacer la fiche technique (PDF) <input type="file" name="datasheet" accept="application/pdf" />
-        </label>
-        <button type="submit" disabled={pending}>
+        <Label>
+          Remplacer la fiche technique (PDF) <Input type="file" name="datasheet" accept="application/pdf" />
+        </Label>
+        <Button type="submit" disabled={pending}>
           Enregistrer
-        </button>
+        </Button>
         {state?.error && <p role="alert">{state.error}</p>}
       </form>
     </main>

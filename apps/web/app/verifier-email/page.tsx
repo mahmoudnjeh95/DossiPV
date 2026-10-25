@@ -4,6 +4,8 @@ import { db } from '@dossipv/db';
 import { adminEmailAddress, appUrl, sendEmail } from '@dossipv/email';
 import { PublicShell } from '../inscription/public-shell';
 import { ResendVerificationForm } from '../inscription/resend-form';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // Public page, reached from the sign-up email. Opening the link confirms the address and starts
 // the free trial, so it must never be cached or prerendered.
@@ -109,7 +111,7 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
           <p className="login-notice" role="status">
             Votre essai gratuit est activé : {TRIAL_DOSSIERS} dossiers pendant {TRIAL_DAYS} jours.
           </p>
-          <Link href="/login" className="button login-submit login-link-button">
+          <Link href="/login" className={cn(buttonVariants(), 'login-submit login-link-button')}>
             Me connecter <span aria-hidden="true">→</span>
           </Link>
         </>

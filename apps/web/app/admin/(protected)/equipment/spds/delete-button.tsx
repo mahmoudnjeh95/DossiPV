@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteSpdAction, type SpdActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteSpdButton({ spdId }: { spdId: string }): React.JSX.Element {
   const boundAction = deleteSpdAction.bind(null, spdId);
@@ -9,7 +10,7 @@ export function DeleteSpdButton({ spdId }: { spdId: string }): React.JSX.Element
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

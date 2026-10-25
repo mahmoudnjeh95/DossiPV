@@ -2,9 +2,12 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
+import { AppHeader } from './app-header';
 import { logoutAdminAction } from '../app/admin/(protected)/actions';
 import { countSignupsToContact } from '../lib/admin-signups';
 import { countPaymentsNeedingAttention } from '../lib/payments/admin';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export interface AdminShellProps {
   children: ReactNode;
@@ -34,35 +37,36 @@ export async function AdminShell({ children }: AdminShellProps): Promise<React.J
   const paymentsToCheck = await countPaymentsNeedingAttention().catch(() => 0);
   return (
     <>
-      <header className="app-header">
-        <div className="app-header-inner">
-          <Link href="/admin" className="app-brand" aria-label="SolarixPro, administration">
+      <AppHeader
+        brandHref="/admin"
+        brandLabel="SolarixPro, administration"
+        brand={
+          <>
             <BrandMark compact />
-            <span className="badge badge-ok app-brand-tag">Admin</span>
-          </Link>
-          <nav className="app-nav" aria-label="Navigation admin">
-            {ADMIN_NAV_LINKS.map((link) => {
-              const Icon = link.icon;
-              return (
-                <Link key={link.href} href={link.href} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Icon size="sm" color="inherit" />
-                  {link.label}
-                  {link.href === '/admin/inscriptions' && signupsToContact > 0 && <span className="badge badge-warn">{signupsToContact}</span>}
-                  {link.href === '/admin/paiements' && paymentsToCheck > 0 && <span className="badge badge-warn">{paymentsToCheck}</span>}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="app-user">
-            <form action={logoutAdminAction}>
-              <button type="submit" className="secondary small" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Logout size="xs" color="inherit" />
-                Se déconnecter
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+            <Badge variant="ok" className="ml-2.5 text-[0.68rem] tracking-[0.04em] uppercase">Admin</Badge>
+          </>
+        }
+        navLabel="Navigation admin"
+        items={ADMIN_NAV_LINKS.map((link) => ({
+          href: link.href,
+          label: link.label,
+          icon: <link.icon size="sm" color="inherit" />,
+          exact: link.href === '/admin',
+          trailing:
+            link.href === '/admin/inscriptions' && signupsToContact > 0 ? (
+              <Badge variant="warn">{signupsToContact}</Badge>
+            ) : link.href === '/admin/paiements' && paymentsToCheck > 0 ? (
+              <Badge variant="warn">{paymentsToCheck}</Badge>
+            ) : undefined,
+        }))}
+      >
+        <form action={logoutAdminAction}>
+          <Button variant="secondary" size="sm" type="submit" className="gap-1.5 text-[0.82rem]">
+            <Logout size="xs" color="inherit" />
+            Se déconnecter
+          </Button>
+        </form>
+      </AppHeader>
       {children}
     </>
   );

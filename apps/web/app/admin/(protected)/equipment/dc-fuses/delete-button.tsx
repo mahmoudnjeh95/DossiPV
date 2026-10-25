@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { deleteDcFuseAction, type DcFuseActionState } from './actions';
+import { Button } from '@/components/ui/button';
 
 export function DeleteDcFuseButton({ dcFuseId }: { dcFuseId: string }): React.JSX.Element {
   const boundAction = deleteDcFuseAction.bind(null, dcFuseId);
@@ -9,7 +10,7 @@ export function DeleteDcFuseButton({ dcFuseId }: { dcFuseId: string }): React.JS
 
   return (
     <form action={formAction}>
-      <button type="submit" disabled={pending}>Supprimer</button>
+      <Button type="submit" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

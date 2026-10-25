@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useKeepFormValues } from '../lib/keep-form-values';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 export interface SectionFormState {
   error: string;
@@ -28,17 +30,17 @@ export function SectionForm({
   const { state, formAction, pending, formRef, errorRef } = useKeepFormValues<SectionFormState>(action);
 
   return (
-    <form ref={formRef} action={formAction} className="card stack">
+    <Card as="form" ref={formRef} action={formAction} className="flex flex-col gap-3">
       {state?.error && <p ref={errorRef} role="alert">{state.error}</p>}
       {children}
-      <div className="actions">
-        <button type="submit" disabled={pending}>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" disabled={pending}>
           {pending ? 'Enregistrement…' : 'Enregistrer'}
-        </button>
-        <Link href={cancelHref} className="button secondary">
+        </Button>
+        <Link href={cancelHref} className={buttonVariants({ variant: 'secondary' })}>
           Retour au projet
         </Link>
       </div>
-    </form>
+    </Card>
   );
 }

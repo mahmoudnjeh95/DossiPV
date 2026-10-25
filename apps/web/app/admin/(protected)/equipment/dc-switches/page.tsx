@@ -3,6 +3,8 @@ import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
 import { DeleteDcSwitchButton } from './delete-button';
 import { DcSwitch, Add } from '@dossipv/icons';
+import { buttonVariants } from '@/components/ui/button';
+import { Table } from '@/components/ui/table';
 
 export default async function DcSwitchListPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
@@ -15,11 +17,11 @@ export default async function DcSwitchListPage(): Promise<React.JSX.Element> {
         <DcSwitch size="lg" color="gold" />
         Sectionneurs DC
       </h1>
-      <Link href="/admin/equipment/dc-switches/new" className="button" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+      <Link href="/admin/equipment/dc-switches/new" className={buttonVariants()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
         <Add size="sm" color="inherit" />
         Ajouter un sectionneur DC
       </Link>
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>Marque</th>
@@ -41,7 +43,7 @@ export default async function DcSwitchListPage(): Promise<React.JSX.Element> {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </main>
   );
 }

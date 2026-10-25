@@ -24,6 +24,8 @@ import {
 } from '../../../../../../components/map/point-markers';
 import { siteImagePointsProblem } from '../../../../../../lib/site-points';
 import { removeSiteImageAction, saveSiteImagePointsAction, uploadSiteImageAction } from './actions';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 type Tool = SitePointKind | 'roof';
 type PhotoPoints = Record<SitePointKind, PhotoPoint | null>;
@@ -244,7 +246,7 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
   }
 
   const importButton = (text: string): React.JSX.Element => (
-    <label className="button" aria-disabled={uploading}>
+    <label className={buttonVariants()} aria-disabled={uploading}>
       {uploading ? 'Import…' : text}
       <input
         type="file"
@@ -262,7 +264,7 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
 
   if (!imageUrl) {
     return (
-      <section className="card site-photo-intro">
+      <Card as="section" className="site-photo-intro">
         <h2>Importer une capture Google Maps</h2>
         <ol>
           <li>Ouvrez Google Maps sur l&apos;adresse du client et passez en vue <strong>Satellite</strong>.</li>
@@ -274,7 +276,7 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
             Faites une capture d&apos;écran (Windows : <kbd>Win</kbd> + <kbd>Maj</kbd> + <kbd>S</kbd>) et importez-la ici.
           </li>
         </ol>
-        <p className="muted">Vous placerez ensuite sur la photo les mêmes points que sur la carte, puis le contour du toit.</p>
+        <p className="text-app-muted">Vous placerez ensuite sur la photo les mêmes points que sur la carte, puis le contour du toit.</p>
         {notice && (
           <p role="alert" className="site-photo-error">
             {notice}
@@ -287,11 +289,11 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
         )}
         <div className="site-photo-actions">
           {importButton('Importer la capture')}
-          <Link className="button secondary" href={`/projects/${projectId}/summary`}>
+          <Link className={buttonVariants({ variant: 'secondary' })} href={`/projects/${projectId}/summary`}>
             Passer cette étape
           </Link>
         </div>
-      </section>
+      </Card>
     );
   }
 
@@ -395,24 +397,24 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
                     ? "Touchez chaque coin du toit sur la photo, dans l'ordre du bord."
                     : `${roof.length} sommet${roof.length > 1 ? 's' : ''} : touchez le premier sommet ou « Terminer » pour fermer.`}
                 </span>
-                <button type="button" className="small" onClick={() => setTool(null)} disabled={roof.length < 3}>
+                <Button size="sm" type="button"  onClick={() => setTool(null)} disabled={roof.length < 3}>
                   Terminer
-                </button>
-                <button type="button" className="small secondary" onClick={() => setRoof((prev) => prev.slice(0, -1))} disabled={roof.length === 0}>
+                </Button>
+                <Button variant="secondary" size="sm" type="button"  onClick={() => setRoof((prev) => prev.slice(0, -1))} disabled={roof.length === 0}>
                   Annuler le dernier
-                </button>
+                </Button>
                 {roof.length > 0 && (
-                  <button type="button" className="small secondary" onClick={() => setRoof([])}>
+                  <Button variant="secondary" size="sm" type="button"  onClick={() => setRoof([])}>
                     Effacer
-                  </button>
+                  </Button>
                 )}
               </>
             ) : (
               <>
                 <span>{points[tool] ? `${PLACE_HINTS[tool]} Le point déjà placé se déplace aussi en le faisant glisser.` : PLACE_HINTS[tool]}</span>
-                <button type="button" className="small secondary" onClick={() => setTool(null)}>
+                <Button variant="secondary" size="sm" type="button"  onClick={() => setTool(null)}>
                   Annuler
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -468,9 +470,9 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
 
       <div className="map-footer">
         {importButton('Remplacer la capture')}
-        <button type="button" className="secondary" onClick={removePhoto} disabled={pending}>
+        <Button variant="secondary" type="button"  onClick={removePhoto} disabled={pending}>
           Retirer
-        </button>
+        </Button>
         <span className="map-footer-spacer" />
         {missing.length > 0 && <span className="map-footer-missing">Il reste : {missing.join(', ')}</span>}
         {error && (
@@ -478,12 +480,12 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
             {error}
           </span>
         )}
-        <Link className="button secondary" href={`/projects/${projectId}/summary`}>
+        <Link className={buttonVariants({ variant: 'secondary' })} href={`/projects/${projectId}/summary`}>
           Passer
         </Link>
-        <button type="button" onClick={submit} disabled={missing.length > 0 || problem !== null || pending || !size}>
+        <Button type="button" onClick={submit} disabled={missing.length > 0 || problem !== null || pending || !size}>
           {pending ? 'Enregistrement…' : 'Enregistrer et voir le récapitulatif'}
-        </button>
+        </Button>
       </div>
     </div>
   );

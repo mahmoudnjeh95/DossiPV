@@ -2,6 +2,9 @@
 
 import { useActionState } from 'react';
 import { addCompanyUserAction, assignPlanAction, resetCompanyUserPasswordAction, updatePeriodEndAction, type InstallerActionState } from './actions';
+import { Button } from '@/components/ui/button';
+import { Input, Select } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -30,9 +33,9 @@ export function AssignPlanForm({
 
   return (
     <form action={formAction}>
-      <label>
+      <Label>
         Plan
-        <select name="planId" defaultValue={currentPlanId ?? ''} required>
+        <Select name="planId" defaultValue={currentPlanId ?? ''} required>
           <option value="" disabled>
             Choisir un plan
           </option>
@@ -41,25 +44,25 @@ export function AssignPlanForm({
               {plan.label}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </Label>
       {(currentPlanId === null || onTrial) && (
-        <label>
+        <Label>
           Fin de période
-          <input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
-        </label>
+          <Input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
+        </Label>
       )}
-      <button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending}>
         {currentPlanId === null ? "Créer l'abonnement" : 'Changer de plan'}
-      </button>
+      </Button>
       {onTrial && (
-        <p className="hint">
+        <p className="text-[0.8rem] font-normal text-app-muted">
           Pour passer de l&apos;essai à un plan payant, la fin de période est obligatoire : l&apos;essai est remplacé par une nouvelle période qui
           commence aujourd&apos;hui (son historique reste dans le journal).
         </p>
       )}
-      {currentPlanId !== null && !onTrial && <p className="hint">La fin de période et les dossiers déjà générés ce mois-ci sont conservés.</p>}
-      <p className="hint">Les plans d&apos;essai gratuit ne se choisissent pas ici : ils sont attribués à l&apos;inscription.</p>
+      {currentPlanId !== null && !onTrial && <p className="text-[0.8rem] font-normal text-app-muted">La fin de période et les dossiers déjà générés ce mois-ci sont conservés.</p>}
+      <p className="text-[0.8rem] font-normal text-app-muted">Les plans d&apos;essai gratuit ne se choisissent pas ici : ils sont attribués à l&apos;inscription.</p>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );
@@ -74,14 +77,14 @@ export function PeriodEndForm({ companyId }: { companyId: string }): React.JSX.E
 
   return (
     <form action={formAction}>
-      <label>
+      <Label>
         Nouvelle fin de période
-        <input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
-      </label>
-      <button type="submit" disabled={pending}>
+        <Input type="date" name="periodEnd" required min={todayIso()} suppressHydrationWarning />
+      </Label>
+      <Button type="submit" disabled={pending}>
         Mettre à jour
-      </button>
-      <p className="hint">Fixe la date exacte de fin et remplace la date actuelle, y compris celle calculée par un paiement avec prolongation : le dernier réglage enregistré l&apos;emporte. Une date passée est refusée.</p>
+      </Button>
+      <p className="text-[0.8rem] font-normal text-app-muted">Fixe la date exacte de fin et remplace la date actuelle, y compris celle calculée par un paiement avec prolongation : le dernier réglage enregistré l&apos;emporte. Une date passée est refusée.</p>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );
@@ -95,28 +98,28 @@ export function AddUserForm({ companyId }: { companyId: string }): React.JSX.Ele
 
   return (
     <form action={formAction}>
-      <label>
+      <Label>
         Nom complet
-        <input type="text" name="fullName" required maxLength={200} />
-      </label>
-      <label>
+        <Input type="text" name="fullName" required maxLength={200} />
+      </Label>
+      <Label>
         Email de connexion
-        <input type="email" name="email" required maxLength={200} />
-      </label>
-      <label>
+        <Input type="email" name="email" required maxLength={200} />
+      </Label>
+      <Label>
         Mot de passe
-        <input type="text" name="password" required minLength={10} maxLength={72} autoComplete="off" />
-      </label>
-      <label>
+        <Input type="text" name="password" required minLength={10} maxLength={72} autoComplete="off" />
+      </Label>
+      <Label>
         Rôle
-        <select name="role" defaultValue="MEMBER">
+        <Select name="role" defaultValue="MEMBER">
           <option value="MEMBER">Membre</option>
           <option value="OWNER">Responsable</option>
-        </select>
-      </label>
-      <button type="submit" disabled={pending}>
+        </Select>
+      </Label>
+      <Button type="submit" disabled={pending}>
         Ajouter
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );
@@ -130,10 +133,10 @@ export function ResetPasswordForm({ companyId, userId }: { companyId: string; us
 
   return (
     <form action={formAction}>
-      <input type="text" name="password" required minLength={10} maxLength={72} autoComplete="off" placeholder="Nouveau mot de passe" aria-label="Nouveau mot de passe" />
-      <button type="submit" className="secondary small" disabled={pending}>
+      <Input type="text" name="password" required minLength={10} maxLength={72} autoComplete="off" placeholder="Nouveau mot de passe" aria-label="Nouveau mot de passe" />
+      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
         Réinitialiser
-      </button>
+      </Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

@@ -4,6 +4,7 @@ import { Jargon } from '../../../../../../components/jargon';
 import { SectionForm } from '../../../../../../components/section-form';
 import { SelectField, equipmentOptions, type EquipmentOption } from '../../../../../../components/select-field';
 import { saveProtectionsAction } from '../actions';
+import { Badge } from '@/components/ui/badge';
 
 export interface ProtectionsCatalog {
   dcSpds: EquipmentOption[];
@@ -18,7 +19,7 @@ export interface ProtectionsCatalog {
 function required(label: string): React.JSX.Element {
   return (
     <>
-      {label} <span className="badge badge-danger">obligatoire</span>
+      {label} <Badge variant="danger">obligatoire</Badge>
     </>
   );
 }
@@ -46,7 +47,7 @@ export function ProtectionsForm({
     <SectionForm action={saveProtectionsAction.bind(null, projectId)} cancelHref={`/projects/${projectId}`}>
       <fieldset>
         <legend>Côté DC</legend>
-        <div className="form-grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
           <SelectField name="dcSpdId" label={required('Parafoudre DC')} emptyMessage={emptyLibrary('parafoudre', 'SPD')} options={equipmentOptions(catalog.dcSpds)} defaultValue={protections?.dcSpdId} allowEmpty required />
           <SelectField name="dcSwitchId" label={required('Interrupteur-sectionneur DC')} emptyMessage={emptyLibrary('interrupteur-sectionneur DC', 'DC_SWITCH')} options={equipmentOptions(catalog.dcSwitches)} defaultValue={protections?.dcSwitchId} allowEmpty required />
           <SelectField
@@ -62,7 +63,7 @@ export function ProtectionsForm({
       </fieldset>
       <fieldset>
         <legend>Côté AC</legend>
-        <div className="form-grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 max-sm:grid-cols-1">
           <SelectField
             name="acBreakerId"
             label={required('Disjoncteur différentiel AC')}

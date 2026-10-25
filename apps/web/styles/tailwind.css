@@ -1,0 +1,47 @@
+/* Tailwind v4 entry. The legacy stylesheets are imported into a low-priority layer so
+   utilities and shadcn/ui components always win while pages migrate one by one. */
+@layer theme, base, legacy, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import './palette.css' layer(legacy);
+@import './icons.css' layer(legacy);
+@import '../app/globals.css' layer(legacy);
+@import './polish.css' layer(legacy);
+@import 'tailwindcss/utilities.css' layer(utilities);
+@import 'tw-animate-css';
+
+@source '../app';
+@source '../components';
+
+/* Design tokens, aliasing the :root variables of globals.css. */
+@theme inline {
+  --color-app-bg: var(--color-bg);
+  --color-app-surface: var(--color-surface);
+  --color-app-text: var(--color-text);
+  --color-app-muted: var(--color-muted);
+  --color-app-border: var(--color-border);
+  --color-app-primary: var(--color-primary);
+  --color-app-accent: var(--color-accent);
+  --color-app-accent-soft: var(--color-accent-soft);
+  --color-app-gold: var(--color-gold);
+  --color-app-navy: var(--color-navy);
+  --color-app-danger: var(--color-danger);
+  --color-app-danger-bg: var(--color-danger-bg);
+  --color-app-warn: var(--color-warn);
+  --color-app-warn-bg: var(--color-warn-bg);
+  --color-app-ok: var(--color-ok);
+  --color-app-ok-bg: var(--color-ok-bg);
+  --radius-ui: var(--radius);
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
+}
+
+@utility card-grid {
+  @apply grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3.5 max-sm:grid-cols-1;
+  & > * {
+    @apply animate-[sx-rise_0.55s_var(--ease-out)_backwards] hover:-translate-y-0.5 hover:border-app-accent/35 hover:shadow-lift;
+  }
+  & > :nth-child(2) { animation-delay: 70ms; }
+  & > :nth-child(3) { animation-delay: 140ms; }
+  & > :nth-child(4) { animation-delay: 210ms; }
+  & > :nth-child(n + 5) { animation-delay: 280ms; }
+}
