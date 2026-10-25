@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,6 @@ export function Badge({
   className,
   variant,
   ...props
-}: ComponentProps<'span'> & VariantProps<typeof badgeVariants>) {
+}: ComponentProps<'span'> & VariantProps<typeof badgeVariants>): JSX.Element {
   return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
 }

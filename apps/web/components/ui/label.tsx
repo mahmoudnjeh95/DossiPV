@@ -1,7 +1,7 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { cn } from '@/lib/utils';
 
-export function Label({ className, inline, ...props }: ComponentProps<'label'> & { inline?: boolean }) {
+export function Label({ className, inline, ...props }: ComponentProps<'label'> & { inline?: boolean }): JSX.Element {
   return (
     <label
       className={cn(

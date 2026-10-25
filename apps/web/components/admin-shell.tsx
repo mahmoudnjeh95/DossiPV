@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { Dashboard, Users, Database, Settings, Logout, Subscription, Shield } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
 import { AppHeader } from './app-header';

@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { cn } from '@/lib/utils';
 
 export const fieldClass =
@@ -6,16 +6,16 @@ export const fieldClass =
 
 const toggleClass = 'min-h-0 w-auto accent-app-accent';
 
-export function Input({ className, type, ...props }: ComponentProps<'input'>) {
+export function Input({ className, type, ...props }: ComponentProps<'input'>): JSX.Element {
   if (type === 'hidden') return <input type="hidden" {...props} />;
   const toggle = type === 'checkbox' || type === 'radio';
   return <input type={type} className={cn(toggle ? toggleClass : fieldClass, className)} {...props} />;
 }
 
-export function Select({ className, ...props }: ComponentProps<'select'>) {
+export function Select({ className, ...props }: ComponentProps<'select'>): JSX.Element {
   return <select className={cn(fieldClass, className)} {...props} />;
 }
 
-export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
+export function Textarea({ className, ...props }: ComponentProps<'textarea'>): JSX.Element {
   return <textarea className={cn(fieldClass, className)} {...props} />;
 }

@@ -1,7 +1,7 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { cn } from '@/lib/utils';
 
-export function Table({ className, ...props }: ComponentProps<'table'>) {
+export function Table({ className, ...props }: ComponentProps<'table'>): JSX.Element {
   return (
     <table
       className={cn(

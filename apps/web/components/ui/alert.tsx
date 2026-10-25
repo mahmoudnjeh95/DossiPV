@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,6 @@ export function Alert({
   className,
   variant,
   ...props
-}: ComponentProps<'div'> & VariantProps<typeof alertVariants>) {
+}: ComponentProps<'div'> & VariantProps<typeof alertVariants>): JSX.Element {
   return <div className={cn(alertVariants({ variant }), className)} {...props} />;
 }

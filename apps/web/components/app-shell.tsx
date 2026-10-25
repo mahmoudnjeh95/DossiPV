@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import { logoutAction } from '../app/(app)/actions';
 import { Dashboard, Projects, Library, Settings, Subscription, Logout } from '@dossipv/icons';
 import { BrandMark } from './brand-mark';
@@ -41,7 +40,7 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
         navLabel="Navigation principale"
         items={NAV_LINKS.map((link) => ({ href: link.href, label: link.label, icon: <link.icon size="sm" color="inherit" /> }))}
       >
-        <span className="max-w-[180px] truncate max-sm:hidden">{userFullName}</span>
+        <span className="hidden max-w-[180px] truncate 2xl:inline" title={userFullName}>{userFullName}</span>
         <form action={logoutAction}>
           <Button type="submit" variant="secondary" size="sm" className="gap-1.5 text-[0.82rem] max-sm:px-2.5 max-sm:text-[0.76rem]">
             <Logout size="xs" color="inherit" />

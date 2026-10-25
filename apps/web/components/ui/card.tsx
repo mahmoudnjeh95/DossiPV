@@ -1,4 +1,4 @@
-import type { ElementType, ComponentPropsWithRef } from 'react';
+import type { ElementType, ComponentPropsWithRef, JSX } from 'react';
 import { cn } from '@/lib/utils';
 
 export const cardClass =
@@ -8,7 +8,7 @@ export function Card<T extends ElementType = 'div'>({
   as,
   className,
   ...props
-}: { as?: T } & Omit<ComponentPropsWithRef<T>, 'as'>) {
+}: { as?: T } & Omit<ComponentPropsWithRef<T>, 'as'>): JSX.Element {
   const Comp: ElementType = as ?? 'div';
   return <Comp className={cn(cardClass, className)} {...props} />;
 }

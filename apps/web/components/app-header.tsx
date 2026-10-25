@@ -24,12 +24,12 @@ export function AppHeader({
         <Link
           href={brandHref}
           aria-label={brandLabel}
-          className="mr-5 inline-flex items-center font-bold text-app-text no-underline transition-transform duration-200 hover:-translate-y-px max-sm:mr-auto"
+          className="mr-3 inline-flex items-center font-bold text-app-text no-underline transition-transform duration-200 hover:-translate-y-px max-sm:mr-auto"
         >
           {brand}
         </Link>
         <NavLinks items={items} label={navLabel} />
-        <div className="flex items-center gap-2 text-[0.9rem] text-app-muted max-sm:ml-auto">{children}</div>
+        <div className="flex items-center gap-2 ml-auto text-[0.9rem] text-app-muted">{children}</div>
       </div>
     </header>
   );

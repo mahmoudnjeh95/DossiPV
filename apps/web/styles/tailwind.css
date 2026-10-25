@@ -45,3 +45,12 @@
   & > :nth-child(4) { animation-delay: 210ms; }
   & > :nth-child(n + 5) { animation-delay: 280ms; }
 }
+
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+}
