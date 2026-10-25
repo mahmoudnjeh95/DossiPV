@@ -19,7 +19,7 @@ export function CancelJobButton({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Button variant="secondary" type="submit"  disabled={pending}>
+      <Button variant="secondary" type="submit" disabled={pending}>
         {pending ? 'Annulation…' : 'Annuler cette génération'}
       </Button>
       {state?.error && <p role="alert">{state.error}</p>}

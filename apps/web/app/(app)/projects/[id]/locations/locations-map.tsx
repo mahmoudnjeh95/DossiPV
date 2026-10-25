@@ -43,6 +43,31 @@ import {
 } from '@dossipv/engine';
 import type { BuildingTypeValue } from '../../../../../lib/building-type';
 import { saveLocationsAction } from './actions';
+import {
+  FloorField,
+  FloorSelect,
+  MapArea,
+  MapCheck,
+  MapCheckLabel,
+  MapCheckLengths,
+  MapCheckState,
+  MapChecklist,
+  MapDone,
+  MapError,
+  MapFooter,
+  MapFooterSpacer,
+  MapHint,
+  MapHintButton,
+  MapMissing,
+  MapNotice,
+  MapNotices,
+  MapTool,
+  MapToolbar,
+  MapWorkspace,
+  Segmented,
+  SegmentedButton,
+} from '@/components/map-ui';
+import { Button } from '@/components/ui/button';
 
 type Point = { lat: number; lon: number };
 type Points = Record<PointKind, Point | null>;
@@ -413,18 +438,10 @@ export function LocationsMap({
   const metresPerPx =
     (EARTH_CIRCUMFERENCE_M * Math.cos((center.lat * Math.PI) / 180)) / 2 ** (zoom + 8);
   const placedCount = KINDS.filter((kind) => points[kind]).length;
-  const workspaceClass = [
-    'locations-workspace',
-    'locations-map',
-    tool ? 'placing' : '',
-    zoom >= ALL_TAGS_ZOOM ? 'show-tags' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
 
   return (
-    <div ref={workspaceRef} className={workspaceClass} style={{ height }}>
-      <div className="locations-map-area">
+    <MapWorkspace ref={workspaceRef} placing={tool !== null} showTags={zoom >= ALL_TAGS_ZOOM} style={{ height }}>
+      <MapArea >
         <MapContainer
           ref={mapRef}
           center={[center.lat, center.lon]}
@@ -518,35 +535,35 @@ export function LocationsMap({
           })}
         </MapContainer>
 
-        <div className="map-toolbar" role="toolbar" aria-label="Que placer sur la carte">
-          <button
+        <MapToolbar  role="toolbar" aria-label="Que placer sur la carte">
+          <MapTool
             type="button"
-            className="map-tool"
+            
             aria-pressed={tool === 'roof'}
             onClick={() => chooseTool('roof')}
           >
             <RoofSwatch />
             Toit
-            {roof.length >= 3 && <span className="done">✓</span>}
-          </button>
+            {roof.length >= 3 && <MapDone />}
+          </MapTool>
           {KINDS.map((kind) => (
-            <button
+            <MapTool
               key={kind}
               type="button"
-              className="map-tool"
+              
               aria-pressed={tool === kind}
               onClick={() => chooseTool(kind)}
               title={POINT_STYLES[kind].label}
             >
               <PinSwatch kind={kind} />
               {SHORT_LABELS[kind]}
-              {points[kind] && <span className="done">✓</span>}
-            </button>
+              {points[kind] && <MapDone />}
+            </MapTool>
           ))}
-        </div>
+        </MapToolbar>
 
         {tool && (
-          <div className="map-hint" role="status">
+          <MapHint  role="status">
             {tool === 'roof' && (
               <>
                 <span>
@@ -554,26 +571,26 @@ export function LocationsMap({
                     ? "Touchez chaque coin du toit, dans l'ordre du bord."
                     : `${roof.length} sommet${roof.length > 1 ? 's' : ''}${roofAreaM2 !== null ? ` — ${nf0.format(roofAreaM2)} m²` : ''} : touchez le premier sommet pour fermer.`}
                 </span>
-                <button
+                <MapHintButton
                   type="button"
-                  className="small"
+                  
                   onClick={finishRoof}
                   disabled={roof.length < 3}
                 >
                   Terminer
-                </button>
-                <button
+                </MapHintButton>
+                <MapHintButton secondary
                   type="button"
-                  className="small secondary"
+                  
                   onClick={() => setRoof((prev) => prev.slice(0, -1))}
                   disabled={roof.length === 0}
                 >
                   Annuler le dernier
-                </button>
+                </MapHintButton>
                 {roof.length > 0 && (
-                  <button type="button" className="small secondary" onClick={clearRoof}>
+                  <MapHintButton secondary type="button"  onClick={clearRoof}>
                     Effacer
-                  </button>
+                  </MapHintButton>
                 )}
               </>
             )}
@@ -584,9 +601,9 @@ export function LocationsMap({
                     ? `${PLACE_HINTS[tool]} Le point déjà placé se déplace aussi en le faisant glisser.`
                     : PLACE_HINTS[tool]}
                 </span>
-                <button
+                <MapHintButton
                   type="button"
-                  className="small"
+                  
                   onClick={() => placeHere(tool)}
                   disabled={locating}
                   title={
@@ -596,32 +613,30 @@ export function LocationsMap({
                   }
                 >
                   {locating ? 'Localisation…' : '📍 Je suis sur place'}
-                </button>
-                <button type="button" className="small secondary" onClick={() => setTool(null)}>
+                </MapHintButton>
+                <MapHintButton secondary type="button"  onClick={() => setTool(null)}>
                   Annuler
-                </button>
+                </MapHintButton>
               </>
             )}
-          </div>
+          </MapHint>
         )}
 
         {(notice || roofCrossed) && (
-          <div className="map-notices">
+          <MapNotices >
             {notice && (
-              <p role="alert" className={`map-notice ${notice.tone}`}>
-                {notice.text}
-              </p>
+              <MapNotice tone={notice.tone}>{notice.text}</MapNotice>
             )}
             {roofCrossed && (
-              <p role="alert" className="map-notice danger">
+              <MapNotice tone="danger" role="alert" >
                 Le contour du toit se croise : déplacez les sommets pour suivre le bord du toit.
-              </p>
+              </MapNotice>
             )}
-          </div>
+          </MapNotices>
         )}
 
-        <details
-          className="map-checklist"
+        <MapChecklist
+          
           open={checklistOpen}
           onToggle={(event) => setChecklistOpen((event.target as HTMLDetailsElement).open)}
         >
@@ -633,62 +648,61 @@ export function LocationsMap({
           <ul>
             {KINDS.map((kind) => (
               <li key={kind}>
-                <button type="button" className="map-check" onClick={() => chooseTool(kind)}>
+                <MapCheck type="button"  onClick={() => chooseTool(kind)}>
                   <PinSwatch kind={kind} />
-                  <span className="map-check-label">
+                  <MapCheckLabel >
                     {POINT_STYLES[kind].label}
                     {kind === 'earthPit' && buildingType !== null && (
                       <small>{earthRequired ? ' (obligatoire)' : ' (facultatif)'}</small>
                     )}
-                  </span>
-                  <span className={points[kind] ? 'map-check-state done' : 'map-check-state'}>
+                  </MapCheckLabel>
+                  <MapCheckState done={points[kind]}>
                     {points[kind] ? '✓' : 'à placer'}
-                  </span>
-                </button>
+                  </MapCheckState>
+                </MapCheck>
               </li>
             ))}
             <li>
-              <button type="button" className="map-check" onClick={() => chooseTool('roof')}>
+              <MapCheck type="button"  onClick={() => chooseTool('roof')}>
                 <RoofSwatch />
-                <span className="map-check-label">
+                <MapCheckLabel >
                   Contour du toit <small>(facultatif)</small>
-                </span>
-                <span className={roof.length >= 3 ? 'map-check-state done' : 'map-check-state'}>
+                </MapCheckLabel>
+                <MapCheckState done={roof.length >= 3}>
                   {roofAreaM2 !== null ? `${nf0.format(roofAreaM2)} m²` : '—'}
-                </span>
-              </button>
+                </MapCheckState>
+              </MapCheck>
             </li>
           </ul>
           {lengths && (
-            <p className="map-check-lengths">
+            <MapCheckLengths >
               Câble DC ≈ {nf0.format(lengths.dcLengthM)} m · câble AC ≈{' '}
               {nf0.format(lengths.acLengthM)} m
-            </p>
+            </MapCheckLengths>
           )}
-        </details>
-      </div>
+        </MapChecklist>
+      </MapArea>
 
-      <div className="map-footer">
-        <div className="segmented" role="group" aria-label="Type de logement du client">
+      <MapFooter >
+        <Segmented  role="group" aria-label="Type de logement du client">
           {(
             [
               ['HOUSE', 'Maison'],
               ['APARTMENT_BUILDING', 'Immeuble'],
             ] as const
           ).map(([value, label]) => (
-            <button
+            <SegmentedButton
               key={value}
-              type="button"
               aria-pressed={buildingType === value}
               onClick={() => chooseBuildingType(value)}
             >
               {label}
-            </button>
+            </SegmentedButton>
           ))}
-        </div>
-        <label className="map-footer-floor">
+        </Segmented>
+        <FloorField >
           Étage du toit
-          <select
+          <FloorSelect
             value={floors === null ? '' : String(floors)}
             onChange={(event) =>
               setFloors(event.target.value === '' ? null : Number(event.target.value))
@@ -700,21 +714,21 @@ export function LocationsMap({
                 {floorLabel(level)}
               </option>
             ))}
-          </select>
-        </label>
-        <span className="map-footer-spacer" />
+          </FloorSelect>
+        </FloorField>
+        <MapFooterSpacer />
         {missing.length > 0 && (
-          <span className="map-footer-missing">Il reste : {missing.join(', ')}</span>
+          <MapMissing >Il reste : {missing.join(', ')}</MapMissing>
         )}
         {error && (
-          <span role="alert" className="map-footer-error">
+          <MapError>
             {error}
-          </span>
+          </MapError>
         )}
-        <button type="button" onClick={submit} disabled={missing.length > 0 || pending}>
+        <Button type="button" onClick={submit} disabled={missing.length > 0 || pending}>
           {pending ? 'Enregistrement…' : 'Enregistrer et continuer'}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </MapFooter>
+    </MapWorkspace>
   );
 }

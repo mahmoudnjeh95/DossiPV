@@ -61,7 +61,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <Card as="section">
         <h2>Abonnement</h2>
         {subscription ? (
-          <dl className="dl">
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
             <dt>Offre</dt>
             <dd>
               {subscription.planName} ({TIER_LABELS[subscription.tier]}) — {subscription.monthlyDossierLimit} dossiers{subscription.isTrial ? ' pendant l\'essai' : ' / mois'}

@@ -252,7 +252,7 @@ export default async function SectionPage({ params }: { params: Promise<{ id: st
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> › <Link href={projectHref}>{project.client?.fullName ?? 'Projet'}</Link> › {title}
       </p>
       <h1>{title}</h1>

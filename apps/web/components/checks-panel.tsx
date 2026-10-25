@@ -65,10 +65,10 @@ export function ChecksPanel({
             <Badge variant="danger">Bloquant</Badge> {blocking.length} contrôle(s) à
             corriger
           </h3>
-          <ul className="check-list">
+          <ul className="m-0 grid list-none gap-1.5 p-0 [&>li]:flex [&>li]:items-baseline [&>li]:gap-2.5 [&>li]:text-[0.95rem]">
             {blocking.map((c, index) => (
               <li key={`${c.id}-${index}`}>
-                <span className="check-id">{c.id}</span>
+                <span className="min-w-[2.6em] font-mono text-[0.85rem] text-app-muted">{c.id}</span>
                 <span>
                   <Jargon text={c.message} />
                   {detail(c)}
@@ -84,10 +84,10 @@ export function ChecksPanel({
             <Badge variant="warn">Avertissement</Badge> {warnings.length} point(s) à
             vérifier
           </h3>
-          <ul className="check-list">
+          <ul className="m-0 grid list-none gap-1.5 p-0 [&>li]:flex [&>li]:items-baseline [&>li]:gap-2.5 [&>li]:text-[0.95rem]">
             {warnings.map((c, index) => (
               <li key={`${c.id}-${index}`}>
-                <span className="check-id">{c.id}</span>
+                <span className="min-w-[2.6em] font-mono text-[0.85rem] text-app-muted">{c.id}</span>
                 <span>
                   <Jargon text={c.message} />
                   {detail(c)}
@@ -99,10 +99,10 @@ export function ChecksPanel({
       )}
       <details style={{ marginTop: 8 }}>
         <summary className="text-app-muted">{passing.length} contrôle(s) satisfait(s)</summary>
-        <ul className="check-list" style={{ marginTop: 6 }}>
+        <ul className="m-0 grid list-none gap-1.5 p-0 [&>li]:flex [&>li]:items-baseline [&>li]:gap-2.5 [&>li]:text-[0.95rem]" style={{ marginTop: 6 }}>
           {passing.map((c, index) => (
             <li key={`${c.id}-${index}`}>
-              <span className="check-id">{c.id}</span>
+              <span className="min-w-[2.6em] font-mono text-[0.85rem] text-app-muted">{c.id}</span>
               <span className="text-app-muted">{c.message}</span>
             </li>
           ))}

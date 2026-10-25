@@ -1,5 +1,7 @@
 'use client';
 
+import { badgeVariants } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatMessage, ChatSide, ChatSnapshot } from '../../lib/payments/chat';
 import { Card } from '@/components/ui/card';
@@ -98,7 +100,7 @@ export function ChatPanel({ initial, mine, send, fetchSnapshot, readOnlyHint, po
       <h2>
         Messages
         {fresh && (
-          <button type="button" className="badge badge-warn" style={{ marginLeft: 8 }} onClick={() => setFresh(false)}>
+          <button type="button" className={cn(badgeVariants({ variant: 'warn' }), 'cursor-pointer border-0')} style={{ marginLeft: 8 }} onClick={() => setFresh(false)}>
             Nouveau message
           </button>
         )}

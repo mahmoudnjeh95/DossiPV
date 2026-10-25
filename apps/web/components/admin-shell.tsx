@@ -46,6 +46,7 @@ export async function AdminShell({ children }: AdminShellProps): Promise<React.J
           </>
         }
         navLabel="Navigation admin"
+        navBelow
         items={ADMIN_NAV_LINKS.map((link) => ({
           href: link.href,
           label: link.label,
@@ -62,7 +63,7 @@ export async function AdminShell({ children }: AdminShellProps): Promise<React.J
         <form action={logoutAdminAction}>
           <Button variant="secondary" size="sm" type="submit" className="gap-1.5 text-[0.82rem]">
             <Logout size="xs" color="inherit" />
-            Se déconnecter
+            <span className="max-sm:sr-only">Se déconnecter</span>
           </Button>
         </form>
       </AppHeader>

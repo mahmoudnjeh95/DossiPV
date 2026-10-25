@@ -102,7 +102,7 @@ export default async function DossierJobPage({
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> ›{' '}
         <Link href={`/projects/${projectId}`}>{clientName}</Link> › Dossier
       </p>
@@ -140,7 +140,7 @@ export default async function DossierJobPage({
       <div className="card-grid" style={{ alignItems: 'start' }}>
         <Card as="section">
           <h2>Déroulement</h2>
-          <dl className="dl" style={{ marginBottom: 12 }}>
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0" style={{ marginBottom: 12 }}>
             <dt>Lancée le</dt>
             <dd>{job.startedAt.toLocaleString('fr-FR')}</dd>
             <dt>Terminée le</dt>
@@ -168,7 +168,7 @@ export default async function DossierJobPage({
         <Card as="section">
           <h2>Fichiers du dossier</h2>
           {files.length > 0 ? (
-            <ul className="section-list">
+            <ul className="m-0 grid list-none gap-2 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-3 [&>li]:rounded-ui [&>li]:border [&>li]:border-app-border [&>li]:bg-app-surface [&>li]:px-3 [&>li]:py-2.5">
               {files.map((file) => (
                 <li key={file.kind}>
                   <span className="grow">{file.label}</span>
@@ -231,7 +231,7 @@ export default async function DossierJobPage({
               projet ou du catalogue ne les change pas ; relancez une génération pour produire une
               nouvelle révision.
             </p>
-            <dl className="dl">
+            <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
               <dt>Date du dossier</dt>
               <dd>{new Date(summary.dossierDate).toLocaleDateString('fr-FR')}</dd>
               <dt>Modules</dt>

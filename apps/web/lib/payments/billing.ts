@@ -58,6 +58,8 @@ export interface BillingView {
   providers: OfferedProvider[];
   payments: BillingPayment[];
   intents: BillingIntent[];
+  /** The payment still open (to declare or awaiting validation): no other can start until it ends. */
+  openIntentId: string | null;
 }
 
 /** The lines under a plan's price: its dossier quota and what Premium adds. */
@@ -126,7 +128,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
   }
 
   // The screenshot itself is never selected here: only the capture routes read it.
-  const [payments, intents, unread] = await Promise.all([
+  const [payments, intents, unread, openIntent] = await Promise.all([
     db.payment.findMany({ where: { companyId }, orderBy: { createdAt: 'desc' }, take: PAYMENT_ROWS }),
     db.paymentIntent.findMany({
       where: { companyId },
@@ -135,6 +137,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
       select: { id: true, createdAt: true, amountTnd: true, provider: true, months: true, status: true, declaredAt: true, failureReason: true, proofMime: true },
     }),
     unreadForCompany(companyId),
+    db.paymentIntent.findFirst({ where: { companyId, status: 'PENDING' }, orderBy: { createdAt: 'desc' }, select: { id: true } }),
   ]);
 
   return {
@@ -144,6 +147,7 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
     option3dUntil: effective?.option3dUntil ?? null,
     offers,
     providers: offeredProviders(p2p),
+    openIntentId: openIntent?.id ?? null,
     payments: payments.map((p) => ({ id: p.id, createdAt: p.createdAt, amountTnd: Number(p.amountTnd), method: p.method })),
     intents: intents.map((i) => ({
       id: i.id,

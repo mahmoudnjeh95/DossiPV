@@ -26,6 +26,25 @@ import { siteImagePointsProblem } from '../../../../../../lib/site-points';
 import { removeSiteImageAction, saveSiteImagePointsAction, uploadSiteImageAction } from './actions';
 import { Card } from '@/components/ui/card';
 import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  MapArea,
+  MapCheck,
+  MapCheckLabel,
+  MapCheckLengths,
+  MapCheckState,
+  MapChecklist,
+  MapDone,
+  MapError,
+  MapFooter,
+  MapFooterSpacer,
+  MapHint,
+  MapMissing,
+  MapNotice,
+  MapNotices,
+  MapTool,
+  MapToolbar,
+  MapWorkspace,
+} from '@/components/map-ui';
 
 type Tool = SitePointKind | 'roof';
 type PhotoPoints = Record<SitePointKind, PhotoPoint | null>;
@@ -264,7 +283,7 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
 
   if (!imageUrl) {
     return (
-      <Card as="section" className="site-photo-intro">
+      <Card as="section" className="max-w-[760px] [&_ol]:mt-0 [&_ol]:mb-3 [&_ol]:pl-[1.3em] [&_ol]:leading-[1.6] [&_kbd]:rounded-[4px] [&_kbd]:border [&_kbd]:border-app-border [&_kbd]:bg-app-bg [&_kbd]:px-[5px] [&_kbd]:font-[inherit] [&_kbd]:text-[0.88em]">
         <h2>Importer une capture Google Maps</h2>
         <ol>
           <li>Ouvrez Google Maps sur l&apos;adresse du client et passez en vue <strong>Satellite</strong>.</li>
@@ -278,16 +297,16 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
         </ol>
         <p className="text-app-muted">Vous placerez ensuite sur la photo les mêmes points que sur la carte, puis le contour du toit.</p>
         {notice && (
-          <p role="alert" className="site-photo-error">
+          <p role="alert" className="text-app-danger">
             {notice}
           </p>
         )}
         {error && (
-          <p role="alert" className="site-photo-error">
+          <p role="alert" className="text-app-danger">
             {error}
           </p>
         )}
-        <div className="site-photo-actions">
+        <div className="flex flex-wrap gap-2">
           {importButton('Importer la capture')}
           <Link className={buttonVariants({ variant: 'secondary' })} href={`/projects/${projectId}/summary`}>
             Passer cette étape
@@ -297,15 +316,14 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
     );
   }
 
-  const workspaceClass = ['locations-workspace', 'locations-map', 'show-tags', tool ? 'placing' : ''].filter(Boolean).join(' ');
   const mismatch = (kind: SitePointKind): number | null => {
     const value = fit?.mismatchM[kind];
     return value !== undefined && value > MAX_PHOTO_MISMATCH_M ? value : null;
   };
 
   return (
-    <div ref={workspaceRef} className={workspaceClass} style={{ height }}>
-      <div className="locations-map-area site-photo-area">
+    <MapWorkspace ref={workspaceRef} placing={tool !== null} showTags style={{ height }}>
+      <MapArea className="[&_.leaflet-container]:bg-[#3a3f44]">
         {size && (
           <MapContainer
             key={imageUrl}
@@ -373,23 +391,23 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
           </MapContainer>
         )}
 
-        <div className="map-toolbar" role="toolbar" aria-label="Que placer sur la photo">
-          <button type="button" className="map-tool" aria-pressed={tool === 'roof'} onClick={() => chooseTool('roof')}>
+        <MapToolbar  role="toolbar" aria-label="Que placer sur la photo">
+          <MapTool type="button"  aria-pressed={tool === 'roof'} onClick={() => chooseTool('roof')}>
             <RoofSwatch />
             Toit
-            {roof.length >= 3 && <span className="done">✓</span>}
-          </button>
+            {roof.length >= 3 && <MapDone />}
+          </MapTool>
           {kinds.map((kind) => (
-            <button key={kind} type="button" className="map-tool" aria-pressed={tool === kind} onClick={() => chooseTool(kind)} title={POINT_STYLES[kind].label}>
+            <MapTool key={kind} type="button"  aria-pressed={tool === kind} onClick={() => chooseTool(kind)} title={POINT_STYLES[kind].label}>
               <PinSwatch kind={kind} />
               {SHORT_LABELS[kind]}
-              {points[kind] && mismatch(kind) === null && <span className="done">✓</span>}
-            </button>
+              {points[kind] && mismatch(kind) === null && <MapDone />}
+            </MapTool>
           ))}
-        </div>
+        </MapToolbar>
 
         {tool && (
-          <div className="map-hint" role="status">
+          <MapHint  role="status">
             {tool === 'roof' ? (
               <>
                 <span>
@@ -417,25 +435,25 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
                 </Button>
               </>
             )}
-          </div>
+          </MapHint>
         )}
 
         {(notice || problem) && (
-          <div className="map-notices">
+          <MapNotices >
             {notice && (
-              <p role="alert" className="map-notice danger">
+              <MapNotice tone="danger" role="alert" >
                 {notice}
-              </p>
+              </MapNotice>
             )}
             {problem && (
-              <p role="alert" className="map-notice danger">
+              <MapNotice tone="danger" role="alert" >
                 {problem}
-              </p>
+              </MapNotice>
             )}
-          </div>
+          </MapNotices>
         )}
 
-        <details className="map-checklist" open>
+        <MapChecklist  open>
           <summary>
             Sur la photo : {kinds.filter((kind) => points[kind]).length}/{kinds.length} points
           </summary>
@@ -444,41 +462,41 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
               const off = mismatch(kind);
               return (
                 <li key={kind}>
-                  <button type="button" className="map-check" onClick={() => chooseTool(kind)}>
+                  <MapCheck type="button"  onClick={() => chooseTool(kind)}>
                     <PinSwatch kind={kind} />
-                    <span className="map-check-label">{POINT_STYLES[kind].label}</span>
-                    <span className={points[kind] && off === null ? 'map-check-state done' : 'map-check-state'}>
+                    <MapCheckLabel >{POINT_STYLES[kind].label}</MapCheckLabel>
+                    <MapCheckState done={points[kind] && off === null}>
                       {!points[kind] ? 'à placer' : off !== null ? `écart ${Math.round(off)} m` : '✓'}
-                    </span>
-                  </button>
+                    </MapCheckState>
+                  </MapCheck>
                 </li>
               );
             })}
             <li>
-              <button type="button" className="map-check" onClick={() => chooseTool('roof')}>
+              <MapCheck type="button"  onClick={() => chooseTool('roof')}>
                 <RoofSwatch />
-                <span className="map-check-label">
+                <MapCheckLabel >
                   Contour du toit {!mapHasRoof && <small>(facultatif)</small>}
-                </span>
-                <span className={roof.length >= 3 ? 'map-check-state done' : 'map-check-state'}>{roof.length >= 3 ? '✓' : 'à tracer'}</span>
-              </button>
+                </MapCheckLabel>
+                <MapCheckState done={roof.length >= 3}>{roof.length >= 3 ? '✓' : 'à tracer'}</MapCheckState>
+              </MapCheck>
             </li>
           </ul>
-          <p className="map-check-lengths">Chaque point doit être au même endroit que sur la carte : ils mettent la photo à l&apos;échelle.</p>
-        </details>
-      </div>
+          <MapCheckLengths >Chaque point doit être au même endroit que sur la carte : ils mettent la photo à l&apos;échelle.</MapCheckLengths>
+        </MapChecklist>
+      </MapArea>
 
-      <div className="map-footer">
+      <MapFooter >
         {importButton('Remplacer la capture')}
         <Button variant="secondary" type="button"  onClick={removePhoto} disabled={pending}>
           Retirer
         </Button>
-        <span className="map-footer-spacer" />
-        {missing.length > 0 && <span className="map-footer-missing">Il reste : {missing.join(', ')}</span>}
+        <MapFooterSpacer />
+        {missing.length > 0 && <MapMissing >Il reste : {missing.join(', ')}</MapMissing>}
         {error && (
-          <span role="alert" className="map-footer-error">
+          <MapError>
             {error}
-          </span>
+          </MapError>
         )}
         <Link className={buttonVariants({ variant: 'secondary' })} href={`/projects/${projectId}/summary`}>
           Passer
@@ -486,7 +504,7 @@ export function SitePhotoEditor({ projectId, mapPoints, mapHasRoof, initialImage
         <Button type="button" onClick={submit} disabled={missing.length > 0 || problem !== null || pending || !size}>
           {pending ? 'Enregistrement…' : 'Enregistrer et voir le récapitulatif'}
         </Button>
-      </div>
-    </div>
+      </MapFooter>
+    </MapWorkspace>
   );
 }

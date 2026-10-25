@@ -31,9 +31,9 @@ export default async function SitePhotoPage({ params }: { params: Promise<{ id: 
   };
 
   return (
-    <main className="locations-main">
-      <div className="locations-head">
-        <p className="breadcrumb">
+    <main className="max-w-none px-(--gutter) pt-2.5 pb-3 max-[700px]:px-2 max-[700px]:pt-1.5 max-[700px]:pb-2">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 [&>p:first-child]:m-0 [&>p:first-child]:basis-full [&>h1]:m-0 [&>h1]:text-[1.3rem] [&>p:not(:first-child)]:m-0 [&>p:not(:first-child)]:text-[0.92rem] max-[700px]:[&>p:not(:first-child)]:hidden">
+        <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
           <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{fullName}</Link> ›{' '}
           <Link href={`/projects/${id}/locations`}>Emplacements</Link> › Photo pour l&apos;annexe 3D
         </p>

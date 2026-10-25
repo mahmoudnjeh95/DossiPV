@@ -1,10 +1,14 @@
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 interface BrandMarkProps {
   /** On a dark background: the wordmark is white. */
   inverse?: boolean;
   /** Small lockup (sun symbol + name) for headers; the default is the full SolarixPro logo. */
   compact?: boolean;
+  /** Compact lockup, smaller (the product card of the landing page). */
+  small?: boolean;
+  className?: string;
 }
 
 /** The SolarixPro sun: gold half-sun rising over a navy horizon, drawn to match the logo. */
@@ -32,23 +36,28 @@ export function SunSymbol({ className }: { className?: string }): React.JSX.Elem
   );
 }
 
-export function BrandMark({ inverse = false, compact = false }: BrandMarkProps): React.JSX.Element {
+export function BrandMark({ inverse = false, compact = false, small = false, className }: BrandMarkProps): React.JSX.Element {
   if (compact) {
     return (
-      <span className={`brand-lockup brand-lockup-compact${inverse ? ' brand-lockup-inverse' : ''}`}>
-        <SunSymbol className="brand-symbol" />
-        <span className="brand-wordmark">
-          <strong>
-            Solarix<em>Pro</em>
+      <span className={cn('inline-flex items-center gap-2.5 text-left no-underline', inverse ? 'text-white' : 'text-app-navy', className)}>
+        <SunSymbol
+          className={cn(
+            'block size-[38px] flex-none drop-shadow-[0_4px_8px_rgba(11,31,74,0.25)] transition-transform duration-[350ms] ease-(--ease-out) group-hover:-rotate-6 group-hover:scale-[1.06]',
+            small && 'size-[30px]',
+          )}
+        />
+        <span className="grid leading-[1.1]">
+          <strong className={cn('text-[1.3rem] font-extrabold tracking-[-0.02em]', small && 'text-[1.05rem]')}>
+            Solarix<em className="text-app-gold not-italic">Pro</em>
           </strong>
         </span>
       </span>
     );
   }
   return (
-    <span className={`brand-lockup brand-lockup-full${inverse ? ' brand-lockup-inverse' : ''}`}>
+    <span className={cn('block w-[clamp(150px,22vw,230px)]', inverse && 'text-white', className)}>
       <Image
-        className="brand-logo"
+        className="block h-auto w-full"
         src={inverse ? '/brand/logo-light.png' : '/brand/logo.png'}
         alt="SolarixPro Photovoltaïque"
         width={854}

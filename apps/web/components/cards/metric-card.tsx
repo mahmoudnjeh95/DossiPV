@@ -19,7 +19,7 @@ export function MetricCard({ icon: Icon, label, value, description, className = 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 600 }}>{label}</p>
-          <p className="stat" style={{ marginTop: 4 }}>{value}</p>
+          <p className="m-0 text-[1.6rem] font-bold tracking-[-0.02em] text-app-navy" style={{ marginTop: 4 }}>{value}</p>
           {description && (
             <p className="text-app-muted" style={{ margin: 0, fontSize: '0.8rem', marginTop: 4 }}>{description}</p>
           )}

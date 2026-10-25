@@ -1,10 +1,23 @@
 name: CI & Deploy
 
+# Documentation-only changes (Markdown, docs/, licence, editor config) skip CI and the deploy,
+# so they can be merged straight away. A comment-only change in code still runs: no path
+# filter can tell a comment from code.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE*'
+      - '.editorconfig'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'LICENSE*'
+      - '.editorconfig'
 
 jobs:
   test:

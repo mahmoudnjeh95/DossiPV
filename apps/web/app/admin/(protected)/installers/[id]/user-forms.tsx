@@ -37,7 +37,7 @@ export function UserActionButton({
 
   return (
     <form action={formAction}>
-      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
+      <Button variant="secondary" size="sm" type="submit" disabled={pending}>
         {label}
       </Button>
       {state?.notice && <p role="status">{state.notice}</p>}
@@ -55,7 +55,7 @@ export function ChangeEmailForm({ companyId, userId, email }: { companyId: strin
   return (
     <form action={formAction}>
       <Input type="email" name="email" required maxLength={200} defaultValue={email} aria-label="Email de connexion" />
-      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
+      <Button variant="secondary" size="sm" type="submit" disabled={pending}>
         Changer
       </Button>
       {state?.error && <p role="alert">{state.error}</p>}

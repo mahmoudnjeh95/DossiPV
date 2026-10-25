@@ -2,40 +2,61 @@
 
 import { useActionState } from 'react';
 import { resendVerificationAction } from './actions';
+import {
+  AuthError,
+  AuthFieldHint,
+  AuthForm,
+  AuthNotice,
+  AuthSubmit,
+} from '@/components/auth/auth-ui';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 /** Development only (the action sets it when SMTP is not configured and NODE_ENV is not production). */
 export function DevVerifyLink({ url }: { url: string | undefined }): React.JSX.Element | null {
   if (!url) return null;
   return (
-    <p className="login-field-hint" data-testid="dev-verify-link">
+    <AuthFieldHint data-testid="dev-verify-link">
       Mode développement (aucun SMTP configuré) : <a href={url}>ouvrir le lien de confirmation</a>.
-    </p>
+    </AuthFieldHint>
   );
 }
 
 /** "Renvoyer l'email de confirmation": the address is prefilled when we know it. */
-export function ResendVerificationForm({ defaultEmail = '' }: { defaultEmail?: string }): React.JSX.Element {
+export function ResendVerificationForm({
+  defaultEmail = '',
+}: {
+  defaultEmail?: string;
+}): React.JSX.Element {
   const [state, formAction, pending] = useActionState(resendVerificationAction, undefined);
 
   if (state?.sent) {
     return (
       <>
-        <p className="login-notice" role="status">{state.message}</p>
+        <AuthNotice>{state.message}</AuthNotice>
         <DevVerifyLink url={state.devVerifyUrl} />
       </>
     );
   }
   return (
-    <form action={formAction} className="login-form">
-      <label htmlFor="resend-email">
+    <AuthForm action={formAction}>
+      <Label htmlFor="resend-email">
         Adresse e-mail
-        <input id="resend-email" type="email" name="email" autoComplete="email" defaultValue={defaultEmail} required />
-      </label>
-      {state?.error && <p className="login-error" role="alert" aria-live="polite">{state.error}</p>}
-      <button type="submit" className="login-submit" disabled={pending}>
-        {pending ? 'Envoi en cours…' : 'Renvoyer l’email de confirmation'}
-        {!pending && <span aria-hidden="true">→</span>}
-      </button>
-    </form>
+        <Input
+          id="resend-email"
+          type="email"
+          name="email"
+          autoComplete="email"
+          defaultValue={defaultEmail}
+          required
+        />
+      </Label>
+      {state?.error && <AuthError>{state.error}</AuthError>}
+      <AuthSubmit
+        pending={pending}
+        label="Renvoyer l’email de confirmation"
+        pendingLabel="Envoi en cours…"
+      />
+    </AuthForm>
   );
 }

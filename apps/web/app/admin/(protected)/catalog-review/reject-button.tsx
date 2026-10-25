@@ -10,7 +10,7 @@ export function RejectButton({ kind, id }: { kind: ReviewKind; id: string }): Re
 
   return (
     <form action={formAction}>
-      <Button variant="danger" type="submit"  disabled={pending}>
+      <Button variant="danger" type="submit" disabled={pending}>
         Rejeter
       </Button>
       {state?.error && <p role="alert">{state.error}</p>}

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { BrandMark, SunSymbol } from '../components/brand-mark';
 import { CountUp } from '../components/count-up';
 import { Reveal } from '../components/reveal';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const FEATURES = [
   { icon: 'M4 5h16v14H4zM4 10h16M9 5v14', title: 'Dossier structuré', text: 'Client, site, équipements et contrôles réunis dans un parcours clair, du premier relevé au document final.' },
@@ -18,128 +20,220 @@ const STEPS = [
   { n: '03', title: 'Générez le dossier', text: 'Téléchargez le dossier technique complet, schémas et plans inclus.' },
 ] as const;
 
+const GUTTER = 'px-[max(var(--gutter),calc((100%-1200px)/2))]';
+const CTA = 'min-h-[50px] px-[22px] max-[700px]:flex-[1_1_100%]';
+const NAV_LINK = 'font-semibold text-[#dbe5fa] no-underline hover:text-[#ffc43d]';
+
 export default function HomePage(): React.JSX.Element {
   return (
-    <main className="sx-page">
-      <header className="sx-header">
-        <Link href="/" aria-label="SolarixPro, accueil" className="sx-header-brand">
+    <main className="m-0 max-w-none overflow-x-clip bg-white p-0">
+      <header
+        className={cn(
+          'sticky top-0 z-20 flex animate-[sx-fade_0.5s_ease_backwards] items-center gap-7 border-b border-app-border/80 bg-white/85 py-3 backdrop-blur-md backdrop-saturate-150 max-[700px]:gap-3',
+          GUTTER,
+        )}
+      >
+        <Link href="/" aria-label="SolarixPro, accueil" className="group no-underline max-[700px]:mr-auto">
           <BrandMark compact />
         </Link>
-        <nav className="sx-header-nav" aria-label="Sections">
-          <a href="#fonctionnalites">Fonctionnalités</a>
-          <a href="#parcours">Comment ça marche</a>
+        <nav className="mr-auto flex gap-1.5 max-[700px]:hidden" aria-label="Sections">
+          {[
+            ['#fonctionnalites', 'Fonctionnalités'],
+            ['#parcours', 'Comment ça marche'],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="rounded-lg px-3 py-2 font-semibold text-app-muted no-underline transition-colors duration-200 hover:bg-app-accent-soft hover:text-app-navy"
+            >
+              {label}
+            </a>
+          ))}
         </nav>
-        <div className="sx-header-actions">
-          <Link href="/login" className="button secondary small">Se connecter</Link>
-          <Link href="/inscription" className="button small sx-cta-gold">Essai gratuit</Link>
+        <div className="flex gap-2.5">
+          <Link href="/login" className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'max-[700px]:hidden')}>
+            Se connecter
+          </Link>
+          <Link href="/inscription" className={buttonVariants({ variant: 'gold', size: 'sm' })}>
+            Essai gratuit
+          </Link>
         </div>
       </header>
 
-      <section className="sx-hero" aria-labelledby="sx-title">
-        <div className="sx-hero-glow" aria-hidden="true" />
-        <div className="sx-hero-copy">
-          <p className="sx-pill"><span className="sx-pill-dot" /> Dossiers photovoltaïques basse tension</p>
-          <h1 id="sx-title">
-            Le dossier PV, <span>prêt plus vite, sans erreur.</span>
+      <section
+        className={cn(
+          'relative grid grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-center gap-12 overflow-hidden bg-[linear-gradient(rgba(29,75,151,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(29,75,151,0.045)_1px,transparent_1px),linear-gradient(180deg,#f4f7fd,#fff)] bg-[length:44px_44px,44px_44px,auto] pt-[72px] pb-[88px] max-[960px]:grid-cols-1 max-[960px]:pt-12',
+          GUTTER,
+        )}
+        aria-labelledby="sx-title"
+      >
+        <div
+          className="pointer-events-none absolute -top-[180px] -right-[140px] size-[620px] animate-[sx-pulse_7s_ease-in-out_infinite] rounded-full bg-[radial-gradient(circle,rgba(255,196,61,0.55),rgba(255,196,61,0)_68%)] motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+        <div className="relative *:animate-[sx-rise_0.7s_var(--ease-out)_backwards] *:nth-2:[animation-delay:80ms] *:nth-3:[animation-delay:160ms] *:nth-4:[animation-delay:240ms] *:nth-5:[animation-delay:320ms]">
+          <p className="mb-[22px] inline-flex items-center gap-2 rounded-full border border-app-accent/20 bg-white px-3.5 py-1.5 text-[0.82rem] font-bold text-app-accent shadow-[0_6px_18px_-10px_rgba(11,31,74,0.4)]">
+            <span className="size-2 animate-[sx-ping_2s_ease-out_infinite] rounded-full bg-app-gold motion-reduce:animate-none" /> Dossiers photovoltaïques basse tension
+          </p>
+          <h1
+            id="sx-title"
+            className="m-0 max-w-[640px] text-[clamp(2.3rem,5vw,3.8rem)] leading-[1.07] font-extrabold tracking-[-0.03em]"
+          >
+            Le dossier PV,{' '}
+            <span className="bg-[linear-gradient(100deg,#1d4b97_10%,#e8a317_90%)] bg-clip-text text-transparent">prêt plus vite, sans erreur.</span>
           </h1>
-          <p className="sx-lead">
+          <p className="mt-[22px] mb-0 max-w-[560px] text-[1.1rem] leading-[1.7] text-app-muted">
             SolarixPro réunit la saisie du projet, la carte, le catalogue d’équipements et la génération du dossier technique : tout au même endroit, pour les installateurs.
           </p>
-          <div className="sx-hero-actions">
-            <Link href="/inscription" className="button sx-cta-gold">Commencer l’essai gratuit <span aria-hidden="true">→</span></Link>
-            <Link href="/login" className="button secondary">Accéder à mon espace</Link>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/inscription" className={cn(buttonVariants({ variant: 'gold' }), CTA)}>
+              Commencer l’essai gratuit <span aria-hidden="true">→</span>
+            </Link>
+            <Link href="/login" className={cn(buttonVariants({ variant: 'secondary' }), CTA)}>
+              Accéder à mon espace
+            </Link>
           </div>
-          <ul className="sx-hero-points" aria-label="Points clés">
-            <li>3 dossiers offerts</li>
-            <li>30 jours d’essai</li>
-            <li>Sans engagement</li>
+          <ul className="m-0 mt-[26px] flex list-none flex-wrap gap-x-[22px] gap-y-2 p-0 text-[0.92rem] font-semibold text-app-muted" aria-label="Points clés">
+            {['3 dossiers offerts', '30 jours d’essai', 'Sans engagement'].map((point) => (
+              <li key={point} className="before:mr-2 before:font-extrabold before:text-app-ok before:content-['✓']">
+                {point}
+              </li>
+            ))}
           </ul>
         </div>
 
-        <div className="sx-hero-visual" aria-hidden="true">
-          <div className="sx-orbit">
-            <SunSymbol className="sx-orbit-sun" />
+        <div className="relative min-h-[460px] max-[960px]:min-h-[430px]" aria-hidden="true">
+          <div className="absolute -top-2.5 -right-2.5 size-[150px] animate-[sx-spin_40s_linear_infinite] rounded-full border border-dashed border-app-accent/30 max-[700px]:hidden motion-reduce:animate-none">
+            <SunSymbol className="absolute -top-[22px] left-1/2 -ml-[22px] size-11" />
           </div>
-          <div className="sx-doc">
-            <div className="sx-doc-head">
-              <BrandMark compact />
-              <span className="sx-doc-status"><i /> En cours</span>
+          <div className="absolute top-10 left-[8%] w-[min(380px,88%)] animate-[sx-float_7s_ease-in-out_infinite,sx-rise_0.9s_0.2s_var(--ease-out)_backwards] rounded-[18px] border border-app-border bg-white p-[22px] shadow-[0_30px_60px_-24px_rgba(11,31,74,0.4),0_2px_6px_rgba(11,31,74,0.06)] max-[700px]:left-0 max-[700px]:w-[92%] motion-reduce:animate-none">
+            <div className="mb-[18px] flex items-center justify-between">
+              <BrandMark compact small />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-(--color-gold-soft) px-2.5 py-1 text-[0.72rem] font-bold text-app-warn">
+                <i className="size-1.5 animate-[sx-pulse_1.6s_ease-in-out_infinite] rounded-full bg-app-gold" /> En cours
+              </span>
             </div>
-            <strong>Installation photovoltaïque 5 kWc</strong>
-            <span className="sx-doc-sub">Dossier technique BT</span>
-            <div className="sx-doc-bar"><span /></div>
-            <ol>
-              <li><b>✓</b> Client et référence</li>
-              <li><b>✓</b> Site et implantation</li>
-              <li><b>✓</b> Équipements</li>
-              <li className="sx-doc-pending"><b /> Génération du dossier</li>
+            <strong className="block text-[1.05rem] text-app-navy">Installation photovoltaïque 5 kWc</strong>
+            <span className="text-[0.85rem] text-app-muted">Dossier technique BT</span>
+            <div className="my-4 h-2 overflow-hidden rounded-lg bg-app-accent-soft">
+              <span className="block h-full w-3/4 origin-left animate-[sx-grow_1.6s_0.7s_var(--ease-out)_backwards,sx-shimmer_3s_linear_infinite] rounded-lg bg-[linear-gradient(90deg,#1d4b97,#e8a317)] bg-[length:200%_100%]" />
+            </div>
+            <ol className="m-0 grid list-none gap-2.5 p-0 text-[0.92rem] font-semibold">
+              {['Client et référence', 'Site et implantation', 'Équipements'].map((step, index) => (
+                <li key={step} className="flex items-center gap-2.5">
+                  <b
+                    className="grid size-[22px] animate-[sx-pop_0.5s_var(--ease-out)_backwards] place-items-center rounded-full bg-app-ok-bg text-[0.72rem] text-app-ok"
+                    style={{ animationDelay: `${0.9 + index * 0.25}s` }}
+                  >
+                    ✓
+                  </b>{' '}
+                  {step}
+                </li>
+              ))}
+              <li className="flex items-center gap-2.5 text-app-muted">
+                <b className="grid size-[22px] place-items-center rounded-full border-2 border-dashed border-[#b9c4db]" /> Génération du dossier
+              </li>
             </ol>
           </div>
-          <div className="sx-chip sx-chip-a"><span>Production estimée</span><strong>8 120 kWh/an</strong></div>
-          <div className="sx-chip sx-chip-b"><span>Contrôles</span><strong>Tous validés</strong></div>
+          <div className="absolute right-0 bottom-[70px] grid animate-[sx-float_6s_ease-in-out_infinite] gap-0.5 rounded-[14px] border border-app-border bg-white/95 px-4 py-3 shadow-lift [animation-delay:-2s] motion-reduce:animate-none">
+            <span className="text-[0.72rem] font-[650] text-app-muted">Production estimée</span>
+            <strong className="text-base text-app-navy">8 120 kWh/an</strong>
+          </div>
+          <div className="absolute bottom-2.5 left-0 grid animate-[sx-float_6s_ease-in-out_infinite] gap-0.5 rounded-[14px] border border-app-border bg-white/95 px-4 py-3 shadow-lift [animation-delay:-4s] motion-reduce:animate-none">
+            <span className="text-[0.72rem] font-[650] text-app-muted">Contrôles</span>
+            <strong className="text-base text-app-ok">Tous validés</strong>
+          </div>
         </div>
       </section>
 
-      <section className="sx-stats" aria-label="En chiffres">
+      <section
+        className="relative mx-auto -mt-[42px] grid max-w-[1200px] grid-cols-4 gap-4 rounded-[18px] border border-app-border bg-white px-7 py-[26px] shadow-lift max-[960px]:mx-(--gutter) max-[960px]:grid-cols-2 *:grid *:gap-0.5 *:text-center [&_strong]:bg-[linear-gradient(100deg,#0b1f4a,#1d4b97)] [&_strong]:bg-clip-text [&_strong]:text-[2.3rem] [&_strong]:leading-[1.1] [&_strong]:font-extrabold [&_strong]:text-transparent [&_div>span]:text-[0.88rem] [&_div>span]:font-semibold [&_div>span]:text-app-muted"
+        aria-label="En chiffres"
+      >
         <Reveal><strong><CountUp to={3} /></strong><span>dossiers offerts à l’inscription</span></Reveal>
         <Reveal delay={80}><strong><CountUp to={30} /></strong><span>jours d’essai gratuit</span></Reveal>
         <Reveal delay={160}><strong><CountUp to={9} /></strong><span>familles d’équipements au catalogue</span></Reveal>
         <Reveal delay={240}><strong><CountUp to={1} /></strong><span>seul outil, du relevé au PDF</span></Reveal>
       </section>
 
-      <section id="fonctionnalites" className="sx-section" aria-labelledby="sx-features-title">
-        <Reveal className="sx-section-head">
-          <p className="sx-kicker">Fonctionnalités</p>
-          <h2 id="sx-features-title">Tout ce qu’il faut pour un dossier complet</h2>
-          <p>Moins de ressaisie, plus de lisibilité : les données du projet restent liées jusqu’au document final.</p>
-        </Reveal>
-        <div className="sx-feature-grid">
+      <section id="fonctionnalites" className="mx-auto max-w-[1200px] px-(--gutter) pt-24 pb-6 max-[700px]:pt-16" aria-labelledby="sx-features-title">
+        <SectionHead kicker="Fonctionnalités" id="sx-features-title" title="Tout ce qu’il faut pour un dossier complet">
+          Moins de ressaisie, plus de lisibilité : les données du projet restent liées jusqu’au document final.
+        </SectionHead>
+        <div className="grid grid-cols-3 gap-5 max-[960px]:grid-cols-2 max-[700px]:grid-cols-1">
           {FEATURES.map((feature, index) => (
-            <Reveal key={feature.title} delay={index * 70} className="sx-feature">
-              <span className="sx-feature-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d={feature.icon} /></svg>
+            <Reveal
+              key={feature.title}
+              delay={index * 70}
+              className="group rounded-[18px] border border-app-border bg-white p-7 shadow-card transition-[transform,box-shadow,border-color,opacity] duration-300 hover:-translate-y-1.5 hover:border-app-gold/60 hover:shadow-lift"
+            >
+              <span className="mb-[18px] grid size-[52px] place-items-center rounded-[14px] bg-[linear-gradient(135deg,#1d4b97,#0b1f4a)] shadow-[0_10px_20px_-10px_rgba(11,31,74,0.7)] transition-transform duration-[350ms] ease-(--ease-out) group-hover:-rotate-6 group-hover:scale-[1.08]">
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[26px] fill-none stroke-[#ffc43d] stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]">
+                  <path d={feature.icon} />
+                </svg>
               </span>
-              <h3>{feature.title}</h3>
-              <p>{feature.text}</p>
+              <h3 className="mb-2 text-[1.12rem] text-app-navy">{feature.title}</h3>
+              <p className="m-0 text-app-muted">{feature.text}</p>
             </Reveal>
           ))}
         </div>
       </section>
 
-      <section id="parcours" className="sx-section sx-steps-section" aria-labelledby="sx-steps-title">
-        <Reveal className="sx-section-head">
-          <p className="sx-kicker">Comment ça marche</p>
-          <h2 id="sx-steps-title">Trois étapes, du relevé au dossier</h2>
-        </Reveal>
-        <ol className="sx-steps">
+      <section id="parcours" className="mx-auto max-w-[1200px] px-(--gutter) pt-24 pb-6 max-[700px]:pt-16" aria-labelledby="sx-steps-title">
+        <SectionHead kicker="Comment ça marche" id="sx-steps-title" title="Trois étapes, du relevé au dossier" />
+        <ol className="relative m-0 grid list-none grid-cols-3 gap-5 p-0 max-[960px]:grid-cols-2 max-[700px]:grid-cols-1">
           {STEPS.map((step, index) => (
-            <Reveal key={step.n} as="li" delay={index * 110} className="sx-step">
-              <span className="sx-step-n">{step.n}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
+            <Reveal
+              key={step.n}
+              as="li"
+              delay={index * 110}
+              className="relative rounded-[18px] border border-app-border bg-linear-to-b from-[#f4f7fd] to-white p-7"
+            >
+              <span className="mb-3.5 inline-block bg-[linear-gradient(100deg,#e8a317,#ffc43d)] bg-clip-text text-[2.6rem] leading-none font-extrabold text-transparent">
+                {step.n}
+              </span>
+              <h3 className="mb-2 text-app-navy">{step.title}</h3>
+              <p className="m-0 text-app-muted">{step.text}</p>
             </Reveal>
           ))}
         </ol>
       </section>
 
-      <Reveal as="section" className="sx-final">
-        <h2>Prêt à gagner du temps sur vos dossiers ?</h2>
-        <p>Créez votre compte : 3 dossiers offerts pendant 30 jours.</p>
-        <div className="sx-hero-actions sx-final-actions">
-          <Link href="/inscription" className="button sx-cta-gold">Créer mon compte <span aria-hidden="true">→</span></Link>
-          <Link href="/login" className="button sx-ghost">Se connecter</Link>
+      <Reveal
+        as="section"
+        className="relative mx-auto mt-24 max-w-[1200px] overflow-hidden rounded-[28px] [background:radial-gradient(ellipse_60%_90%_at_100%_100%,rgba(232,163,23,0.45),transparent_70%),radial-gradient(ellipse_60%_80%_at_0%_0%,rgba(40,96,190,0.6),transparent_70%),#0b1f4a] px-8 py-16 text-center text-white"
+      >
+        <h2 className="m-0 text-[clamp(1.6rem,3.4vw,2.4rem)] tracking-[-0.02em] text-white">Prêt à gagner du temps sur vos dossiers ?</h2>
+        <p className="mt-3 mb-0 text-[1.05rem] text-[#c9d6ee]">Créez votre compte : 3 dossiers offerts pendant 30 jours.</p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link href="/inscription" className={cn(buttonVariants({ variant: 'gold' }), CTA)}>
+            Créer mon compte <span aria-hidden="true">→</span>
+          </Link>
+          <Link href="/login" className={cn(buttonVariants({ variant: 'ghost' }), CTA)}>
+            Se connecter
+          </Link>
         </div>
       </Reveal>
 
-      <footer className="sx-footer">
-        <BrandMark inverse />
-        <p>Conçu pour la préparation de dossiers photovoltaïques basse tension.</p>
-        <nav aria-label="Liens">
-          <Link href="/login">Connexion</Link>
-          <Link href="/inscription">Créer un compte</Link>
+      <footer className="mt-24 grid justify-items-center gap-3.5 bg-[#081a40] px-(--gutter) pt-12 pb-9 text-center text-[#aebddb]">
+        <BrandMark inverse className="w-[170px]" />
+        <p className="m-0">Conçu pour la préparation de dossiers photovoltaïques basse tension.</p>
+        <nav className="flex gap-[22px]" aria-label="Liens">
+          <Link href="/login" className={NAV_LINK}>Connexion</Link>
+          <Link href="/inscription" className={NAV_LINK}>Créer un compte</Link>
         </nav>
-        <small>© {new Date().getFullYear()} SolarixPro. Tous droits réservés.</small>
+        <small className="opacity-70">© {new Date().getFullYear()} SolarixPro. Tous droits réservés.</small>
       </footer>
     </main>
+  );
+}
+
+function SectionHead({ kicker, id, title, children }: { kicker: string; id: string; title: string; children?: React.ReactNode }): React.JSX.Element {
+  return (
+    <Reveal className="mx-auto mb-12 max-w-[640px] text-center">
+      <p className="mb-2.5 text-[0.8rem] font-extrabold tracking-[0.14em] text-[#b97d00] uppercase">{kicker}</p>
+      <h2 id={id} className="m-0 text-[clamp(1.7rem,3.4vw,2.5rem)] leading-[1.15] tracking-[-0.02em]">{title}</h2>
+      {children && <p className="mt-3.5 mb-0 text-[1.05rem] text-app-muted">{children}</p>}
+    </Reveal>
   );
 }

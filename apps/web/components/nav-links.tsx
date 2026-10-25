@@ -16,12 +16,15 @@ export interface NavItem {
 }
 
 /** Primary navigation; the link of the page being viewed is marked current. */
-export function NavLinks({ items, label }: { items: NavItem[]; label: string }): React.JSX.Element {
+export function NavLinks({ items, label, below }: { items: NavItem[]; label: string; below?: boolean | undefined }): React.JSX.Element {
   const pathname = usePathname();
   return (
     <nav
       aria-label={label}
-      className="flex flex-wrap gap-x-1 gap-y-1 max-sm:order-3 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0.5 max-sm:overflow-x-auto"
+      className={cn(
+        'flex flex-wrap gap-x-1 gap-y-1 max-sm:order-3 max-sm:w-full max-sm:flex-nowrap max-sm:gap-0.5 max-sm:overflow-x-auto',
+        below && 'order-3 w-full flex-nowrap gap-0 overflow-x-auto [&_a]:px-1.5 [&_a]:text-[0.9rem]',
+      )}
     >
       {items.map((item) => {
         const current = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -31,7 +34,7 @@ export function NavLinks({ items, label }: { items: NavItem[]; label: string }):
             href={item.href}
             aria-current={current ? 'page' : undefined}
             className={cn(
-              'relative flex items-center gap-1.5 rounded-[5px] px-2 py-[9px] font-[550] text-app-muted no-underline transition-colors duration-150 hover:bg-[#eef2fa] hover:text-app-text max-sm:shrink-0 max-sm:px-[9px] max-sm:py-2 max-sm:text-[0.82rem]',
+              'relative flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[5px] px-2 py-[9px] font-[550] text-app-muted no-underline transition-colors duration-150 hover:bg-[#eef2fa] hover:text-app-text max-sm:shrink-0 max-sm:px-[9px] max-sm:py-2 max-sm:text-[0.82rem]',
               'after:absolute after:inset-x-3 after:bottom-[3px] after:h-0.5 after:origin-left after:scale-x-0 after:rounded-sm after:bg-app-gold after:transition-transform after:duration-300 hover:after:scale-x-100',
               current && 'bg-app-accent-soft font-semibold text-app-navy after:scale-x-100',
             )}

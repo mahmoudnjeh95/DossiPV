@@ -47,7 +47,7 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
         <Link href="/admin/paiements">← Paiements</Link>
       </p>
       <h1>Paiement {paymentReference(intent.id)}</h1>
-      <dl className="dl">
+      <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
         <dt>Société</dt>
         <dd>
           <Link href={companyHref}>{intent.company.name}</Link>

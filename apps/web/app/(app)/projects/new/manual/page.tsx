@@ -15,7 +15,7 @@ export default function NewProjectPage(): React.JSX.Element {
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> › Nouveau projet
       </p>
       <h1>Nouveau projet</h1>

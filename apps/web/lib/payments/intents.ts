@@ -22,7 +22,7 @@ export async function createIntent(
   }
   const open = await db.paymentIntent.count({ where: { companyId, status: 'PENDING' } });
   if (open >= MAX_OPEN_INTENTS) {
-    throw new PaymentError(`Vous avez déjà ${MAX_OPEN_INTENTS} paiements en cours : annulez-en un ou attendez la validation de SolarixPro.`);
+    throw new PaymentError('Vous avez déjà un paiement en cours : terminez-le (ou annulez-le) avant d’en commencer un autre.');
   }
   const price = await priceCheckout(companyId, input);
   const intent = await db.paymentIntent.create({

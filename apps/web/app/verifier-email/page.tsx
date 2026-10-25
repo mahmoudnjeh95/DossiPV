@@ -4,8 +4,13 @@ import { db } from '@dossipv/db';
 import { adminEmailAddress, appUrl, sendEmail } from '@dossipv/email';
 import { PublicShell } from '../inscription/public-shell';
 import { ResendVerificationForm } from '../inscription/resend-form';
-import { buttonVariants } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import {
+  AuthBackLink,
+  AuthError,
+  AuthIntro,
+  AuthNotice,
+  authSubmitClass,
+} from '@/components/auth/auth-ui';
 
 // Public page, reached from the sign-up email. Opening the link confirms the address and starts
 // the free trial, so it must never be cached or prerendered.
@@ -28,7 +33,10 @@ type Outcome = 'confirmed' | 'invalid' | 'no-trial-plan';
  */
 async function confirmEmail(token: string): Promise<Outcome> {
   if (!token) return 'invalid';
-  const trialPlan = await db.plan.findFirst({ where: { isTrial: true, archivedAt: null }, orderBy: { createdAt: 'asc' } });
+  const trialPlan = await db.plan.findFirst({
+    where: { isTrial: true, archivedAt: null },
+    orderBy: { createdAt: 'asc' },
+  });
   if (!trialPlan) return 'no-trial-plan';
 
   let verified: { companyUserId: string; companyId: string; email: string };
@@ -41,9 +49,16 @@ async function confirmEmail(token: string): Promise<Outcome> {
 
   const periodStart = new Date();
   const trialStarted = await db.$transaction(async (tx) => {
-    if (await tx.subscription.findUnique({ where: { companyId: verified.companyId } })) return false;
+    if (await tx.subscription.findUnique({ where: { companyId: verified.companyId } }))
+      return false;
     await tx.subscription.create({
-      data: { companyId: verified.companyId, planId: trialPlan.id, status: 'ACTIVE', periodStart, periodEnd: new Date(periodStart.getTime() + TRIAL_DAYS * DAY_MS) },
+      data: {
+        companyId: verified.companyId,
+        planId: trialPlan.id,
+        status: 'ACTIVE',
+        periodStart,
+        periodEnd: new Date(periodStart.getTime() + TRIAL_DAYS * DAY_MS),
+      },
     });
     return true;
   });
@@ -52,7 +67,13 @@ async function confirmEmail(token: string): Promise<Outcome> {
   if (trialStarted) {
     const company = await db.company.findUnique({
       where: { id: verified.companyId },
-      select: { name: true, phone: true, anmeCode: true, signupContactName: true, signupGovernorate: true },
+      select: {
+        name: true,
+        phone: true,
+        anmeCode: true,
+        signupContactName: true,
+        signupGovernorate: true,
+      },
     });
     await sendWelcomeEmail(verified.email);
     await sendAdminNotification(verified.email, company, periodStart);
@@ -77,7 +98,13 @@ async function sendWelcomeEmail(to: string): Promise<void> {
 
 async function sendAdminNotification(
   email: string,
-  company: { name: string; phone: string; anmeCode: string; signupContactName: string | null; signupGovernorate: string | null } | null,
+  company: {
+    name: string;
+    phone: string;
+    anmeCode: string;
+    signupContactName: string | null;
+    signupGovernorate: string | null;
+  } | null,
   at: Date,
 ): Promise<void> {
   const admin = adminEmailAddress();
@@ -98,7 +125,9 @@ async function sendAdminNotification(
   });
 }
 
-export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps): Promise<React.JSX.Element> {
+export default async function VerifyEmailPage({
+  searchParams,
+}: VerifyEmailPageProps): Promise<React.JSX.Element> {
   const { token: tokenParam } = await searchParams;
   const outcome = await confirmEmail(typeof tokenParam === 'string' ? tokenParam : '');
   const admin = adminEmailAddress();
@@ -108,10 +137,10 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
       {outcome === 'confirmed' && (
         <>
           <h2 id="verify-title">Email confirmé, connectez-vous.</h2>
-          <p className="login-notice" role="status">
+          <AuthNotice>
             Votre essai gratuit est activé : {TRIAL_DOSSIERS} dossiers pendant {TRIAL_DAYS} jours.
-          </p>
-          <Link href="/login" className={cn(buttonVariants(), 'login-submit login-link-button')}>
+          </AuthNotice>
+          <Link href="/login" className={authSubmitClass()}>
             Me connecter <span aria-hidden="true">→</span>
           </Link>
         </>
@@ -119,19 +148,23 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
       {outcome === 'invalid' && (
         <>
           <h2 id="verify-title">Ce lien n’est plus valide.</h2>
-          <p className="login-intro">Il a déjà servi, a expiré ou a été remplacé par un lien plus récent. Saisissez votre adresse pour recevoir un nouvel email de confirmation.</p>
+          <AuthIntro>
+            Il a déjà servi, a expiré ou a été remplacé par un lien plus récent. Saisissez votre
+            adresse pour recevoir un nouvel email de confirmation.
+          </AuthIntro>
           <ResendVerificationForm />
         </>
       )}
       {outcome === 'no-trial-plan' && (
         <>
           <h2 id="verify-title">Activation momentanément impossible.</h2>
-          <p className="login-error" role="alert">
-            L’essai gratuit n’est pas disponible pour le moment. Votre lien reste valable : contactez le support{admin ? ` (${admin})` : ''} puis rouvrez ce lien.
-          </p>
+          <AuthError>
+            L’essai gratuit n’est pas disponible pour le moment. Votre lien reste valable :
+            contactez le support{admin ? ` (${admin})` : ''} puis rouvrez ce lien.
+          </AuthError>
         </>
       )}
-      <Link href="/login" className="login-back-link"><span aria-hidden="true">←</span> Retour à la connexion</Link>
+      <AuthBackLink href="/login">Retour à la connexion</AuthBackLink>
     </PublicShell>
   );
 }

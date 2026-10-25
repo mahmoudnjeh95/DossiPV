@@ -1,4 +1,5 @@
 'use client';
+import { liveHint } from '@/components/ui/live-hint';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -243,9 +244,9 @@ export function CablingForm({ projectId, defaults, cables, connectors, cableTray
               </Label>
             </div>
             <div className="flex flex-col gap-3" style={{ gap: 4, marginTop: 8 }}>
-              {ambientTemp !== undefined && <span className="live-hint">Température ambiante retenue : {ambientTemp} °C.</span>}
+              {ambientTemp !== undefined && <span className={liveHint()}>Température ambiante retenue : {ambientTemp} °C.</span>}
               {k1Missing && (
-                <span className="live-hint bad">
+                <span className={liveHint({ tone: 'bad' })}>
                   Le mode de pose {run.installMethod} n&apos;a pas de facteur K1 tabulé : la génération sera bloquée tant qu&apos;un mode
                   de pose supporté n&apos;est pas choisi.
                 </span>

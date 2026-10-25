@@ -6,6 +6,7 @@ import { requestNotificationPermission, useJobProgress, useNow, type LiveJobView
 import { derivePipelineSteps, isJobActive, jobProgressPercent, type JobProgressView } from '../../../../../../lib/dossier-jobs';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const STEP_BADGE: Record<string, { className: string; text: string }> = {
   done: { className: badgeVariants({ variant: 'ok' }), text: 'OK' },
@@ -69,13 +70,13 @@ export function JobProgressBanner({ initial }: { initial: JobProgressView }): Re
   }
 
   return (
-    <Alert variant="info" className="job-progress">
-      <div className="job-progress-head">
+    <Alert variant="info" className="grid gap-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
         <strong>{title}</strong>
         <span className="text-app-muted">{detail}</span>
       </div>
       <div
-        className="progress-track"
+        className="relative h-2.5 overflow-hidden rounded-full bg-app-accent/15"
         role="progressbar"
         aria-label="Avancement de la génération"
         aria-valuemin={0}
@@ -84,12 +85,16 @@ export function JobProgressBanner({ initial }: { initial: JobProgressView }): Re
         aria-valuetext={view.status === 'PENDING' ? 'En attente' : `${percent} %`}
       >
         <div
-          className={`progress-fill${view.status === 'PENDING' ? ' progress-fill-waiting' : ''}${view.status === 'FAILED' ? ' progress-fill-failed' : ''}`}
+          className={cn(
+            'h-full rounded-[inherit] bg-app-accent transition-[width] duration-900 ease-linear',
+            view.status === 'PENDING' && 'w-[30%] animate-[progress-waiting_1.6s_ease-in-out_infinite] motion-reduce:animate-none',
+            view.status === 'FAILED' && 'bg-app-danger',
+          )}
           style={view.status === 'PENDING' ? undefined : { width: `${percent}%` }}
         />
       </div>
       {isJobActive(view.status) && (
-        <div className="job-progress-foot">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-[0.9rem]">
           <span className="text-app-muted">
             Vous pouvez quitter cette page et continuer à travailler : vous serez prévenu à la fin.
             {permission === 'granted' && " Une notification du navigateur s'affichera aussi si l'onglet est en arrière-plan."}
@@ -109,7 +114,7 @@ export function JobProgressBanner({ initial }: { initial: JobProgressView }): Re
 export function JobStepList({ initial }: { initial: JobProgressView }): React.JSX.Element {
   const view = useJobProgress(initial);
   return (
-    <ul className="section-list">
+    <ul className="m-0 grid list-none gap-2 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-3 [&>li]:rounded-ui [&>li]:border [&>li]:border-app-border [&>li]:bg-app-surface [&>li]:px-3 [&>li]:py-2.5">
       {derivePipelineSteps(view).map((step) => {
         const badge = STEP_BADGE[step.state]!;
         return (

@@ -134,7 +134,7 @@ export function ResetPasswordForm({ companyId, userId }: { companyId: string; us
   return (
     <form action={formAction}>
       <Input type="text" name="password" required minLength={10} maxLength={72} autoComplete="off" placeholder="Nouveau mot de passe" aria-label="Nouveau mot de passe" />
-      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
+      <Button variant="secondary" size="sm" type="submit" disabled={pending}>
         Réinitialiser
       </Button>
       {state?.error && <p role="alert">{state.error}</p>}

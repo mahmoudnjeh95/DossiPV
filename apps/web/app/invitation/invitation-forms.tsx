@@ -1,65 +1,97 @@
 'use client';
 
 import { useActionState } from 'react';
-import { acceptInvitationAction, createAccountFromInvitationAction, type InvitationActionState } from './actions';
+import { AuthError, AuthFieldHint, AuthForm, AuthSubmit } from '@/components/auth/auth-ui';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  acceptInvitationAction,
+  createAccountFromInvitationAction,
+  type InvitationActionState,
+} from './actions';
 
 // Password rules mirror @dossipv/auth (MIN_PASSWORD_LENGTH); the server action checks them anyway.
 const MIN_PASSWORD_LENGTH = 10;
 
 export function AcceptForm({ token }: { token: string }): React.JSX.Element {
-  const [state, formAction, pending] = useActionState<InvitationActionState>(acceptInvitationAction.bind(null, token), undefined);
+  const [state, formAction, pending] = useActionState<InvitationActionState>(
+    acceptInvitationAction.bind(null, token),
+    undefined,
+  );
   return (
-    <form action={formAction} className="login-form">
-      {state?.error && <p className="login-error" role="alert" aria-live="polite">{state.error}</p>}
-      <button type="submit" className="login-submit" disabled={pending}>
-        {pending ? 'Un instant…' : 'Accepter'}
-        {!pending && <span aria-hidden="true">→</span>}
-      </button>
-    </form>
+    <AuthForm action={formAction}>
+      {state?.error && <AuthError>{state.error}</AuthError>}
+      <AuthSubmit pending={pending} label="Accepter" pendingLabel="Un instant…" />
+    </AuthForm>
   );
 }
 
-export function CreateAccountForm({ token, email }: { token: string; email: string }): React.JSX.Element {
+export function CreateAccountForm({
+  token,
+  email,
+}: {
+  token: string;
+  email: string;
+}): React.JSX.Element {
   const [state, formAction, pending] = useActionState<InvitationActionState, FormData>(
     createAccountFromInvitationAction.bind(null, token),
     undefined,
   );
   return (
-    <form action={formAction} className="login-form">
-      <label htmlFor="companyName">
+    <AuthForm action={formAction}>
+      <Label htmlFor="companyName">
         Raison sociale
-        <input id="companyName" name="companyName" autoComplete="organization" maxLength={200} required />
-      </label>
-      <label htmlFor="contactName">
+        <Input
+          id="companyName"
+          name="companyName"
+          autoComplete="organization"
+          maxLength={200}
+          required
+        />
+      </Label>
+      <Label htmlFor="contactName">
         Nom et prénom du contact
-        <input id="contactName" name="contactName" autoComplete="name" maxLength={200} required />
-      </label>
-      <label htmlFor="phone">
+        <Input id="contactName" name="contactName" autoComplete="name" maxLength={200} required />
+      </Label>
+      <Label htmlFor="phone">
         Téléphone
-        <input id="phone" type="tel" name="phone" autoComplete="tel" maxLength={30} required />
-      </label>
-      <label htmlFor="email">
+        <Input id="phone" type="tel" name="phone" autoComplete="tel" maxLength={30} required />
+      </Label>
+      <Label htmlFor="email">
         Adresse e-mail
-        <input id="email" type="email" name="email" value={email} readOnly />
-      </label>
-      <label htmlFor="anmeCode">
+        <Input id="email" type="email" name="email" value={email} readOnly />
+      </Label>
+      <Label htmlFor="anmeCode">
         Code ANME de l’installateur
-        <input id="anmeCode" name="anmeCode" minLength={3} maxLength={40} required />
-      </label>
-      <label htmlFor="password">
+        <Input id="anmeCode" name="anmeCode" minLength={3} maxLength={40} required />
+      </Label>
+      <Label htmlFor="password">
         Mot de passe
-        <input id="password" type="password" name="password" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} maxLength={72} required />
-      </label>
-      <label htmlFor="confirmation">
+        <Input
+          id="password"
+          type="password"
+          name="password"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={72}
+          required
+        />
+      </Label>
+      <Label htmlFor="confirmation">
         Confirmation du mot de passe
-        <input id="confirmation" type="password" name="confirmation" autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} maxLength={72} required />
-      </label>
-      <p className="login-field-hint">{MIN_PASSWORD_LENGTH} caractères minimum.</p>
-      {state?.error && <p className="login-error" role="alert" aria-live="polite">{state.error}</p>}
-      <button type="submit" className="login-submit" disabled={pending}>
-        {pending ? 'Création en cours…' : 'Créer mon compte'}
-        {!pending && <span aria-hidden="true">→</span>}
-      </button>
-    </form>
+        <Input
+          id="confirmation"
+          type="password"
+          name="confirmation"
+          autoComplete="new-password"
+          minLength={MIN_PASSWORD_LENGTH}
+          maxLength={72}
+          required
+        />
+      </Label>
+      <AuthFieldHint>{MIN_PASSWORD_LENGTH} caractères minimum.</AuthFieldHint>
+      {state?.error && <AuthError>{state.error}</AuthError>}
+      <AuthSubmit pending={pending} label="Créer mon compte" pendingLabel="Création en cours…" />
+    </AuthForm>
   );
 }

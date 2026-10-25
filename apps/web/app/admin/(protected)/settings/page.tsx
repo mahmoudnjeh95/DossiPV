@@ -1,25 +1,25 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { getOption3dPriceTnd } from '../../../../lib/platform-settings';
+import { CLAUDE_MODEL_OPTIONS, resolveClaudeModel } from '@dossipv/dossier-worker/claude-models';
+import { getClaudeModel, getOption3dPriceTnd } from '../../../../lib/platform-settings';
 import { loadP2pSettings } from '../../../../lib/payments/p2p';
 import { Option3dPriceForm } from './option3d-price-form';
+import { ClaudeModelForm } from './claude-model-form';
 import { P2pForm } from './p2p-form';
 import { maskAccessToken } from '../../../../lib/admin-period';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 import { Table } from '@/components/ui/table';
 
-// Mirrors the model hardcoded in packages/document-text/src/generate-dossier-text.ts.
-const CLAUDE_DOSSIER_MODEL = 'claude-sonnet-5-5';
-
 export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   await requireAuthenticatedSuperAdmin();
   const option3dPrice = await getOption3dPriceTnd();
+  const claudeModel = await getClaudeModel();
   const p2p = await loadP2pSettings();
 
   return (
     <main>
       <h1>Paramètres</h1>
-      <p>Configuration actuelle de la plateforme (lecture seule, sauf l&apos;option 3D et le paiement P2P).</p>
+      <p>Configuration actuelle de la plateforme (lecture seule, sauf le modèle Claude, l&apos;option 3D et le paiement P2P).</p>
 
       <h2>Fournisseur de cartes</h2>
       <Table>
@@ -36,14 +36,7 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
       </Table>
 
       <h2>Modèle Claude</h2>
-      <Table>
-        <tbody>
-          <tr>
-            <th>Génération du texte du dossier</th>
-            <td>{CLAUDE_DOSSIER_MODEL}</td>
-          </tr>
-        </tbody>
-      </Table>
+      <ClaudeModelForm model={resolveClaudeModel(claudeModel)} options={CLAUDE_MODEL_OPTIONS} />
 
       <h2>Option 3D</h2>
       <p className="text-[0.8rem] font-normal text-app-muted">
