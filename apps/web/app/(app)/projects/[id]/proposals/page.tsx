@@ -67,7 +67,7 @@ export default async function ProposalsPage({
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> › <Link href={`/projects/${id}`}>{client?.fullName ?? 'Projet'}</Link> › Propositions
       </p>
       <h1>Propositions pour {client?.fullName ?? 'ce client'}</h1>
@@ -81,7 +81,7 @@ export default async function ProposalsPage({
 
       <Card as="section">
         <h2>Lu sur la facture</h2>
-        <dl className="dl">
+        <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
           <dt>Référence STEG</dt>
           <dd>{client?.stegReference ?? 'Non lue'}</dd>
           <dt>Puissance souscrite</dt>

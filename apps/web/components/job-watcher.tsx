@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isJobActive, type JobProgressView } from '../lib/dossier-jobs';
 
@@ -230,19 +232,22 @@ export function JobWatcherProvider({ children }: { children: ReactNode }): React
   return (
     <JobWatcherContext.Provider value={value}>
       {children}
-      <div className="toast-stack" role="status" aria-live="polite">
+      <div className="fixed right-4 bottom-4 z-[1100] grid w-[min(360px,calc(100vw-32px))] gap-2.5" role="status" aria-live="polite">
         {toasts.map((toast) => (
-          <div key={toast.id} className={`toast ${toast.succeeded ? 'toast-ok' : 'toast-danger'}`}>
-            <div className="grow">
+          <div key={toast.id} className={cn(
+              'flex items-start gap-3 rounded-ui border border-l-4 border-app-border bg-app-surface py-3 pr-3 pl-4 shadow-[0_10px_28px_rgba(15,23,42,0.14)] [&_p]:mt-0.5 [&_p]:mb-1.5 [&_p]:wrap-anywhere [&_p]:text-app-muted',
+              toast.succeeded ? 'border-l-app-ok' : 'border-l-app-danger',
+            )}>
+            <div className="min-w-0 flex-1">
               <strong>{toast.succeeded ? 'Dossier prêt' : 'Échec de la génération'}</strong>
               <p>{toast.clientName}</p>
               <Link href={jobPath(toast)} onClick={() => dismiss(toast.id)}>
                 {toast.succeeded ? 'Ouvrir le dossier' : 'Voir le détail'}
               </Link>
             </div>
-            <button type="button" className="toast-close" aria-label="Fermer" onClick={() => dismiss(toast.id)}>
+            <Button type="button" variant="ghost" size="sm" className="min-h-0 border-0 px-1.5 py-0 text-[1.3rem] leading-tight text-app-muted shadow-none hover:translate-y-0 hover:bg-[#eef2f6] hover:text-app-text" aria-label="Fermer" onClick={() => dismiss(toast.id)}>
               ×
-            </button>
+            </Button>
           </div>
         ))}
       </div>

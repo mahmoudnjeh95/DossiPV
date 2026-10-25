@@ -131,7 +131,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> › <Link href={`/projects/${project.id}`}>{fullName}</Link> › Récapitulatif
       </p>
       <h1>Récapitulatif avant génération — {fullName}</h1>
@@ -155,13 +155,13 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
       <Card as="section">
         <h2>L&apos;installation</h2>
         {!engineInput.ok ? (
-          <ul className="check-list">
+          <ul className="m-0 grid list-none gap-1.5 p-0 [&>li]:flex [&>li]:items-baseline [&>li]:gap-2.5 [&>li]:text-[0.95rem]">
             {engineInput.missing.map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
         ) : (
-          <dl className="dl">
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
             <dt>Puissance crête</dt>
             <dd>{dcPowerW !== undefined ? `${kwpFormat.format(dcPowerW / 1000)} kWc` : '—'}</dd>
             <dt>Panneaux</dt>
@@ -195,7 +195,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         {project.cableRuns.length === 0 ? (
           <p className="text-app-muted">Aucune liaison définie.</p>
         ) : (
-          <dl className="dl">
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
             {cableLines(project).map((line) => (
               <div key={line.key} style={{ display: 'contents' }}>
                 <dt>{line.label}</dt>
@@ -219,7 +219,7 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
         <h2>
           Pièces STEG — {donePieces}/{pieces.length}
         </h2>
-        <ul className="section-list piece-list">
+        <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 [&>li]:flex [&>li]:items-start [&>li]:gap-3 [&>li]:rounded-ui [&>li]:border [&>li]:border-app-border [&>li]:bg-app-surface [&>li]:px-3 [&>li]:py-2.5 [&_.grow]:min-w-0">
           {pieces.map((piece) => (
             <li key={piece.key}>
               <span className="grow">

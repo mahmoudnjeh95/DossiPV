@@ -14,7 +14,6 @@ import {
   AuthInlineLink,
   AuthIntro,
   AuthNotice,
-  authSubmitClass,
   AuthSubmit,
 } from '@/components/auth/auth-ui';
 import { Input, Select } from '@/components/ui/input';

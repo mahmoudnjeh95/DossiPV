@@ -19,7 +19,7 @@ export function PieceUploadForm({ projectId, piece, label }: PieceUploadFormProp
   const bound = uploadStegPieceAction.bind(null, projectId);
   const [state, formAction, pending] = useActionState(bound, undefined);
   return (
-    <form action={formAction} className="piece-upload">
+    <form action={formAction} className="mt-2 flex flex-wrap items-center gap-2 [&_input[type=file]]:w-auto [&_input[type=file]]:min-w-0 [&_input[type=file]]:flex-[1_1_200px] [&_input[type=file]]:text-[0.9rem]">
       <Input type="hidden" name="piece" value={piece} />
       <Input
         type="file"

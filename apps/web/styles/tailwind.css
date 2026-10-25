@@ -1,16 +1,149 @@
-/* Tailwind v4 entry. The legacy stylesheets are imported into a low-priority layer so
-   utilities and shadcn/ui components always win while pages migrate one by one. */
-@layer theme, base, legacy, components, utilities;
+/* Tailwind v4 entry: design tokens, the page base styles and the shared motion. Everything else
+   is utilities and the shadcn-style components in components/ui. */
+@layer theme, base, components, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
-@import './palette.css' layer(legacy);
-@import './icons.css' layer(legacy);
-@import '../app/globals.css' layer(legacy);
-@import './polish.css' layer(legacy);
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import 'tw-animate-css';
 
 @source '../app';
 @source '../components';
+
+@layer base {
+  :root {
+    --color-bg: #f4f6fb;
+    --color-surface: #ffffff;
+    --color-text: #0e1b3d;
+    --color-muted: #55627d;
+    --color-border: #dbe2ee;
+    --color-primary: #0b1f4a;
+    --color-primary-contrast: #ffffff;
+    --color-accent: #1d4b97;
+    --color-accent-soft: #e8eefa;
+    --color-gold: #e8a317;
+    --color-gold-soft: #fff4d6;
+    --color-navy: #0b1f4a;
+    --color-danger: #b42318;
+    --color-danger-bg: #fdecea;
+    --color-warn: #8a5a00;
+    --color-warn-bg: #fff4d6;
+    --color-ok: #17694a;
+    --color-ok-bg: #e3f5ec;
+    --radius: 10px;
+    --gutter: 24px;
+    --shadow-card: 0 1px 2px rgba(11, 31, 74, 0.04), 0 8px 24px -12px rgba(11, 31, 74, 0.12);
+    --shadow-lift: 0 2px 4px rgba(11, 31, 74, 0.05), 0 18px 36px -14px rgba(11, 31, 74, 0.22);
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  ::selection {
+    background: rgba(232, 163, 23, 0.35);
+  }
+
+  :focus-visible {
+    outline: 3px solid rgba(232, 163, 23, 0.85);
+    outline-offset: 3px;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-plus-jakarta), 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-underline-offset: 3px;
+  }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px var(--gutter) 64px;
+    animation: sx-rise 0.5s var(--ease-out) backwards;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    color: var(--color-navy);
+    font-size: 1.8rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    color: var(--color-navy);
+    font-size: 1.15rem;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  fieldset {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  legend {
+    padding: 0 6px;
+    font-weight: 600;
+  }
+
+  input[type='checkbox'] {
+    accent-color: var(--color-accent);
+  }
+
+  /* Error line of a form or a server action. */
+  [role='alert'] {
+    margin: 0;
+    color: var(--color-danger);
+  }
+
+  form [role='alert'] {
+    margin-top: 8px;
+    padding: 9px 12px;
+    border-left: 3px solid var(--color-danger);
+    background: var(--color-danger-bg);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 700px) {
+    :root {
+      --gutter: 18px;
+    }
+
+    main {
+      padding-top: 24px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
 
 /* Design tokens, aliasing the :root variables of globals.css. */
 @theme inline {
@@ -44,15 +177,6 @@
   & > :nth-child(3) { animation-delay: 140ms; }
   & > :nth-child(4) { animation-delay: 210ms; }
   & > :nth-child(n + 5) { animation-delay: 280ms; }
-}
-
-@layer base {
-  button,
-  input,
-  select,
-  textarea {
-    font-family: inherit;
-  }
 }
 
 /* Motion shared by the pages. */
@@ -160,4 +284,32 @@
       animation: none;
     }
   }
+}
+
+@keyframes progress-waiting {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+/*
+ * Leaflet draws these elements itself, and leaflet.css is not in a cascade layer, so the
+ * overrides have to stay outside the layers too.
+ */
+.leaflet-tooltip.leg-label {
+  padding: 1px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.leaflet-tooltip.leg-label::before {
+  display: none;
 }

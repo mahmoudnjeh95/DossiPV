@@ -32,7 +32,7 @@ export function Eyebrow({
   className?: string;
   children: ReactNode;
   mark?: boolean;
-}) {
+}): React.JSX.Element {
   return (
     <p
       className={cn(
@@ -108,14 +108,14 @@ export function AuthShell({
   );
 }
 
-export function AuthIntro({ className, ...props }: ComponentProps<'p'>) {
+export function AuthIntro({ className, ...props }: ComponentProps<'p'>): React.JSX.Element {
   return (
     <p className={cn('mt-[11px] mb-[30px] text-[0.94rem] text-app-muted', className)} {...props} />
   );
 }
 
 /** The form column: labels, fields and the submit button share the roomier login sizing. */
-export function AuthForm({ className, ...props }: ComponentProps<'form'>) {
+export function AuthForm({ className, ...props }: ComponentProps<'form'>): React.JSX.Element {
   return (
     <form
       className={cn(
@@ -127,11 +127,11 @@ export function AuthForm({ className, ...props }: ComponentProps<'form'>) {
   );
 }
 
-export function AuthFieldHint({ className, ...props }: ComponentProps<'p'>) {
+export function AuthFieldHint({ className, ...props }: ComponentProps<'p'>): React.JSX.Element {
   return <p className={cn('-mt-2.5 mb-0 text-[0.78rem] text-app-muted', className)} {...props} />;
 }
 
-export function AuthError({ className, ...props }: ComponentProps<'p'>) {
+export function AuthError({ className, ...props }: ComponentProps<'p'>): React.JSX.Element {
   return (
     <p
       role="alert"
@@ -145,7 +145,7 @@ export function AuthError({ className, ...props }: ComponentProps<'p'>) {
   );
 }
 
-export function AuthNotice({ className, ...props }: ComponentProps<'p'>) {
+export function AuthNotice({ className, ...props }: ComponentProps<'p'>): React.JSX.Element {
   return (
     <p
       role="status"
@@ -164,7 +164,6 @@ const submitClass =
 /** The wide primary button of the page; its arrow (a span in the label) slides on hover. */
 export function AuthSubmit({
   className,
-  children,
   pending,
   label,
   pendingLabel,
@@ -174,7 +173,7 @@ export function AuthSubmit({
   pending: boolean;
   label: string;
   pendingLabel: string;
-}) {
+}): React.JSX.Element {
   return (
     <Button type="submit" disabled={pending} className={cn(submitClass, className)} {...props}>
       {pending ? pendingLabel : label}
@@ -188,17 +187,17 @@ export function authSubmitClass(className?: string): string {
   return cn(buttonVariants(), submitClass, 'flex', className);
 }
 
-export function AuthHelp({ className, ...props }: ComponentProps<'p'>) {
+export function AuthHelp({ className, ...props }: ComponentProps<'p'>): React.JSX.Element {
   return <p className={cn('mt-[22px] mb-0 text-[0.78rem] text-app-muted', className)} {...props} />;
 }
 
 const linkClass = 'mt-3.5 inline-block text-[0.84rem] font-[650] text-app-accent';
 
-export function AuthLink({ className, href, ...props }: ComponentProps<typeof Link>) {
+export function AuthLink({ className, href, ...props }: ComponentProps<typeof Link>): React.JSX.Element {
   return <Link href={href} className={cn(linkClass, className)} {...props} />;
 }
 
-export function AuthInlineLink({ className, href, ...props }: ComponentProps<typeof Link>) {
+export function AuthInlineLink({ className, href, ...props }: ComponentProps<typeof Link>): React.JSX.Element {
   return (
     <Link
       href={href}

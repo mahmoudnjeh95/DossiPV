@@ -1,4 +1,5 @@
 'use client';
+import { liveHint } from '@/components/ui/live-hint';
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -216,7 +217,7 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
                 />
               </p>
             )}
-            {phaseMismatch && <p className="live-hint bad">Le site est {sitePhases === 3 ? 'triphasé' : 'monophasé'} mais cet onduleur ne l&apos;est pas (C19).</p>}
+            {phaseMismatch && <p className={liveHint({ tone: 'bad' })}>Le site est {sitePhases === 3 ? 'triphasé' : 'monophasé'} mais cet onduleur ne l&apos;est pas (C19).</p>}
 
             <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
               {row.mppts.map((mppt, mpptIndex) => {
@@ -236,12 +237,12 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
                     </Label>
                     <div className="flex flex-col gap-3" style={{ gap: 4 }}>
                       {bounds && (
-                        <span className={`live-hint ${nsBad ? 'bad' : nsWarn ? '' : 'good'}`}>
+                        <span className={liveHint({ tone: nsBad ? 'bad' : nsWarn ? 'neutral' : 'good' })}>
                           <Jargon text={nsBad ? `Ns doit être entre ${bounds.nsMin} et ${bounds.nsMax} pour cet onduleur.` : nsWarn ? `Ns au-dessus de l'optimal (${bounds.nsOptMax}) : écrêtage possible (C03).` : `Ns dans la plage ${bounds.nsMin}–${bounds.nsMax}.`} />
                         </span>
                       )}
                       {bounds && (
-                        <span className={`live-hint ${npBad ? 'bad' : 'good'}`}>
+                        <span className={liveHint({ tone: npBad ? 'bad' : 'good' })}>
                           <Jargon text={npBad ? `Np dépasse le maximum ${bounds.npMax} (C04).` : `Np ≤ ${bounds.npMax}.`} />
                           {fuse ? ' Fusibles DC requis.' : ''}
                         </span>
@@ -286,7 +287,7 @@ export function ArrayForm({ projectId, defaults, sitePhases, modules, inverters,
       </div>
 
       {totals && (
-        <div className={`live-hint ${totals.ratio < 0.9 || totals.ratio > 1.3 ? '' : 'good'}`}>
+        <div className={liveHint({ tone: totals.ratio < 0.9 || totals.ratio > 1.3 ? 'neutral' : 'good' })}>
           {totals.moduleCount} modules · {fmt(totals.dcPowerW)} Wc DC · ratio DC/AC {fmt(totals.ratio, 2)}
           {totals.ratio < 0.9 || totals.ratio > 1.3 ? ' (hors plage 0,9–1,3 — avertissement C06)' : ''}
         </div>

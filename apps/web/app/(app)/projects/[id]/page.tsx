@@ -115,7 +115,7 @@ export default async function ProjectOverviewPage({
 
   return (
     <main>
-      <p className="breadcrumb">
+      <p className="mb-2 text-[0.9rem] [&_a]:no-underline">
         <Link href="/projects">Projets</Link> › {clientName}
       </p>
       <div className="flex flex-wrap items-center gap-2" style={{ marginBottom: 12 }}>
@@ -142,7 +142,7 @@ export default async function ProjectOverviewPage({
       <div className="card-grid" style={{ alignItems: 'start' }}>
         <Card as="section">
           <h2>Sections du dossier</h2>
-          <ul className="section-list">
+          <ul className="m-0 grid list-none gap-2 p-0 [&>li]:flex [&>li]:items-center [&>li]:gap-3 [&>li]:rounded-ui [&>li]:border [&>li]:border-app-border [&>li]:bg-app-surface [&>li]:px-3 [&>li]:py-2.5">
             {sections.map((section) => (
               <li key={section.key}>
                 <span className={badgeVariants({ variant: section.complete ? 'ok' : 'default' })}>
@@ -164,7 +164,7 @@ export default async function ProjectOverviewPage({
               <p className="text-app-muted">
                 Les contrôles s&apos;exécuteront dès que les sections suivantes seront complètes :
               </p>
-              <ul className="check-list">
+              <ul className="m-0 grid list-none gap-1.5 p-0 [&>li]:flex [&>li]:items-baseline [&>li]:gap-2.5 [&>li]:text-[0.95rem]">
                 {engineInput.missing.map((line) => (
                   <li key={line}>
                     <span>{line}</span>
@@ -183,7 +183,7 @@ export default async function ProjectOverviewPage({
       {engineResult && (
         <Card as="section">
           <h2>Valeurs calculées</h2>
-          <dl className="dl">
+          <dl className="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 [&_dt]:text-app-muted [&_dd]:m-0">
             {DERIVED_LABELS.map((item) => {
               const value = engineResult.derived[item.key];
               if (value === undefined) {
