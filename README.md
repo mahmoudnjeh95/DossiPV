@@ -47,7 +47,7 @@ Everything runs in Docker on the server under `/home/debian`:
 | Dossier worker container        | `dossipv-worker-1`, runs the queued dossier jobs            |
 | Database container              | `dossipv-postgres-1`, data in volume `dossipv_pgdata`       |
 | Uploaded files                  | volume `dossipv_files`                                      |
-| Public entry point              | nginx on port 3001, config in `deploy/nginx-dossipv.conf`   |
+| Public entry point              | nginx: ai.solarixpro.com (80, then HTTPS via certbot) and port 3001, config in `deploy/nginx-dossipv.conf` |
 
 Pushing to `main` runs lint, typecheck and tests, then `.github/workflows/deploy.yml` builds the image
 on the server, applies database migrations and restarts the app and worker.
