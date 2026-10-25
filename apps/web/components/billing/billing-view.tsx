@@ -64,6 +64,12 @@ export function BillingPageView({
             </li>
           ))}
         </ol>
+        {billing.openIntentId && (
+          <Alert variant="warn" role="status">
+            Vous avez un paiement en cours. Terminez-le ou annulez-le avant d’en commencer un autre.{' '}
+            <Link href={`/paiement/${billing.openIntentId}`}>Reprendre mon paiement</Link>
+          </Alert>
+        )}
         {billing.providers.length === 0 ? (
           <Alert variant="warn" role="status">
             Paiement indisponible : <ContactDossipv />.
@@ -73,7 +79,7 @@ export function BillingPageView({
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {billing.offers.map((offer) => (
-              <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay} />
+              <CheckoutOffer key={offer.key} offer={offer} providers={billing.providers} canPay={canPay && !billing.openIntentId} />
             ))}
           </div>
         )}

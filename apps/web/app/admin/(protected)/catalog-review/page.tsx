@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 function Notes({ notes }: { notes: string | null }): React.JSX.Element | null {
-  return notes ? <pre className="text-[0.8rem] font-normal text-app-muted" style={{ whiteSpace: 'pre-wrap' }}>{notes}</pre> : null;
+  return notes ? <pre className="text-[0.8rem] font-normal break-words text-app-muted" style={{ whiteSpace: 'pre-wrap' }}>{notes}</pre> : null;
 }
 
 export default async function CatalogReviewPage(): Promise<React.JSX.Element> {

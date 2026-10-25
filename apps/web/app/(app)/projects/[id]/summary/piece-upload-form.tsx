@@ -28,7 +28,7 @@ export function PieceUploadForm({ projectId, piece, label }: PieceUploadFormProp
         required
         aria-label={`${label} : photo ou PDF`}
       />
-      <Button variant="secondary" size="sm" type="submit"  disabled={pending}>
+      <Button variant="secondary" size="sm" type="submit" disabled={pending}>
         {pending ? 'Envoi…' : 'Ajouter la photo'}
       </Button>
       {state?.error && <Alert variant="danger" role="alert">{state.error}</Alert>}

@@ -15,7 +15,7 @@ export function RejectForm({ intentId }: { intentId: string }): React.JSX.Elemen
         Motif du refus (lu par le client)
         <Textarea name="reason" maxLength={300} rows={2} required />
       </Label>
-      <Button variant="secondary" type="submit"  disabled={pending}>
+      <Button variant="secondary" type="submit" disabled={pending}>
         Refuser le paiement
       </Button>
       {state?.error && <p role="alert">{state.error}</p>}

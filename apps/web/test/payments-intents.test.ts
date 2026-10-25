@@ -76,9 +76,9 @@ describe('createIntent', () => {
     expect(m.mockIntentCreate).not.toHaveBeenCalled();
   });
 
-  it('refuses a fourth open intent', async () => {
-    m.mockIntentCount.mockResolvedValue(3);
-    await expect(createIntent('c1', { purpose: 'SUBSCRIPTION', planId: 'plan-std', months: 1, provider: 'FLOUCI' })).rejects.toThrow(/3 paiements en cours/);
+  it('refuses a second open intent', async () => {
+    m.mockIntentCount.mockResolvedValue(1);
+    await expect(createIntent('c1', { purpose: 'SUBSCRIPTION', planId: 'plan-std', months: 1, provider: 'FLOUCI' })).rejects.toThrow(/déjà un paiement en cours/);
     expect(m.mockIntentCount).toHaveBeenCalledWith({ where: { companyId: 'c1', status: 'PENDING' } });
   });
 
@@ -120,9 +120,9 @@ describe('createIntentAction', () => {
   });
 
   it('returns the French refusal of the pricing rules', async () => {
-    m.mockIntentCount.mockResolvedValue(3);
+    m.mockIntentCount.mockResolvedValue(1);
     const result = await createIntentAction('SUBSCRIPTION', 'plan-std', 1, 'FLOUCI');
-    expect(result?.error).toMatch(/paiements en cours/);
+    expect(result?.error).toMatch(/paiement en cours/);
     expect(m.mockRedirect).not.toHaveBeenCalled();
   });
 

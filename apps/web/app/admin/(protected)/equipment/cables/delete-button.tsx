@@ -10,7 +10,7 @@ export function DeleteCableButton({ cableId }: { cableId: string }): React.JSX.E
 
   return (
     <form action={formAction}>
-      <Button type="submit" disabled={pending}>Supprimer</Button>
+      <Button type="submit" variant="danger" size="sm" disabled={pending}>Supprimer</Button>
       {state?.error && <p role="alert">{state.error}</p>}
     </form>
   );

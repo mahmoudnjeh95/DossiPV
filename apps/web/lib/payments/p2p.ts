@@ -20,8 +20,8 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const PROOF_RETENTION_DAYS = 30;
 /** Largest screenshot accepted, before it is re-encoded. */
 export const MAX_PROOF_BYTES = 8 * 1024 * 1024;
-/** Intents a company can leave open (PENDING) at once. */
-export const MAX_OPEN_INTENTS = 3;
+/** Intents a company can leave open (PENDING) at once: one, it must end before another starts. */
+export const MAX_OPEN_INTENTS = 1;
 
 export interface P2pSettings {
   accountHolder: string | null;

@@ -44,7 +44,7 @@ export function AppShell({ userFullName, children }: AppShellProps): React.JSX.E
         <form action={logoutAction}>
           <Button type="submit" variant="secondary" size="sm" className="gap-1.5 text-[0.82rem] max-sm:px-2.5 max-sm:text-[0.76rem]">
             <Logout size="xs" color="inherit" />
-            Se déconnecter
+            <span className="max-sm:sr-only">Se déconnecter</span>
           </Button>
         </form>
       </AppHeader>

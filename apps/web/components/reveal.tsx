@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
 interface RevealProps {
   children: ReactNode;
@@ -36,7 +37,11 @@ export function Reveal({ children, delay = 0, as: Tag = 'div', className = '' }:
   return (
     <Tag
       ref={ref}
-      className={`reveal${armed ? ' reveal-armed' : ''}${shown ? ' reveal-shown' : ''} ${className}`.trim()}
+      className={cn(
+        armed && 'transition-[opacity,transform] duration-700 ease-(--ease-out)',
+        armed && !shown && 'translate-y-[22px] opacity-0 motion-reduce:translate-y-0 motion-reduce:opacity-100',
+        className,
+      )}
       style={delay ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}

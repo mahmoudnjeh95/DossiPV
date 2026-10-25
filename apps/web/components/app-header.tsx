@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { NavLinks, type NavItem } from './nav-links';
 
 /** Sticky top bar shared by the installer and admin shells: brand, navigation, user area. */
@@ -9,6 +10,7 @@ export function AppHeader({
   brand,
   navLabel,
   items,
+  navBelow,
   children,
 }: {
   brandHref: string;
@@ -16,6 +18,8 @@ export function AppHeader({
   brand: ReactNode;
   navLabel: string;
   items: NavItem[];
+  /** Many links: the navigation takes its own scrolling row under the brand and user area. */
+  navBelow?: boolean | undefined;
   children: ReactNode;
 }): React.JSX.Element {
   return (
@@ -24,11 +28,11 @@ export function AppHeader({
         <Link
           href={brandHref}
           aria-label={brandLabel}
-          className="mr-3 inline-flex items-center font-bold text-app-text no-underline transition-transform duration-200 hover:-translate-y-px max-sm:mr-auto"
+          className={cn('group mr-3 inline-flex items-center font-bold text-app-text no-underline transition-transform duration-200 hover:-translate-y-px max-sm:mr-auto', navBelow && 'mr-auto')}
         >
           {brand}
         </Link>
-        <NavLinks items={items} label={navLabel} />
+        <NavLinks items={items} label={navLabel} below={navBelow} />
         <div className="flex items-center gap-2 ml-auto text-[0.9rem] text-app-muted">{children}</div>
       </div>
     </header>
