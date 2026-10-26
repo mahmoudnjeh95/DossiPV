@@ -10,6 +10,7 @@ import { readLoginEmail, readNewPassword } from '../../../../lib/account-form';
 import { parseFuturePeriodEnd } from '../../../../lib/admin-period';
 import { withNotice } from '../../../../lib/admin-notice';
 import { audienceMismatchError } from '../../../../lib/plan-audience';
+import { ALL_EQUIPMENT_KINDS, addSharedCatalogToLibrary } from '../../../../lib/library-seed';
 
 export interface CreateInstallerActionState {
   error: string;
@@ -90,6 +91,7 @@ export async function createInstallerAction(
       ...company,
       anmeValidFrom,
       anmeValidTo,
+      libraryHintPending: true,
       users: {
         create: { email: ownerEmail, fullName: ownerFullName, role: 'OWNER', passwordHash: await hashPassword(ownerPassword) },
       },
@@ -98,6 +100,7 @@ export async function createInstallerAction(
         : {}),
     },
   });
+  await addSharedCatalogToLibrary(created.id, ALL_EQUIPMENT_KINDS);
   await logAdminAction(admin.id, 'company.create', created.id, {
     name: company.name,
     ownerEmail,

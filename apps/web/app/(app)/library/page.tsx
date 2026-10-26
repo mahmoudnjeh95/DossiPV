@@ -4,7 +4,7 @@ import { loadSections, withHighlights } from './library-data';
 import { loadHighlightedProducts } from '../../../lib/highlight';
 import { SponsoredBadge } from '../../../components/sponsored-badge';
 import { LibraryTabs } from './library-tabs';
-import { AddAllButton, AddButton, DeleteOwnButton, RemoveButton } from './library-buttons';
+import { AddAllButton, AddButton, DeleteOwnButton, RemoveAllButton, RemoveButton } from './library-buttons';
 import { ownEquipmentSlug } from './own-equipment-kinds';
 import { PriceForm } from './price-form';
 import { loadSponsor } from '../../../lib/sponsor-info';
@@ -119,6 +119,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Sear
               {s.title} ({s.rows.length})
             </h2>
             {catalogue && s.bulk && s.rows.some((r) => !r.libraryItemId) && <AddAllButton kind={s.kind as BulkKind} />}
+            {!catalogue && s.rows.length > 1 && !(sponsored && isLocked(s.kind)) && (
+              <RemoveAllButton kind={s.kind} count={s.rows.length} title={s.title} />
+            )}
             <Table>
               <tbody>
                 {s.rows.slice(0, catalogue ? shown : undefined).map((r) => (

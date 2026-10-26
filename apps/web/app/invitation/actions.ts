@@ -7,7 +7,8 @@ import { adminEmailAddress } from '@dossipv/email';
 import { FormReader } from '../../lib/form-reader';
 import { readNewPassword } from '../../lib/account-form';
 import { currentInstallerCompany } from '../../lib/installer-session';
-import { SponsorshipError, acceptInvitation, findValidInvitation, supplierSeats } from '../../lib/sponsorship';
+import { LOCKED_KINDS, SponsorshipError, acceptInvitation, findValidInvitation, supplierSeats } from '../../lib/sponsorship';
+import { ALL_EQUIPMENT_KINDS, addSharedCatalogToLibrary } from '../../lib/library-seed';
 
 const INVALID_MESSAGE = 'Cette invitation n’est plus valide.';
 const FULL_MESSAGE = 'Le pack de ce fournisseur est complet : demandez-lui de passer à un pack plus grand.';
@@ -103,6 +104,7 @@ export async function createAccountFromInvitationAction(
         signupAt: new Date(),
         signupContactName: contactName,
         signupGovernorate: '',
+        libraryHintPending: true,
       },
     });
     // The invitation email proves the address: no confirmation link to send.
@@ -120,5 +122,7 @@ export async function createAccountFromInvitationAction(
     if (error instanceof SponsorshipError) return { error: error.message };
     throw error;
   }
+  // Everything but the panels and inverters: those come from the supplier (linked above).
+  await addSharedCatalogToLibrary(companyId, ALL_EQUIPMENT_KINDS.filter((kind) => !(LOCKED_KINDS as readonly string[]).includes(kind)));
   redirect('/login?compte=cree');
 }

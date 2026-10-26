@@ -14,6 +14,7 @@ const m = vi.hoisted(() => {
     mockCompanyCreate: vi.fn(),
     mockPlanFindUnique: vi.fn(),
     mockAuditCreate: vi.fn(),
+    mockSeedLibrary: vi.fn(),
   };
 });
 
@@ -37,7 +38,13 @@ vi.mock('@dossipv/db', async () => {
   };
 });
 
+vi.mock('../lib/library-seed', async () => {
+  const actual = await vi.importActual<typeof import('../lib/library-seed')>('../lib/library-seed');
+  return { ...actual, addSharedCatalogToLibrary: m.mockSeedLibrary };
+});
+
 import { createInstallerAction } from '../app/admin/(protected)/installers/actions';
+import { ALL_EQUIPMENT_KINDS } from '../lib/library-seed';
 
 function form(fields: Record<string, string>): FormData {
   const formData = new FormData();
@@ -92,6 +99,7 @@ describe('createInstallerAction', () => {
         anmeCategory: 'BT',
         anmeValidFrom: new Date('2024-01-01'),
         anmeValidTo: new Date('2027-01-01'),
+        libraryHintPending: true,
         users: { create: { email: 'owner@solarpro.tn', fullName: 'Ahmed Ben Ali', role: 'OWNER', passwordHash: 'hashed:un-mot-de-passe' } },
       },
     });
@@ -103,6 +111,7 @@ describe('createInstallerAction', () => {
         details: { name: 'SolarPro Tunisie', ownerEmail: 'owner@solarpro.tn', planId: null, periodEnd: null },
       },
     });
+    expect(m.mockSeedLibrary).toHaveBeenCalledWith('company-new', ALL_EQUIPMENT_KINDS);
     expect(m.mockRedirect).toHaveBeenCalledWith(expect.stringMatching(/^\/admin\/installers\/company-new\?ok=/));
   });
 

@@ -18,6 +18,7 @@ const m = vi.hoisted(() => {
     companyUpdate: vi.fn(),
     companyCreate: vi.fn(),
     companyDelete: vi.fn(),
+    seedLibrary: vi.fn(),
     companyUserFindFirst: vi.fn(),
     companyUserCreate: vi.fn(),
     companyUserDeleteMany: vi.fn(),
@@ -56,6 +57,11 @@ vi.mock('@dossipv/db', () => {
       typeof arg === 'function' ? (arg as (tx: unknown) => Promise<unknown>)(db) : Promise.all(arg as unknown[]),
   };
   return { db };
+});
+
+vi.mock('../lib/library-seed', async () => {
+  const actual = await vi.importActual<typeof import('../lib/library-seed')>('../lib/library-seed');
+  return { ...actual, addSharedCatalogToLibrary: m.seedLibrary };
 });
 
 import { acceptInvitationAction, createAccountFromInvitationAction } from '../app/invitation/actions';
@@ -219,8 +225,10 @@ describe('createAccountFromInvitationAction', () => {
     await expect(run()).rejects.toThrow('NEXT_REDIRECT:/login?compte=cree');
 
     expect(m.companyCreate.mock.calls[0]?.[0]).toMatchObject({
-      data: { name: 'Nouvelle Sarl', anmeCode: 'AN-777', profileComplete: false, signupAt: expect.any(Date) as unknown },
+      data: { name: 'Nouvelle Sarl', anmeCode: 'AN-777', profileComplete: false, signupAt: expect.any(Date) as unknown, libraryHintPending: true },
     });
+    // The shared catalog but the panels and inverters, which the supplier provides.
+    expect(m.seedLibrary).toHaveBeenCalledWith('company-new', ['SPD', 'DC_SWITCH', 'DC_FUSE', 'AC_BREAKER', 'AC_ISOLATOR', 'CABLE', 'ACCESSORY']);
     expect(m.companyUserCreate.mock.calls[0]?.[0]).toMatchObject({
       data: { companyId: 'company-new', email: 'new@installer.tn', role: 'OWNER', passwordHash: 'hashed:a-long-password-1', emailVerifiedAt: expect.any(Date) as unknown },
     });

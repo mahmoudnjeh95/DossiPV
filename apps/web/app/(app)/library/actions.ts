@@ -6,6 +6,7 @@ import type { EquipmentKind } from '@dossipv/db';
 import { requireInstallerUser } from '../layout';
 import { catalogScope, provenanceScope } from '../../../lib/project-access';
 import { CATALOG_LOCK_MESSAGE, LOCKED_KINDS, isSponsored } from '../../../lib/sponsorship';
+import { addSharedCatalogToLibrary } from '../../../lib/library-seed';
 
 const isLockedKind = (kind: string): boolean => (LOCKED_KINDS as readonly string[]).includes(kind);
 
@@ -70,22 +71,7 @@ export async function addAllOfKindAction(kind: BulkKind): Promise<LibraryActionS
   if (!BULK_KINDS.includes(kind)) {
     return { error: 'Type d’équipement invalide.' };
   }
-  const entry = KINDS[kind];
-  const missing = await entry.catalog().findMany({
-    where: {
-      ownerCompanyId: null,
-      catalogStatus: 'PUBLISHED',
-      datasheetSourceUrl: { not: null },
-      libraryItems: { none: { companyId: user.companyId } },
-    },
-    select: { id: true },
-  });
-  if (missing.length > 0) {
-    await db.libraryItem.createMany({
-      data: missing.map((item) => ({ companyId: user.companyId, kind, [entry.fk]: item.id })) as never,
-      skipDuplicates: true,
-    });
-  }
+  await addSharedCatalogToLibrary(user.companyId, [kind]);
   revalidatePath('/library');
   return undefined;
 }
@@ -102,6 +88,20 @@ export async function removeFromLibraryAction(libraryItemId: string): Promise<Li
   if (count === 0) {
     return { error: 'Élément introuvable.' };
   }
+  revalidatePath('/library');
+  return undefined;
+}
+
+/** « Retirer tout »: empties one type of the library (a new library starts with the whole shared catalog). */
+export async function removeAllOfKindAction(kind: EquipmentKind): Promise<LibraryActionState> {
+  const user = await requireInstallerUser();
+  if (!Object.hasOwn(KINDS, kind)) {
+    return { error: 'Type d’équipement invalide.' };
+  }
+  if (isLockedKind(kind) && (await isSponsored(user.companyId))) {
+    return { error: CATALOG_LOCK_MESSAGE };
+  }
+  await db.libraryItem.deleteMany({ where: { companyId: user.companyId, kind } });
   revalidatePath('/library');
   return undefined;
 }

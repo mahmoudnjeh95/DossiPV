@@ -115,6 +115,9 @@ model Company {
   /// legal representative, ANME category and validity): the columns above hold placeholders and
   /// dossier generation is refused until then.
   profileComplete          Boolean   @default(true)
+  /// True for a new company whose library was filled with the whole shared catalog: a hint asks
+  /// it to sort its library (remove what it does not install, add its own) until dismissed.
+  libraryHintPending       Boolean   @default(false)
   kind                     CompanyKind @default(INSTALLER)
   /// The supplier paying this installer's Standard plan, whose panels and inverters it is
   /// limited to (spec 2026-10-23 §5). Null for a direct installer. This column alone decides.
