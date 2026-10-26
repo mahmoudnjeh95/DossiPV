@@ -91,6 +91,9 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.DEPLOY_SMTP_PASSWORD }}
           SMTP_FROM: ${{ secrets.DEPLOY_SMTP_FROM }}
           ADMIN_EMAIL: ${{ secrets.DEPLOY_ADMIN_EMAIL }}
+          SUPPORT_EMAIL: ${{ secrets.DEPLOY_SUPPORT_EMAIL }}
+          SUPPORT_PHONE: ${{ secrets.DEPLOY_SUPPORT_PHONE }}
+          SUPPORT_WHATSAPP: ${{ secrets.DEPLOY_SUPPORT_WHATSAPP }}
           SENTRY_DSN: ${{ secrets.DEPLOY_SENTRY_DSN }}
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.DEPLOY_NEXT_PUBLIC_SENTRY_DSN }}
           NEXT_PUBLIC_MAPBOX_TOKEN: ${{ secrets.DEPLOY_NEXT_PUBLIC_MAPBOX_TOKEN }}
@@ -134,6 +137,9 @@ jobs:
           SMTP_PASSWORD='$SMTP_PASSWORD'
           SMTP_FROM='$SMTP_FROM'
           ADMIN_EMAIL='$ADMIN_EMAIL'
+          SUPPORT_EMAIL='$SUPPORT_EMAIL'
+          SUPPORT_PHONE='$SUPPORT_PHONE'
+          SUPPORT_WHATSAPP='$SUPPORT_WHATSAPP'
           SENTRY_DSN='$SENTRY_DSN'
           MAPBOX_ACCESS_TOKEN='$NEXT_PUBLIC_MAPBOX_TOKEN'
           IMAGE_TAG=${{ github.sha }}

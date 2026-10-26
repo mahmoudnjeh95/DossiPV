@@ -21,6 +21,7 @@ values there, not by editing `.env` on the server (a manual edit is lost at the 
 | `DEPLOY_APP_URL` | `APP_URL` — public base URL, e.g. `https://app.dossipv.tn` (no trailing slash) | links in e-mails |
 | `DEPLOY_SMTP_HOST`, `DEPLOY_SMTP_PORT`, `DEPLOY_SMTP_USER`, `DEPLOY_SMTP_PASSWORD`, `DEPLOY_SMTP_FROM` | `SMTP_*` | all e-mail (app and worker) |
 | `DEPLOY_ADMIN_EMAIL` | `ADMIN_EMAIL` | failed-job and sign-up alerts |
+| `DEPLOY_SUPPORT_EMAIL`, `DEPLOY_SUPPORT_PHONE`, `DEPLOY_SUPPORT_WHATSAPP` | `SUPPORT_*` | contact shown to users and on the legal pages (`SUPPORT_EMAIL` falls back to `ADMIN_EMAIL`) |
 | `DEPLOY_SENTRY_DSN` | `SENTRY_DSN` (runtime) | Sentry, web server + worker |
 | `DEPLOY_NEXT_PUBLIC_SENTRY_DSN` | `NEXT_PUBLIC_SENTRY_DSN` (Docker **build arg**) | Sentry, browser |
 
