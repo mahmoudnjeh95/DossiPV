@@ -34,6 +34,7 @@ export function buildFullProject(overrides: Partial<ProjectForEngine> = {}): Pro
     revision: 1,
     createdAt: NOW,
     updatedAt: NOW,
+    archivedAt: null,
     company: {
       id: 'company-1',
       name: 'SolarPro Tunisie',
