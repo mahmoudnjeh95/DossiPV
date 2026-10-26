@@ -177,6 +177,10 @@ model CompanyUser {
   /// When the user proved it owns its email (sign-up link); logging in needs it. Users that
   /// existed before sign-up was introduced are marked verified.
   emailVerifiedAt DateTime?
+  /// When the user accepted the CGU and the privacy policy, and which version (apps/web/lib/legal.ts
+  /// TERMS_VERSION); null until accepted. A user on an older version is asked again.
+  termsAcceptedAt DateTime?
+  termsVersion    String?
 
   sessions Session[]
   passwordResetTokens PasswordResetToken[]

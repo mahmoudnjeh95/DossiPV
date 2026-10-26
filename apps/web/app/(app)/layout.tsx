@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { validateSession, type AuthenticatedCompanyUser } from '@dossipv/auth';
 import { AppShell } from '../../components/app-shell';
+import { requireCurrentTerms } from '../../lib/terms-gate';
 import { endImpersonationAction } from './actions';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export default async function AppLayout({
     redirect('/fournisseur');
     return undefined as never;
   }
+  await requireCurrentTerms(user);
   return (
     <>
       {user.impersonatedBySuperAdminId && <ImpersonationBanner fullName={user.fullName} email={user.email} />}

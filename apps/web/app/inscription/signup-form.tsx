@@ -5,6 +5,7 @@ import { signUpAction } from './actions';
 import { GOVERNORATES } from './governorates';
 import { PublicShell } from './public-shell';
 import { DevVerifyLink, ResendVerificationForm } from './resend-form';
+import { TermsCheckbox } from '@/components/terms-checkbox';
 import {
   AuthBackLink,
   AuthError,
@@ -153,6 +154,7 @@ export function SignUpForm({ supplierContact }: { supplierContact: ReactNode }):
           />
         </Label>
         <AuthFieldHint>{MIN_PASSWORD_LENGTH} caractères minimum.</AuthFieldHint>
+        <TermsCheckbox />
         <AuthSubmit pending={pending} label="Créer mon compte" pendingLabel="Création en cours…" />
       </AuthForm>
       <AuthHelp>

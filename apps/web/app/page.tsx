@@ -222,6 +222,11 @@ export default function HomePage(): React.JSX.Element {
           <Link href="/login" className={NAV_LINK}>Connexion</Link>
           <Link href="/inscription" className={NAV_LINK}>Créer un compte</Link>
         </nav>
+        <nav className="flex flex-wrap justify-center gap-x-[22px] gap-y-2 text-[0.85rem]" aria-label="Informations légales">
+          <Link href="/cgu" className={NAV_LINK}>Conditions générales</Link>
+          <Link href="/confidentialite" className={NAV_LINK}>Confidentialité</Link>
+          <Link href="/mentions-legales" className={NAV_LINK}>Mentions légales</Link>
+        </nav>
         <small className="opacity-70">© {new Date().getFullYear()} SolarixPro. Tous droits réservés.</small>
       </footer>
     </main>

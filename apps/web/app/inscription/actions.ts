@@ -7,6 +7,7 @@ import { db } from '@dossipv/db';
 import { adminEmailAddress, appUrl, isEmailConfigured, sendEmail } from '@dossipv/email';
 import { FormReader } from '../../lib/form-reader';
 import { readLoginEmail, readNewPassword, readTunisianPhone } from '../../lib/account-form';
+import { TERMS_VERSION } from '../../lib/legal';
 import { GOVERNORATES } from './governorates';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -78,6 +79,9 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
   if (password.length > 0 && formData.get('confirmation') !== password) {
     reader.errors.push('Les deux mots de passe ne correspondent pas.');
   }
+  if (formData.get('acceptTerms') !== 'on') {
+    reader.errors.push('Acceptez les conditions générales et la politique de confidentialité pour créer votre compte.');
+  }
   const fields: SignUpFields = { companyName, contactName, phone, email, governorate, anmeCode };
   if (reader.hasErrors) {
     return { sent: false, error: reader.errorMessage(), fields };
@@ -127,7 +131,15 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
         },
       });
       const owner = await tx.companyUser.create({
-        data: { companyId: company.id, email, fullName: contactName, role: 'OWNER', passwordHash },
+        data: {
+          companyId: company.id,
+          email,
+          fullName: contactName,
+          role: 'OWNER',
+          passwordHash,
+          termsAcceptedAt: new Date(),
+          termsVersion: TERMS_VERSION,
+        },
       });
       return owner.id;
     });

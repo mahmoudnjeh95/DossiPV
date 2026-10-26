@@ -20,6 +20,7 @@ const m = vi.hoisted(() => {
     validateUploadedFile: vi.fn(),
     db: {
       company: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
+      companyUser: { findUnique: vi.fn() },
       pvModule: { findFirst: vi.fn() },
       inverter: { findFirst: vi.fn() },
       supplierProduct: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn(), findMany: vi.fn() },
@@ -57,6 +58,7 @@ import { addSupplierProductAction, removeSupplierProductAction, proposeSupplierP
 import { inviteInstallerAction, removeSponsoredInstallerAction, cancelInvitationAction } from '../app/fournisseur/installateurs/actions';
 import { loadSupplierStats } from '../lib/supplier-stats';
 import { SponsorshipError } from '../lib/sponsorship';
+import { TERMS_VERSION } from '../lib/legal';
 
 const user = { id: 'u1', companyId: 'sup1', email: 's@x.tn', fullName: 'Sami', role: 'OWNER' as const };
 
@@ -68,6 +70,7 @@ function signIn(kind: 'SUPPLIER' | 'INSTALLER' | null): void {
   m.cookieGet.mockReturnValue({ value: 'tok' });
   m.validateSession.mockResolvedValue(user);
   m.db.company.findUnique.mockResolvedValue({ id: 'sup1', name: 'Solaire SA', kind, profileComplete: true });
+  m.db.companyUser.findUnique.mockResolvedValue({ termsVersion: TERMS_VERSION });
 }
 
 beforeEach(() => {
