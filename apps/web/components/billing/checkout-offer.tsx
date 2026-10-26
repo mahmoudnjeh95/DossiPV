@@ -30,7 +30,7 @@ export function CheckoutOffer({
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
   const option = offer.options.find((o) => o.months === months) ?? offer.options[0];
-  const featured = offer.tier === 'PREMIUM' && !offer.isCurrent;
+  const featured = offer.tier === 'PREMIUM';
 
   function pay(): void {
     if (!provider) return;
@@ -47,7 +47,7 @@ export function CheckoutOffer({
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="m-0">{offer.title}</h3>
           {offer.isCurrent && <Badge variant="ok">Votre offre</Badge>}
-          {featured && <Badge variant="warn">Recommandé</Badge>}
+          {featured && !offer.isCurrent && <Badge variant="warn">Recommandé</Badge>}
         </div>
         <p className="m-0 mt-1 text-[1.5rem] leading-tight font-bold">
           {money(offer.monthlyTnd)} <span className="text-[0.9rem] font-normal text-app-muted">par mois</span>
@@ -67,7 +67,7 @@ export function CheckoutOffer({
         {offer.note && <p className="m-0 mt-2 text-[0.8rem] font-normal text-app-muted">{offer.note}</p>}
       </div>
 
-      <fieldset className="m-0 border-0 p-0" disabled={pending}>
+      <fieldset className="m-0 mt-auto border-0 p-0" disabled={pending}>
         <legend className="mb-2 p-0 text-[0.9rem] font-semibold">Durée</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {offer.options.map((o) => (
