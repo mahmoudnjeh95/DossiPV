@@ -329,6 +329,21 @@ model PlatformSettings {
   p2pInstructions    String?
   /// Claude model used for the dossier text (one of CLAUDE_MODEL_OPTIONS); null = default.
   claudeModel        String?
+  /// The company publishing SolarixPro, shown on /cgu, /confidentialite and /mentions-legales; null
+  /// prints "à compléter" there.
+  legalName          String?
+  /// Forme juridique and capital, e.g. "SARL au capital de 10 000 TND".
+  legalForm          String?
+  /// Identifiant unique au Registre National des Entreprises.
+  legalRneId         String?
+  legalTaxId         String?
+  legalAddress       String?
+  /// Directeur de la publication.
+  legalPublisher     String?
+  /// Receipt number of the INPDP declaration.
+  legalInpdpDeclaration String?
+  /// The company hosting the servers, with its address.
+  legalHost          String?
   updatedAt          DateTime @updatedAt
 
   @@map("platform_settings")

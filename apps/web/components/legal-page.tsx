@@ -50,7 +50,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
   );
 }
 
-/** A value of LEGAL_ENTITY, highlighted while it is still missing so it cannot go unnoticed. */
+/** A publisher detail (getLegalEntity), highlighted while it is still missing so it cannot go unnoticed. */
 export function LegalValue({ value }: { value: string | null }): React.JSX.Element {
   if (value) return <>{value}</>;
   return <mark className="rounded bg-app-warn-bg px-1 text-app-text">[{PLACEHOLDER}]</mark>;

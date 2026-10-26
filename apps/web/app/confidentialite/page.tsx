@@ -1,14 +1,16 @@
 import type { Metadata } from 'next';
 import { LegalPage, LegalValue, formatTermsDate } from '../../components/legal-page';
-import { LEGAL_ENTITY, SUBPROCESSORS, TERMS_VERSION } from '../../lib/legal';
+import { SUBPROCESSORS, TERMS_VERSION } from '../../lib/legal';
+import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 
 export const metadata: Metadata = { title: 'Politique de confidentialité — SolarixPro' };
 
-// The contact address comes from the environment of the running server: never prerendered.
+// The contact address and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';
 
-export default function PrivacyPage(): React.JSX.Element {
+export default async function PrivacyPage(): Promise<React.JSX.Element> {
+  const entity = await getLegalEntity();
   const email = supportContact().email;
   const contact = email ? <a href={`mailto:${email}`}>{email}</a> : <LegalValue value={null} />;
   return (
@@ -21,9 +23,9 @@ export default function PrivacyPage(): React.JSX.Element {
 
       <h2>1. Qui est responsable</h2>
       <p>
-        <LegalValue value={LEGAL_ENTITY.name} />, <LegalValue value={LEGAL_ENTITY.address} /> (l’« Éditeur »), est responsable
+        <LegalValue value={entity.name} />, <LegalValue value={entity.address} /> (l’« Éditeur »), est responsable
         du traitement des données des comptes : utilisateurs des entreprises d’installation et des fournisseurs. Déclaration
-        auprès de l’Instance Nationale de Protection des Données Personnelles (INPDP) : <LegalValue value={LEGAL_ENTITY.inpdpDeclaration} />.
+        auprès de l’Instance Nationale de Protection des Données Personnelles (INPDP) : <LegalValue value={entity.inpdpDeclaration} />.
       </p>
       <p>
         Pour les données des clients de l’installateur (particuliers ou entreprises qui font installer des panneaux), le
@@ -58,7 +60,7 @@ export default function PrivacyPage(): React.JSX.Element {
 
       <h2>4. Avec qui elles sont partagées</h2>
       <p>
-        Les données sont hébergées par <LegalValue value={LEGAL_ENTITY.host} />. Certaines étapes du Service font appel aux
+        Les données sont hébergées par <LegalValue value={entity.host} />. Certaines étapes du Service font appel aux
         prestataires suivants, qui ne reçoivent que les données nécessaires à leur tâche :
       </p>
       <table>

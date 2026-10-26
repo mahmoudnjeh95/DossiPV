@@ -1,15 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage, LegalValue, formatTermsDate } from '../../components/legal-page';
-import { LEGAL_ENTITY, TERMS_VERSION } from '../../lib/legal';
+import { TERMS_VERSION } from '../../lib/legal';
+import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 
 export const metadata: Metadata = { title: 'Mentions légales — SolarixPro' };
 
-// The contact details come from the environment of the running server: never prerendered.
+// The contact details and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';
 
-export default function LegalNoticePage(): React.JSX.Element {
+export default async function LegalNoticePage(): Promise<React.JSX.Element> {
+  const entity = await getLegalEntity();
   const contact = supportContact();
   return (
     <LegalPage title="Mentions légales" updated={formatTermsDate(TERMS_VERSION)}>
@@ -18,27 +20,27 @@ export default function LegalNoticePage(): React.JSX.Element {
         <tbody>
           <tr>
             <th scope="row">Raison sociale</th>
-            <td><LegalValue value={LEGAL_ENTITY.name} /></td>
+            <td><LegalValue value={entity.name} /></td>
           </tr>
           <tr>
             <th scope="row">Forme juridique</th>
-            <td><LegalValue value={LEGAL_ENTITY.legalForm} /></td>
+            <td><LegalValue value={entity.legalForm} /></td>
           </tr>
           <tr>
             <th scope="row">Identifiant RNE</th>
-            <td><LegalValue value={LEGAL_ENTITY.rneId} /></td>
+            <td><LegalValue value={entity.rneId} /></td>
           </tr>
           <tr>
             <th scope="row">Matricule fiscal</th>
-            <td><LegalValue value={LEGAL_ENTITY.taxId} /></td>
+            <td><LegalValue value={entity.taxId} /></td>
           </tr>
           <tr>
             <th scope="row">Siège</th>
-            <td><LegalValue value={LEGAL_ENTITY.address} /></td>
+            <td><LegalValue value={entity.address} /></td>
           </tr>
           <tr>
             <th scope="row">Directeur de la publication</th>
-            <td><LegalValue value={LEGAL_ENTITY.publisher} /></td>
+            <td><LegalValue value={entity.publisher} /></td>
           </tr>
           <tr>
             <th scope="row">Contact</th>
@@ -51,11 +53,11 @@ export default function LegalNoticePage(): React.JSX.Element {
       </table>
 
       <h2>Hébergement</h2>
-      <p><LegalValue value={LEGAL_ENTITY.host} /></p>
+      <p><LegalValue value={entity.host} /></p>
 
       <h2>Données personnelles</h2>
       <p>
-        Déclaration INPDP : <LegalValue value={LEGAL_ENTITY.inpdpDeclaration} />. Le détail des traitements figure dans la{' '}
+        Déclaration INPDP : <LegalValue value={entity.inpdpDeclaration} />. Le détail des traitements figure dans la{' '}
         <Link href="/confidentialite">politique de confidentialité</Link>.
       </p>
 

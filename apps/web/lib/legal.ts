@@ -8,6 +8,7 @@
  */
 export const TERMS_VERSION = '2026-10-26';
 
+/** The company publishing SolarixPro: set in the super admin's Paramètres, null until filled. */
 export interface LegalEntity {
   /** Raison sociale, e.g. "SolarixPro SARL". */
   name: string | null;
@@ -25,17 +26,6 @@ export interface LegalEntity {
   /** The company hosting the servers, with its address. */
   host: string | null;
 }
-
-export const LEGAL_ENTITY: LegalEntity = {
-  name: null,
-  legalForm: null,
-  rneId: null,
-  taxId: null,
-  address: null,
-  publisher: null,
-  inpdpDeclaration: null,
-  host: null,
-};
 
 /** The services personal data passes through, listed in the privacy policy. Keep in step with the code. */
 export const SUBPROCESSORS: ReadonlyArray<{ name: string; purpose: string; country: string }> = [

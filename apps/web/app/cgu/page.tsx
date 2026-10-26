@@ -1,23 +1,25 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage, LegalValue, formatTermsDate } from '../../components/legal-page';
-import { LEGAL_ENTITY, TERMS_VERSION } from '../../lib/legal';
+import { TERMS_VERSION } from '../../lib/legal';
+import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 import { TRIAL_BILL_IMPORT_LIMIT } from '../../lib/trial';
 
 export const metadata: Metadata = { title: 'Conditions générales — SolarixPro' };
 
-// The contact address comes from the environment of the running server: never prerendered.
+// The contact address and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';
 
-export default function TermsPage(): React.JSX.Element {
+export default async function TermsPage(): Promise<React.JSX.Element> {
+  const entity = await getLegalEntity();
   const email = supportContact().email;
   return (
     <LegalPage title="Conditions générales d’utilisation et de vente" updated={formatTermsDate(TERMS_VERSION)}>
       <h2>1. Objet</h2>
       <p>
         Les présentes conditions régissent l’accès au service en ligne SolarixPro (le « Service »), édité par{' '}
-        <LegalValue value={LEGAL_ENTITY.name} /> (l’« Éditeur »), et son utilisation par les entreprises qui s’y inscrivent
+        <LegalValue value={entity.name} /> (l’« Éditeur »), et son utilisation par les entreprises qui s’y inscrivent
         (le « Client »). Le Service aide les installateurs photovoltaïques à préparer le dossier technique d’une installation
         raccordée au réseau basse tension de la STEG : saisie du projet, import de la facture STEG, dimensionnement, contrôles
         électriques, simulation de production, plans, schémas et génération du dossier au format PDF.

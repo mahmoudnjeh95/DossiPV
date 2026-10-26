@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { requireAuthenticatedSuperAdmin } from '../layout';
 import { CLAUDE_MODEL_OPTIONS, resolveClaudeModel } from '@dossipv/dossier-worker/claude-models';
-import { getClaudeModel, getOption3dPriceTnd } from '../../../../lib/platform-settings';
+import { getClaudeModel, getLegalEntity, getOption3dPriceTnd } from '../../../../lib/platform-settings';
 import { loadP2pSettings } from '../../../../lib/payments/p2p';
 import { Option3dPriceForm } from './option3d-price-form';
 import { ClaudeModelForm } from './claude-model-form';
 import { P2pForm } from './p2p-form';
+import { LegalEntityForm } from './legal-entity-form';
 import { maskAccessToken } from '../../../../lib/admin-period';
 import { ACTIVE_MAP_PROVIDER } from '../../../(app)/projects/[id]/map/esri-provider';
 import { Table } from '@/components/ui/table';
@@ -15,11 +16,30 @@ export default async function AdminSettingsPage(): Promise<React.JSX.Element> {
   const option3dPrice = await getOption3dPriceTnd();
   const claudeModel = await getClaudeModel();
   const p2p = await loadP2pSettings();
+  const legal = await getLegalEntity();
 
   return (
     <main>
       <h1>Paramètres</h1>
-      <p>Configuration actuelle de la plateforme (lecture seule, sauf le modèle Claude, l&apos;option 3D et le paiement P2P).</p>
+      <p>Configuration actuelle de la plateforme (lecture seule, sauf la société éditrice, le modèle Claude, l&apos;option 3D et le paiement P2P).</p>
+
+      <h2>Société éditrice</h2>
+      <p className="text-[0.8rem] font-normal text-app-muted">
+        Affichée sur les <Link href="/cgu">conditions générales</Link>, la <Link href="/confidentialite">politique de confidentialité</Link> et
+        les <Link href="/mentions-legales">mentions légales</Link>. Un champ vide y apparaît en « à compléter ».
+      </p>
+      <LegalEntityForm
+        values={{
+          legalName: legal.name ?? '',
+          legalForm: legal.legalForm ?? '',
+          legalRneId: legal.rneId ?? '',
+          legalTaxId: legal.taxId ?? '',
+          legalAddress: legal.address ?? '',
+          legalPublisher: legal.publisher ?? '',
+          legalInpdpDeclaration: legal.inpdpDeclaration ?? '',
+          legalHost: legal.host ?? '',
+        }}
+      />
 
       <h2>Fournisseur de cartes</h2>
       <Table>
