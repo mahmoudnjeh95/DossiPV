@@ -112,7 +112,7 @@ export default function PrivacyPage(): React.JSX.Element {
           </tr>
           <tr>
             <td>Sauvegardes</td>
-            <td>7 jours pour les sauvegardes quotidiennes, 4 semaines pour les hebdomadaires.</td>
+            <td>3 jours sur le serveur ; hors du serveur, en copie chiffrée, 30 jours pour les sauvegardes quotidiennes et 12 semaines pour les hebdomadaires.</td>
           </tr>
         </tbody>
       </table>

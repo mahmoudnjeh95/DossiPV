@@ -44,6 +44,7 @@ export const SUBPROCESSORS: ReadonlyArray<{ name: string; purpose: string; count
   { name: 'Esri (ArcGIS) et Mapbox', purpose: 'fonds de carte satellite, à partir des coordonnées du site', country: 'États-Unis' },
   { name: 'Commission européenne, JRC (PVGIS)', purpose: 'simulation de production, à partir des seules coordonnées du site', country: 'Union européenne' },
   { name: 'Sentry', purpose: 'suivi des erreurs techniques, sans données personnelles', country: 'États-Unis' },
+  { name: 'Google (Drive)', purpose: 'copie de sauvegarde hors du serveur, chiffrée avant envoi et illisible par Google', country: 'États-Unis' },
 ];
 
 export const PLACEHOLDER = 'à compléter';
