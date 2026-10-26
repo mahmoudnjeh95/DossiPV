@@ -29,6 +29,10 @@ KEEP_WEEKLY="${BACKUP_KEEP_WEEKLY:-4}"
 # ISO weekday (1 = Monday … 7 = Sunday) whose backup is also kept as a weekly one.
 WEEKLY_DAY="${BACKUP_WEEKLY_DAY:-7}"
 RCLONE_REMOTE="${BACKUP_RCLONE_REMOTE:-}"
+# How long the off-site copies are kept: the local retention unless set (the remote usually has
+# far more room than the server's disk).
+REMOTE_KEEP_DAILY="${BACKUP_REMOTE_KEEP_DAILY:-$KEEP_DAILY}"
+REMOTE_KEEP_WEEKLY="${BACKUP_REMOTE_KEEP_WEEKLY:-$KEEP_WEEKLY}"
 HEARTBEAT_URL="${BACKUP_HEARTBEAT_URL:-}"
 
 log() {
@@ -131,8 +135,8 @@ if [[ -n "$RCLONE_REMOTE" ]]; then
   if [[ -d "$BACKUP_ROOT/weekly/$DATE" ]]; then
     rclone copy --checksum "$BACKUP_ROOT/weekly/$DATE" "$REMOTE/weekly/$DATE" || fail "rclone copy (weekly) failed"
   fi
-  rclone delete --min-age "$((KEEP_DAILY + 1))d" "$REMOTE/daily" || fail "rclone retention (daily) failed"
-  rclone delete --min-age "$((KEEP_WEEKLY * 7 + 1))d" "$REMOTE/weekly" || fail "rclone retention (weekly) failed"
+  rclone delete --min-age "$((REMOTE_KEEP_DAILY + 1))d" "$REMOTE/daily" || fail "rclone retention (daily) failed"
+  rclone delete --min-age "$((REMOTE_KEEP_WEEKLY * 7 + 1))d" "$REMOTE/weekly" || fail "rclone retention (weekly) failed"
   rclone rmdirs --leave-root "$REMOTE" 2>/dev/null || true
   log "off-site: ok"
 else

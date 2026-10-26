@@ -92,8 +92,9 @@ server it is what lets you reach the off-site copies.
 
 How the off-site copy behaves: each run `rclone copy`s the new backup into `daily/<date>` (and
 `weekly/<date>` on Sundays); it never mirrors local deletions, so wiping the server's backups does
-not wipe the off-site ones. Off-site copies are aged out by date (daily older than 8 days, weekly
-older than 29 days).
+not wipe the off-site ones. Off-site copies are aged out by date: by default like the local ones (daily older than 8 days,
+weekly older than 29 days); `BACKUP_REMOTE_KEEP_DAILY` and `BACKUP_REMOTE_KEEP_WEEKLY` keep them
+longer than the server's disk allows.
 
 Optional dead man's switch: create a heartbeat check (healthchecks.io free tier, or a Better Stack
 heartbeat) expecting one ping a day with a few hours of grace, and set
