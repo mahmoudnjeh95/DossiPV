@@ -24,7 +24,7 @@ vi.mock('@dossipv/db', async () => {
   return { ...actual, db: { ...actual.db, platformSettings: { upsert: m.mockSettingsUpsert }, adminAuditLog: { create: m.mockAuditCreate } } };
 });
 
-import { updateP2pSettingsAction } from '../app/admin/(protected)/settings/actions';
+import { updateLegalEntityAction, updateP2pSettingsAction } from '../app/admin/(protected)/settings/actions';
 
 function form(fields: Record<string, string>): FormData {
   const formData = new FormData();
@@ -88,5 +88,34 @@ describe('updateP2pSettingsAction', () => {
     // The mocked redirect does not throw as the real one does, so the action goes on and fails on the missing admin.
     await updateP2pSettingsAction(undefined, form({})).catch(() => undefined);
     expect(m.mockRedirect).toHaveBeenCalledWith('/admin/login');
+  });
+});
+
+describe('updateLegalEntityAction', () => {
+  it('saves the publisher, empty fields as null, and logs settings.legalEntity', async () => {
+    const result = await updateLegalEntityAction(
+      undefined,
+      form({ legalName: ' SolarixPro SARL ', legalTaxId: '1234567/A/M/000', legalHost: 'OVH SAS, Roubaix, France', legalRneId: '' }),
+    );
+
+    expect(result).toEqual({ saved: true });
+    const input = {
+      legalName: 'SolarixPro SARL',
+      legalForm: null,
+      legalRneId: null,
+      legalTaxId: '1234567/A/M/000',
+      legalAddress: null,
+      legalPublisher: null,
+      legalInpdpDeclaration: null,
+      legalHost: 'OVH SAS, Roubaix, France',
+    };
+    expect(m.mockSettingsUpsert).toHaveBeenCalledWith({ where: { id: 'singleton' }, create: { id: 'singleton', ...input }, update: input });
+    expect(m.mockAuditCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ action: 'settings.legalEntity', details: input }) as unknown });
+  });
+
+  it('rejects a value that is too long', async () => {
+    const result = await updateLegalEntityAction(undefined, form({ legalName: 'x'.repeat(201) }));
+    expect(result?.error).toMatch(/Raison sociale/);
+    expect(m.mockSettingsUpsert).not.toHaveBeenCalled();
   });
 });

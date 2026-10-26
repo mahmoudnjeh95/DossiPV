@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { requireSupplier } from '../../lib/supplier-access';
+import { requireCurrentTerms } from '../../lib/terms-gate';
 import { BrandMark } from '../../components/brand-mark';
 import { AppHeader } from '../../components/app-header';
 import { logoutAction } from '../(app)/actions';
@@ -16,6 +17,7 @@ const NAV_LINKS = [
 /** Chrome of the supplier space; refuses anonymous visitors (/login) and installers (/dashboard). */
 export default async function SupplierLayout({ children }: { children: ReactNode }): Promise<React.JSX.Element> {
   const { user, supplierName } = await requireSupplier();
+  await requireCurrentTerms(user);
   return (
     <>
       <AppHeader

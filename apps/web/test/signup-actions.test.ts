@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   mockUserCreate: vi.fn(),
   mockCreateToken: vi.fn(),
   mockSendEmail: vi.fn<(message: EmailMessage) => Promise<{ sent: boolean }>>(),
+  mockSeedLibrary: vi.fn(),
 }));
 
 vi.mock('next/headers', () => ({
@@ -31,6 +32,10 @@ vi.mock('@dossipv/db', () => ({
       callback({ company: { create: m.mockCompanyCreate }, companyUser: { create: m.mockUserCreate } }),
   },
 }));
+vi.mock('../lib/library-seed', async () => {
+  const actual = await vi.importActual<typeof import('../lib/library-seed')>('../lib/library-seed');
+  return { ...actual, addSharedCatalogToLibrary: m.mockSeedLibrary };
+});
 vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
   return { ...actual, createEmailVerificationToken: m.mockCreateToken, hashPassword: vi.fn().mockResolvedValue('hashed') };
@@ -43,6 +48,8 @@ vi.mock('@dossipv/email', () => ({
 }));
 
 import { resendVerificationAction, signUpAction } from '../app/inscription/actions';
+import { TERMS_VERSION } from '../lib/legal';
+import { ALL_EQUIPMENT_KINDS } from '../lib/library-seed';
 
 // expect.* matchers are typed any; these keep the assertions lint-clean.
 const contains = (text: string): string => expect.stringContaining(text) as string;
@@ -83,6 +90,7 @@ function signUpForm(overrides: Record<string, string> = {}): FormData {
     anmeCode: ' inst-0042 ',
     password: 'un-mot-de-passe-long',
     confirmation: 'un-mot-de-passe-long',
+    acceptTerms: 'on',
     ...overrides,
   };
   const formData = new FormData();
@@ -113,6 +121,7 @@ describe('signUpAction validation', () => {
     [{ password: 'court', confirmation: 'court' }, '10 caractères minimum'],
     [{ password: 'x'.repeat(73), confirmation: 'x'.repeat(73) }, '72 caractères maximum'],
     [{ confirmation: 'autre-mot-de-passe' }, 'ne correspondent pas'],
+    [{ acceptTerms: '' }, 'conditions générales'],
   ])('refuses %j', async (overrides, message) => {
     const result = await signUp(overrides);
 
@@ -151,11 +160,22 @@ describe('signUpAction', () => {
         signupAt: anyDate(),
         signupContactName: 'Ali Ben Salah',
         signupGovernorate: 'Sfax',
+        libraryHintPending: true,
       }),
     });
+    // The whole shared catalog goes into the new library.
+    expect(m.mockSeedLibrary).toHaveBeenCalledWith('c1', ALL_EQUIPMENT_KINDS);
     expect(m.mockCompanyCreate.mock.calls[0]?.[0].data).not.toHaveProperty('subscription');
     expect(m.mockUserCreate).toHaveBeenCalledWith({
-      data: { companyId: 'c1', email, fullName: 'Ali Ben Salah', role: 'OWNER', passwordHash: 'hashed' },
+      data: {
+        companyId: 'c1',
+        email,
+        fullName: 'Ali Ben Salah',
+        role: 'OWNER',
+        passwordHash: 'hashed',
+        termsAcceptedAt: anyDate(),
+        termsVersion: TERMS_VERSION,
+      },
     });
     expect(m.mockCreateToken).toHaveBeenCalledWith('u1');
     expect(m.mockSendEmail).toHaveBeenCalledTimes(1);

@@ -8,6 +8,7 @@ import { logAdminAction } from '../../../../lib/admin-audit';
 import { PLATFORM_SETTINGS_ID } from '../../../../lib/platform-settings';
 import { isClaudeModelId } from '@dossipv/dossier-worker/claude-models';
 import { readP2pSettings } from './p2p-validation';
+import { readLegalEntity } from './legal-entity-validation';
 
 export interface SettingsActionState {
   error?: string;
@@ -84,6 +85,30 @@ export async function updateP2pSettingsAction(
     izi: input.p2pIziNumber !== null,
     d17: input.p2pD17Number !== null,
   });
+  revalidatePath('/admin/settings');
+  return { saved: true };
+}
+
+/** Sets the company publishing SolarixPro, shown on /cgu, /confidentialite and /mentions-legales. */
+export async function updateLegalEntityAction(
+  _prevState: SettingsActionState | undefined,
+  formData: FormData,
+): Promise<SettingsActionState | undefined> {
+  const admin = await requireAuthenticatedSuperAdmin();
+
+  const reader = new FormReader(formData);
+  const input = readLegalEntity(reader);
+  if (reader.hasErrors) {
+    return { error: reader.errorMessage() };
+  }
+
+  await db.platformSettings.upsert({
+    where: { id: PLATFORM_SETTINGS_ID },
+    create: { id: PLATFORM_SETTINGS_ID, ...input },
+    update: input,
+  });
+  // The company's own public identity, not personal data.
+  await logAdminAction(admin.id, 'settings.legalEntity', null, input);
   revalidatePath('/admin/settings');
   return { saved: true };
 }

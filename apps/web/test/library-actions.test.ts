@@ -45,6 +45,7 @@ vi.mock('@dossipv/db', async () => {
 import {
   addToLibraryAction,
   addAllOfKindAction,
+  removeAllOfKindAction,
   removeFromLibraryAction,
   updateLibraryPriceAction,
 } from '../app/(app)/library/actions';
@@ -60,6 +61,26 @@ beforeEach(() => {
   m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: null });
   m.mockGet.mockReturnValue({ value: 'token' });
   m.mockValidateSession.mockResolvedValue({ id: 'user-1', companyId: 'company-1', fullName: 'Test' });
+});
+
+describe('removeAllOfKindAction', () => {
+  it('empties one type of the company library', async () => {
+    m.deleteMany.mockResolvedValue({ count: 12 });
+    expect(await removeAllOfKindAction('CABLE')).toBeUndefined();
+    expect(m.deleteMany).toHaveBeenCalledWith({ where: { companyId: 'company-1', kind: 'CABLE' } });
+    expect(m.mockRevalidatePath).toHaveBeenCalledWith('/library');
+  });
+
+  it('refuses panels and inverters for a sponsored installer', async () => {
+    m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1' });
+    expect(await removeAllOfKindAction('PV_MODULE')).toEqual({ error: expect.any(String) as string });
+    expect(m.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses an unknown type', async () => {
+    expect(await removeAllOfKindAction('NOPE' as never)).toEqual({ error: 'Type d’équipement invalide.' });
+    expect(m.deleteMany).not.toHaveBeenCalled();
+  });
 });
 
 describe('library actions', () => {

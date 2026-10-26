@@ -7,6 +7,8 @@ import { db } from '@dossipv/db';
 import { adminEmailAddress, appUrl, isEmailConfigured, sendEmail } from '@dossipv/email';
 import { FormReader } from '../../lib/form-reader';
 import { readLoginEmail, readNewPassword, readTunisianPhone } from '../../lib/account-form';
+import { TERMS_VERSION } from '../../lib/legal';
+import { ALL_EQUIPMENT_KINDS, addSharedCatalogToLibrary } from '../../lib/library-seed';
 import { GOVERNORATES } from './governorates';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -78,6 +80,9 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
   if (password.length > 0 && formData.get('confirmation') !== password) {
     reader.errors.push('Les deux mots de passe ne correspondent pas.');
   }
+  if (formData.get('acceptTerms') !== 'on') {
+    reader.errors.push('Acceptez les conditions générales et la politique de confidentialité pour créer votre compte.');
+  }
   const fields: SignUpFields = { companyName, contactName, phone, email, governorate, anmeCode };
   if (reader.hasErrors) {
     return { sent: false, error: reader.errorMessage(), fields };
@@ -107,8 +112,9 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
 
   const passwordHash = await hashPassword(password);
   let ownerId: string;
+  let companyId: string;
   try {
-    ownerId = await db.$transaction(async (tx) => {
+    ({ ownerId, companyId } = await db.$transaction(async (tx) => {
       const company = await tx.company.create({
         data: {
           name: companyName,
@@ -124,13 +130,22 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
           signupAt: new Date(),
           signupContactName: contactName,
           signupGovernorate: governorate,
+          libraryHintPending: true,
         },
       });
       const owner = await tx.companyUser.create({
-        data: { companyId: company.id, email, fullName: contactName, role: 'OWNER', passwordHash },
+        data: {
+          companyId: company.id,
+          email,
+          fullName: contactName,
+          role: 'OWNER',
+          passwordHash,
+          termsAcceptedAt: new Date(),
+          termsVersion: TERMS_VERSION,
+        },
       });
-      return owner.id;
-    });
+      return { ownerId: owner.id, companyId: company.id };
+    }));
   } catch (error) {
     // Two sign-ups racing on the same address: the loser gets the neutral answer too.
     if (typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002') {
@@ -138,6 +153,9 @@ export async function signUpAction(_prevState: SignUpState | undefined, formData
     }
     throw error;
   }
+
+  // The whole shared catalog to start with: the hint on first visit asks to sort it.
+  await addSharedCatalogToLibrary(companyId, ALL_EQUIPMENT_KINDS);
 
   if (showDevVerifyLink()) {
     const url = await verificationUrl(ownerId);

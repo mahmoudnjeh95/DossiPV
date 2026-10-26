@@ -5,6 +5,7 @@ import type { EquipmentKind } from '@dossipv/db';
 import {
   addAllOfKindAction,
   addToLibraryAction,
+  removeAllOfKindAction,
   removeFromLibraryAction,
   type LibraryActionState,
 } from './actions';
@@ -48,6 +49,16 @@ export function AddAllButton({
 
 export function RemoveButton({ libraryItemId }: { libraryItemId: string }): React.JSX.Element {
   return <ActionButton action={removeFromLibraryAction.bind(null, libraryItemId)} label="Retirer" />;
+}
+
+export function RemoveAllButton({ kind, count, title }: { kind: EquipmentKind; count: number; title: string }): React.JSX.Element {
+  return (
+    <ActionButton
+      action={removeAllOfKindAction.bind(null, kind)}
+      label="Retirer tout"
+      confirmMessage={`Retirer de votre bibliothèque les ${count} ${title.toLowerCase()} ? Vous pourrez les ajouter à nouveau depuis le catalogue partagé.`}
+    />
+  );
 }
 
 export function DeleteOwnButton({ kind, itemId }: { kind: EquipmentKind; itemId: string }): React.JSX.Element {
