@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { countSignupsToContact } from '../../../lib/admin-signups';
 import { countPaymentsNeedingAttention } from '../../../lib/payments/admin';
 import { expiringSubscriptionWhere } from '../../../lib/admin-search';
+import { computeMonthRevenue } from '../../../lib/admin-revenue';
 import { Users, ChartBar, Revenue, Payment } from '@dossipv/icons';
 
 export function getMonthStart(now: Date): Date {
@@ -50,20 +51,45 @@ export async function computeDashboardStats(now: Date): Promise<DashboardStats> 
   };
 }
 
+const tnd = (amount: number): string => `${amount.toFixed(2)} TND`;
+
 export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
   // Defense-in-depth: see the matching comment on the installer list page for why this call
   // is here even though the (protected) layout already guards this route.
   await requireAuthenticatedSuperAdmin();
 
-  const [stats, signupsToContact, paymentsToVerify] = await Promise.all([
-    computeDashboardStats(new Date()),
+  const now = new Date();
+  const [stats, revenue, signupsToContact, paymentsToVerify] = await Promise.all([
+    computeDashboardStats(now),
+    computeMonthRevenue(now),
     countSignupsToContact(),
     countPaymentsNeedingAttention(),
   ]);
+  const month = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'Africa/Tunis' });
 
   return (
     <main>
       <h1>Tableau de bord</h1>
+
+      <h2>Revenus — {month}</h2>
+      <div className="card-grid">
+        <AdminStatsCard icon={Payment} label="Encaissé ce mois (confirmé)" value={tnd(revenue.confirmedThisMonthTnd)} />
+        <Link href="/admin/paiements" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <AdminStatsCard
+            icon={Payment}
+            label={`En attente ce mois (${revenue.pendingThisMonthCount} paiement${revenue.pendingThisMonthCount > 1 ? 's' : ''} à vérifier)`}
+            value={tnd(revenue.pendingThisMonthTnd)}
+          />
+        </Link>
+        <AdminStatsCard
+          icon={Revenue}
+          label={`Renouvellements attendus d'ici la fin du mois (${revenue.renewalsDueCount})`}
+          value={tnd(revenue.renewalsDueTnd)}
+        />
+        <AdminStatsCard icon={ChartBar} label="Revenu mensuel estimé (abonnements en cours)" value={tnd(revenue.monthlyEstimateTnd)} />
+      </div>
+
+      <h2>Activité</h2>
 
       <div className="card-grid">
         <AdminStatsCard icon={Users} label="Installateurs actifs" value={stats.activeInstallers} />
@@ -76,7 +102,7 @@ export default async function AdminDashboardPage(): Promise<React.JSX.Element> {
         <AdminStatsCard
           icon={Payment}
           label="Revenu total"
-          value={`${stats.totalRevenueTnd.toFixed(2)} TND`}
+          value={tnd(stats.totalRevenueTnd)}
         />
         <Link href="/admin/fournisseurs" style={{ textDecoration: 'none', color: 'inherit' }}>
           <AdminStatsCard icon={Users} label="Fournisseurs" value={stats.suppliers} />

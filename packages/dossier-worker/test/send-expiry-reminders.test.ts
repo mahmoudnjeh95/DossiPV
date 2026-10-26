@@ -25,14 +25,14 @@ vi.mock('@dossipv/email', () => ({
   appUrl: (path: string): string => `https://dossipv.tn${path}`,
 }));
 
-import { buildReminderEmail, formatFrenchDate, reminderKindFor, reminderRecipients, sendExpiryReminders } from '../src/send-expiry-reminders';
+import { billingPath, buildOption3dReminderEmail, buildReminderEmail, formatFrenchDate, reminderKindFor, reminderRecipients, sendExpiryReminders, sendOption3dReminders } from '../src/send-expiry-reminders';
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const NOW = new Date('2026-10-24T08:00:00.000Z');
 const inMs = (ms: number): Date => new Date(NOW.getTime() + ms);
 
-function subscriptionRow(overrides: Partial<{ id: string; status: string; periodEnd: Date; users: unknown[]; email: string }> = {}): unknown {
+function subscriptionRow(overrides: Partial<{ id: string; status: string; periodEnd: Date; users: unknown[]; email: string; kind: string }> = {}): unknown {
   return {
     id: overrides.id ?? 'sub-1',
     status: overrides.status ?? 'ACTIVE',
@@ -41,6 +41,7 @@ function subscriptionRow(overrides: Partial<{ id: string; status: string; period
     company: {
       name: 'SolarPro',
       email: overrides.email ?? 'contact@solarpro.tn',
+      kind: overrides.kind ?? 'INSTALLER',
       users: overrides.users ?? [{ email: 'owner@solarpro.tn', role: 'OWNER', disabledAt: null }],
     },
   };
@@ -104,13 +105,22 @@ describe('buildReminderEmail', () => {
     expect(email.text).toContain('consulter');
     expect(email.text).toContain('ne pourrez plus générer');
     expect(email.text).toContain('admin@dossipv.tn');
+    expect(email.text).toContain('préparer votre paiement');
+    expect(email.text).toContain('Flouci, izi ou D17');
   });
 
   it('falls back to a generic contact without ADMIN_EMAIL', () => {
     mocks.adminEmailAddress.mockReturnValue(null);
     const email = buildReminderEmail({ kind: 'EXPIRED', companyName: 'SolarPro', planName: 'Standard', periodEnd: inMs(-DAY_MS), now: NOW });
     expect(email.subject).toBe('Votre abonnement SolarixPro a expiré');
-    expect(email.text).toContain("contactez l'équipe SolarixPro");
+    expect(email.text).toContain("Contactez l'équipe SolarixPro");
+  });
+});
+
+describe('billingPath', () => {
+  it('sends a supplier to its own billing page', () => {
+    expect(billingPath('INSTALLER')).toBe('/facturation');
+    expect(billingPath('SUPPLIER')).toBe('/fournisseur/facturation');
   });
 });
 
@@ -126,7 +136,7 @@ describe('sendExpiryReminders', () => {
     expect(where.periodEnd.gte).toEqual(inMs(-30 * DAY_MS));
   });
 
-  it('records the reminder first, then emails the recipients with a dashboard button', async () => {
+  it('records the reminder first, then emails the recipients with a button to the billing page', async () => {
     const periodEnd = inMs(12 * HOUR_MS);
     mocks.subscriptionFindMany.mockResolvedValue([subscriptionRow({ periodEnd })]);
 
@@ -138,7 +148,7 @@ describe('sendExpiryReminders', () => {
     const message = mocks.sendEmail.mock.calls[0]?.[0] as { to: string[]; subject: string; action: { url: string } };
     expect(message.to).toEqual(['owner@solarpro.tn', 'contact@solarpro.tn']);
     expect(message.subject).toMatch(/^Dernier jour/);
-    expect(message.action.url).toBe('https://dossipv.tn/dashboard');
+    expect(message.action.url).toBe('https://dossipv.tn/facturation');
   });
 
   it('sends each reminder once: an existing row (unique violation) means already sent', async () => {
@@ -203,5 +213,71 @@ describe('sendExpiryReminders', () => {
     expect(summary).toEqual({ checked: 2, sent: 1 });
     expect(error).toHaveBeenCalled();
     error.mockRestore();
+  });
+});
+
+function optionRow(overrides: Partial<{ id: string; option3dUntil: Date | null; sponsorTier: string }> = {}): unknown {
+  return {
+    id: overrides.id ?? 'sub-3d',
+    option3dUntil: overrides.option3dUntil === undefined ? inMs(6 * DAY_MS) : overrides.option3dUntil,
+    company: {
+      name: 'SolarPro',
+      email: 'contact@solarpro.tn',
+      users: [{ email: 'owner@solarpro.tn', role: 'OWNER', disabledAt: null }],
+      sponsor: { subscription: { plan: { tier: overrides.sponsorTier ?? 'STANDARD' } } },
+    },
+  };
+}
+
+describe('buildOption3dReminderEmail', () => {
+  it('names the end date, the effect on new projects and how to pay', () => {
+    const email = buildOption3dReminderEmail({ companyName: 'SolarPro', option3dUntil: new Date('2026-10-30T10:00:00.000Z'), now: NOW });
+    expect(email.subject).toBe('Votre option 3D SolarixPro expire le 30/10/2026');
+    expect(email.text).toContain('dans 7 jours');
+    expect(email.text).toContain('vue 3D');
+    expect(email.text).toContain('préparer votre paiement');
+    expect(email.text).toContain('admin@dossipv.tn');
+  });
+});
+
+describe('sendOption3dReminders', () => {
+  it('queries the sponsored installers whose 3D option ends within 7 days', async () => {
+    mocks.subscriptionFindMany.mockResolvedValue([]);
+
+    await sendOption3dReminders(NOW);
+
+    const where = (mocks.subscriptionFindMany.mock.calls[0]?.[0] as { where: { option3dUntil: { gt: Date; lte: Date }; company: unknown } }).where;
+    expect(where.option3dUntil).toEqual({ gt: NOW, lte: inMs(7 * DAY_MS) });
+    expect(where.company).toEqual({ sponsorCompanyId: { not: null } });
+  });
+
+  it('records one 3D reminder per option end, then emails a button to the billing page', async () => {
+    const option3dUntil = inMs(6 * DAY_MS);
+    mocks.subscriptionFindMany.mockResolvedValue([optionRow({ option3dUntil })]);
+
+    const summary = await sendOption3dReminders(NOW);
+
+    expect(summary).toEqual({ checked: 1, sent: 1 });
+    expect(mocks.reminderCreate).toHaveBeenCalledWith(expect.objectContaining({ data: { subscriptionId: 'sub-3d', periodEnd: option3dUntil, kind: 'OPTION_3D_EXPIRES_IN_7_DAYS' } }));
+    const message = mocks.sendEmail.mock.calls[0]?.[0] as { to: string[]; action: { url: string } };
+    expect(message.to).toEqual(['owner@solarpro.tn', 'contact@solarpro.tn']);
+    expect(message.action.url).toBe('https://dossipv.tn/facturation');
+  });
+
+  it('sends nothing when the supplier is on Premium, which includes 3D', async () => {
+    mocks.subscriptionFindMany.mockResolvedValue([optionRow({ sponsorTier: 'PREMIUM' })]);
+
+    const summary = await sendOption3dReminders(NOW);
+
+    expect(summary).toEqual({ checked: 0, sent: 0 });
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('sends each 3D reminder once', async () => {
+    mocks.subscriptionFindMany.mockResolvedValue([optionRow()]);
+    mocks.reminderCreate.mockRejectedValue(uniqueViolation());
+
+    expect(await sendOption3dReminders(NOW)).toEqual({ checked: 1, sent: 0 });
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,9 @@ import { requireCurrentTerms } from '../../lib/terms-gate';
 import { BrandMark } from '../../components/brand-mark';
 import { AppHeader } from '../../components/app-header';
 import { logoutAction } from '../(app)/actions';
+import { SubscriptionBanner } from '../../components/subscription-banner';
+import { loadEffectiveSubscription } from '../../lib/sponsorship';
+import { summarizeSubscription } from '../../lib/subscription';
 import { Button } from '@/components/ui/button';
 
 const NAV_LINKS = [
@@ -16,8 +19,11 @@ const NAV_LINKS = [
 
 /** Chrome of the supplier space; refuses anonymous visitors (/login) and installers (/dashboard). */
 export default async function SupplierLayout({ children }: { children: ReactNode }): Promise<React.JSX.Element> {
-  const { user, supplierName } = await requireSupplier();
+  const { user, supplierName, supplierId } = await requireSupplier();
   await requireCurrentTerms(user);
+  // Only a pack nearing its end, expired or suspended is announced: a supplier without a pack yet
+  // is guided by its welcome card instead of the installer's « Aucun abonnement » message.
+  const pack = summarizeSubscription(await loadEffectiveSubscription(supplierId), new Date());
   return (
     <>
       <AppHeader
@@ -41,6 +47,12 @@ export default async function SupplierLayout({ children }: { children: ReactNode
           </Button>
         </form>
       </AppHeader>
+      {pack && (
+        // Full width under the header, like the installer app's account notices.
+        <div className="[&>*]:m-0 [&>*]:rounded-none [&>*]:text-center">
+          <SubscriptionBanner subscription={pack} billingHref="/fournisseur/facturation" />
+        </div>
+      )}
       {children}
     </>
   );

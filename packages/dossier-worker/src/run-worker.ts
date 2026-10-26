@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'url';
 import { db } from '@dossipv/db';
 import { processJob } from './process-job';
-import { sendExpiryReminders } from './send-expiry-reminders';
+import { sendExpiryReminders, sendOption3dReminders } from './send-expiry-reminders';
 import { erasePaymentProofs } from './erase-payment-proofs';
 import { reportError } from './monitoring';
 
@@ -57,6 +57,10 @@ export async function runExpiryRemindersIfDue(now: Date = new Date()): Promise<v
     const summary = await sendExpiryReminders(now);
     if (summary.sent > 0) {
       console.warn(`Expiry reminders: ${summary.sent} sent (${summary.checked} subscriptions in the reminder window).`);
+    }
+    const options = await sendOption3dReminders(now);
+    if (options.sent > 0) {
+      console.warn(`3D option reminders: ${options.sent} sent (${options.checked} options ending within 7 days).`);
     }
   } catch (error) {
     console.error('Expiry reminders check failed:', error);

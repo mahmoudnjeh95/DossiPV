@@ -28,7 +28,8 @@ export function BillingPageView({
   return (
     <main>
       <h1>Abonnement et paiement</h1>
-      <SubscriptionBanner subscription={subscription} awaitingEmailConfirmation={awaitingEmailConfirmation} />
+      {/* The supplier space shows the banner in its layout, on every page. */}
+      {!isSupplier && <SubscriptionBanner subscription={subscription} awaitingEmailConfirmation={awaitingEmailConfirmation} />}
 
       <Card as="section">
         <h2>{isSupplier ? 'Votre pack' : 'Votre abonnement'}</h2>

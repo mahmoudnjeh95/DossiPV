@@ -372,7 +372,7 @@ model Subscription {
   @@map("subscription")
 }
 
-/// An expiry email already sent for one period end, so the worker sends each one once.
+/// An expiry email already sent for one period end (or 3D option end), so the worker sends each one once.
 model SubscriptionReminder {
   id             String                   @id @default(uuid())
   subscriptionId String
@@ -389,6 +389,8 @@ enum SubscriptionReminderKind {
   EXPIRES_IN_7_DAYS
   EXPIRES_IN_1_DAY
   EXPIRED
+  /// The 3D option of a sponsored installer ends in 7 days (periodEnd holds option3dUntil).
+  OPTION_3D_EXPIRES_IN_7_DAYS
 }
 
 enum SubscriptionStatus {

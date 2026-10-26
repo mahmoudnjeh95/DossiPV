@@ -12,11 +12,14 @@ export function SubscriptionBanner({
   subscription,
   trialUsed = 0,
   awaitingEmailConfirmation = false,
+  billingHref = '/facturation',
 }: {
   subscription: SubscriptionSummary | null;
   trialUsed?: number;
   /** A self sign-up that has not confirmed its email: the free trial starts at confirmation. */
   awaitingEmailConfirmation?: boolean;
+  /** The « Abonnement et paiement » page: /fournisseur/facturation in the supplier space. */
+  billingHref?: string;
 }): React.JSX.Element | null {
   if (!subscription && awaitingEmailConfirmation) {
     return (
@@ -55,7 +58,7 @@ export function SubscriptionBanner({
       <Alert variant="danger" role="status">
         Votre abonnement a expiré le {subscription.periodEnd.toLocaleDateString('fr-FR')}. Vous pouvez consulter vos
         projets mais plus générer de dossier tant qu&apos;il n&apos;est pas renouvelé.{' '}
-        <Link href="/facturation">Renouveler</Link>
+        <Link href={billingHref}>Renouveler</Link>
       </Alert>
     );
   }
@@ -63,8 +66,9 @@ export function SubscriptionBanner({
     return (
       <Alert variant="warn" role="status">
         Votre abonnement expire dans {subscription.daysLeft} jour{subscription.daysLeft > 1 ? 's' : ''} (le{' '}
-        {subscription.periodEnd.toLocaleDateString('fr-FR')}). Pensez à le renouveler.{' '}
-        <Link href="/facturation">Renouveler</Link>
+        {subscription.periodEnd.toLocaleDateString('fr-FR')}). Préparez dès maintenant votre paiement (Flouci, izi ou D17)
+        pour le renouveler sans interruption.{' '}
+        <Link href={billingHref}>Renouveler</Link>
       </Alert>
     );
   }

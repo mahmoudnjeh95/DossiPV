@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   findFirst: vi.fn(),
   updateMany: vi.fn(),
   sendExpiryReminders: vi.fn(),
+  sendOption3dReminders: vi.fn(),
   erasePaymentProofs: vi.fn(),
 }));
 
@@ -12,7 +13,7 @@ vi.mock('@dossipv/db', async () => {
   return { ...actual, db: { ...actual.db, dossierJob: { findFirst: mocks.findFirst, updateMany: mocks.updateMany } } };
 });
 
-vi.mock('../src/send-expiry-reminders', () => ({ sendExpiryReminders: mocks.sendExpiryReminders }));
+vi.mock('../src/send-expiry-reminders', () => ({ sendExpiryReminders: mocks.sendExpiryReminders, sendOption3dReminders: mocks.sendOption3dReminders }));
 
 vi.mock('../src/erase-payment-proofs', () => ({ erasePaymentProofs: mocks.erasePaymentProofs }));
 
@@ -83,6 +84,7 @@ describe('runExpiryRemindersIfDue', () => {
   beforeEach(() => {
     resetExpiryReminderScheduleForTests();
     mocks.sendExpiryReminders.mockResolvedValue({ checked: 0, sent: 0 });
+    mocks.sendOption3dReminders.mockResolvedValue({ checked: 0, sent: 0 });
   });
 
   it('runs on the first call (startup), then at most once an hour', async () => {
@@ -94,6 +96,7 @@ describe('runExpiryRemindersIfDue', () => {
     await runExpiryRemindersIfDue(minutesLater(60));
     expect(mocks.sendExpiryReminders).toHaveBeenCalledTimes(2);
     expect(mocks.sendExpiryReminders).toHaveBeenLastCalledWith(minutesLater(60));
+    expect(mocks.sendOption3dReminders).toHaveBeenCalledTimes(2);
   });
 
   it('never throws when the check fails, and waits an hour before trying again', async () => {
