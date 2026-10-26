@@ -73,6 +73,11 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
+    # One deploy at a time: a parallel run's image cleanup would remove the tag this run is
+    # about to start. Queued runs wait instead of being cancelled, so every merge deploys.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
