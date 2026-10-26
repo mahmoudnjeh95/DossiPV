@@ -1,17 +1,21 @@
 import { db } from '@dossipv/db';
 import { generateToken, hashToken } from '@dossipv/auth';
 import type { SubscriptionLike } from './subscription';
+import { TIER_LABELS } from './labels';
+import { ALL_EQUIPMENT_KINDS, addSharedCatalogToLibrary } from './library-seed';
 
 /**
- * Sponsoring (spec 2026-10-23 §5): a supplier (fournisseur) pays for installers' Standard plan and
- * those installers can use only the panels and inverters the supplier carries. The lock lives in
- * the installer's LIBRARY: every library-based scope (sizing, dropdowns, save checks) then follows
- * without change, and items already saved in a project stay valid (equipmentChoiceScope keeps them).
+ * Sponsoring (spec 2026-10-23 §5): a supplier (fournisseur) pays for installers' plan and those
+ * installers can use only the panels and inverters the supplier carries. The lock lives in the
+ * installer's LIBRARY, which the supplier manages: the installer adds and removes nothing. Every
+ * library-based scope (sizing, dropdowns, save checks) then follows without change, and items
+ * already saved in a project stay valid (equipmentChoiceScope keeps them).
  */
 
 export const INVITATION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
-/** Only panels and inverters are locked: the supplier sells those. Everything else is the shared catalog. */
+/** The supplier sells panels and inverters: only those it carries. Everything else is the whole shared catalog. */
 export const LOCKED_KINDS = ['PV_MODULE', 'INVERTER'] as const;
+const OTHER_KINDS = ALL_EQUIPMENT_KINDS.filter((kind) => !(LOCKED_KINDS as readonly string[]).includes(kind));
 
 /** A refusal with a message fit for the user (French). */
 export class SponsorshipError extends Error {
@@ -37,9 +41,9 @@ async function carriedItemIds(supplierId: string): Promise<{ modules: string[]; 
 }
 
 /**
- * Makes a sponsored installer's panels and inverters exactly what its supplier carries: removes
- * the others from its library and adds the missing ones. Other equipment is untouched. A direct
- * installer (no sponsor) is left alone.
+ * Makes a sponsored installer's panels and inverters exactly what its supplier carries (removes
+ * the others from its library and adds the missing ones) and adds the whole shared catalog of the
+ * other types, since the installer cannot pick them itself. A direct installer is left alone.
  */
 export async function syncSponsoredLibrary(installerCompanyId: string): Promise<void> {
   const company = await db.company.findUnique({ where: { id: installerCompanyId }, select: { sponsorCompanyId: true } });
@@ -51,6 +55,13 @@ export async function syncSponsoredLibrary(installerCompanyId: string): Promise<
     db.libraryItem.createMany({ data: modules.map((pvModuleId) => ({ companyId: installerCompanyId, kind: 'PV_MODULE' as const, pvModuleId })), skipDuplicates: true }),
     db.libraryItem.createMany({ data: inverters.map((inverterId) => ({ companyId: installerCompanyId, kind: 'INVERTER' as const, inverterId })), skipDuplicates: true }),
   ]);
+  await addSharedCatalogToLibrary(installerCompanyId, OTHER_KINDS);
+}
+
+/** Call after shared protections or cables were published: every sponsored installer gets them. */
+export async function syncAllSponsoredLibraries(): Promise<void> {
+  const installers = await db.company.findMany({ where: { sponsorCompanyId: { not: null } }, select: { id: true } });
+  for (const installer of installers) await addSharedCatalogToLibrary(installer.id, OTHER_KINDS);
 }
 
 /** Call after catalog items a supplier may carry were published: every supplier carrying one re-syncs its installers. */
@@ -202,7 +213,7 @@ export async function isSponsored(companyId: string): Promise<boolean> {
 
 /**
  * The subscription the company generates dossiers under. A direct installer: its own. A sponsored
- * installer (§5.4): the Standard plan paid by its supplier — active while the supplier's own
+ * installer (§5.4): the pack's tier paid by its supplier — active while the supplier's own
  * subscription is — with the pack's per-installer monthly quota, not the supplier's pack figures.
  * Null when there is none.
  */
@@ -219,7 +230,7 @@ export async function loadEffectiveSubscription(companyId: string): Promise<(Sub
       status: sponsor.status,
       periodStart: sponsor.periodStart,
       periodEnd: sponsor.periodEnd,
-      plan: { name: `Standard (offert par votre fournisseur)`, monthlyDossierLimit: sponsor.plan.dossiersPerInstallerPerMonth, tier: 'STANDARD' },
+      plan: { name: `${TIER_LABELS[sponsor.plan.tier]} (offert par votre fournisseur)`, monthlyDossierLimit: sponsor.plan.dossiersPerInstallerPerMonth, tier: sponsor.plan.tier },
       isTrial: false,
       sponsored: true,
       option3dUntil: company.subscription?.option3dUntil ?? null,
@@ -245,5 +256,5 @@ export function includes3d(subscription: { plan: { tier: 'STANDARD' | 'PREMIUM' 
 }
 
 /** Refusals shown to a sponsored installer (they live here: a "use server" file can only export actions). */
-export const CATALOG_LOCK_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs.';
+export const CATALOG_LOCK_MESSAGE = 'Votre bibliothèque est gérée par votre fournisseur.';
 export const SPONSORED_OWN_EQUIPMENT_MESSAGE = 'Votre fournisseur impose ses panneaux et onduleurs : vous ne pouvez pas ajouter votre propre matériel.';

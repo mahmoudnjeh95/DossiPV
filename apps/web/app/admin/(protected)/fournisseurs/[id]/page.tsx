@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../../layout';
-import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS } from '../../../../../lib/labels';
+import { ADMIN_ACTION_LABELS, COMPANY_USER_ROLE_LABELS, SUBSCRIPTION_STATUS_LABELS, TIER_LABELS } from '../../../../../lib/labels';
 import { describeAuditDetails } from '../../../../../lib/admin-audit';
 import { PAYMENT_METHOD_LABELS } from '../../../../../lib/payments/p2p';
 import { displayedSubscriptionStatus } from '../../../../../lib/admin-period';
@@ -86,7 +86,7 @@ export default async function SupplierDetailPage({ params }: { params: Promise<{
             <p>Statut : {statusLabel}</p>
             <p>Fin de période : {company.subscription.periodEnd.toLocaleDateString('fr-FR')}</p>
             <p>
-              Mise en avant : {company.subscription.plan.includesHighlight ? 'incluse' : 'non incluse'} · Quota :{' '}
+              Niveau : {TIER_LABELS[company.subscription.plan.tier]} · Mise en avant : {company.subscription.plan.includesHighlight ? 'incluse' : 'non incluse'} · Quota :{' '}
               {company.subscription.plan.dossiersPerInstallerPerMonth} dossiers / installateur / mois
             </p>
             {company.subscription.status !== 'SUSPENDED' && (

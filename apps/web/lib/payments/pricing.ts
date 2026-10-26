@@ -36,7 +36,7 @@ export function planPurchaseError(company: BuyerCompany, plan: PurchasablePlan, 
   if (mismatch) return mismatch;
   if (plan.isTrial) return 'L’essai gratuit ne s’achète pas.';
   if (company.kind === 'SUPPLIER' && planId !== currentPlanId) return 'Un fournisseur ne peut renouveler que son pack actuel : contactez SolarixPro pour changer de pack.';
-  if (company.sponsored && plan.tier !== 'PREMIUM') return 'Votre plan Standard est offert par votre fournisseur : vous pouvez acheter Premium ou l’option 3D.';
+  if (company.sponsored && plan.tier !== 'PREMIUM') return 'Votre plan est offert par votre fournisseur : vous pouvez acheter Premium ou l’option 3D.';
   return null;
 }
 
@@ -61,7 +61,12 @@ export async function priceCheckout(
   if (!(CHECKOUT_MONTHS as readonly number[]).includes(input.months)) throw new PaymentError('Durée invalide : choisissez 1, 3, 6 ou 12 mois.');
   const company = await db.company.findUnique({
     where: { id: companyId },
-    select: { kind: true, sponsorCompanyId: true, subscription: { select: { planId: true } } },
+    select: {
+      kind: true,
+      sponsorCompanyId: true,
+      subscription: { select: { planId: true } },
+      sponsor: { select: { subscription: { select: { plan: { select: { tier: true } } } } } },
+    },
   });
   if (!company) throw new PaymentError('Société introuvable.');
   const buyer: BuyerCompany = { kind: company.kind, sponsored: company.sponsorCompanyId !== null };
@@ -69,6 +74,9 @@ export async function priceCheckout(
   if (input.purpose === 'OPTION_3D') {
     if (buyer.kind !== 'INSTALLER' || !buyer.sponsored) {
       throw new PaymentError('L’option 3D est réservée aux installateurs parrainés : passez au plan Premium, qui inclut la 3D.');
+    }
+    if (company.sponsor?.subscription?.plan.tier === 'PREMIUM') {
+      throw new PaymentError('Votre fournisseur vous offre déjà Premium, qui inclut la 3D.');
     }
     const price = await loadOption3dPrice();
     if (price === null || price <= 0) throw new PaymentError('L’option 3D n’est pas encore en vente : contactez SolarixPro.');

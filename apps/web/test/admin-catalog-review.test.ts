@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => {
     inverterDelete: vi.fn(),
     cableUpdateMany: vi.fn(),
     syncSuppliersCarrying: vi.fn(),
+    syncAllSponsoredLibraries: vi.fn(),
   };
 });
 
@@ -26,7 +27,7 @@ vi.mock('@dossipv/auth', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/auth')>('@dossipv/auth');
   return { ...actual, validateSuperAdminSession: mocks.mockValidateSuperAdminSession };
 });
-vi.mock('../lib/sponsorship', () => ({ syncSuppliersCarrying: mocks.syncSuppliersCarrying }));
+vi.mock('../lib/sponsorship', () => ({ syncSuppliersCarrying: mocks.syncSuppliersCarrying, syncAllSponsoredLibraries: mocks.syncAllSponsoredLibraries }));
 vi.mock('@dossipv/db', async () => {
   const actual = await vi.importActual<typeof import('@dossipv/db')>('@dossipv/db');
   return {
@@ -68,6 +69,8 @@ describe('catalog review actions', () => {
       where: { ownerCompanyId: null, catalogStatus: 'DRAFT' },
       data: { catalogStatus: 'PUBLISHED' },
     });
+    // Sponsored installers cannot pick cables themselves: they get the newly published ones.
+    expect(mocks.syncAllSponsoredLibraries).toHaveBeenCalledTimes(1);
   });
 
   it('publishes in bulk only the drafts without notes', async () => {

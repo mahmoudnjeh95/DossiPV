@@ -61,7 +61,7 @@ vi.mock('../lib/dossier-number', async () => {
   return { ...actual, assignDossierNumber: m.assignDossierNumber };
 });
 
-import { addAllOfKindAction, addToLibraryAction, removeFromLibraryAction } from '../app/(app)/library/actions';
+import { addAllOfKindAction, addToLibraryAction, removeAllOfKindAction, removeFromLibraryAction } from '../app/(app)/library/actions';
 import { createOwnEquipmentAction } from '../app/(app)/library/own-equipment-actions';
 import { createProjectAction } from '../app/(app)/projects/actions';
 import { generateDossierAction } from '../app/(app)/projects/[id]/actions';
@@ -128,20 +128,16 @@ beforeEach(() => {
 });
 
 describe('catalog lock — library', () => {
-  it('refuses a sponsored installer adding a panel or an inverter', async () => {
-    setup({ sponsored: true, supplier: packRow() });
-    const expected = { error: 'Votre fournisseur impose ses panneaux et onduleurs.' };
-    expect(await addToLibraryAction('PV_MODULE', 'mod-1')).toEqual(expected);
-    expect(await addToLibraryAction('INVERTER', 'inv-1')).toEqual(expected);
-    expect(m.libraryUpsert).not.toHaveBeenCalled();
-  });
+  const LOCKED = { error: 'Votre bibliothèque est gérée par votre fournisseur.' };
 
-  it('still lets a sponsored installer add any other kind', async () => {
+  it('refuses a sponsored installer adding anything, panels and inverters or any other kind', async () => {
     setup({ sponsored: true, supplier: packRow() });
-    expect(await addToLibraryAction('SPD', 'spd-1')).toBeUndefined();
-    expect(m.libraryUpsert).toHaveBeenCalledTimes(1);
-    expect(await addAllOfKindAction('SPD')).toBeUndefined();
-    expect(m.libraryCreateMany).toHaveBeenCalledTimes(1);
+    expect(await addToLibraryAction('PV_MODULE', 'mod-1')).toEqual(LOCKED);
+    expect(await addToLibraryAction('INVERTER', 'inv-1')).toEqual(LOCKED);
+    expect(await addToLibraryAction('SPD', 'spd-1')).toEqual(LOCKED);
+    expect(await addAllOfKindAction('SPD')).toEqual(LOCKED);
+    expect(m.libraryUpsert).not.toHaveBeenCalled();
+    expect(m.libraryCreateMany).not.toHaveBeenCalled();
   });
 
   it('lets a direct installer add panels and inverters', async () => {
@@ -150,15 +146,11 @@ describe('catalog lock — library', () => {
     expect(m.libraryUpsert).toHaveBeenCalledTimes(2);
   });
 
-  it('refuses a sponsored installer removing a panel or inverter, but not another kind', async () => {
+  it('refuses a sponsored installer removing anything', async () => {
     setup({ sponsored: true, supplier: packRow() });
-    m.libraryFindFirst.mockResolvedValueOnce({ kind: 'INVERTER' });
-    expect(await removeFromLibraryAction('li-1')).toEqual({ error: 'Votre fournisseur impose ses panneaux et onduleurs.' });
+    expect(await removeFromLibraryAction('li-1')).toEqual(LOCKED);
+    expect(await removeAllOfKindAction('SPD')).toEqual(LOCKED);
     expect(m.libraryDeleteMany).not.toHaveBeenCalled();
-
-    m.libraryFindFirst.mockResolvedValueOnce({ kind: 'SPD' });
-    expect(await removeFromLibraryAction('li-2')).toBeUndefined();
-    expect(m.libraryDeleteMany).toHaveBeenCalledTimes(1);
   });
 
   it('lets a direct installer remove a panel', async () => {

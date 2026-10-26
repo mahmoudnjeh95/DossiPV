@@ -111,14 +111,15 @@ export async function loadBilling(companyId: string, now: Date = new Date()): Pr
   }
   // The current plan first, then the others by price.
   offers.sort((a, b) => Number(b.planId === currentPlanId) - Number(a.planId === currentPlanId));
-  if (buyer.kind === 'INSTALLER' && buyer.sponsored && option3dPrice !== null && option3dPrice > 0) {
+  // A Premium pack already gives its sponsored installers the 3D.
+  if (buyer.kind === 'INSTALLER' && buyer.sponsored && effective?.plan.tier !== 'PREMIUM' && option3dPrice !== null && option3dPrice > 0) {
     offers.push({
       key: 'option-3d',
       purpose: 'OPTION_3D',
       planId: null,
       title: 'Option 3D',
       buttonLabel: 'Acheter l’option 3D',
-      note: 'La vue 3D du champ sur le toit dans vos dossiers, en plus du Standard offert par votre fournisseur.',
+      note: 'La vue 3D du champ sur le toit dans vos dossiers, en plus du plan Standard offert par votre fournisseur.',
       highlights: [],
       isCurrent: false,
       tier: null,

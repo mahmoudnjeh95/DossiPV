@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { db, Prisma } from '@dossipv/db';
 import { requireAuthenticatedSuperAdmin } from '../layout';
-import { syncSuppliersCarrying } from '../../../../lib/sponsorship';
+import { syncAllSponsoredLibraries, syncSuppliersCarrying } from '../../../../lib/sponsorship';
 
 export type ReviewKind = 'PV_MODULE' | 'INVERTER';
 
@@ -39,6 +39,7 @@ export async function publishCuratedDraftsAction(kind: CuratedKind): Promise<voi
   else if (kind === 'DC_FUSE') await db.dcFuse.updateMany(args);
   else if (kind === 'AC_BREAKER') await db.acBreaker.updateMany(args);
   else await db.acIsolator.updateMany(args);
+  await syncAllSponsoredLibraries();
   revalidatePath(PATH);
 }
 
