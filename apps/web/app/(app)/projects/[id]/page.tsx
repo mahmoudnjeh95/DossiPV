@@ -14,6 +14,8 @@ import { FlashBanner } from '../../../../components/flash-banner';
 import { Jargon } from '../../../../components/jargon';
 import { ChecksPanel } from '../../../../components/checks-panel';
 import { locationsPending } from '../../../../lib/steg-completeness';
+import { projectHref } from '../../../../lib/project-list';
+import { ProjectRowActions } from '../project-row-actions';
 import { Projects } from '@dossipv/icons';
 import { Badge } from '@/components/ui/badge';
 import { Alert } from '@/components/ui/alert';
@@ -129,10 +131,21 @@ export default async function ProjectOverviewPage({
         <span className="text-app-muted">Révision {project.revision}</span>
       </div>
 
+      {project.archivedAt && (
+        <Alert variant="info" className="flex flex-wrap items-center gap-3">
+          <span className="grow">Projet archivé le {project.archivedAt.toLocaleDateString('fr-FR')} : il n&apos;apparaît plus dans la liste des projets en cours.</span>
+          <ProjectRowActions projectId={project.id} clientName={clientName} archived deletable={false} />
+        </Alert>
+      )}
       {(project.flowStep === 'PROPOSALS' || project.flowStep === 'LOCATIONS') && (
-        <Alert variant="ok">
-          <Link className={buttonVariants()} href={`/projects/${project.id}/${project.flowStep === 'PROPOSALS' ? 'proposals' : 'locations'}`}>
-            {project.flowStep === 'PROPOSALS' ? "Continuer : choisir l'installation" : 'Continuer : placer les points'}
+        <Alert variant="ok" className="flex flex-wrap items-center gap-3">
+          <span className="grow">
+            {project.flowStep === 'PROPOSALS'
+              ? "Les propositions d'installation calculées à partir de la facture vous attendent : choisissez-en une et les sections techniques se remplissent automatiquement."
+              : "L'installation est choisie : placez le champ PV, l'onduleur et le compteur sur la carte."}
+          </span>
+          <Link className={buttonVariants()} href={projectHref(project)}>
+            {project.flowStep === 'PROPOSALS' ? 'Voir les propositions' : 'Continuer : placer les points'}
           </Link>
         </Alert>
       )}
@@ -159,7 +172,12 @@ export default async function ProjectOverviewPage({
 
         <Card as="section">
           <h2>Validation</h2>
-          {!engineInput.ok ? (
+          {!engineInput.ok && project.flowStep === 'PROPOSALS' ? (
+            <p className="text-app-muted">
+              Les contrôles s&apos;exécuteront une fois l&apos;installation choisie parmi les{' '}
+              <Link href={projectHref(project)}>propositions</Link>.
+            </p>
+          ) : !engineInput.ok ? (
             <>
               <p className="text-app-muted">
                 Les contrôles s&apos;exécuteront dès que les sections suivantes seront complètes :

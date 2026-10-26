@@ -851,6 +851,8 @@ model Project {
   revision        Int           @default(1)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  /// Set when the installer archives the project: it leaves the default project list, nothing else changes.
+  archivedAt      DateTime?
 
   client          ProjectClient?
   site            ProjectSite?

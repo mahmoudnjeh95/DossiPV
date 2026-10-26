@@ -9,6 +9,7 @@ import {
 } from '../../../lib/subscription';
 import { loadEffectiveSubscription } from '../../../lib/sponsorship';
 import { PROJECT_STATUS_LABELS, TIER_LABELS } from '../../../lib/labels';
+import { projectHref, projectStepLabel } from '../../../lib/project-list';
 import { isAwaitingEmailConfirmation } from '../../../lib/email-confirmation';
 import { SubscriptionBanner } from '../../../components/subscription-banner';
 import { PremiumUpsell } from '../../../components/premium-upsell';
@@ -27,12 +28,12 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
   const [jobsInWindow, recentProjects, projectCount] = await Promise.all([
     quotaJobs(user.companyId, subscription, now),
     db.project.findMany({
-      where: { companyId: user.companyId },
+      where: { companyId: user.companyId, archivedAt: null },
       include: { client: true },
       orderBy: { updatedAt: 'desc' },
       take: 5,
     }),
-    db.project.count({ where: { companyId: user.companyId } }),
+    db.project.count({ where: { companyId: user.companyId, archivedAt: null } }),
   ]);
 
   const awaitingEmail = subscription === null && (await isAwaitingEmailConfirmation(user.id));
@@ -90,11 +91,14 @@ export default async function DashboardPage(): Promise<React.JSX.Element> {
                 {recentProjects.map((project) => (
                   <tr key={project.id}>
                     <td>
-                      <Link href={`/projects/${project.id}`}>
+                      <Link href={projectHref(project)}>
                         {project.client?.fullName ?? 'Sans client'}
                       </Link>
                     </td>
-                    <td>{PROJECT_STATUS_LABELS[project.status] ?? project.status}</td>
+                    <td>
+                      {PROJECT_STATUS_LABELS[project.status] ?? project.status}
+                      {projectStepLabel(project) && <span className="text-app-muted"> · {projectStepLabel(project)}</span>}
+                    </td>
                     <td>{TIER_LABELS[project.tier] ?? project.tier}</td>
                     <td>{project.updatedAt.toLocaleDateString('fr-FR')}</td>
                   </tr>
