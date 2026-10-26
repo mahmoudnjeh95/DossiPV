@@ -107,4 +107,9 @@ describe('priceCheckout', () => {
     m.mockSettingsFindUnique.mockResolvedValue({ option3dPriceTnd: null });
     await expect(priceCheckout('c1', { purpose: 'OPTION_3D', planId: null, months: 1 })).rejects.toThrow(/pas encore en vente/);
   });
+
+  it('refuses the 3D option to an installer whose supplier holds a Premium pack', async () => {
+    m.mockCompanyFindUnique.mockResolvedValue({ kind: 'INSTALLER', sponsorCompanyId: 's1', subscription: null, sponsor: { subscription: { plan: { tier: 'PREMIUM' } } } });
+    await expect(priceCheckout('c1', { purpose: 'OPTION_3D', planId: null, months: 1 })).rejects.toThrow(/déjà Premium/);
+  });
 });

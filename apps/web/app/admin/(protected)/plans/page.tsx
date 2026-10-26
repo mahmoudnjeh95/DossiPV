@@ -64,6 +64,7 @@ function PackTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
       <thead>
         <tr>
           <th>Nom</th>
+          <th>Niveau</th>
           <th>Comptes installateurs</th>
           <th>Dossiers / installateur / mois</th>
           <th>Mise en avant</th>
@@ -78,6 +79,7 @@ function PackTable({ plans, archived }: { plans: PlanRow[]; archived: boolean })
             <td>
               {plan.name} {archived && <Badge>archivé</Badge>}
             </td>
+            <td>{TIER_LABELS[plan.tier] ?? plan.tier}</td>
             <td>{plan.maxSponsoredInstallers ?? 'Illimité'}</td>
             <td>{plan.dossiersPerInstallerPerMonth}</td>
             <td>{plan.includesHighlight ? 'oui' : 'non'}</td>

@@ -12,13 +12,15 @@ export function LibraryTabs({ active, sponsored = false }: { active: LibraryTab;
       >
         Mes équipements
       </Link>
-      <Link
-        href="/library?tab=catalogue"
-        aria-current={active === 'catalogue' ? 'page' : undefined}
-        style={{ fontWeight: active === 'catalogue' ? 700 : 400 }}
-      >
-        Catalogue partagé
-      </Link>
+      {!sponsored && (
+        <Link
+          href="/library?tab=catalogue"
+          aria-current={active === 'catalogue' ? 'page' : undefined}
+          style={{ fontWeight: active === 'catalogue' ? 700 : 400 }}
+        >
+          Catalogue partagé
+        </Link>
+      )}
       {!sponsored && (
         <Link
           href="/library/new"

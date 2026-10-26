@@ -17,6 +17,12 @@ const m = vi.hoisted(() => ({
   invitationCreate: vi.fn(),
   invitationUpdateMany: vi.fn(),
   transaction: vi.fn(),
+  addSharedCatalog: vi.fn(),
+}));
+
+vi.mock('../lib/library-seed', () => ({
+  ALL_EQUIPMENT_KINDS: ['PV_MODULE', 'INVERTER', 'SPD', 'DC_SWITCH', 'DC_FUSE', 'AC_BREAKER', 'AC_ISOLATOR', 'CABLE', 'ACCESSORY'],
+  addSharedCatalogToLibrary: m.addSharedCatalog,
 }));
 
 vi.mock('@dossipv/db', () => ({
@@ -252,10 +258,22 @@ describe('loadEffectiveSubscription', () => {
       status: 'ACTIVE',
       periodStart: new Date('2026-10-01'),
       periodEnd: new Date('2026-11-01'),
-      plan: { dossiersPerInstallerPerMonth: 5, maxSponsoredInstallers: 50 },
+      plan: { dossiersPerInstallerPerMonth: 5, maxSponsoredInstallers: 50, tier: 'STANDARD' },
     });
 
     expect(await loadEffectiveSubscription('c1')).toMatchObject({ sponsored: true, status: 'ACTIVE', periodEnd: new Date('2026-11-01'), plan: { monthlyDossierLimit: 5, tier: 'STANDARD' } });
+  });
+
+  it("is Premium for an installer sponsored under a Premium pack", async () => {
+    m.companyFindUnique.mockResolvedValue({ sponsorCompanyId: 'supplier-1', subscription: null });
+    m.subscriptionFindUnique.mockResolvedValue({
+      status: 'ACTIVE',
+      periodStart: new Date('2026-10-01'),
+      periodEnd: new Date('2026-11-01'),
+      plan: { dossiersPerInstallerPerMonth: 3, maxSponsoredInstallers: 100, tier: 'PREMIUM' },
+    });
+
+    expect(await loadEffectiveSubscription('c1')).toMatchObject({ sponsored: true, plan: { name: 'Premium (offert par votre fournisseur)', monthlyDossierLimit: 3, tier: 'PREMIUM' } });
   });
 
   it('follows its supplier: a lapsed or absent supplier subscription is not a valid one', async () => {

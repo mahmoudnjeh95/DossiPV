@@ -47,6 +47,13 @@ export function PlanForm({
           Prix (TND / mois)
           <Input type="number" name="priceTnd" defaultValue={plan?.priceTnd} min={0} step="0.001" required />
         </Label>
+        <Label>
+          Niveau
+          <Select name="tier" defaultValue={plan?.tier ?? 'STANDARD'}>
+            <option value="STANDARD">Standard</option>
+            <option value="PREMIUM">Premium</option>
+          </Select>
+        </Label>
         {isPack ? (
           <>
             <Label>
@@ -59,19 +66,10 @@ export function PlanForm({
             </Label>
           </>
         ) : (
-          <>
-            <Label>
-              Niveau
-              <Select name="tier" defaultValue={plan?.tier ?? 'STANDARD'}>
-                <option value="STANDARD">Standard</option>
-                <option value="PREMIUM">Premium</option>
-              </Select>
-            </Label>
-            <Label>
-              Dossiers par mois
-              <Input type="number" name="monthlyDossierLimit" defaultValue={plan?.monthlyDossierLimit} min={1} max={1000} step={1} required />
-            </Label>
-          </>
+          <Label>
+            Dossiers par mois
+            <Input type="number" name="monthlyDossierLimit" defaultValue={plan?.monthlyDossierLimit} min={1} max={1000} step={1} required />
+          </Label>
         )}
       </div>
       {isPack ? (
@@ -80,8 +78,8 @@ export function PlanForm({
             <Input type="checkbox" name="includesHighlight" defaultChecked={plan?.includesHighlight ?? false} /> Mise en avant incluse
           </Label>
           <p className="text-[0.8rem] font-normal text-app-muted">
-            Le fournisseur paie le plan Standard de chaque installateur parrainé, dans la limite du nombre de comptes, avec le quota de dossiers
-            ci-dessus par installateur et par mois.
+            Le fournisseur paie le niveau ci-dessus pour chaque installateur parrainé (Premium inclut la 3D), dans la limite du nombre de
+            comptes, avec le quota de dossiers ci-dessus par installateur et par mois.
           </p>
         </>
       ) : (

@@ -102,9 +102,9 @@ describe('createPlanAction', () => {
 });
 
 describe('supplier packs', () => {
-  const pack = { audience: 'SUPPLIER', name: 'Pack 50', priceTnd: '500', maxSponsoredInstallers: '50', dossiersPerInstallerPerMonth: '8', includesHighlight: 'on' };
+  const pack = { audience: 'SUPPLIER', name: 'Pack 50', tier: 'STANDARD', priceTnd: '500', maxSponsoredInstallers: '50', dossiersPerInstallerPerMonth: '8', includesHighlight: 'on' };
 
-  it('stores the pack fields with neutral tier and monthly limit, ignoring installer-only fields', async () => {
+  it('stores the pack fields and tier with a neutral monthly limit, ignoring installer-only fields', async () => {
     m.mockPlanCreate.mockResolvedValue({ id: 'pack-1' });
 
     await createPlanAction(undefined, form({ ...pack, tier: 'PREMIUM', monthlyDossierLimit: '99', isTrial: 'on' }));
@@ -112,7 +112,7 @@ describe('supplier packs', () => {
     expect(m.mockPlanCreate).toHaveBeenCalledWith({
       data: {
         name: 'Pack 50',
-        tier: 'STANDARD',
+        tier: 'PREMIUM',
         monthlyDossierLimit: 0,
         priceTnd: 500,
         isTrial: false,

@@ -28,9 +28,9 @@ interface PlanData {
 
 /**
  * An installer plan has a tier, a monthly limit and maybe the trial flag; a supplier pack has a
- * price, a number of installer accounts, a per-installer monthly quota and the highlight flag. The
- * fields that do not apply are stored neutral (tier STANDARD and limit 0 for a pack; no pack
- * figures for an installer plan), whatever the form sent.
+ * price, the tier its sponsored installers get, a number of installer accounts, a per-installer
+ * monthly quota and the highlight flag. The fields that do not apply are stored neutral (limit 0
+ * for a pack; no pack figures for an installer plan), whatever the form sent.
  */
 function readPlan(formData: FormData): { error: string } | PlanData {
   const reader = new FormReader(formData);
@@ -41,7 +41,7 @@ function readPlan(formData: FormData): { error: string } | PlanData {
   if (audience === 'SUPPLIER') {
     plan = {
       name,
-      tier: 'STANDARD',
+      tier: reader.optionalOneOf('tier', 'Niveau', TIERS) ?? 'STANDARD',
       monthlyDossierLimit: 0,
       priceTnd,
       isTrial: false,
