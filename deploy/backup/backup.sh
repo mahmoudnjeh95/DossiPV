@@ -135,6 +135,8 @@ if [[ -n "$RCLONE_REMOTE" ]]; then
   if [[ -d "$BACKUP_ROOT/weekly/$DATE" ]]; then
     rclone copy --checksum "$BACKUP_ROOT/weekly/$DATE" "$REMOTE/weekly/$DATE" || fail "rclone copy (weekly) failed"
   fi
+  # Until the first Sunday there is no remote weekly/ yet, and `rclone delete` fails on a missing directory.
+  rclone mkdir "$REMOTE/daily" && rclone mkdir "$REMOTE/weekly" || fail "rclone mkdir on $REMOTE failed"
   rclone delete --min-age "$((REMOTE_KEEP_DAILY + 1))d" "$REMOTE/daily" || fail "rclone retention (daily) failed"
   rclone delete --min-age "$((REMOTE_KEEP_WEEKLY * 7 + 1))d" "$REMOTE/weekly" || fail "rclone retention (weekly) failed"
   rclone rmdirs --leave-root "$REMOTE" 2>/dev/null || true
