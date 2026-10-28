@@ -6,7 +6,11 @@ import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 import { TRIAL_BILL_IMPORT_LIMIT } from '../../lib/trial';
 
-export const metadata: Metadata = { title: 'Conditions générales — SolarixPro' };
+export const metadata: Metadata = {
+  title: 'Conditions générales',
+  description: 'Conditions générales d’utilisation du service SolarixPro de préparation de dossiers photovoltaïques.',
+  alternates: { canonical: '/cgu' },
+};
 
 // The contact address and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';

@@ -5,7 +5,11 @@ import { TERMS_VERSION } from '../../lib/legal';
 import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 
-export const metadata: Metadata = { title: 'Mentions légales — SolarixPro' };
+export const metadata: Metadata = {
+  title: 'Mentions légales',
+  description: 'Éditeur, hébergement et coordonnées de SolarixPro.',
+  alternates: { canonical: '/mentions-legales' },
+};
 
 // The contact details and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';

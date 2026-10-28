@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { db } from '@dossipv/db';
 import { requireAuthenticatedCompanyUser } from '../(app)/layout';
@@ -5,6 +6,10 @@ import { needsTermsAcceptance } from '../../lib/legal';
 import { logoutAction } from '../(app)/actions';
 import { AuthIntro, AuthShell } from '@/components/auth/auth-ui';
 import { AcceptTermsForm } from './accept-form';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 export const dynamic = 'force-dynamic';
 

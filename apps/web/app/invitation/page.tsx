@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import { AuthBackLink, AuthInlineLink, AuthIntro, AuthShell } from '@/components/auth/auth-ui';
 import { findValidInvitation } from '../../lib/sponsorship';
 import { currentInstallerCompany } from '../../lib/installer-session';
 import { AcceptForm, CreateAccountForm } from './invitation-forms';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 // Public page, reached from the supplier's invitation email: it depends on the link and the
 // session, so it must never be cached or prerendered.

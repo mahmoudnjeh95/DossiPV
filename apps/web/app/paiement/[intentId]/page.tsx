@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { db } from '@dossipv/db';
@@ -13,6 +14,10 @@ import { Card } from '@/components/ui/card';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { NO_INDEX } from '../../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 const money = (value: number): string => `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TND`;
 

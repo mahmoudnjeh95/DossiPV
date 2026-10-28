@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
@@ -9,6 +10,10 @@ import { requireCurrentTerms } from '../../lib/terms-gate';
 import { dismissLibraryHintAction, endImpersonationAction } from './actions';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 const SESSION_COOKIE_NAME = 'dossipv_session';
 

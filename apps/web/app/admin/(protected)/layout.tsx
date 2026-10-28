@@ -1,9 +1,14 @@
+import type { Metadata } from 'next';
 import { Suspense, type ReactNode } from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { validateSuperAdminSession, type AuthenticatedSuperAdmin } from '@dossipv/auth';
 import { AdminShell } from '../../../components/admin-shell';
 import { AdminNotice } from './components/admin-notice';
+import { NO_INDEX } from '../../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 const ADMIN_SESSION_COOKIE_NAME = 'dossipv_admin_session';
 

@@ -4,7 +4,11 @@ import { SUBPROCESSORS, TERMS_VERSION } from '../../lib/legal';
 import { getLegalEntity } from '../../lib/platform-settings';
 import { supportContact } from '../../lib/support-contact';
 
-export const metadata: Metadata = { title: 'Politique de confidentialité — SolarixPro' };
+export const metadata: Metadata = {
+  title: 'Politique de confidentialité',
+  description: 'Comment SolarixPro traite et protège vos données personnelles.',
+  alternates: { canonical: '/confidentialite' },
+};
 
 // The contact address and the publisher are read at request time: never prerendered.
 export const dynamic = 'force-dynamic';

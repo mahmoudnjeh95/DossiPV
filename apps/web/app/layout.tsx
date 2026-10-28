@@ -1,5 +1,7 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { SITE_DESCRIPTION, SITE_KEYWORDS, SITE_NAME, SITE_TITLE, SITE_URL } from '../lib/site';
 import '../styles/tailwind.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -8,12 +10,45 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   variable: '--font-plus-jakarta',
 });
 
-export const metadata = {
+// Search Console / Bing Webmaster ownership tokens, read at build time; unset leaves the tag out.
+const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION || undefined;
+const BING_SITE_VERIFICATION = process.env.BING_SITE_VERIFICATION || undefined;
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'SolarixPro | Dossiers photovoltaïques BT',
-    template: '%s | SolarixPro',
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: 'Préparez et structurez vos dossiers techniques photovoltaïques basse tension.',
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: 'technology',
+  openGraph: {
+    type: 'website',
+    locale: 'fr_TN',
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 },
+  },
+  verification: {
+    google: GOOGLE_SITE_VERIFICATION,
+    other: BING_SITE_VERIFICATION ? { 'msvalidate.01': BING_SITE_VERIFICATION } : undefined,
+  },
+  formatDetection: { telephone: false },
 };
 
 export const viewport = {

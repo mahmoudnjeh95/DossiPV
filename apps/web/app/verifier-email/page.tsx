@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { InvalidVerificationTokenError, verifyEmailWithToken } from '@dossipv/auth';
 import { db } from '@dossipv/db';
@@ -11,6 +12,10 @@ import {
   AuthNotice,
   authSubmitClass,
 } from '@/components/auth/auth-ui';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 // Public page, reached from the sign-up email. Opening the link confirms the address and starts
 // the free trial, so it must never be cached or prerendered.

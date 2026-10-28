@@ -1,7 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { findValidPasswordResetToken, MIN_PASSWORD_LENGTH } from '@dossipv/auth';
 import { AuthBackLink, AuthIntro, AuthShell, authSubmitClass } from '@/components/auth/auth-ui';
 import { ResetPasswordForm } from './reset-password-form';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 // Public page (outside the (app) layout), reached from a reset email: the installer's own
 // "mot de passe oublié" link (1 hour) or a link sent by the admin, which may be a 7-day

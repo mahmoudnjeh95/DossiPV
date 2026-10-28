@@ -1,9 +1,13 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BrandMark, SunSymbol } from '../components/brand-mark';
 import { CountUp } from '../components/count-up';
 import { Reveal } from '../components/reveal';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '../lib/site';
+
+export const metadata: Metadata = { alternates: { canonical: '/' }, openGraph: { url: '/' } };
 
 const FEATURES = [
   { icon: 'M4 5h16v14H4zM4 10h16M9 5v14', title: 'Dossier structuré', text: 'Client, site, équipements et contrôles réunis dans un parcours clair, du premier relevé au document final.' },
@@ -20,6 +24,63 @@ const STEPS = [
   { n: '03', title: 'Générez le dossier', text: 'Téléchargez le dossier technique complet, schémas et plans inclus.' },
 ] as const;
 
+const FAQ = [
+  {
+    q: 'Qu’est-ce que SolarixPro ?',
+    a: 'Un logiciel en ligne qui prépare le dossier technique des installations photovoltaïques basse tension raccordées au réseau STEG : saisie du projet, dimensionnement, contrôles électriques, schémas et PDF final.',
+  },
+  {
+    q: 'À qui s’adresse SolarixPro ?',
+    a: 'Aux installateurs et bureaux d’études photovoltaïques qui montent des dossiers de raccordement BT pour leurs clients résidentiels ou professionnels.',
+  },
+  {
+    q: 'Que contient le dossier généré ?',
+    a: 'Les informations client et site, le choix des modules et de l’onduleur, les contrôles techniques, l’estimation de production, le schéma unifilaire et le plan d’implantation, réunis dans un PDF prêt à déposer.',
+  },
+  {
+    q: 'Peut-on essayer gratuitement ?',
+    a: 'Oui : à l’inscription, 3 dossiers sont offerts pendant 30 jours, sans engagement.',
+  },
+] as const;
+
+/** schema.org description of the product and its FAQ, read by search engines for rich results. */
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon-512.png`,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      inLanguage: 'fr',
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      inLanguage: 'fr',
+      areaServed: 'TN',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'TND', description: 'Essai gratuit : 3 dossiers pendant 30 jours' },
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: FAQ.map(({ q, a }) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })),
+    },
+  ],
+};
+
 const GUTTER = 'px-[max(var(--gutter),calc((100%-1200px)/2))]';
 const CTA = 'min-h-[50px] px-[22px] max-[700px]:flex-[1_1_100%]';
 const NAV_LINK = 'font-semibold text-[#dbe5fa] no-underline hover:text-[#ffc43d]';
@@ -27,6 +88,7 @@ const NAV_LINK = 'font-semibold text-[#dbe5fa] no-underline hover:text-[#ffc43d]
 export default function HomePage(): React.JSX.Element {
   return (
     <main className="m-0 max-w-none overflow-x-clip bg-white p-0">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA).replace(/</g, '\\u003c') }} />
       <header
         className={cn(
           'sticky top-0 z-20 flex animate-[sx-fade_0.5s_ease_backwards] items-center gap-7 border-b border-app-border/80 bg-white/85 py-3 backdrop-blur-md backdrop-saturate-150 max-[700px]:gap-3',
@@ -40,6 +102,7 @@ export default function HomePage(): React.JSX.Element {
           {[
             ['#fonctionnalites', 'Fonctionnalités'],
             ['#parcours', 'Comment ça marche'],
+            ['#questions', 'Questions'],
           ].map(([href, label]) => (
             <a
               key={href}
@@ -197,6 +260,21 @@ export default function HomePage(): React.JSX.Element {
             </Reveal>
           ))}
         </ol>
+      </section>
+
+      <section id="questions" className="mx-auto max-w-[820px] px-(--gutter) pt-24 max-[700px]:pt-16" aria-labelledby="sx-faq-title">
+        <SectionHead kicker="Questions fréquentes" id="sx-faq-title" title="Ce qu’il faut savoir sur SolarixPro" />
+        <div className="grid gap-3">
+          {FAQ.map(({ q, a }) => (
+            <details key={q} className="group rounded-[14px] border border-app-border bg-white px-5 py-4 open:shadow-lift">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold text-app-navy">
+                <h3 className="m-0 text-[1.02rem]">{q}</h3>
+                <span aria-hidden="true" className="text-app-accent transition-transform duration-200 group-open:rotate-45">+</span>
+              </summary>
+              <p className="mt-3 mb-0 text-app-muted">{a}</p>
+            </details>
+          ))}
+        </div>
       </section>
 
       <Reveal

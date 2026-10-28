@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { requireSupplier } from '../../lib/supplier-access';
@@ -9,6 +10,10 @@ import { SubscriptionBanner } from '../../components/subscription-banner';
 import { loadEffectiveSubscription } from '../../lib/sponsorship';
 import { summarizeSubscription } from '../../lib/subscription';
 import { Button } from '@/components/ui/button';
+import { NO_INDEX } from '../../lib/site';
+
+// Behind a login or a one-time token: never in search results.
+export const metadata: Metadata = { robots: NO_INDEX };
 
 const NAV_LINKS = [
   { href: '/fournisseur/produits', label: 'Produits' },

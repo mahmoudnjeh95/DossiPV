@@ -1,6 +1,13 @@
+import type { Metadata } from 'next';
 import { SupportContactLinks } from '../../components/support-contact';
 import { supportContact } from '../../lib/support-contact';
 import { LoginForm } from './login-form';
+
+export const metadata: Metadata = {
+  title: 'Connexion installateur',
+  description: 'Connectez-vous à votre espace SolarixPro pour préparer et générer vos dossiers techniques photovoltaïques.',
+  alternates: { canonical: '/login' },
+};
 
 interface LoginPageProps {
   searchParams: Promise<{ reinitialise?: string | string[]; compte?: string | string[]; connexion?: string | string[] }>;
